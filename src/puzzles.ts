@@ -752,3 +752,34 @@ export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
     categories,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Difficulty curve. We can't measure "abstractness" cheaply, so we proxy it
+// with word length + count of long/rare spokes — longer, less-common words make
+// a level harder. Levels are ordered easiest-first (with the STAR tutorial
+// pinned to #1) and bucketed into three tiers for the level map.
+
+export type Tier = 1 | 2 | 3;
+export interface Level extends RawPuzzle {
+  tier: Tier;
+}
+
+function difficultyScore(raw: RawPuzzle): number {
+  const spokes = raw.categories.flatMap((c) => c.words);
+  const avgLen = spokes.reduce((s, w) => s + w.length, 0) / spokes.length;
+  const longCount = spokes.filter((w) => w.length >= 8).length;
+  return avgLen + longCount * 0.6;
+}
+
+const orderedRaw = PUZZLES.slice().sort((a, b) => {
+  if (a.id === "star") return -1; // pin the tutorial level first
+  if (b.id === "star") return 1;
+  return difficultyScore(a) - difficultyScore(b);
+});
+
+export const LEVELS: Level[] = orderedRaw.map((raw, i) => ({
+  ...raw,
+  tier: (i < orderedRaw.length / 3 ? 1 : i < (2 * orderedRaw.length) / 3 ? 2 : 3) as Tier,
+}));
+
+export const TIER_LABELS: Record<Tier, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };

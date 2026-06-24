@@ -1,7 +1,14 @@
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { PUZZLES } from "./puzzles";
-import { loadProgress, saveProgress, type Progress } from "./progress";
+import { LEVELS } from "./puzzles";
+import {
+  loadProgress,
+  saveProgress,
+  totalStars,
+  clearedCount,
+  MAX_STARS,
+  type Progress,
+} from "./progress";
 import { initAudio, isMuted, setMuted } from "./audio";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
@@ -16,6 +23,7 @@ export default function App() {
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
   const [muted, setMutedState] = useState(() => isMuted());
   const [showHelp, setShowHelp] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   // The interactive coached tutorial runs once, on the player's first level.
   const [tutorialPending, setTutorialPending] = useState(() => {
     try {
@@ -54,15 +62,21 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (stars: number) => {
+    (result: { stars: number; linkCorrect: boolean; timeMs: number }) => {
       setProgress((prev) => {
-        const id = PUZZLES[levelIndex].id;
-        const best = Math.max(prev.stars[id] ?? 0, stars);
+        const id = LEVELS[levelIndex].id;
+        const bestStars = Math.max(prev.stars[id] ?? 0, result.stars);
         const streak = prev.streak + 1;
+        const prevBestTime = prev.best[id];
         const next: Progress = {
-          stars: { ...prev.stars, [id]: best },
+          stars: { ...prev.stars, [id]: bestStars },
           streak,
           bestStreak: Math.max(prev.bestStreak, streak),
+          linksGuessed: prev.linksGuessed + (result.linkCorrect ? 1 : 0),
+          best: {
+            ...prev.best,
+            [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
+          },
         };
         saveProgress(next);
         return next;
@@ -80,7 +94,7 @@ export default function App() {
   }, []);
 
   const nextLevel = useCallback(() => {
-    setLevelIndex((i) => Math.min(i + 1, PUZZLES.length - 1));
+    setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1));
   }, []);
 
   return (
@@ -108,6 +122,7 @@ export default function App() {
               onPick={pickLevel}
               onHome={() => setScreen("home")}
               onHelp={() => setShowHelp(true)}
+              onStats={() => setShowStats(true)}
               muted={muted}
               onToggleMute={toggleMute}
             />
@@ -125,7 +140,7 @@ export default function App() {
               onWin={handleWin}
               onLoss={handleLoss}
               onExit={() => setScreen("levels")}
-              onNext={levelIndex < PUZZLES.length - 1 ? nextLevel : undefined}
+              onNext={levelIndex < LEVELS.length - 1 ? nextLevel : undefined}
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}
             />
@@ -135,8 +150,58 @@ export default function App() {
 
       <AnimatePresence>
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+        {showStats && <StatsModal progress={progress} onClose={() => setShowStats(false)} />}
       </AnimatePresence>
     </>
+  );
+}
+
+function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+  const cleared = clearedCount(progress);
+  const stats: [string, string][] = [
+    ["Stars collected", `${totalStars(progress)} / ${MAX_STARS}`],
+    ["Levels cleared", `${cleared} / ${LEVELS.length}`],
+    ["Completion", `${Math.round((cleared / LEVELS.length) * 100)}%`],
+    ["Links guessed", `${progress.linksGuessed}`],
+    ["Current streak", `🔥 ${progress.streak}`],
+    ["Best streak", `${progress.bestStreak}`],
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Your stats"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 24 }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+      >
+        <h3 className="font-display text-2xl font-bold text-white">Your stats</h3>
+        <dl className="mt-4 divide-y divide-white/10">
+          {stats.map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between py-2.5">
+              <dt className="text-sm text-indigo-100/80">{k}</dt>
+              <dd className="font-bold text-white">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <button
+          onClick={onClose}
+          className="mt-5 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+        >
+          Close
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
 

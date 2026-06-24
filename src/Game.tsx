@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PUZZLES, buildPuzzle, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
 import { starsForMistakes } from "./progress";
 import Confetti from "./Confetti";
 import {
@@ -31,7 +31,7 @@ interface GameProps {
   reduce: boolean;
   streak: number;
   tutorial: boolean;
-  onWin: (mistakes: number) => void;
+  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number }) => void;
   onLoss: () => void;
   onExit: () => void;
   onNext?: () => void;
@@ -51,7 +51,7 @@ export default function Game({
   onHelp,
   onTutorialDone,
 }: GameProps) {
-  const raw = PUZZLES[puzzleIndex];
+  const raw = LEVELS[puzzleIndex];
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
   // The 8 spoke tiles (everything except the hidden link), in shuffled order.
@@ -66,8 +66,10 @@ export default function Game({
   const [toast, setToast] = useState<string | null>(null);
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const [coach, setCoach] = useState(tutorial ? 0 : -1);
   const reported = useRef(false);
+  const startedAt = useRef(Date.now());
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -83,11 +85,16 @@ export default function Game({
   }, [puzzle]);
 
   // Four multiple-choice options for the finale: the real link + 3 decoys.
+  // Decoys are biased toward a similar length to the answer so they can't be
+  // eliminated at a glance — a bit more thought than purely random picks.
   const linkOptions = useMemo(() => {
-    const decoys = PUZZLES.map((p) => p.pivot)
-      .filter((w) => w !== puzzle.pivot)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+    const pool = LEVELS.map((p) => p.pivot).filter((w) => w !== puzzle.pivot);
+    const near = pool
+      .map((w) => ({ w, d: Math.abs(w.length - puzzle.pivot.length) + Math.random() }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 8)
+      .map((x) => x.w);
+    const decoys = near.sort(() => Math.random() - 0.5).slice(0, 3);
     return [puzzle.pivot, ...decoys].sort(() => Math.random() - 0.5);
   }, [puzzle]);
 
@@ -144,10 +151,10 @@ export default function Game({
     }
   }, [coach, solved.length, onTutorialDone]);
 
-  // Final stars: from pairing mistakes, minus one if the link guess was wrong.
+  // Final stars: from pairing mistakes, minus a wrong link guess and any hints.
   const finalStars = Math.max(
     1,
-    starsForMistakes(mistakes) - (linkGuess && linkGuess !== puzzle.pivot ? 1 : 0)
+    starsForMistakes(mistakes) - (linkGuess && linkGuess !== puzzle.pivot ? 1 : 0) - hintsUsed
   );
 
   // Report the result up exactly once.
@@ -158,12 +165,12 @@ export default function Game({
       playWin();
       buzz([0, 40, 60, 40]);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin(finalStars);
+      onWin({ stars: finalStars, linkCorrect: linkGuess === puzzle.pivot, timeMs: Date.now() - startedAt.current });
     } else if (status === "lost") {
       reported.current = true;
       onLoss();
     }
-  }, [status, finalStars, onWin, onLoss, buzz]);
+  }, [status, finalStars, onWin, onLoss, buzz, linkGuess, puzzle.pivot]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -216,8 +223,16 @@ export default function Game({
     setSelected([]);
   }, [selected.length]);
 
+  // Hint: auto-solve one unsolved group for the cost of a star.
+  const useHint = useCallback(() => {
+    if (status !== "playing" || unsolvedCategories.length <= 1) return;
+    setHintsUsed((h) => h + 1);
+    solveCategory(unsolvedCategories[0], solved.length);
+  }, [status, unsolvedCategories, solveCategory, solved.length]);
+
   const restart = useCallback(() => {
     reported.current = false;
+    startedAt.current = Date.now();
     setSolved([]);
     setSelected([]);
     setMistakes(0);
@@ -227,6 +242,7 @@ export default function Game({
     setToast(null);
     setPastGuesses(new Set());
     setLinkGuess(null);
+    setHintsUsed(0);
   }, []);
 
   const guessLink = useCallback(
@@ -325,8 +341,10 @@ export default function Game({
             max={MAX_MISTAKES}
             canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
+            canHint={unsolvedCategories.length > 1}
             onSubmit={submit}
             onClear={clearSelection}
+            onHint={useHint}
           />
         )}
 
@@ -504,15 +522,19 @@ function Controls({
   max,
   canSubmit,
   hasSelection,
+  canHint,
   onSubmit,
   onClear,
+  onHint,
 }: {
   mistakes: number;
   max: number;
   canSubmit: boolean;
   hasSelection: boolean;
+  canHint: boolean;
   onSubmit: () => void;
   onClear: () => void;
+  onHint: () => void;
 }) {
   return (
     <div className="mt-7 flex flex-col items-center gap-4">
@@ -544,6 +566,13 @@ function Controls({
           Submit group
         </button>
       </div>
+      <button
+        onClick={onHint}
+        disabled={!canHint}
+        className="text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-30"
+      >
+        💡 Hint — reveal a group (costs a star)
+      </button>
     </div>
   );
 }

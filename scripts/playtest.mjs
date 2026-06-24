@@ -60,12 +60,12 @@ await p.screenshot({ path: `${SHOT}/r2-start.png` });
 if (!(await clickText("button", "Play"))) note("No Play button on start screen.");
 await sleep(500);
 
-// 2. Level map: 62 nodes, only #1 unlocked
+// 2. Level map: 62 nodes; looser gating opens the first few (lookahead 3)
 const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
 log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
 if (nodes.length !== 62) note(`Expected 62 level nodes, found ${nodes.length}.`);
-if (nodes[0]) note("Level 1 should be unlocked.");
-if (!nodes[1]) note("Level 2 should start locked.");
+if (nodes[0] || nodes[1] || nodes[2]) note("Levels 1-3 should be unlocked from the start.");
+if (!nodes[3]) note("Level 4 should start locked (lookahead 3).");
 await p.screenshot({ path: `${SHOT}/r3-levels.png` });
 
 // 3. Enter level 1 → coached tutorial
@@ -111,11 +111,11 @@ if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`)
 log("link-guess acknowledged:", /guessed it/i.test(winText));
 await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
-// 8. Back to map: level 2 unlocked, stars banked (62*3 = 186)
+// 8. Back to map: window extends after a clear, stars banked (62*3 = 186)
 await clickText("button", "Levels");
 await sleep(500);
 const after = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
-if (after[1] !== false) note("Level 2 not unlocked after clearing level 1.");
+if (after[3] !== false) note("Level 4 not unlocked after clearing level 1 (window should extend).");
 if (!/⭐\s*3\/186/.test(await bodyText())) note("Star total not updated to 3/186.");
 await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
 
