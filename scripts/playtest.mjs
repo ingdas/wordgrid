@@ -14,12 +14,12 @@ const log = (...a) => console.log("•", ...a);
 const issues = [];
 const note = (s) => { issues.push(s); log("ISSUE:", s); };
 
-// Level 1 is the STAR puzzle; its four spoke-pairs (the link STAR is hidden):
-const PAIRS = [
-  ["ICON", "LEGEND"],
-  ["MOON", "COMET"],
-  ["JELLY", "CAT"],
-  ["HEART", "ARROW"],
+// Level 1 is the STAR puzzle; its four spoke-groups (the link STAR is hidden):
+const GROUPS = [
+  ["ICON", "LEGEND", "IDOL"],
+  ["MOON", "COMET", "PLANET"],
+  ["JELLY", "CAT", "SWORD"],
+  ["HEART", "ARROW", "CROSS"],
 ];
 
 const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
@@ -47,9 +47,9 @@ async function clickWord(w) {
   }
   return false;
 }
-async function solvePair(pair) {
-  for (const w of pair) await clickWord(w);
-  await clickText("button", "Submit pair");
+async function solveGroup(group) {
+  for (const w of group) await clickWord(w);
+  await clickText("button", "Submit group");
   await sleep(500);
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
@@ -84,13 +84,13 @@ log("link word hidden mid-game:", !/\bSTAR\b/.test(midText));
 if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during play.");
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
-// 5. Solve pairs (coach auto-advances after the first; pair 4 auto-solves)
-await solvePair(PAIRS[0]);
+// 5. Solve groups (coach auto-advances after the first; group 4 auto-solves)
+await solveGroup(GROUPS[0]);
 await clickText("button", "Let's go"); // dismiss coach step 2
 await sleep(200);
-await solvePair(PAIRS[1]);
-await solvePair(PAIRS[2]);
-await sleep(1200); // auto-solve final pair → guessing
+await solveGroup(GROUPS[1]);
+await solveGroup(GROUPS[2]);
+await sleep(1200); // auto-solve final group → guessing
 
 // 6. Guess-the-link finale
 const guessing = /secret word/i.test(await bodyText());

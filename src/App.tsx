@@ -170,14 +170,14 @@ const STEPS = [
   {
     icon: "🔤",
     grad: "from-sky-400 to-cyan-300",
-    title: "Pair up the words",
-    body: "Tap two words that share a theme, then Submit. The hidden link joins them to make a group.",
+    title: "Group the words",
+    body: "Tap three words that share a theme, then Submit. The hidden link joins them to make a group of four.",
   },
   {
     icon: "⭐",
     grad: "from-amber-300 to-orange-400",
     title: "Guess the link, earn stars",
-    body: "Find all four pairs (four mistakes allowed), then guess the secret word that links them all.",
+    body: "Find all four groups (four mistakes allowed), then guess the secret word that links them all.",
   },
 ];
 

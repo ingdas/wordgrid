@@ -1,21 +1,22 @@
-// Each puzzle has 9 words. There are 4 categories to find.
-// Every category contains the SAME shared "pivot" word plus two unique words,
-// so: 1 pivot + (4 x 2) = 9 words total.
+// Each puzzle has 13 words. There are 4 categories to find.
+// Every category contains the SAME hidden "pivot" (link) word plus three unique
+// spoke words, so: 1 pivot + (4 x 3) = 13 words total. The board shows the 12
+// spokes; the pivot stays hidden until the end.
 //
-// The pivot is listed first in `pivot` and is also included implicitly in each
-// category's `members` (we add it at load time so the data stays readable).
+// The pivot is listed in `pivot` and is added to each category's `members` at
+// load time, so the data below stays readable.
 
 export interface RawCategory {
   /** Human-readable theme revealed once solved. */
   name: string;
-  /** The two words unique to this category (the pivot is added automatically). */
-  words: [string, string];
+  /** The three spoke words unique to this category (the pivot is added automatically). */
+  words: [string, string, string];
 }
 
 export interface RawPuzzle {
   id: string;
   title: string;
-  /** The word shared by all four categories. */
+  /** The word shared by all four categories — kept hidden during play. */
   pivot: string;
   categories: [RawCategory, RawCategory, RawCategory, RawCategory];
 }
@@ -26,10 +27,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Star Power",
     pivot: "STAR",
     categories: [
-      { name: "Words for a celebrity", words: ["ICON", "LEGEND"] },
-      { name: "Seen in the night sky", words: ["MOON", "COMET"] },
-      { name: "___ + FISH", words: ["JELLY", "CAT"] },
-      { name: "Symbols & emoji", words: ["HEART", "ARROW"] },
+      { name: "Words for a celebrity", words: ["ICON", "LEGEND", "IDOL"] },
+      { name: "Seen in the night sky", words: ["MOON", "COMET", "PLANET"] },
+      { name: "___ + FISH", words: ["JELLY", "CAT", "SWORD"] },
+      { name: "Symbols & shapes", words: ["HEART", "ARROW", "CROSS"] },
     ],
   },
   {
@@ -37,10 +38,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Rock Solid",
     pivot: "ROCK",
     categories: [
-      { name: "Music genres", words: ["JAZZ", "BLUES"] },
-      { name: "To move back and forth", words: ["SWAY", "SWING"] },
-      { name: "Bits of stone", words: ["PEBBLE", "BOULDER"] },
-      { name: "Hand game throws", words: ["PAPER", "SCISSORS"] },
+      { name: "Music genres", words: ["JAZZ", "BLUES", "FOLK"] },
+      { name: "To move back and forth", words: ["SWAY", "SWING", "WOBBLE"] },
+      { name: "Bits of stone", words: ["PEBBLE", "BOULDER", "STONE"] },
+      { name: "Hand-game throws", words: ["PAPER", "SCISSORS", "LIZARD"] },
     ],
   },
   {
@@ -48,10 +49,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Spring Loaded",
     pivot: "SPRING",
     categories: [
-      { name: "Seasons", words: ["SUMMER", "WINTER"] },
-      { name: "To leap suddenly", words: ["LEAP", "POUNCE"] },
-      { name: "Sources of water", words: ["WELL", "GEYSER"] },
-      { name: "Mechanical parts", words: ["GEAR", "COIL"] },
+      { name: "Seasons", words: ["SUMMER", "WINTER", "AUTUMN"] },
+      { name: "To leap suddenly", words: ["LEAP", "POUNCE", "BOUND"] },
+      { name: "Sources of water", words: ["WELL", "GEYSER", "FOUNTAIN"] },
+      { name: "Mechanical parts", words: ["GEAR", "COIL", "LEVER"] },
     ],
   },
   {
@@ -59,10 +60,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Light Work",
     pivot: "LIGHT",
     categories: [
-      { name: "Gives off light", words: ["LAMP", "TORCH"] },
-      { name: "Not heavy", words: ["AIRY", "SLIGHT"] },
-      { name: "___ + HOUSE", words: ["GREEN", "WARE"] },
-      { name: "To set ablaze", words: ["IGNITE", "KINDLE"] },
+      { name: "Gives off light", words: ["LAMP", "TORCH", "CANDLE"] },
+      { name: "Not heavy", words: ["AIRY", "SLIGHT", "FLUFFY"] },
+      { name: "___ + HOUSE", words: ["GREEN", "WARE", "POWER"] },
+      { name: "To set ablaze", words: ["IGNITE", "KINDLE", "SPARK"] },
     ],
   },
   {
@@ -70,10 +71,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Bolt Upright",
     pivot: "BOLT",
     categories: [
-      { name: "Hardware bits", words: ["SCREW", "NUT"] },
-      { name: "To flee fast", words: ["DASH", "FLEE"] },
-      { name: "Lightning-related", words: ["FLASH", "THUNDER"] },
-      { name: "Secure a door", words: ["LATCH", "LOCK"] },
+      { name: "Hardware bits", words: ["SCREW", "NUT", "WASHER"] },
+      { name: "To flee fast", words: ["DASH", "FLEE", "SCRAM"] },
+      { name: "Lightning-related", words: ["FLASH", "THUNDER", "STORM"] },
+      { name: "Secure a door", words: ["LATCH", "LOCK", "BAR"] },
     ],
   },
   {
@@ -81,10 +82,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "On Fire",
     pivot: "FIRE",
     categories: [
-      { name: "Dismiss from a job", words: ["SACK", "CAN"] },
-      { name: "Discharge a weapon", words: ["SHOOT", "BLAST"] },
-      { name: "Burning hot things", words: ["FLAME", "EMBER"] },
-      { name: "Burning enthusiasm", words: ["PASSION", "ZEAL"] },
+      { name: "Dismiss from a job", words: ["SACK", "CAN", "AXE"] },
+      { name: "Discharge a weapon", words: ["SHOOT", "BLAST", "LAUNCH"] },
+      { name: "Burning hot things", words: ["FLAME", "EMBER", "BLAZE"] },
+      { name: "Burning enthusiasm", words: ["PASSION", "ZEAL", "ARDOR"] },
     ],
   },
   {
@@ -92,10 +93,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Sales Pitch",
     pivot: "PITCH",
     categories: [
-      { name: "Throw in baseball", words: ["THROW", "HURL"] },
-      { name: "A sales spiel", words: ["SPIEL", "PROPOSAL"] },
-      { name: "Musical highness", words: ["TONE", "KEY"] },
-      { name: "Sports playing field", words: ["FIELD", "COURT"] },
+      { name: "Throw in baseball", words: ["THROW", "HURL", "TOSS"] },
+      { name: "A sales spiel", words: ["SPIEL", "PROPOSAL", "PLUG"] },
+      { name: "Musical highness", words: ["TONE", "KEY", "NOTE"] },
+      { name: "Sports playing area", words: ["FIELD", "COURT", "GROUND"] },
     ],
   },
   {
@@ -103,10 +104,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Packed Trunk",
     pivot: "TRUNK",
     categories: [
-      { name: "Parts of a tree", words: ["BARK", "ROOT"] },
-      { name: "Car body parts", words: ["HOOD", "FENDER"] },
-      { name: "On an elephant", words: ["TUSK", "TAIL"] },
-      { name: "Storage boxes", words: ["CHEST", "CRATE"] },
+      { name: "Parts of a tree", words: ["BARK", "ROOT", "LIMB"] },
+      { name: "Car body parts", words: ["HOOD", "FENDER", "BUMPER"] },
+      { name: "On an elephant", words: ["TUSK", "TAIL", "EARS"] },
+      { name: "Storage boxes", words: ["CHEST", "CRATE", "COFFER"] },
     ],
   },
   {
@@ -114,10 +115,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Palm Reading",
     pivot: "PALM",
     categories: [
-      { name: "Parts of the hand", words: ["WRIST", "KNUCKLE"] },
-      { name: "Kinds of tree", words: ["MAPLE", "BIRCH"] },
-      { name: "To conceal in hand", words: ["HIDE", "STASH"] },
-      { name: "Palm ___ (resort towns)", words: ["SPRINGS", "BEACH"] },
+      { name: "Parts of the hand", words: ["WRIST", "KNUCKLE", "THUMB"] },
+      { name: "Kinds of tree", words: ["MAPLE", "BIRCH", "OAK"] },
+      { name: "To conceal in hand", words: ["HIDE", "STASH", "POCKET"] },
+      { name: "Palm ___", words: ["SPRINGS", "BEACH", "SUNDAY"] },
     ],
   },
   {
@@ -125,10 +126,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Tipping the Scale",
     pivot: "SCALE",
     categories: [
-      { name: "Music elements", words: ["OCTAVE", "CHORD"] },
-      { name: "Fish features", words: ["FIN", "GILL"] },
-      { name: "To climb up", words: ["CLIMB", "ASCEND"] },
-      { name: "Weighing instruments", words: ["BALANCE", "METER"] },
+      { name: "Music elements", words: ["OCTAVE", "CHORD", "KEY"] },
+      { name: "Fish features", words: ["FIN", "GILL", "TAIL"] },
+      { name: "To climb up", words: ["CLIMB", "ASCEND", "MOUNT"] },
+      { name: "Weighing instruments", words: ["BALANCE", "METER", "GAUGE"] },
     ],
   },
   {
@@ -136,10 +137,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Worse Than Bite",
     pivot: "BARK",
     categories: [
-      { name: "Dog sounds", words: ["WOOF", "GROWL"] },
-      { name: "Found on a tree", words: ["SAP", "RING"] },
-      { name: "To shout harshly", words: ["SHOUT", "SNAP"] },
-      { name: "Sailing vessels", words: ["SLOOP", "KETCH"] },
+      { name: "Dog sounds", words: ["WOOF", "GROWL", "YAP"] },
+      { name: "Found on a tree", words: ["SAP", "RING", "KNOT"] },
+      { name: "To shout harshly", words: ["SHOUT", "SNAP", "SNARL"] },
+      { name: "Sailing vessels", words: ["SLOOP", "KETCH", "YAWL"] },
     ],
   },
   {
@@ -147,10 +148,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Nailed It",
     pivot: "NAIL",
     categories: [
-      { name: "Carpentry hardware", words: ["SCREW", "TACK"] },
-      { name: "Parts of a finger", words: ["CUTICLE", "KNUCKLE"] },
-      { name: "To do perfectly", words: ["ACE", "CRUSH"] },
-      { name: "To arrest", words: ["NAB", "BUST"] },
+      { name: "Carpentry hardware", words: ["SCREW", "TACK", "BRAD"] },
+      { name: "Parts of a finger", words: ["CUTICLE", "KNUCKLE", "TIP"] },
+      { name: "To do perfectly", words: ["ACE", "CRUSH", "MASTER"] },
+      { name: "To arrest", words: ["NAB", "BUST", "COLLAR"] },
     ],
   },
   {
@@ -158,10 +159,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Ring of Truth",
     pivot: "RING",
     categories: [
-      { name: "Fighting venues", words: ["ARENA", "OCTAGON"] },
-      { name: "Worn as jewelry", words: ["NECKLACE", "BRACELET"] },
-      { name: "To telephone", words: ["CALL", "DIAL"] },
-      { name: "Circular shapes", words: ["HOOP", "LOOP"] },
+      { name: "Fighting venues", words: ["ARENA", "OCTAGON", "PIT"] },
+      { name: "Worn as jewelry", words: ["NECKLACE", "BRACELET", "ANKLET"] },
+      { name: "To telephone", words: ["CALL", "DIAL", "BUZZ"] },
+      { name: "Circular shapes", words: ["HOOP", "LOOP", "BAND"] },
     ],
   },
   {
@@ -169,10 +170,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Mint Condition",
     pivot: "MINT",
     categories: [
-      { name: "Cooking herbs", words: ["BASIL", "THYME"] },
-      { name: "To make money", words: ["COIN", "STAMP"] },
-      { name: "Sweet treats", words: ["TOFFEE", "FUDGE"] },
-      { name: "Brand-new", words: ["PRISTINE", "FRESH"] },
+      { name: "Cooking herbs", words: ["BASIL", "THYME", "SAGE"] },
+      { name: "To make money", words: ["COIN", "STAMP", "PRINT"] },
+      { name: "Sweet treats", words: ["TOFFEE", "FUDGE", "CARAMEL"] },
+      { name: "Brand-new", words: ["PRISTINE", "FRESH", "NEW"] },
     ],
   },
   {
@@ -180,10 +181,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Bank On It",
     pivot: "BANK",
     categories: [
-      { name: "Found in a bank", words: ["VAULT", "ATM"] },
-      { name: "Edge of a river", words: ["SHORE", "LEVEE"] },
-      { name: "To rely on", words: ["COUNT", "DEPEND"] },
-      { name: "To tilt while turning", words: ["TILT", "ROLL"] },
+      { name: "Found in a bank", words: ["VAULT", "ATM", "TELLER"] },
+      { name: "Edge of a river", words: ["SHORE", "LEVEE", "EDGE"] },
+      { name: "To rely on", words: ["COUNT", "DEPEND", "RELY"] },
+      { name: "To tilt while turning", words: ["TILT", "ROLL", "LEAN"] },
     ],
   },
   {
@@ -191,10 +192,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Check, Please",
     pivot: "CHECK",
     categories: [
-      { name: "Chess terms", words: ["MATE", "CASTLE"] },
-      { name: "To verify", words: ["VERIFY", "INSPECT"] },
-      { name: "Restaurant payment", words: ["BILL", "TAB"] },
-      { name: "Fabric patterns", words: ["PLAID", "STRIPE"] },
+      { name: "Chess terms", words: ["MATE", "CASTLE", "ROOK"] },
+      { name: "To verify", words: ["VERIFY", "INSPECT", "CONFIRM"] },
+      { name: "Restaurant payment", words: ["BILL", "TAB", "TOTAL"] },
+      { name: "Fabric patterns", words: ["PLAID", "STRIPE", "GINGHAM"] },
     ],
   },
   {
@@ -202,10 +203,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Clean Sheet",
     pivot: "SHEET",
     categories: [
-      { name: "Bedding", words: ["PILLOW", "DUVET"] },
-      { name: "Paper items", words: ["PAGE", "LEAF"] },
-      { name: "Music notation", words: ["NOTE", "STAFF"] },
-      { name: "A ___ of ice", words: ["SLAB", "LAYER"] },
+      { name: "Bedding", words: ["PILLOW", "DUVET", "QUILT"] },
+      { name: "Paper items", words: ["PAGE", "LEAF", "REAM"] },
+      { name: "Music notation", words: ["NOTE", "STAFF", "CLEF"] },
+      { name: "A ___ of ice", words: ["SLAB", "LAYER", "PANE"] },
     ],
   },
   {
@@ -213,10 +214,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Bug Hunt",
     pivot: "BUG",
     categories: [
-      { name: "Creepy-crawlies", words: ["BEETLE", "ANT"] },
-      { name: "To pester", words: ["PESTER", "ANNOY"] },
-      { name: "Software faults", words: ["GLITCH", "ERROR"] },
-      { name: "Spy gear", words: ["WIRE", "TAP"] },
+      { name: "Creepy-crawlies", words: ["BEETLE", "ANT", "FLEA"] },
+      { name: "To pester", words: ["PESTER", "ANNOY", "NAG"] },
+      { name: "Software faults", words: ["GLITCH", "ERROR", "CRASH"] },
+      { name: "Spy gear", words: ["WIRE", "TAP", "MIC"] },
     ],
   },
   {
@@ -224,10 +225,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "In a Jam",
     pivot: "JAM",
     categories: [
-      { name: "Spread on toast", words: ["JELLY", "BUTTER"] },
-      { name: "A music session", words: ["GIG", "SET"] },
-      { name: "To block up", words: ["CLOG", "WEDGE"] },
-      { name: "A tough spot", words: ["PICKLE", "BIND"] },
+      { name: "Spread on toast", words: ["JELLY", "BUTTER", "MARMALADE"] },
+      { name: "A music get-together", words: ["GIG", "SET", "SHOW"] },
+      { name: "To block up", words: ["CLOG", "WEDGE", "STUFF"] },
+      { name: "A tough spot", words: ["PICKLE", "BIND", "FIX"] },
     ],
   },
   {
@@ -235,10 +236,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Turn the Table",
     pivot: "TABLE",
     categories: [
-      { name: "Household furniture", words: ["CHAIR", "DESK"] },
-      { name: "Ways to show data", words: ["CHART", "GRAPH"] },
-      { name: "To postpone", words: ["SHELVE", "DEFER"] },
-      { name: "Billiards gear", words: ["CUE", "RACK"] },
+      { name: "Household furniture", words: ["CHAIR", "DESK", "STOOL"] },
+      { name: "Ways to show data", words: ["CHART", "GRAPH", "GRID"] },
+      { name: "To postpone", words: ["SHELVE", "DEFER", "DELAY"] },
+      { name: "Billiards gear", words: ["CUE", "RACK", "CHALK"] },
     ],
   },
   {
@@ -246,10 +247,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Drop It",
     pivot: "DROP",
     categories: [
-      { name: "Bit of liquid", words: ["DROPLET", "BEAD"] },
-      { name: "To fall sharply", words: ["PLUNGE", "SINK"] },
-      { name: "To abandon", words: ["QUIT", "DITCH"] },
-      { name: "Hard candy", words: ["TOFFEE", "LOZENGE"] },
+      { name: "Bit of liquid", words: ["DROPLET", "BEAD", "DRIP"] },
+      { name: "To fall sharply", words: ["PLUNGE", "SINK", "DIVE"] },
+      { name: "To abandon", words: ["QUIT", "DITCH", "SCRAP"] },
+      { name: "Hard candy", words: ["TOFFEE", "LOZENGE", "PASTILLE"] },
     ],
   },
   {
@@ -257,10 +258,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Pound for Pound",
     pivot: "POUND",
     categories: [
-      { name: "Units of weight", words: ["OUNCE", "GRAM"] },
-      { name: "World currencies", words: ["EURO", "YEN"] },
-      { name: "To hit hard", words: ["HAMMER", "BEAT"] },
-      { name: "Home for strays", words: ["SHELTER", "KENNEL"] },
+      { name: "Units of weight", words: ["OUNCE", "GRAM", "TON"] },
+      { name: "World currencies", words: ["EURO", "YEN", "PESO"] },
+      { name: "To hit hard", words: ["HAMMER", "BEAT", "BASH"] },
+      { name: "Home for strays", words: ["SHELTER", "KENNEL", "REFUGE"] },
     ],
   },
   {
@@ -268,10 +269,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Under a Spell",
     pivot: "SPELL",
     categories: [
-      { name: "Witchcraft", words: ["CHARM", "HEX"] },
-      { name: "A period of time", words: ["STINT", "STRETCH"] },
-      { name: "Heard at a spelling bee", words: ["LETTER", "VOWEL"] },
-      { name: "To relieve someone", words: ["RELIEVE", "REPLACE"] },
+      { name: "Witchcraft", words: ["CHARM", "HEX", "CURSE"] },
+      { name: "A period of time", words: ["STINT", "STRETCH", "SPAN"] },
+      { name: "Heard at a spelling bee", words: ["LETTER", "VOWEL", "WORD"] },
+      { name: "To relieve someone", words: ["RELIEVE", "REPLACE", "COVER"] },
     ],
   },
   {
@@ -279,10 +280,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Stick With It",
     pivot: "STICK",
     categories: [
-      { name: "To adhere", words: ["CLING", "ADHERE"] },
-      { name: "Bits of wood", words: ["TWIG", "BRANCH"] },
-      { name: "Swung in sport", words: ["BAT", "CLUB"] },
-      { name: "To poke", words: ["JAB", "POKE"] },
+      { name: "To adhere", words: ["CLING", "ADHERE", "BOND"] },
+      { name: "Bits of wood", words: ["TWIG", "BRANCH", "LOG"] },
+      { name: "Swung in sport", words: ["BAT", "CLUB", "RACKET"] },
+      { name: "To poke", words: ["JAB", "POKE", "PROD"] },
     ],
   },
   {
@@ -290,10 +291,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Cap It Off",
     pivot: "CAP",
     categories: [
-      { name: "Headwear", words: ["HAT", "BERET"] },
-      { name: "Bottle closures", words: ["LID", "CORK"] },
-      { name: "An upper limit", words: ["LIMIT", "CEILING"] },
-      { name: "Parts of a mushroom", words: ["STEM", "GILL"] },
+      { name: "Headwear", words: ["HAT", "BERET", "BEANIE"] },
+      { name: "Bottle closures", words: ["LID", "CORK", "STOPPER"] },
+      { name: "An upper limit", words: ["LIMIT", "CEILING", "MAX"] },
+      { name: "Parts of a mushroom", words: ["STEM", "GILL", "SPORE"] },
     ],
   },
   {
@@ -301,10 +302,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "On a Roll",
     pivot: "ROLL",
     categories: [
-      { name: "From the bakery", words: ["BAGEL", "BUN"] },
-      { name: "To rotate", words: ["SPIN", "TUMBLE"] },
-      { name: "A winning streak", words: ["STREAK", "RUN"] },
-      { name: "An attendance list", words: ["REGISTER", "ROSTER"] },
+      { name: "From the bakery", words: ["BAGEL", "BUN", "LOAF"] },
+      { name: "To rotate", words: ["SPIN", "TUMBLE", "REVOLVE"] },
+      { name: "A winning streak", words: ["STREAK", "RUN", "SPREE"] },
+      { name: "An attendance list", words: ["REGISTER", "ROSTER", "LIST"] },
     ],
   },
   {
@@ -312,10 +313,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Make Waves",
     pivot: "WAVE",
     categories: [
-      { name: "At the seaside", words: ["TIDE", "SURF"] },
-      { name: "Hand gestures", words: ["SALUTE", "NOD"] },
-      { name: "A ___ of heat", words: ["SURGE", "SPELL"] },
-      { name: "Hair textures", words: ["CURL", "FRIZZ"] },
+      { name: "At the seaside", words: ["TIDE", "SURF", "SWELL"] },
+      { name: "Gestures", words: ["SALUTE", "NOD", "BECKON"] },
+      { name: "A ___ of heat", words: ["SURGE", "SPELL", "BLAST"] },
+      { name: "Hair textures", words: ["CURL", "FRIZZ", "KINK"] },
     ],
   },
   {
@@ -323,10 +324,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Building Block",
     pivot: "BLOCK",
     categories: [
-      { name: "To obstruct", words: ["HINDER", "STOP"] },
-      { name: "Parts of a city", words: ["STREET", "AVENUE"] },
-      { name: "Children's toys", words: ["LEGO", "DOLL"] },
-      { name: "Solid chunks", words: ["SLAB", "CUBE"] },
+      { name: "To obstruct", words: ["HINDER", "STOP", "BAR"] },
+      { name: "Parts of a city", words: ["STREET", "AVENUE", "LANE"] },
+      { name: "Children's toys", words: ["LEGO", "DOLL", "BRICK"] },
+      { name: "Solid chunks", words: ["SLAB", "CUBE", "LUMP"] },
     ],
   },
   {
@@ -334,10 +335,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Press On",
     pivot: "PRESS",
     categories: [
-      { name: "The news media", words: ["MEDIA", "NEWS"] },
-      { name: "To push", words: ["PUSH", "SHOVE"] },
-      { name: "To flatten with heat", words: ["IRON", "FLATTEN"] },
-      { name: "Weightlifting moves", words: ["CURL", "SQUAT"] },
+      { name: "The news media", words: ["MEDIA", "NEWS", "PAPERS"] },
+      { name: "To push", words: ["PUSH", "SHOVE", "THRUST"] },
+      { name: "To flatten with heat", words: ["IRON", "FLATTEN", "STEAM"] },
+      { name: "Weightlifting moves", words: ["CURL", "SQUAT", "LIFT"] },
     ],
   },
   {
@@ -345,10 +346,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Lose the Plot",
     pivot: "PLOT",
     categories: [
-      { name: "Story elements", words: ["THEME", "CHARACTER"] },
-      { name: "Pieces of land", words: ["LOT", "PARCEL"] },
-      { name: "To scheme", words: ["SCHEME", "CONSPIRE"] },
-      { name: "To chart points", words: ["GRAPH", "MAP"] },
+      { name: "Story elements", words: ["THEME", "CHARACTER", "TWIST"] },
+      { name: "Pieces of land", words: ["LOT", "PARCEL", "TRACT"] },
+      { name: "To scheme", words: ["SCHEME", "CONSPIRE", "PLAN"] },
+      { name: "To chart points", words: ["GRAPH", "MAP", "CHART"] },
     ],
   },
   {
@@ -356,10 +357,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Crash Course",
     pivot: "CRASH",
     categories: [
-      { name: "Collisions", words: ["WRECK", "SMASH"] },
-      { name: "Computer failures", words: ["FREEZE", "HANG"] },
-      { name: "To barge in", words: ["INTRUDE", "BARGE"] },
-      { name: "A market drop", words: ["SLUMP", "PLUNGE"] },
+      { name: "Collisions", words: ["WRECK", "SMASH", "PILEUP"] },
+      { name: "Computer failures", words: ["FREEZE", "HANG", "GLITCH"] },
+      { name: "To barge in", words: ["INTRUDE", "BARGE", "GATECRASH"] },
+      { name: "A market drop", words: ["SLUMP", "PLUNGE", "DIVE"] },
     ],
   },
   {
@@ -367,10 +368,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Hold Court",
     pivot: "COURT",
     categories: [
-      { name: "Places you play", words: ["RINK", "PITCH"] },
-      { name: "Royal trappings", words: ["THRONE", "CROWN"] },
-      { name: "To woo", words: ["WOO", "PURSUE"] },
-      { name: "Found in a courtroom", words: ["JUDGE", "JURY"] },
+      { name: "Places you play", words: ["RINK", "PITCH", "FIELD"] },
+      { name: "Royal trappings", words: ["THRONE", "CROWN", "SCEPTER"] },
+      { name: "To woo", words: ["WOO", "PURSUE", "ROMANCE"] },
+      { name: "Found in a courtroom", words: ["JUDGE", "JURY", "BENCH"] },
     ],
   },
   {
@@ -378,10 +379,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Chip In",
     pivot: "CHIP",
     categories: [
-      { name: "Crunchy snacks", words: ["CRISP", "PRETZEL"] },
-      { name: "Casino tokens", words: ["TOKEN", "COUNTER"] },
-      { name: "Computer guts", words: ["PROCESSOR", "CIRCUIT"] },
-      { name: "Small damage", words: ["CRACK", "NICK"] },
+      { name: "Crunchy snacks", words: ["CRISP", "PRETZEL", "CRACKER"] },
+      { name: "Casino tokens", words: ["TOKEN", "COUNTER", "MARKER"] },
+      { name: "Computer guts", words: ["PROCESSOR", "CIRCUIT", "TRANSISTOR"] },
+      { name: "Small damage", words: ["CRACK", "NICK", "DENT"] },
     ],
   },
   {
@@ -389,10 +390,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Sealed Tight",
     pivot: "SEAL",
     categories: [
-      { name: "Arctic animals", words: ["WALRUS", "NARWHAL"] },
-      { name: "To close up", words: ["SHUT", "CLOSE"] },
-      { name: "Official marks", words: ["STAMP", "CREST"] },
-      { name: "Elite soldiers", words: ["RANGER", "MARINE"] },
+      { name: "Marine animals", words: ["WALRUS", "NARWHAL", "ORCA"] },
+      { name: "To close up", words: ["SHUT", "CLOSE", "FASTEN"] },
+      { name: "Official marks", words: ["STAMP", "CREST", "EMBLEM"] },
+      { name: "Elite soldiers", words: ["RANGER", "MARINE", "COMMANDO"] },
     ],
   },
   {
@@ -400,10 +401,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Off the Bat",
     pivot: "BAT",
     categories: [
-      { name: "Creatures of the night", words: ["OWL", "MOTH"] },
-      { name: "Swung at a ball", words: ["RACKET", "CLUB"] },
-      { name: "To flutter", words: ["FLUTTER", "BLINK"] },
-      { name: "Cricket terms", words: ["WICKET", "BOWLER"] },
+      { name: "Creatures of the night", words: ["OWL", "MOTH", "RACCOON"] },
+      { name: "Swung at a ball", words: ["RACKET", "CLUB", "PADDLE"] },
+      { name: "To flutter", words: ["FLUTTER", "BLINK", "WINK"] },
+      { name: "Cricket terms", words: ["WICKET", "BOWLER", "CREASE"] },
     ],
   },
   {
@@ -411,10 +412,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Deck the Halls",
     pivot: "DECK",
     categories: [
-      { name: "Parts of a ship", words: ["HULL", "MAST"] },
-      { name: "In a card game", words: ["SUIT", "ACE"] },
-      { name: "To punch out", words: ["SLUG", "FLOOR"] },
-      { name: "Outdoor spaces", words: ["PATIO", "PORCH"] },
+      { name: "Parts of a ship", words: ["HULL", "MAST", "BOW"] },
+      { name: "In a card game", words: ["SUIT", "ACE", "JOKER"] },
+      { name: "To punch out", words: ["SLUG", "FLOOR", "CLOCK"] },
+      { name: "Outdoor spaces", words: ["PATIO", "PORCH", "VERANDA"] },
     ],
   },
   {
@@ -422,10 +423,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Take Note",
     pivot: "NOTE",
     categories: [
-      { name: "Music symbols", words: ["REST", "CLEF"] },
-      { name: "Quick messages", words: ["MEMO", "LETTER"] },
-      { name: "Paper money", words: ["BILL", "CASH"] },
-      { name: "To observe", words: ["NOTICE", "OBSERVE"] },
+      { name: "Music symbols", words: ["REST", "CLEF", "SHARP"] },
+      { name: "Quick messages", words: ["MEMO", "LETTER", "REMINDER"] },
+      { name: "Paper money", words: ["BILL", "CASH", "TENNER"] },
+      { name: "To observe", words: ["NOTICE", "OBSERVE", "REMARK"] },
     ],
   },
   {
@@ -433,10 +434,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Walk in the Park",
     pivot: "PARK",
     categories: [
-      { name: "Green spaces", words: ["GARDEN", "MEADOW"] },
-      { name: "To stop a car", words: ["STOP", "HALT"] },
-      { name: "Amusement ___", words: ["FAIR", "CARNIVAL"] },
-      { name: "Baseball venues", words: ["FIELD", "STADIUM"] },
+      { name: "Green spaces", words: ["GARDEN", "MEADOW", "COMMON"] },
+      { name: "To stop a car", words: ["STOP", "HALT", "IDLE"] },
+      { name: "Amusement ___", words: ["FAIR", "CARNIVAL", "ARCADE"] },
+      { name: "Baseball venues", words: ["FIELD", "STADIUM", "DIAMOND"] },
     ],
   },
   {
@@ -444,10 +445,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Bait and Switch",
     pivot: "SWITCH",
     categories: [
-      { name: "To swap", words: ["SWAP", "TRADE"] },
-      { name: "Electrical controls", words: ["DIMMER", "OUTLET"] },
-      { name: "Game consoles", words: ["XBOX", "WII"] },
-      { name: "To whip", words: ["LASH", "CANE"] },
+      { name: "To swap", words: ["SWAP", "TRADE", "EXCHANGE"] },
+      { name: "Electrical controls", words: ["DIMMER", "OUTLET", "SOCKET"] },
+      { name: "Game consoles", words: ["XBOX", "WII", "ATARI"] },
+      { name: "To whip", words: ["LASH", "CANE", "FLOG"] },
     ],
   },
   {
@@ -455,10 +456,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Pull Strings",
     pivot: "STRING",
     categories: [
-      { name: "On a guitar", words: ["FRET", "PICK"] },
-      { name: "To deceive", words: ["FOOL", "TRICK"] },
-      { name: "Things you tie", words: ["ROPE", "CORD"] },
-      { name: "A series of", words: ["CHAIN", "SEQUENCE"] },
+      { name: "On a guitar", words: ["FRET", "PICK", "NECK"] },
+      { name: "To deceive", words: ["FOOL", "TRICK", "DUPE"] },
+      { name: "Things you tie", words: ["ROPE", "CORD", "TWINE"] },
+      { name: "A series of", words: ["CHAIN", "SEQUENCE", "SUCCESSION"] },
     ],
   },
   {
@@ -466,10 +467,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Stamp of Approval",
     pivot: "STAMP",
     categories: [
-      { name: "On an envelope", words: ["SENDER", "ADDRESS"] },
-      { name: "To press with a foot", words: ["STOMP", "TRAMPLE"] },
-      { name: "Collector's hobbies", words: ["COIN", "CARD"] },
-      { name: "To wipe out", words: ["QUASH", "CRUSH"] },
+      { name: "On an envelope", words: ["SENDER", "ADDRESS", "POSTMARK"] },
+      { name: "To press with a foot", words: ["STOMP", "TRAMPLE", "TREAD"] },
+      { name: "Collector's hobbies", words: ["COIN", "CARD", "COMIC"] },
+      { name: "To wipe out", words: ["QUASH", "CRUSH", "ERADICATE"] },
     ],
   },
   {
@@ -477,10 +478,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Make the Grade",
     pivot: "GRADE",
     categories: [
-      { name: "School marks", words: ["MARK", "SCORE"] },
-      { name: "A slope", words: ["SLOPE", "INCLINE"] },
-      { name: "To rank", words: ["RANK", "RATE"] },
-      { name: "Quality levels", words: ["TIER", "CLASS"] },
+      { name: "School marks", words: ["MARK", "SCORE", "RESULT"] },
+      { name: "A slope", words: ["SLOPE", "INCLINE", "GRADIENT"] },
+      { name: "To rank", words: ["RANK", "RATE", "SORT"] },
+      { name: "Quality levels", words: ["TIER", "CLASS", "BRACKET"] },
     ],
   },
   {
@@ -488,10 +489,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Small Fry",
     pivot: "FRY",
     categories: [
-      { name: "Cooking methods", words: ["GRILL", "ROAST"] },
-      { name: "Fast-food orders", words: ["NUGGET", "SHAKE"] },
-      { name: "A youngster", words: ["KID", "TOT"] },
-      { name: "To burn out a circuit", words: ["BLOW", "SHORT"] },
+      { name: "Cooking methods", words: ["GRILL", "ROAST", "SAUTE"] },
+      { name: "Fast-food orders", words: ["NUGGET", "SHAKE", "BURGER"] },
+      { name: "A youngster", words: ["KID", "TOT", "TYKE"] },
+      { name: "To burn out a circuit", words: ["BLOW", "SHORT", "ZAP"] },
     ],
   },
   {
@@ -499,10 +500,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Join the Club",
     pivot: "CLUB",
     categories: [
-      { name: "Places to dance", words: ["DISCO", "LOUNGE"] },
-      { name: "Card suits", words: ["HEART", "SPADE"] },
-      { name: "Golf gear", words: ["IRON", "PUTTER"] },
-      { name: "Groups you join", words: ["GUILD", "SOCIETY"] },
+      { name: "Places to dance", words: ["DISCO", "LOUNGE", "VENUE"] },
+      { name: "Card suits", words: ["HEART", "SPADE", "DIAMOND"] },
+      { name: "Golf gear", words: ["IRON", "PUTTER", "WEDGE"] },
+      { name: "Groups you join", words: ["GUILD", "SOCIETY", "LEAGUE"] },
     ],
   },
   {
@@ -510,10 +511,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Perfect Match",
     pivot: "MATCH",
     categories: [
-      { name: "To correspond", words: ["PAIR", "FIT"] },
-      { name: "A sporting contest", words: ["BOUT", "GAME"] },
-      { name: "Lights a fire", words: ["LIGHTER", "FLINT"] },
-      { name: "A romantic pairing", words: ["DATE", "COUPLE"] },
+      { name: "To correspond", words: ["PAIR", "FIT", "ALIGN"] },
+      { name: "A sporting contest", words: ["BOUT", "GAME", "DUEL"] },
+      { name: "Lights a fire", words: ["LIGHTER", "FLINT", "KINDLING"] },
+      { name: "A romantic pairing", words: ["DATE", "COUPLE", "ITEM"] },
     ],
   },
   {
@@ -521,10 +522,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Last Post",
     pivot: "POST",
     categories: [
-      { name: "Mail delivery", words: ["MAIL", "PARCEL"] },
-      { name: "Upright supports", words: ["PILLAR", "COLUMN"] },
-      { name: "To publish online", words: ["TWEET", "SHARE"] },
-      { name: "A job or role", words: ["ROLE", "JOB"] },
+      { name: "Mail delivery", words: ["MAIL", "PARCEL", "LETTER"] },
+      { name: "Upright supports", words: ["PILLAR", "COLUMN", "POLE"] },
+      { name: "To publish online", words: ["TWEET", "SHARE", "UPLOAD"] },
+      { name: "A job or role", words: ["ROLE", "JOB", "POSITION"] },
     ],
   },
   {
@@ -532,10 +533,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Tank Up",
     pivot: "TANK",
     categories: [
-      { name: "Armored vehicles", words: ["JEEP", "HUMVEE"] },
-      { name: "Holds liquid", words: ["BARREL", "VAT"] },
-      { name: "To fail badly", words: ["FLOP", "BOMB"] },
-      { name: "Sleeveless tops", words: ["VEST", "CAMI"] },
+      { name: "Armored vehicles", words: ["JEEP", "HUMVEE", "APC"] },
+      { name: "Holds liquid", words: ["BARREL", "VAT", "CISTERN"] },
+      { name: "To fail badly", words: ["FLOP", "BOMB", "FLUNK"] },
+      { name: "Sleeveless tops", words: ["VEST", "CAMI", "HALTER"] },
     ],
   },
   {
@@ -543,10 +544,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Big Break",
     pivot: "BREAK",
     categories: [
-      { name: "To shatter", words: ["SNAP", "CRACK"] },
-      { name: "A short rest", words: ["PAUSE", "RECESS"] },
-      { name: "A lucky chance", words: ["CHANCE", "SHOT"] },
-      { name: "To tame a horse", words: ["TAME", "TRAIN"] },
+      { name: "To shatter", words: ["SNAP", "CRACK", "SHATTER"] },
+      { name: "A short rest", words: ["PAUSE", "RECESS", "RESPITE"] },
+      { name: "A lucky chance", words: ["CHANCE", "SHOT", "OPENING"] },
+      { name: "To tame a horse", words: ["TAME", "TRAIN", "BRIDLE"] },
     ],
   },
   {
@@ -554,10 +555,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Forge Ahead",
     pivot: "FORGE",
     categories: [
-      { name: "A blacksmith's kit", words: ["ANVIL", "BELLOWS"] },
-      { name: "To counterfeit", words: ["FAKE", "COPY"] },
-      { name: "To push forward", words: ["ADVANCE", "PROGRESS"] },
-      { name: "To shape", words: ["SHAPE", "MOLD"] },
+      { name: "A blacksmith's kit", words: ["ANVIL", "BELLOWS", "HAMMER"] },
+      { name: "To counterfeit", words: ["FAKE", "COPY", "FALSIFY"] },
+      { name: "To push forward", words: ["ADVANCE", "PROGRESS", "PRESS"] },
+      { name: "To shape metal", words: ["SHAPE", "MOLD", "FORM"] },
     ],
   },
   {
@@ -565,10 +566,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Raise a Glass",
     pivot: "GLASS",
     categories: [
-      { name: "Drinkware", words: ["MUG", "TUMBLER"] },
-      { name: "In a window", words: ["PANE", "FRAME"] },
-      { name: "Vision aids", words: ["LENS", "SPECS"] },
-      { name: "Fragile materials", words: ["CRYSTAL", "CERAMIC"] },
+      { name: "Drinkware", words: ["MUG", "TUMBLER", "GOBLET"] },
+      { name: "In a window", words: ["PANE", "FRAME", "SILL"] },
+      { name: "Vision aids", words: ["LENS", "SPECS", "MONOCLE"] },
+      { name: "Fragile materials", words: ["CRYSTAL", "CERAMIC", "PORCELAIN"] },
     ],
   },
   {
@@ -576,10 +577,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Pen Pal",
     pivot: "PEN",
     categories: [
-      { name: "Writing tools", words: ["PENCIL", "MARKER"] },
-      { name: "Animal enclosures", words: ["COOP", "STY"] },
-      { name: "Prison (slang)", words: ["JAIL", "CELL"] },
-      { name: "To compose", words: ["WRITE", "DRAFT"] },
+      { name: "Writing tools", words: ["PENCIL", "MARKER", "CRAYON"] },
+      { name: "Animal enclosures", words: ["COOP", "STY", "CORRAL"] },
+      { name: "Prison (slang)", words: ["JAIL", "CELL", "CLINK"] },
+      { name: "To compose", words: ["WRITE", "DRAFT", "AUTHOR"] },
     ],
   },
   {
@@ -587,10 +588,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Number One Fan",
     pivot: "FAN",
     categories: [
-      { name: "Cooling devices", words: ["BLOWER", "VENT"] },
-      { name: "Devoted followers", words: ["FANATIC", "SUPPORTER"] },
-      { name: "To spread out", words: ["SPREAD", "SPLAY"] },
-      { name: "To stir up flames", words: ["STOKE", "KINDLE"] },
+      { name: "Cooling devices", words: ["BLOWER", "VENT", "COOLER"] },
+      { name: "Devoted followers", words: ["FANATIC", "SUPPORTER", "DEVOTEE"] },
+      { name: "To spread out", words: ["SPREAD", "SPLAY", "UNFURL"] },
+      { name: "To stir up flames", words: ["STOKE", "KINDLE", "FUEL"] },
     ],
   },
   {
@@ -598,10 +599,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Sole Survivor",
     pivot: "SOLE",
     categories: [
-      { name: "Parts of a shoe", words: ["LACE", "TONGUE"] },
-      { name: "Flatfish on the menu", words: ["COD", "HALIBUT"] },
-      { name: "The only one", words: ["ONLY", "LONE"] },
-      { name: "Parts of the foot", words: ["ARCH", "HEEL"] },
+      { name: "Parts of a shoe", words: ["LACE", "TONGUE", "EYELET"] },
+      { name: "Flatfish on the menu", words: ["COD", "HALIBUT", "PLAICE"] },
+      { name: "The only one", words: ["ONLY", "LONE", "SINGLE"] },
+      { name: "Parts of the foot", words: ["ARCH", "HEEL", "INSTEP"] },
     ],
   },
   {
@@ -609,10 +610,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Break the Mold",
     pivot: "MOLD",
     categories: [
-      { name: "Damp growth", words: ["MILDEW", "FUNGUS"] },
-      { name: "To shape", words: ["FORM", "CAST"] },
-      { name: "A casting frame", words: ["DIE", "STENCIL"] },
-      { name: "To influence", words: ["GUIDE", "SHAPE"] },
+      { name: "Damp growth", words: ["MILDEW", "FUNGUS", "SPORE"] },
+      { name: "To shape", words: ["FORM", "CAST", "SCULPT"] },
+      { name: "A casting frame", words: ["DIE", "STENCIL", "TEMPLATE"] },
+      { name: "To influence", words: ["GUIDE", "SHAPE", "STEER"] },
     ],
   },
   {
@@ -620,10 +621,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Pipe Down",
     pivot: "PIPE",
     categories: [
-      { name: "Plumbing parts", words: ["VALVE", "DRAIN"] },
-      { name: "Wind instruments", words: ["FLUTE", "OBOE"] },
-      { name: "To channel along", words: ["FUNNEL", "ROUTE"] },
-      { name: "For smoking", words: ["CIGAR", "VAPE"] },
+      { name: "Plumbing parts", words: ["VALVE", "DRAIN", "SPOUT"] },
+      { name: "Wind instruments", words: ["FLUTE", "OBOE", "CLARINET"] },
+      { name: "To channel along", words: ["FUNNEL", "ROUTE", "DIRECT"] },
+      { name: "For smoking", words: ["CIGAR", "VAPE", "HOOKAH"] },
     ],
   },
   {
@@ -631,10 +632,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Save the Date",
     pivot: "DATE",
     categories: [
-      { name: "Calendar units", words: ["DAY", "MONTH"] },
-      { name: "Dried fruits", words: ["FIG", "RAISIN"] },
-      { name: "A romantic outing", words: ["FLING", "ROMANCE"] },
-      { name: "To find the age of", words: ["AGE", "CARBON"] },
+      { name: "Calendar units", words: ["DAY", "MONTH", "YEAR"] },
+      { name: "Dried fruits", words: ["FIG", "RAISIN", "PRUNE"] },
+      { name: "A romantic outing", words: ["FLING", "ROMANCE", "TRYST"] },
+      { name: "To mark with a date", words: ["MARK", "STAMP", "LABEL"] },
     ],
   },
   {
@@ -642,10 +643,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Cell Block",
     pivot: "CELL",
     categories: [
-      { name: "Body building blocks", words: ["NEURON", "TISSUE"] },
-      { name: "Prison rooms", words: ["CAGE", "DUNGEON"] },
-      { name: "Phone-related", words: ["MOBILE", "PHONE"] },
-      { name: "Power sources", words: ["BATTERY", "ANODE"] },
+      { name: "Body building blocks", words: ["NEURON", "TISSUE", "MEMBRANE"] },
+      { name: "Prison rooms", words: ["CAGE", "DUNGEON", "LOCKUP"] },
+      { name: "Phone-related", words: ["MOBILE", "PHONE", "HANDSET"] },
+      { name: "Power sources", words: ["BATTERY", "ANODE", "CATHODE"] },
     ],
   },
   {
@@ -653,10 +654,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Wishing Well",
     pivot: "WELL",
     categories: [
-      { name: "Water sources", words: ["SPRING", "BORE"] },
-      { name: "In good health", words: ["HEALTHY", "FIT"] },
-      { name: "Oilfield gear", words: ["RIG", "DERRICK"] },
-      { name: "A deep shaft", words: ["SHAFT", "PIT"] },
+      { name: "Water sources", words: ["SPRING", "BORE", "AQUIFER"] },
+      { name: "In good health", words: ["HEALTHY", "FIT", "HALE"] },
+      { name: "Oilfield gear", words: ["RIG", "DERRICK", "PUMP"] },
+      { name: "A deep shaft", words: ["SHAFT", "PIT", "MINE"] },
     ],
   },
   {
@@ -664,10 +665,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Cold Shower",
     pivot: "SHOWER",
     categories: [
-      { name: "Bathroom fixtures", words: ["TUB", "BASIN"] },
-      { name: "Light rain", words: ["DRIZZLE", "SPRINKLE"] },
-      { name: "Celebration parties", words: ["GALA", "BASH"] },
-      { name: "To lavish", words: ["LAVISH", "HEAP"] },
+      { name: "Bathroom fixtures", words: ["TUB", "BASIN", "FAUCET"] },
+      { name: "Light rain", words: ["DRIZZLE", "SPRINKLE", "MIST"] },
+      { name: "Celebration parties", words: ["GALA", "BASH", "FETE"] },
+      { name: "To lavish", words: ["LAVISH", "HEAP", "BESTOW"] },
     ],
   },
   {
@@ -675,10 +676,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Off Track",
     pivot: "TRACK",
     categories: [
-      { name: "Railway parts", words: ["RAIL", "SLEEPER"] },
-      { name: "Songs on an album", words: ["SONG", "TUNE"] },
-      { name: "To follow", words: ["TRACE", "TRAIL"] },
-      { name: "Racing venues", words: ["CIRCUIT", "SPEEDWAY"] },
+      { name: "Railway parts", words: ["RAIL", "SLEEPER", "TIE"] },
+      { name: "Songs on an album", words: ["SONG", "TUNE", "CUT"] },
+      { name: "To follow", words: ["TRACE", "TRAIL", "FOLLOW"] },
+      { name: "Racing venues", words: ["CIRCUIT", "SPEEDWAY", "RACEWAY"] },
     ],
   },
   {
@@ -686,10 +687,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Go Figure",
     pivot: "FIGURE",
     categories: [
-      { name: "Numbers", words: ["DIGIT", "NUMERAL"] },
-      { name: "Body shape", words: ["BUILD", "FRAME"] },
-      { name: "To work out", words: ["SOLVE", "RECKON"] },
-      { name: "Sculpted forms", words: ["STATUE", "FIGURINE"] },
+      { name: "Numbers", words: ["DIGIT", "NUMERAL", "INTEGER"] },
+      { name: "Body shape", words: ["BUILD", "FRAME", "PHYSIQUE"] },
+      { name: "To work out", words: ["SOLVE", "RECKON", "DEDUCE"] },
+      { name: "Sculpted forms", words: ["STATUE", "FIGURINE", "BUST"] },
     ],
   },
   {
@@ -697,10 +698,10 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Brush Off",
     pivot: "BRUSH",
     categories: [
-      { name: "Painting tools", words: ["ROLLER", "PALETTE"] },
-      { name: "Grooming items", words: ["COMB", "RAZOR"] },
-      { name: "Dense shrubs", words: ["THICKET", "SCRUB"] },
-      { name: "To graze lightly", words: ["GRAZE", "SKIM"] },
+      { name: "Painting tools", words: ["ROLLER", "PALETTE", "EASEL"] },
+      { name: "Grooming items", words: ["COMB", "RAZOR", "CLIPPERS"] },
+      { name: "Dense shrubs", words: ["THICKET", "SCRUB", "BRAMBLE"] },
+      { name: "To graze lightly", words: ["GRAZE", "SKIM", "GLANCE"] },
     ],
   },
 ];
@@ -709,9 +710,9 @@ export const PUZZLES: RawPuzzle[] = [
 
 export interface Category {
   name: string;
-  /** All three member words including the pivot, normalized to upper case. */
+  /** All four member words including the pivot, normalized to upper case. */
   members: string[];
-  /** The two non-pivot words. */
+  /** The three non-pivot spoke words. */
   spokes: string[];
 }
 

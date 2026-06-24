@@ -168,7 +168,7 @@ export default function Game({
           playDeselect();
           return prev.filter((w) => w !== word);
         }
-        if (prev.length >= 2) return prev; // a pair is two words
+        if (prev.length >= 3) return prev; // a group is three spokes
         playSelect();
         return [...prev, word];
       });
@@ -177,7 +177,7 @@ export default function Game({
   );
 
   const submit = useCallback(() => {
-    if (status !== "playing" || selected.length !== 2) return;
+    if (status !== "playing" || selected.length !== 3) return;
     const sel = new Set(selected);
     const match = unsolvedCategories.find((c) => c.spokes.every((s) => sel.has(s)));
     if (match) {
@@ -187,12 +187,12 @@ export default function Game({
 
     const key = [...selected].sort().join("|");
     if (pastGuesses.has(key)) {
-      setToast("You already tried that pair.");
+      setToast("You already tried that group.");
       setShake((s) => s + 1);
       return;
     }
     setPastGuesses((prev) => new Set(prev).add(key));
-    setToast("Those two aren't a pair.");
+    setToast("Those three aren't a group.");
     playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
@@ -318,7 +318,7 @@ export default function Game({
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
-            canSubmit={selected.length === 2}
+            canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
             onSubmit={submit}
             onClear={clearSelection}
@@ -536,7 +536,7 @@ function Controls({
           disabled={!canSubmit}
           className="rounded-full bg-white px-7 py-2.5 text-sm font-bold text-slate-900 shadow-lg shadow-black/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
-          Submit pair
+          Submit group
         </button>
       </div>
     </div>
@@ -729,13 +729,13 @@ const COACH = [
     cta: "Next",
   },
   {
-    title: "Find a pair",
-    body: "Tap the two highlighted words that share a theme, then hit Submit pair. The hidden link joins them automatically.",
-    cta: null, // advances when the player solves their first pair
+    title: "Find a group",
+    body: "Tap the three highlighted words that share a theme, then hit Submit group. The hidden link joins them automatically.",
+    cta: null, // advances when the player solves their first group
   },
   {
     title: "You've got it!",
-    body: "Find the other pairs, then guess the secret word that links them all. Good luck!",
+    body: "Find the other groups, then guess the secret word that links them all. Good luck!",
     cta: "Let's go",
   },
 ];

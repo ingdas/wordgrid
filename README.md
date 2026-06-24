@@ -10,10 +10,10 @@ word, then build all four groups of three around it.
 
 ## How to play
 
-1. A board shows **8 words** plus a **masked "secret link"** (`◆ ? ? ?`).
-2. Tap **two words that share a theme**, then **Submit** — the hidden link joins
-   them into a group. Its word stays concealed the whole game.
-3. Find all **four pairs** (you get **4 mistakes**), then **guess the secret
+1. A board shows **12 words** plus a **masked "secret link"** (`◆ ? ? ?`).
+2. Tap **three words that share a theme**, then **Submit** — the hidden link
+   joins them into a group of four. Its word stays concealed the whole game.
+3. Find all **four groups** (you get **4 mistakes**), then **guess the secret
    word** that links them all. The reveal is the climax, not a giveaway.
 4. Fewer mistakes earn more **stars** (3 max per level).
 

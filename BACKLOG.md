@@ -2,9 +2,14 @@
 
 _Last updated: iteration 5._
 
-The game is a casual word puzzle: **62 levels**, each a board of 8 words that
-pair into 4 themed groups, all joined by one **hidden link word** revealed only
-at the end. Flow: **Start → Level Map → Game (pair up + guess the link)**.
+The game is a casual word puzzle: **62 levels**, each a board of 12 words that
+sort into 4 themed groups of four, all joined by one **hidden link word**
+revealed only at the end. Flow: **Start → Level Map → Game (group + guess the
+link)**.
+
+> Iteration 6: expanded each level from 4×3 (8 spokes) to **4×4 (12 spokes)** —
+> every category gained a third themed spoke. All 62 re-validated. The ambiguity
+> risk (P1 below) grows with the bigger groups and still wants a human audit.
 
 An automated headless-Chrome runthrough (`scripts/playtest.mjs`) drives the full
 flow and currently passes with **zero console errors and zero issues**,
