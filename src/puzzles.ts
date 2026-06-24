@@ -104,7 +104,7 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Packed Trunk",
     pivot: "TRUNK",
     categories: [
-      { name: "Parts of a tree", words: ["BARK", "ROOT", "LIMB"] },
+      { name: "Parts of a tree", words: ["BARK", "ROOT", "BOUGH"] },
       { name: "Car body parts", words: ["HOOD", "FENDER", "BUMPER"] },
       { name: "On an elephant", words: ["TUSK", "TAIL", "EARS"] },
       { name: "Storage boxes", words: ["CHEST", "CRATE", "COFFER"] },
@@ -162,7 +162,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Fighting venues", words: ["ARENA", "OCTAGON", "PIT"] },
       { name: "Worn as jewelry", words: ["NECKLACE", "BRACELET", "ANKLET"] },
       { name: "To telephone", words: ["CALL", "DIAL", "BUZZ"] },
-      { name: "Circular shapes", words: ["HOOP", "LOOP", "BAND"] },
+      { name: "Circular shapes", words: ["HOOP", "LOOP", "HALO"] },
     ],
   },
   {
@@ -613,7 +613,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Damp growth", words: ["MILDEW", "FUNGUS", "SPORE"] },
       { name: "To shape", words: ["FORM", "CAST", "SCULPT"] },
       { name: "A casting frame", words: ["DIE", "STENCIL", "TEMPLATE"] },
-      { name: "To influence", words: ["GUIDE", "SHAPE", "STEER"] },
+      { name: "To influence", words: ["GUIDE", "SWAY", "STEER"] },
     ],
   },
   {
@@ -654,7 +654,7 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Wishing Well",
     pivot: "WELL",
     categories: [
-      { name: "Water sources", words: ["SPRING", "BORE", "AQUIFER"] },
+      { name: "Water sources", words: ["SPRING", "OASIS", "AQUIFER"] },
       { name: "In good health", words: ["HEALTHY", "FIT", "HALE"] },
       { name: "Oilfield gear", words: ["RIG", "DERRICK", "PUMP"] },
       { name: "A deep shaft", words: ["SHAFT", "PIT", "MINE"] },

@@ -144,6 +144,12 @@ export default function Game({
     }
   }, [coach, solved.length, onTutorialDone]);
 
+  // Final stars: from pairing mistakes, minus one if the link guess was wrong.
+  const finalStars = Math.max(
+    1,
+    starsForMistakes(mistakes) - (linkGuess && linkGuess !== puzzle.pivot ? 1 : 0)
+  );
+
   // Report the result up exactly once.
   useEffect(() => {
     if (reported.current) return;
@@ -151,14 +157,13 @@ export default function Game({
       reported.current = true;
       playWin();
       buzz([0, 40, 60, 40]);
-      const stars = starsForMistakes(mistakes);
-      for (let i = 0; i < stars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin(mistakes);
+      for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
+      onWin(finalStars);
     } else if (status === "lost") {
       reported.current = true;
       onLoss();
     }
-  }, [status, mistakes, onWin, onLoss, buzz]);
+  }, [status, finalStars, onWin, onLoss, buzz]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -235,7 +240,7 @@ export default function Game({
   );
 
   const revealLink = status === "won" || status === "lost";
-  const stars = starsForMistakes(mistakes);
+  const stars = finalStars;
   const hintWords = coach === 1 ? new Set(puzzle.categories[0].spokes) : null;
   // On a loss, reveal every group (solved first, then the rest, faded).
   const bannerCats: Category[] =
@@ -671,7 +676,7 @@ function EndCard({
             <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
               {pivot}
             </span>
-            . {linkCorrect ? "🔑 You guessed it!" : ""}
+            . {linkCorrect ? "🔑 You guessed it!" : "Missed the link — that cost a star."}
           </p>
           {streak >= 2 && <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>}
         </>

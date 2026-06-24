@@ -1,12 +1,7 @@
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { PUZZLES } from "./puzzles";
-import {
-  loadProgress,
-  saveProgress,
-  starsForMistakes,
-  type Progress,
-} from "./progress";
+import { loadProgress, saveProgress, type Progress } from "./progress";
 import { initAudio, isMuted, setMuted } from "./audio";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
@@ -59,11 +54,10 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (mistakes: number) => {
+    (stars: number) => {
       setProgress((prev) => {
         const id = PUZZLES[levelIndex].id;
-        const star = starsForMistakes(mistakes);
-        const best = Math.max(prev.stars[id] ?? 0, star);
+        const best = Math.max(prev.stars[id] ?? 0, stars);
         const streak = prev.streak + 1;
         const next: Progress = {
           stars: { ...prev.stars, [id]: best },
