@@ -12,7 +12,7 @@ body,
 
 body {
   margin: 0;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Inter Variable", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
@@ -20,7 +20,7 @@ body {
 }
 
 .font-display {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: "Fraunces Variable", Georgia, serif;
 }
 
 /* Animated aurora backdrop */

@@ -54,6 +54,40 @@ It writes screenshots and prints `=== ISSUES FOUND ===` at the end.
 
 ---
 
+## Iteration 4 — "make it a hit on CrazyGames"
+
+Reframed the app around a casual-portal structure: **Start → Level Map → Game**.
+Runthrough (`scripts/playtest.mjs`) passes with **zero console errors / zero
+issues**, including the pivot colour-concealment check.
+
+### Added
+- **Game feel / juice:** synthesized Web-Audio SFX (select, ascending "correct"
+  arpeggio that climbs per combo, wrong buzz, win fanfare, star pings) with a
+  persisted mute toggle; per-solve confetti pop; haptic vibration on
+  correct/incorrect (respecting reduced-motion).
+- **Hypercasual level map** replacing the chip strip: a grid of level nodes with
+  3/2/1-star ratings, gold "cleared" faces, a pulsing "play me next" node, and
+  sequential unlocking (clear N to open N+1).
+- **Meta-progression:** stars banked per level (best-of), a global "⭐ X/93"
+  goal, and a 🔥 win-streak (+ best). Persisted.
+- **Start screen** with the core hook ("Four hidden groups. One secret word they
+  all share.") and a single Play CTA — also the gesture that unlocks audio.
+- **Redesigned tutorial** — icon-driven step cards instead of a text wall, with
+  copy corrected to match the concealment behaviour.
+- **Self-hosted fonts** (`@fontsource-variable/*`) — no external Google Fonts
+  request, so it loads instantly and reliably inside the CrazyGames iframe.
+- **Star-based win card** with animated stars + streak callout.
+
+### Still open for CrazyGames polish
+- **CrazyGames SDK integration** (rewarded video for a hint, interstitial
+  between levels, analytics). The level boundaries are already natural ad
+  breaks. Requires their SDK in the embed.
+- **Hint button** (good rewarded-ad hook): reveal one tile's group at a cost.
+- **Background music** loop with its own volume toggle (kept out for now to
+  avoid annoyance / asset weight).
+- **Colourblind-safe banner palette** (add icons/patterns to the four colours).
+- **Daily challenge + streak** and **leaderboards**.
+
 ## Feature backlog (ranked)
 
 ### Implemented (iterations 1–3)

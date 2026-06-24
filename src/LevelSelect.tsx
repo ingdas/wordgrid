@@ -1,0 +1,143 @@
+import { motion } from "framer-motion";
+import { PUZZLES } from "./puzzles";
+import { isUnlocked, MAX_STARS, totalStars, type Progress } from "./progress";
+
+export default function LevelSelect({
+  progress,
+  onPick,
+  onHome,
+  onHelp,
+  muted,
+  onToggleMute,
+}: {
+  progress: Progress;
+  onPick: (index: number) => void;
+  onHome: () => void;
+  onHelp: () => void;
+  muted: boolean;
+  onToggleMute: () => void;
+}) {
+  const stars = totalStars(progress);
+  // The first unlocked, not-yet-cleared level — the one we nudge the player to.
+  const nextIndex = PUZZLES.findIndex((p, i) => isUnlocked(progress, i) && !(progress.stars[p.id] > 0));
+
+  return (
+    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onHome}
+          aria-label="Home"
+          className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base text-indigo-100 transition hover:bg-white/15 active:scale-95"
+        >
+          ‹
+        </button>
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-semibold text-indigo-100">
+          <span>⭐ {stars}/{MAX_STARS}</span>
+          {progress.streak >= 2 && <span className="text-amber-300">🔥 {progress.streak}</span>}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onToggleMute}
+            aria-label={muted ? "Unmute" : "Mute"}
+            className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base transition hover:bg-white/15 active:scale-95"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+          <button
+            onClick={onHelp}
+            aria-label="How to play"
+            className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
+          >
+            ?
+          </button>
+        </div>
+      </div>
+
+      <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-white">
+        Choose a level
+      </h2>
+      <p className="mt-1 text-center text-sm text-indigo-200/70">
+        Clear a level to unlock the next. Fewer mistakes earn more stars.
+      </p>
+
+      <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4">
+        {PUZZLES.map((p, i) => {
+          const unlocked = isUnlocked(progress, i);
+          const earned = progress.stars[p.id] ?? 0;
+          const isNext = i === nextIndex;
+          return (
+            <LevelNode
+              key={p.id}
+              index={i}
+              title={p.title}
+              unlocked={unlocked}
+              earned={earned}
+              highlight={isNext}
+              onClick={() => unlocked && onPick(i)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LevelNode({
+  index,
+  title,
+  unlocked,
+  earned,
+  highlight,
+  onClick,
+}: {
+  index: number;
+  title: string;
+  unlocked: boolean;
+  earned: number;
+  highlight: boolean;
+  onClick: () => void;
+}) {
+  const done = earned > 0;
+
+  let face = "border border-white/10 bg-white/[0.05] text-indigo-100";
+  if (done) face = "border-transparent bg-gradient-to-br from-amber-300 to-orange-400 text-orange-950";
+  else if (unlocked) face = "border-transparent bg-white text-slate-900";
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: Math.min(index * 0.015, 0.4), type: "spring", stiffness: 320, damping: 24 }}
+      whileTap={unlocked ? { scale: 0.92 } : undefined}
+      onClick={onClick}
+      disabled={!unlocked}
+      aria-label={`Level ${index + 1}, ${title}${done ? `, ${earned} of 3 stars` : unlocked ? "" : ", locked"}`}
+      className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-lg transition disabled:cursor-default ${face}`}
+    >
+      {highlight && (
+        <motion.span
+          aria-hidden
+          className="absolute inset-0 rounded-2xl ring-2 ring-fuchsia-300"
+          animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity }}
+        />
+      )}
+      {unlocked ? (
+        <>
+          <span className="font-display text-2xl font-bold leading-none">{index + 1}</span>
+          <span className="mt-1 flex gap-0.5 text-[0.65rem] leading-none">
+            {[0, 1, 2].map((s) => (
+              <span key={s} className={s < earned ? "" : "opacity-30"}>
+                {s < earned ? "⭐" : "☆"}
+              </span>
+            ))}
+          </span>
+        </>
+      ) : (
+        <span className="text-xl opacity-60" aria-hidden>
+          🔒
+        </span>
+      )}
+    </motion.button>
+  );
+}
