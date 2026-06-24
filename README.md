@@ -12,8 +12,12 @@ word, then build all four groups of three around it.
 
 1. Tap **three** words that form a group, then **Submit**.
 2. One word is part of *all four* groups — reuse it each time.
-3. Each correct group locks in with its own colour.
-4. You get **4 mistakes**. Solve all four to win.
+3. Each correct group flies up into a coloured banner; the shared word stays
+   **masked and concealed on the board** so you can't spot it by elimination.
+4. You get **4 mistakes**. Solve all four to win — the shared word is revealed.
+
+There are **31 puzzles** to play, picked from the scrollable selector (or hit
+🎲 for a random one).
 
 ## Tech stack
 
@@ -25,9 +29,17 @@ word, then build all four groups of three around it.
 
 ```bash
 npm install
-npm run dev      # local dev server
-npm run build    # type-check + build to /docs
+npm run dev       # local dev server
+npm run build     # type-check + build to /docs
+npm run validate  # structurally check every puzzle (9 unique tiles, pivot fits)
 ```
+
+### Automated playtest
+
+`scripts/playtest.mjs` drives a headless Chrome through the solve / lose /
+reduced-motion flows and asserts on the DOM (including that the pivot is never
+distinguishable by colour mid-game). See [`BACKLOG.md`](./BACKLOG.md) for how to
+run it and the latest findings.
 
 ## Hosting on GitHub Pages
 

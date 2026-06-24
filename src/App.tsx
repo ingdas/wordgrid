@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { PUZZLES, buildPuzzle, type Category, type Puzzle } from "./puzzles";
 import Confetti from "./Confetti";
@@ -77,13 +77,6 @@ export default function App() {
     }
   }, []);
 
-  // For each spoke word, which category index it belongs to.
-  const spokeCategoryIndex = useMemo(() => {
-    const m = new Map<string, number>();
-    puzzle.categories.forEach((c, i) => c.spokes.forEach((w) => m.set(w, i)));
-    return m;
-  }, [puzzle]);
-
   const indexByName = useMemo(() => {
     const m = new Map<string, number>();
     puzzle.categories.forEach((c, i) => m.set(c.name, i));
@@ -135,12 +128,23 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const solvedCategoryIndices = useMemo(
-    () => new Set(solved.map((c) => indexByName.get(c.name)!)),
-    [solved, indexByName]
-  );
+  // Spokes belonging to already-solved groups. These leave the board (they
+  // fly up into their banner) so the grid is NEVER colour-coded during play —
+  // that's what keeps the pivot from being "the one word with no colour".
+  const solvedSpokes = useMemo(() => {
+    const s = new Set<string>();
+    solved.forEach((c) => c.spokes.forEach((w) => s.add(w)));
+    return s;
+  }, [solved]);
 
   const allSolved = solved.length === puzzle.categories.length;
+
+  // Words left on the board: the pivot (always, until the very end) plus every
+  // spoke whose group is still unsolved. All render identically — neutral.
+  const remainingWords = useMemo(
+    () => puzzle.words.filter((w) => w === puzzle.pivot || !solvedSpokes.has(w)),
+    [puzzle.words, puzzle.pivot, solvedSpokes]
+  );
 
   const unsolvedCategories = useMemo(
     () => puzzle.categories.filter((c) => !solved.includes(c)),
@@ -165,28 +169,16 @@ export default function App() {
     }
   }, [solved, status, allSolved, unsolvedCategories, puzzle.categories.length, solveCategory]);
 
-  // Whether a given word is currently locked into a solved group (spokes only).
-  const lockedIndexOf = useCallback(
-    (word: string): number | null => {
-      if (word === puzzle.pivot) return null;
-      const ci = spokeCategoryIndex.get(word);
-      if (ci != null && solvedCategoryIndices.has(ci)) return ci;
-      return null;
-    },
-    [puzzle.pivot, spokeCategoryIndex, solvedCategoryIndices]
-  );
-
   const toggleSelect = useCallback(
     (word: string) => {
       if (status !== "playing") return;
-      if (lockedIndexOf(word) != null) return;
       setSelected((prev) => {
         if (prev.includes(word)) return prev.filter((w) => w !== word);
         if (prev.length >= 3) return prev;
         return [...prev, word];
       });
     },
-    [status, lockedIndexOf]
+    [status]
   );
 
   const submit = useCallback(() => {
@@ -285,28 +277,30 @@ export default function App() {
             </div>
           )}
 
-          {/* The board: a stable 3x3 grid that never reflows */}
+          {/* The board. Solved spokes fly up into their banner, so nothing on
+              the board is ever colour-coded mid-game — the pivot looks exactly
+              like every other tile right up until the reveal. */}
           <motion.div
             key={shake}
             animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
             transition={{ duration: 0.45 }}
-            className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3"
+            className="mt-5 flex flex-wrap justify-center gap-3"
           >
-            {puzzle.words.map((word) => {
-              const locked = lockedIndexOf(word);
-              const isPivotReveal = revealPivot && word === puzzle.pivot;
-              return (
-                <WordTile
-                  key={word}
-                  word={word}
-                  selected={selected.includes(word)}
-                  lockedIndex={locked}
-                  pivotReveal={isPivotReveal}
-                  disabled={status !== "playing" || locked != null}
-                  onClick={() => toggleSelect(word)}
-                />
-              );
-            })}
+            <AnimatePresence mode="popLayout">
+              {remainingWords.map((word) => {
+                const isPivotReveal = revealPivot && word === puzzle.pivot;
+                return (
+                  <WordTile
+                    key={word}
+                    word={word}
+                    selected={selected.includes(word)}
+                    pivotReveal={isPivotReveal}
+                    disabled={status !== "playing"}
+                    onClick={() => toggleSelect(word)}
+                  />
+                );
+              })}
+            </AnimatePresence>
           </motion.div>
 
           {/* Controls */}
@@ -437,26 +431,59 @@ function PuzzlePicker({
   completed: Set<string>;
   onPick: (i: number) => void;
 }) {
+  const stripRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // Keep the selected puzzle chip in view as you step or shuffle through 30+.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [current]);
+
+  const step = (dir: number) => {
+    const n = PUZZLES.length;
+    onPick((current + dir + n) % n);
+  };
+  const shuffle = () => {
+    if (PUZZLES.length < 2) return;
+    let r = current;
+    while (r === current) r = Math.floor(Math.random() * PUZZLES.length);
+    onPick(r);
+  };
+
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5">
-      {PUZZLES.map((p, i) => {
-        const done = completed.has(p.id);
-        return (
-          <button
-            key={p.id}
-            onClick={() => onPick(i)}
-            aria-current={i === current}
-            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
-              i === current
-                ? "bg-white text-slate-900 shadow"
-                : "bg-white/8 text-indigo-100/80 hover:bg-white/15"
-            }`}
-          >
-            {done && <span className={i === current ? "text-emerald-600" : "text-emerald-400"}>✓</span>}
-            {p.title}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-2">
+      <IconButton label="Previous puzzle" onClick={() => step(-1)}>
+        ‹
+      </IconButton>
+      <div
+        ref={stripRef}
+        className="flex flex-1 gap-1.5 overflow-x-auto scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {PUZZLES.map((p, i) => {
+          const done = completed.has(p.id);
+          const active = i === current;
+          return (
+            <button
+              key={p.id}
+              ref={active ? activeRef : undefined}
+              onClick={() => onPick(i)}
+              aria-current={active}
+              className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                active ? "bg-white text-slate-900 shadow" : "bg-white/8 text-indigo-100/80 hover:bg-white/15"
+              }`}
+            >
+              {done && <span className={active ? "text-emerald-600" : "text-emerald-400"}>✓</span>}
+              {p.title}
+            </button>
+          );
+        })}
+      </div>
+      <IconButton label="Next puzzle" onClick={() => step(1)}>
+        ›
+      </IconButton>
+      <IconButton label="Random puzzle" onClick={shuffle}>
+        🎲
+      </IconButton>
     </div>
   );
 }
@@ -464,19 +491,16 @@ function PuzzlePicker({
 function WordTile({
   word,
   selected,
-  lockedIndex,
   pivotReveal,
   disabled,
   onClick,
 }: {
   word: string;
   selected: boolean;
-  lockedIndex: number | null;
   pivotReveal: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const theme = lockedIndex != null ? CATEGORY_THEMES[lockedIndex] : null;
   // Shrink the font for longer words so nothing overflows the tile.
   const sizeClass =
     word.length >= 8 ? "text-[0.7rem] sm:text-xs" : word.length >= 7 ? "text-xs sm:text-sm" : "text-sm sm:text-base";
@@ -486,28 +510,27 @@ function WordTile({
   if (selected) {
     look = "bg-white text-slate-900";
     style = { boxShadow: "0 10px 30px -8px rgba(255,255,255,0.4)" };
-  } else if (theme) {
-    look = "border-transparent text-white";
-    style = { background: theme.chip, color: theme.ink };
   } else if (pivotReveal) {
     look = "border-transparent text-slate-900";
     style = {
       backgroundImage: "linear-gradient(135deg,#fff,#fde68a,#fbcfe8,#c7d2fe)",
-      boxShadow: "0 0 24px rgba(255,255,255,0.45)",
+      boxShadow: "0 0 28px rgba(255,255,255,0.5)",
     };
   }
 
   return (
     <motion.button
       layout
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={pivotReveal ? { opacity: 1, scale: [1, 1.12, 1] } : { opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.4, y: -24 }}
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
       whileTap={disabled ? undefined : { scale: 0.92 }}
-      animate={pivotReveal ? { scale: [1, 1.08, 1] } : {}}
-      transition={{ duration: 0.5 }}
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={`${word}${theme ? ", solved" : ""}${pivotReveal ? ", the shared word" : ""}`}
-      className={`relative grid aspect-[1.7/1] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide transition-colors ${sizeClass} ${look} disabled:cursor-default`}
+      aria-label={`${word}${pivotReveal ? ", the shared word" : ""}`}
+      className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${look} disabled:cursor-default`}
       style={style}
     >
       {pivotReveal && (
