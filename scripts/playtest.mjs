@@ -1,6 +1,6 @@
-// Headless-Chrome runthrough of the full flow: tutorial → start → level map →
-// game → win → unlock. Asserts on the DOM, including that the pivot is never
-// distinguishable by colour mid-game. Run with:
+// Headless-Chrome runthrough of the full flow: start → level map → coached
+// tutorial → pair-matching game → guess-the-link finale → win → unlock.
+// Verifies the secret link's WORD never appears until the reveal.
 //
 //   npm run build && npm run preview        # serve on :4173
 //   npm i -D puppeteer                       # one-time (kept out of deps)
@@ -14,12 +14,12 @@ const log = (...a) => console.log("•", ...a);
 const issues = [];
 const note = (s) => { issues.push(s); log("ISSUE:", s); };
 
-// Level 1 is always the STAR puzzle.
-const GROUPS = [
-  ["STAR", "ICON", "LEGEND"],
-  ["STAR", "MOON", "COMET"],
-  ["STAR", "JELLY", "CAT"],
-  ["STAR", "HEART", "ARROW"],
+// Level 1 is the STAR puzzle; its four spoke-pairs (the link STAR is hidden):
+const PAIRS = [
+  ["ICON", "LEGEND"],
+  ["MOON", "COMET"],
+  ["JELLY", "CAT"],
+  ["HEART", "ARROW"],
 ];
 
 const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
@@ -47,65 +47,77 @@ async function clickWord(w) {
   }
   return false;
 }
-async function solveGroup(g) {
-  for (const w of g) await clickWord(w);
-  await clickText("button", "Submit");
+async function solvePair(pair) {
+  for (const w of pair) await clickWord(w);
+  await clickText("button", "Submit pair");
   await sleep(500);
 }
+const bodyText = () => p.$eval("body", (e) => e.innerText);
 
-// 1. First-visit tutorial
-log("tutorial auto-opened:", !!(await p.$('[role="dialog"]')));
-if (!(await p.$('[role="dialog"]'))) note("Tutorial did not auto-open on first visit.");
-await p.screenshot({ path: `${SHOT}/r1-tutorial.png` });
-await clickText('[role="dialog"] button', "Let's play");
-await p.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 4000 });
-await sleep(200);
-
-// 2. Start screen → Play
+// 1. Start screen (no auto-dialog now — tutorial is in-game)
+if (await p.$('[role="dialog"]')) note("A modal auto-opened on first visit (tutorial should be in-game).");
 await p.screenshot({ path: `${SHOT}/r2-start.png` });
 if (!(await clickText("button", "Play"))) note("No Play button on start screen.");
 await sleep(500);
 
-// 3. Level map
-await p.screenshot({ path: `${SHOT}/r3-levels.png` });
+// 2. Level map: 62 nodes, only #1 unlocked
 const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
 log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
-if (nodes.length !== 31) note(`Expected 31 level nodes, found ${nodes.length}.`);
+if (nodes.length !== 62) note(`Expected 62 level nodes, found ${nodes.length}.`);
 if (nodes[0]) note("Level 1 should be unlocked.");
 if (!nodes[1]) note("Level 2 should start locked.");
+await p.screenshot({ path: `${SHOT}/r3-levels.png` });
 
-// 4. Enter level 1
+// 3. Enter level 1 → coached tutorial
 await (await p.$("button[aria-label^='Level 1,']")).click();
 await sleep(500);
-await p.screenshot({ path: `${SHOT}/r4-game.png` });
+const coachShown = /secret link/i.test(await bodyText());
+log("coach tutorial shown:", coachShown);
+if (!coachShown) note("Interactive tutorial coach did not appear on first level.");
+await p.screenshot({ path: `${SHOT}/r4-coach.png` });
+await clickText("button", "Next"); // dismiss coach step 0
+await sleep(300);
 
-// 5. Solve; verify concealment (uniform tile backgrounds) after first group
-await solveGroup(GROUPS[0]);
-const styles = await p.$$eval("main button[aria-pressed='false']", (els) =>
-  els.map((e) => { const s = getComputedStyle(e); return `${s.backgroundColor}|${s.backgroundImage}`; })
-);
-const distinct = [...new Set(styles)].length;
-log("distinct mid-play tile backgrounds (expect 1):", distinct);
-if (distinct > 1) note("Pivot derivable by colour mid-play.");
+// 4. Concealment: the link WORD (STAR) must not be visible mid-game
+const midText = await bodyText();
+log("link word hidden mid-game:", !/\bSTAR\b/.test(midText));
+if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during play.");
+if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
-await solveGroup(GROUPS[1]);
-await solveGroup(GROUPS[2]);
-await sleep(1400); // auto-solve last + win
-const won = /shared word was/i.test(await p.$eval("body", (e) => e.innerText));
+// 5. Solve pairs (coach auto-advances after the first; pair 4 auto-solves)
+await solvePair(PAIRS[0]);
+await clickText("button", "Let's go"); // dismiss coach step 2
+await sleep(200);
+await solvePair(PAIRS[1]);
+await solvePair(PAIRS[2]);
+await sleep(1200); // auto-solve final pair → guessing
+
+// 6. Guess-the-link finale
+const guessing = /secret word/i.test(await bodyText());
+log("guess-the-link step shown:", guessing);
+if (!guessing) note("Guess-the-link finale did not appear.");
+await p.screenshot({ path: `${SHOT}/r5-guess.png` });
+if (!(await clickText("main button", "STAR"))) note("Could not find STAR among the link options.");
+await sleep(1300);
+
+// 7. Win
+const winText = await bodyText();
+const won = /secret link was/i.test(winText);
 log("won + reveal shown:", won);
 if (!won) note("Win/reveal did not appear.");
-const starCount = await p.evaluate(() => (document.body.innerText.match(/⭐/g) || []).length);
+const starCount = (winText.match(/⭐/g) || []).length;
 log("stars on win card:", starCount);
 if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`);
-await p.screenshot({ path: `${SHOT}/r5-win.png` });
+log("link-guess acknowledged:", /guessed it/i.test(winText));
+await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
-// 6. Back to map: level 2 unlocked, stars banked
+// 8. Back to map: level 2 unlocked, stars banked (62*3 = 186)
 await clickText("button", "Levels");
 await sleep(500);
 const after = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
 if (after[1] !== false) note("Level 2 not unlocked after clearing level 1.");
-if (!/⭐\s*3\/93/.test(await p.$eval("body", (e) => e.innerText))) note("Star total not updated to 3/93.");
-await p.screenshot({ path: `${SHOT}/r6-levels-after.png` });
+if (!/⭐\s*3\/186/.test(await bodyText())) note("Star total not updated to 3/186.");
+await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
 
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");

@@ -1,142 +1,93 @@
-# WordGrid — Backlog & Playtest Notes
+# WordGrid — Critical Evaluation & Backlog
 
-A running log of playtest findings and the feature backlog. Findings come from
-both manual review and an automated Puppeteer playtest (`scripts/playtest.mjs`),
-which drives a real headless Chrome through solve / lose / reduced-motion flows
-and asserts on the DOM.
+_Last updated: iteration 5._
 
-## How to run the playtest
+The game is a casual word puzzle: **62 levels**, each a board of 8 words that
+pair into 4 themed groups, all joined by one **hidden link word** revealed only
+at the end. Flow: **Start → Level Map → Game (pair up + guess the link)**.
 
-```bash
-npm run build && npm run preview        # serve the build on :4173
-npm i -D puppeteer                       # one-time (kept out of deps to stay lean)
-BASE=http://localhost:4173/ node scripts/playtest.mjs
-```
-
-It writes screenshots and prints `=== ISSUES FOUND ===` at the end.
+An automated headless-Chrome runthrough (`scripts/playtest.mjs`) drives the full
+flow and currently passes with **zero console errors and zero issues**,
+including the assertion that the link word never appears on screen mid-game.
 
 ---
 
-## Iteration 3 — Puppeteer playtest results
+## Critical evaluation (honest pass)
 
-### Verified working (assertions passing)
-- How-to-play auto-opens on first visit only.
-- Board renders 9 uniform tiles, no text overflow (incl. SCISSORS, PASSION…).
-- **Pivot concealment:** mid-play, every board tile shares one identical
-  background — asserted by reading computed styles. The pivot cannot be picked
-  out by colour. Solved spokes leave the board into their banner; the pivot
-  stays as a plain neutral tile until the end.
-- Banners mask the pivot as `◆ SHARED` during play; the word `STAR` never
-  leaks into a banner before the reveal.
-- Final group auto-solves; win card reveals "The shared word was STAR".
-- Wrong guess costs one life; an identical repeated wrong guess costs none.
-- 4 mistakes → loss; all four categories revealed.
-- Confetti fires normally but is suppressed under `prefers-reduced-motion`.
+### What works well
+- **Concealment is now airtight.** The link is a masked tile (`◆ ? ? ?`); its
+  word is never rendered until the reveal, and it's never a board tile you could
+  deduce by elimination. This fully resolves the long-running leak.
+- **Strong loop:** pair matching → "guess the secret word" climax → stars →
+  next level. The guess restores the original "find the shared word" challenge
+  as a payoff instead of a giveaway.
+- **Onboarding:** an in-context coached tutorial (not a wall of text) that waits
+  for the player to actually make their first pair.
+- **Game feel:** synthesized SFX, per-solve confetti, haptics, star animations.
+- **Self-contained:** fonts bundled, audio synthesized, builds to `/docs`.
+
+### Weaknesses / risks (ranked)
+1. **[content] Pair ambiguity risk.** With pick-2, a level is only fair if each
+   themed pair is unambiguous and no spoke plausibly pairs across groups. The 62
+   puzzles are hand-checked for structure (unique tiles, pivot fits) but **not**
+   for cross-pair ambiguity. A human pass / playtest of each is needed. *High.*
+2. **[depth] The link guess is multiple-choice (1 of 4)** and the distractors
+   are random other-puzzle pivots, often easy to eliminate by theme. Low
+   challenge; no penalty for a wrong guess. *Medium.*
+3. **[balance] Pairing can be easier than the old pick-3** — 8 tiles into 4
+   pairs is gentle. Difficulty curve across 62 levels is undifferentiated. *Med.*
+4. **[progression] Hard sequential gating** of 62 levels may frustrate players
+   who want to jump around or who get stuck on an ambiguous one. *Medium.*
+5. **[replay] Replaying a cleared level is trivial** — you already know the link,
+   so the finale is a freebie; stars are easy to farm. *Low.*
+6. **[a11y] The guess/reveal isn't announced** to screen readers; banner colours
+   aren't colourblind-differentiated (no icons/patterns). *Medium.*
+7. **[mobile] Tall layouts** (link card + 4 banners + grid + controls) can
+   require scrolling on small phones near the end. *Low.*
+8. **[audio] No background music / no master volume** beyond mute. *Low.*
+9. **[meta] Streak only lives in localStorage**; no daily challenge, no
+   leaderboard, nothing social beyond the share string. *Medium.*
 
 ### Fixed this iteration
-- **[P0] Pivot derivable from colouring.** Previously solved spokes were
-  coloured in place, leaving the pivot as the lone un-coloured tile. Now nothing
-  on the board is ever colour-coded during play. *(addresses the explicit
-  requirement: cannot derive the pivot because others are coloured and it isn't)*
-- **[P2] Loss board inconsistency** — moot now that the board is never coloured
-  mid-game; the loss state reveals everything through the banners + end card.
-- **[P3] No favicon / blank tab** — added an inline SVG ◆ favicon.
-- **[P2] Picker didn't scale** — with 31 puzzles the wrap-row was unwieldy;
-  replaced with a horizontally-scrollable strip + ‹ › steppers + 🎲 random,
-  auto-scrolling the active chip into view.
-
-### Known test-harness artifacts (not product bugs)
-- "pivot-hint shown: false" in Test B — the assertion samples the toast after a
-  *repeated* wrong guess, which shows the dedupe toast instead. The pivot hint
-  does fire on a first pivot-less guess.
-- Earlier "5 banners on loss" — the selector also matched the gradient "Next
-  puzzle" button; fixed by scoping to `.rounded-2xl.bg-gradient-to-r`.
+- New masked-link mechanic (the core concealment fix).
+- Interactive coached tutorial on first level.
+- Doubled content: 31 → **62 levels** (all validated).
+- **Loss now reveals all four groups** (previously only solved ones showed).
+- Coach disappears on win/loss and records completion once the first pair lands.
+- Tutorial/help copy rewritten to match the pair-and-link mechanic.
 
 ---
 
-## Iteration 4 — "make it a hit on CrazyGames"
+## Backlog (prioritised)
 
-Reframed the app around a casual-portal structure: **Start → Level Map → Game**.
-Runthrough (`scripts/playtest.mjs`) passes with **zero console errors / zero
-issues**, including the pivot colour-concealment check.
+### P1 — correctness & fairness
+- **Audit all 62 puzzles for pair ambiguity.** Write a checker that flags any
+  spoke which could plausibly belong to another group's theme; human-review the
+  flags. Consider a small playtest where solvers report "unfair" pairs.
+- **Make the link guess matter.** Options: cost a star (or a "perfect" badge) on
+  a wrong guess; or replace MC with typed entry + fuzzy match for a star bonus;
+  or escalate options (6 instead of 4) on later levels.
 
-### Added
-- **Game feel / juice:** synthesized Web-Audio SFX (select, ascending "correct"
-  arpeggio that climbs per combo, wrong buzz, win fanfare, star pings) with a
-  persisted mute toggle; per-solve confetti pop; haptic vibration on
-  correct/incorrect (respecting reduced-motion).
-- **Hypercasual level map** replacing the chip strip: a grid of level nodes with
-  3/2/1-star ratings, gold "cleared" faces, a pulsing "play me next" node, and
-  sequential unlocking (clear N to open N+1).
-- **Meta-progression:** stars banked per level (best-of), a global "⭐ X/93"
-  goal, and a 🔥 win-streak (+ best). Persisted.
-- **Start screen** with the core hook ("Four hidden groups. One secret word they
-  all share.") and a single Play CTA — also the gesture that unlocks audio.
-- **Redesigned tutorial** — icon-driven step cards instead of a text wall, with
-  copy corrected to match the concealment behaviour.
-- **Self-hosted fonts** (`@fontsource-variable/*`) — no external Google Fonts
-  request, so it loads instantly and reliably inside the CrazyGames iframe.
-- **Star-based win card** with animated stars + streak callout.
+### P2 — depth, balance, progression
+- **Difficulty tiers.** Tag levels easy/medium/hard (e.g. by abstractness of the
+  link); order the map as a curve and show the tier on each node.
+- **Smarter distractors.** Pick link decoys that are thematically near the real
+  link, not random, so the guess takes thought.
+- **Looser gating / level jump.** Unlock in small batches, or allow replaying any
+  cleared level and jumping ahead a few.
+- **Hint system** (natural rewarded-ad hook): reveal one pair, or one decoy is
+  removed from the link guess, at the cost of a star.
 
-### Still open for CrazyGames polish
-- **CrazyGames SDK integration** (rewarded video for a hint, interstitial
-  between levels, analytics). The level boundaries are already natural ad
-  breaks. Requires their SDK in the embed.
-- **Hint button** (good rewarded-ad hook): reveal one tile's group at a cost.
-- **Background music** loop with its own volume toggle (kept out for now to
-  avoid annoyance / asset weight).
-- **Colourblind-safe banner palette** (add icons/patterns to the four colours).
-- **Daily challenge + streak** and **leaderboards**.
+### P3 — polish & retention
+- **Colourblind-safe banners** (icons/patterns per group) + screen-reader
+  announcements for solves and the reveal.
+- **Daily challenge** (date-seeded level) with a streak and a shareable
+  "WordGrid #N — ★★☆" result.
+- **CrazyGames SDK**: rewarded video for hints, interstitial between levels,
+  analytics. Level boundaries are already clean ad breaks.
+- **Background music** loop with its own volume control.
+- **Stats screen**: best stars per level, total %, links guessed, best streak.
 
-## Feature backlog (ranked)
-
-### Implemented (iterations 1–3)
-1. ✅ Conceal the pivot (no colour tell; masked banners; end reveal)
-2. ✅ Clear "used" memory via banners
-3. ✅ End card reveals the shared word
-4. ✅ Long-word tile sizing
-5. ✅ Accessibility: `aria-pressed`, live region, labels, focus rings
-6. ✅ `prefers-reduced-motion`
-7. ✅ Repeated wrong guess doesn't cost a life
-8. ✅ Share result (emoji grid; Web Share API → clipboard)
-9. ✅ Completed-puzzle ✓ ticks in the picker
-10. ✅ First-visit onboarding
-11. ✅ Scalable puzzle navigation (scroll strip + steppers + random)
-12. ✅ Puzzle-data validator (`npm run validate`)
-13. ✅ Automated browser playtest harness
-
-### Open — previously listed #11–#15, now reprioritised
-- **[#11] Shuffle / rearrange remaining tiles.** A button to reshuffle the
-  on-board tiles for a fresh look without losing progress. *(small)*
-- **[#12] Move counter / optional timer.** Surface guesses-used and an
-  opt-in timer for speed-runners; feed into the share string. *(small)*
-- **[#13] Haptic feedback.** `navigator.vibrate` on correct/incorrect for
-  mobile. Guard behind a settings toggle and reduced-motion. *(small)*
-- **[#14] Guess-history strip.** Show past guesses as rows of coloured dots,
-  like Connections, so players can see their path. *(medium)*
-- **[#15] Daily puzzle mode.** Date-seeded puzzle of the day + streak tracking,
-  shareable as "WordGrid #123". *(medium)*
-
-### Additional ideas (newer)
-- **[#16] Difficulty signalling.** Tag puzzles easy/medium/hard; let the picker
-  filter. Some pivots (e.g. SCALE) are harder than others. *(medium)*
-- **[#17] Hint system.** Optional "reveal one tile's group" at the cost of a
-  life or a star, for stuck players. *(medium)*
-- **[#18] Settings panel.** Persisted toggles: reduce motion override, sound,
-  haptics, colourblind-friendly palette. *(medium)*
-- **[#19] Colourblind-safe palette / patterns.** The four banner colours should
-  stay distinguishable for deuteranopia/protanopia (add icons or patterns).
-  *(medium, accessibility)*
-- **[#20] Self-host fonts.** Currently Fraunces/Inter load from Google Fonts;
-  bundle them via `@fontsource` so the build is fully self-contained and works
-  offline / on strict-CSP hosting. *(small)*
-- **[#21] Win/score persistence & stats.** Track per-puzzle best (fewest
-  mistakes) and an overall completion %. *(medium)*
-- **[#22] Keyboard shortcuts.** Enter to submit, Esc to clear, digit keys to
-  toggle tiles. *(small)*
-- **[#23] Puzzle-authoring docs / generator.** A short guide + maybe a helper
-  to sanity-check that a pivot genuinely fits all four senses. *(medium)*
-- **[#24] i18n scaffolding.** Externalise strings to support other languages.
-  *(large)*
-- **[#25] Unit tests for game logic.** Extract the solve/mistake reducer and
-  cover it with Vitest, independent of the DOM. *(medium)*
+### Carried-over ideas (not yet done)
+- Shuffle remaining tiles; move counter/timer; keyboard shortcuts; i18n;
+  unit tests for the reducer; per-level best-time.

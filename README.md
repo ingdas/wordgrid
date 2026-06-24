@@ -10,14 +10,15 @@ word, then build all four groups of three around it.
 
 ## How to play
 
-1. Tap **three** words that form a group, then **Submit**.
-2. One word is part of *all four* groups — reuse it each time.
-3. Each correct group flies up into a coloured banner; the shared word stays
-   **masked and concealed on the board** so you can't spot it by elimination.
-4. You get **4 mistakes**. Solve all four to win — the shared word is revealed.
+1. A board shows **8 words** plus a **masked "secret link"** (`◆ ? ? ?`).
+2. Tap **two words that share a theme**, then **Submit** — the hidden link joins
+   them into a group. Its word stays concealed the whole game.
+3. Find all **four pairs** (you get **4 mistakes**), then **guess the secret
+   word** that links them all. The reveal is the climax, not a giveaway.
+4. Fewer mistakes earn more **stars** (3 max per level).
 
-There are **31 puzzles** to play, picked from the scrollable selector (or hit
-🎲 for a random one).
+There are **62 levels** on a hypercasual level map — clear one to unlock the
+next, and chase the ⭐ total and your 🔥 streak.
 
 ## Tech stack
 

@@ -24,31 +24,38 @@ export const CATEGORY_THEMES = [
 
 const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
 
-type Status = "playing" | "won" | "lost";
+type Status = "playing" | "guessing" | "won" | "lost";
 
 interface GameProps {
   puzzleIndex: number;
   reduce: boolean;
   streak: number;
+  tutorial: boolean;
   onWin: (mistakes: number) => void;
   onLoss: () => void;
   onExit: () => void;
   onNext?: () => void;
   onHelp: () => void;
+  onTutorialDone: () => void;
 }
 
 export default function Game({
   puzzleIndex,
   reduce,
   streak,
+  tutorial,
   onWin,
   onLoss,
   onExit,
   onNext,
   onHelp,
+  onTutorialDone,
 }: GameProps) {
   const raw = PUZZLES[puzzleIndex];
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
+
+  // The 8 spoke tiles (everything except the hidden link), in shuffled order.
+  const spokeTiles = useMemo(() => puzzle.words.filter((w) => w !== puzzle.pivot), [puzzle]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
@@ -58,6 +65,8 @@ export default function Game({
   const [burst, setBurst] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
+  const [linkGuess, setLinkGuess] = useState<string | null>(null);
+  const [coach, setCoach] = useState(tutorial ? 0 : -1);
   const reported = useRef(false);
 
   const buzz = useCallback(
@@ -73,6 +82,15 @@ export default function Game({
     return m;
   }, [puzzle]);
 
+  // Four multiple-choice options for the finale: the real link + 3 decoys.
+  const linkOptions = useMemo(() => {
+    const decoys = PUZZLES.map((p) => p.pivot)
+      .filter((w) => w !== puzzle.pivot)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    return [puzzle.pivot, ...decoys].sort(() => Math.random() - 0.5);
+  }, [puzzle]);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 1900);
@@ -85,11 +103,9 @@ export default function Game({
     return s;
   }, [solved]);
 
-  const allSolved = solved.length === puzzle.categories.length;
-
-  const remainingWords = useMemo(
-    () => puzzle.words.filter((w) => w === puzzle.pivot || !solvedSpokes.has(w)),
-    [puzzle.words, puzzle.pivot, solvedSpokes]
+  const remainingSpokes = useMemo(
+    () => spokeTiles.filter((w) => !solvedSpokes.has(w)),
+    [spokeTiles, solvedSpokes]
   );
 
   const unsolvedCategories = useMemo(
@@ -108,7 +124,7 @@ export default function Game({
     [buzz]
   );
 
-  // Auto-solve the final category once only one remains, then declare the win.
+  // Auto-solve the final pair, then move to the "guess the link" finale.
   useEffect(() => {
     if (status !== "playing") return;
     if (solved.length === puzzle.categories.length - 1) {
@@ -116,20 +132,30 @@ export default function Game({
       const t = setTimeout(() => solveCategory(last, solved.length), 600);
       return () => clearTimeout(t);
     }
-    if (allSolved && solved.length > 0) setStatus("won");
-  }, [solved, status, allSolved, unsolvedCategories, puzzle.categories.length, solveCategory]);
+    if (solved.length === puzzle.categories.length) setStatus("guessing");
+  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory]);
 
-  // Report the result up exactly once, and fire the win fanfare + stars.
+  // Advance the coach once the player lands their first pair, and record that
+  // the tutorial has been completed so it never re-triggers.
   useEffect(() => {
-    if (status === "playing" || reported.current) return;
-    reported.current = true;
+    if (coach === 1 && solved.length >= 1) {
+      setCoach(2);
+      onTutorialDone();
+    }
+  }, [coach, solved.length, onTutorialDone]);
+
+  // Report the result up exactly once.
+  useEffect(() => {
+    if (reported.current) return;
     if (status === "won") {
+      reported.current = true;
       playWin();
       buzz([0, 40, 60, 40]);
       const stars = starsForMistakes(mistakes);
-      for (let i = 0; i < stars; i++) setTimeout(() => playStar(i), 500 + i * 220);
+      for (let i = 0; i < stars; i++) setTimeout(() => playStar(i), 450 + i * 200);
       onWin(mistakes);
-    } else {
+    } else if (status === "lost") {
+      reported.current = true;
       onLoss();
     }
   }, [status, mistakes, onWin, onLoss, buzz]);
@@ -142,7 +168,7 @@ export default function Game({
           playDeselect();
           return prev.filter((w) => w !== word);
         }
-        if (prev.length >= 3) return prev;
+        if (prev.length >= 2) return prev; // a pair is two words
         playSelect();
         return [...prev, word];
       });
@@ -151,9 +177,9 @@ export default function Game({
   );
 
   const submit = useCallback(() => {
-    if (status !== "playing" || selected.length !== 3) return;
+    if (status !== "playing" || selected.length !== 2) return;
     const sel = new Set(selected);
-    const match = unsolvedCategories.find((c) => c.members.every((m) => sel.has(m)));
+    const match = unsolvedCategories.find((c) => c.spokes.every((s) => sel.has(s)));
     if (match) {
       solveCategory(match, solved.length);
       return;
@@ -161,19 +187,12 @@ export default function Game({
 
     const key = [...selected].sort().join("|");
     if (pastGuesses.has(key)) {
-      setToast("You already tried that combo.");
+      setToast("You already tried that pair.");
       setShake((s) => s + 1);
       return;
     }
     setPastGuesses((prev) => new Set(prev).add(key));
-
-    const bestOverlap = Math.max(
-      ...unsolvedCategories.map((c) => c.members.filter((m) => sel.has(m)).length)
-    );
-    if (!sel.has(puzzle.pivot)) setToast("Every group shares one word — include it!");
-    else if (bestOverlap === 2) setToast("So close — one away!");
-    else setToast("Not a group. Try again.");
-
+    setToast("Those two aren't a pair.");
     playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
@@ -185,7 +204,7 @@ export default function Game({
       }
       return next;
     });
-  }, [status, selected, unsolvedCategories, solveCategory, solved.length, puzzle.pivot, pastGuesses, buzz]);
+  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -202,20 +221,28 @@ export default function Game({
     setBurst(0);
     setToast(null);
     setPastGuesses(new Set());
+    setLinkGuess(null);
   }, []);
 
-  const bannerCats: Category[] = useMemo(() => {
-    if (status === "playing") return solved;
-    const rest = puzzle.categories.filter((c) => !solved.includes(c));
-    return [...solved, ...rest];
-  }, [status, solved, puzzle.categories]);
+  const guessLink = useCallback(
+    (word: string) => {
+      setLinkGuess(word);
+      if (word === puzzle.pivot) playStar(2);
+      else playWrong();
+      setTimeout(() => setStatus("won"), 900);
+    },
+    [puzzle.pivot]
+  );
 
-  const revealPivot = status !== "playing";
+  const revealLink = status === "won" || status === "lost";
   const stars = starsForMistakes(mistakes);
+  const hintWords = coach === 1 ? new Set(puzzle.categories[0].spokes) : null;
+  // On a loss, reveal every group (solved first, then the rest, faded).
+  const bannerCats: Category[] =
+    status === "lost" ? [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))] : solved;
 
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5">
-      {/* Top bar */}
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -238,21 +265,22 @@ export default function Game({
         </button>
       </div>
 
-      <main className="mt-5 flex-1">
-        <p className="text-center text-sm text-indigo-200/70">
-          Four groups of three — all sharing one secret word.
-        </p>
+      <main className="mt-4 flex-1">
+        {/* The secret link — present in every group, word hidden until the end */}
+        <SecretLink
+          reveal={revealLink}
+          word={puzzle.pivot}
+          spotlight={coach === 0}
+        />
 
         {bannerCats.length > 0 && (
-          <div className="mt-5 space-y-2.5">
+          <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
               {bannerCats.map((cat) => (
                 <SolvedBanner
                   key={cat.name}
                   cat={cat}
-                  pivot={puzzle.pivot}
                   themeIndex={indexByName.get(cat.name) ?? 0}
-                  revealPivot={revealPivot}
                   faded={status === "lost" && !solved.includes(cat)}
                 />
               ))}
@@ -260,39 +288,49 @@ export default function Game({
           </div>
         )}
 
-        <motion.div
-          key={shake}
-          animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
-          transition={{ duration: 0.45 }}
-          className="mt-5 flex flex-wrap justify-center gap-3"
-        >
-          <AnimatePresence mode="popLayout">
-            {remainingWords.map((word) => (
-              <WordTile
-                key={word}
-                word={word}
-                selected={selected.includes(word)}
-                pivotReveal={revealPivot && word === puzzle.pivot}
-                disabled={status !== "playing"}
-                onClick={() => toggleSelect(word)}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        {status !== "lost" ? (
+          <motion.div
+            key={shake}
+            animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
+            transition={{ duration: 0.45 }}
+            className="mt-4 flex flex-wrap justify-center gap-3"
+          >
+            <AnimatePresence mode="popLayout">
+              {remainingSpokes.map((word) => (
+                <WordTile
+                  key={word}
+                  word={word}
+                  selected={selected.includes(word)}
+                  hinted={!!hintWords?.has(word)}
+                  disabled={status !== "playing"}
+                  onClick={() => toggleSelect(word)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        ) : (
+          <p className="mt-6 text-center text-sm text-indigo-200/70">
+            The groups are revealed above — give it another go!
+          </p>
+        )}
 
         {status === "playing" && (
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
-            canSubmit={selected.length === 3}
+            canSubmit={selected.length === 2}
             hasSelection={selected.length > 0}
             onSubmit={submit}
             onClear={clearSelection}
           />
         )}
 
+        {status === "guessing" && (
+          <LinkGuess options={linkOptions} chosen={linkGuess} answer={puzzle.pivot} onGuess={guessLink} />
+        )}
+
         <AnimatePresence>
-          {status !== "playing" && (
+          {(status === "won" || status === "lost") && (
             <EndCard
               key={status}
               won={status === "won"}
@@ -300,6 +338,7 @@ export default function Game({
               mistakes={mistakes}
               streak={streak}
               pivot={puzzle.pivot}
+              linkCorrect={linkGuess === puzzle.pivot}
               shareText={buildShare(puzzle, solved, indexByName, mistakes, status === "won")}
               onShareToast={() => setToast("Result copied to clipboard!")}
               onExit={onExit}
@@ -326,9 +365,14 @@ export default function Game({
         )}
       </AnimatePresence>
 
-      {/* Per-solve particle pop, plus the big win shower */}
-      {!reduce && burst > 0 && status === "playing" && <Confetti key={burst} count={26} />}
+      {!reduce && burst > 0 && status === "playing" && <Confetti key={burst} count={24} />}
       {status === "won" && !reduce && <Confetti count={110} />}
+
+      <AnimatePresence>
+        {coach >= 0 && coach <= 2 && status === "playing" && (
+          <Coach step={coach} onNext={() => setCoach((c) => c + 1)} onDone={() => { setCoach(-1); onTutorialDone(); }} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -345,21 +389,52 @@ function buildShare(
   const order = (won ? solved : [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))])
     .map((c) => CATEGORY_THEMES[indexByName.get(c.name) ?? 0].emoji)
     .join("");
-  const stars = won ? "★".repeat(starsForMistakes(mistakes)) + "☆".repeat(3 - starsForMistakes(mistakes)) : "—";
-  const tag = won ? `${stars}` : "didn't crack it";
+  const s = starsForMistakes(mistakes);
+  const tag = won ? "★".repeat(s) + "☆".repeat(3 - s) : "didn't crack it";
   return `WordGrid — ${puzzle.title}\n${order}\n${tag}\n${location.href}`;
+}
+
+function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string; spotlight: boolean }) {
+  return (
+    <motion.div
+      animate={spotlight ? { scale: [1, 1.04, 1] } : {}}
+      transition={{ duration: 1.4, repeat: spotlight ? Infinity : 0 }}
+      className={`relative overflow-hidden rounded-2xl border px-4 py-3 text-center ${
+        spotlight ? "border-fuchsia-300 ring-2 ring-fuchsia-300/70" : "border-white/15"
+      }`}
+      style={{ background: "linear-gradient(110deg,rgba(129,140,248,0.18),rgba(232,121,249,0.18))" }}
+    >
+      <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-indigo-200/80">
+        Secret link · in every group
+      </div>
+      <div className="mt-1 flex items-center justify-center gap-2">
+        <span aria-hidden className="text-lg">◆</span>
+        {reveal ? (
+          <motion.span
+            initial={{ rotateX: 90, opacity: 0 }}
+            animate={{ rotateX: 0, opacity: 1 }}
+            className="font-display text-2xl font-bold uppercase tracking-wide text-white"
+          >
+            {word}
+          </motion.span>
+        ) : (
+          <span className="font-display text-2xl font-bold tracking-[0.3em] text-white/90">? ? ?</span>
+        )}
+      </div>
+    </motion.div>
+  );
 }
 
 function WordTile({
   word,
   selected,
-  pivotReveal,
+  hinted,
   disabled,
   onClick,
 }: {
   word: string;
   selected: boolean;
-  pivotReveal: boolean;
+  hinted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -371,52 +446,32 @@ function WordTile({
   if (selected) {
     look = "bg-white text-slate-900";
     style = { boxShadow: "0 10px 30px -8px rgba(255,255,255,0.4)" };
-  } else if (pivotReveal) {
-    look = "border-transparent text-slate-900";
-    style = {
-      backgroundImage: "linear-gradient(135deg,#fff,#fde68a,#fbcfe8,#c7d2fe)",
-      boxShadow: "0 0 28px rgba(255,255,255,0.5)",
-    };
+  } else if (hinted) {
+    look = "border-fuchsia-300 text-white";
+    style = { boxShadow: "0 0 0 2px rgba(240,171,252,0.8)" };
   }
 
   return (
     <motion.button
       layout
       initial={{ opacity: 0, scale: 0.6 }}
-      animate={pivotReveal ? { opacity: 1, scale: [1, 1.12, 1] } : { opacity: 1, scale: 1 }}
+      animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.4, y: -24 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
       whileTap={disabled ? undefined : { scale: 0.92 }}
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={`${word}${pivotReveal ? ", the shared word" : ""}`}
+      aria-label={word}
       className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${look} disabled:cursor-default`}
       style={style}
     >
-      {pivotReveal && (
-        <span aria-hidden className="absolute right-1.5 top-1 text-[0.6rem]">
-          ◆
-        </span>
-      )}
       {word}
     </motion.button>
   );
 }
 
-function SolvedBanner({
-  cat,
-  pivot,
-  themeIndex,
-  revealPivot,
-  faded,
-}: {
-  cat: Category;
-  pivot: string;
-  themeIndex: number;
-  revealPivot: boolean;
-  faded: boolean;
-}) {
+function SolvedBanner({ cat, themeIndex, faded }: { cat: Category; themeIndex: number; faded: boolean }) {
   const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
   return (
     <motion.div
@@ -424,21 +479,17 @@ function SolvedBanner({
       initial={{ opacity: 0, scale: 0.9, y: -8 }}
       animate={{ opacity: faded ? 0.55 : 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className={`rounded-2xl bg-gradient-to-r ${theme.grad} px-4 py-2.5 shadow-lg`}
+      className={`flex items-center justify-between rounded-2xl bg-gradient-to-r ${theme.grad} px-4 py-2.5 shadow-lg`}
       style={{ color: theme.ink }}
     >
-      <div className="text-[0.7rem] font-bold uppercase tracking-widest opacity-80">{cat.name}</div>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-extrabold">
-        <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5" style={{ background: "rgba(0,0,0,0.16)" }}>
-          <span aria-hidden>◆</span>
-          {revealPivot ? pivot : "SHARED"}
-        </span>
+      <span className="text-[0.7rem] font-bold uppercase tracking-widest opacity-80">{cat.name}</span>
+      <span className="flex gap-1.5 text-sm font-extrabold">
         {cat.spokes.map((w) => (
           <span key={w} className="rounded-md px-2 py-0.5" style={{ background: "rgba(255,255,255,0.28)" }}>
             {w}
           </span>
         ))}
-      </div>
+      </span>
     </motion.div>
   );
 }
@@ -485,14 +536,59 @@ function Controls({
           disabled={!canSubmit}
           className="rounded-full bg-white px-7 py-2.5 text-sm font-bold text-slate-900 shadow-lg shadow-black/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
-          Submit
+          Submit pair
         </button>
       </div>
     </div>
   );
 }
 
-function StarRow({ stars, size = 44 }: { stars: number; size?: number }) {
+function LinkGuess({
+  options,
+  chosen,
+  answer,
+  onGuess,
+}: {
+  options: string[];
+  chosen: string | null;
+  answer: string;
+  onGuess: (w: string) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-7 text-center"
+    >
+      <h3 className="font-display text-xl font-bold text-white">All four groups found!</h3>
+      <p className="mt-1 text-sm text-indigo-200/80">Now — what's the secret word linking them all?</p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {options.map((w) => {
+          const isChosen = chosen === w;
+          const isAnswer = w === answer;
+          let cls = "border-white/15 bg-white/[0.06] text-indigo-50 hover:bg-white/[0.12]";
+          if (chosen) {
+            if (isAnswer) cls = "border-transparent bg-gradient-to-r from-emerald-400 to-teal-300 text-emerald-950";
+            else if (isChosen) cls = "border-transparent bg-gradient-to-r from-rose-400 to-pink-500 text-white";
+            else cls = "border-white/10 bg-white/[0.04] text-indigo-100/40";
+          }
+          return (
+            <button
+              key={w}
+              disabled={!!chosen}
+              onClick={() => onGuess(w)}
+              className={`rounded-2xl border px-3 py-3 text-base font-bold uppercase tracking-wide transition ${cls}`}
+            >
+              {w}
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+function StarRow({ stars }: { stars: number }) {
   return (
     <div className="flex justify-center gap-2">
       {[0, 1, 2].map((i) => {
@@ -502,8 +598,8 @@ function StarRow({ stars, size = 44 }: { stars: number; size?: number }) {
             key={i}
             initial={{ scale: 0, rotate: -40 }}
             animate={{ scale: earned ? 1 : 0.8, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.25 + i * 0.22 }}
-            style={{ fontSize: size }}
+            transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.2 + i * 0.2 }}
+            style={{ fontSize: 44 }}
             className={earned ? "drop-shadow-[0_2px_10px_rgba(251,191,36,0.6)]" : "opacity-30 grayscale"}
           >
             {earned ? "⭐" : "☆"}
@@ -520,6 +616,7 @@ function EndCard({
   mistakes,
   streak,
   pivot,
+  linkCorrect,
   shareText,
   onShareToast,
   onExit,
@@ -531,6 +628,7 @@ function EndCard({
   mistakes: number;
   streak: number;
   pivot: string;
+  linkCorrect: boolean;
   shareText: string;
   onShareToast: () => void;
   onExit: () => void;
@@ -568,23 +666,28 @@ function EndCard({
           <h3 className="mt-3 font-display text-2xl font-bold text-white">
             {RATINGS[Math.min(mistakes, RATINGS.length - 1)]}
           </h3>
-          {streak >= 2 && (
-            <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>
-          )}
+          <p className="mt-2 text-sm text-indigo-200/80">
+            The secret link was{" "}
+            <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
+              {pivot}
+            </span>
+            . {linkCorrect ? "🔑 You guessed it!" : ""}
+          </p>
+          {streak >= 2 && <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>}
         </>
       ) : (
         <>
           <div className="text-4xl">🧩</div>
           <h3 className="mt-2 font-display text-2xl font-bold text-white">Out of guesses</h3>
+          <p className="mt-2 text-sm text-indigo-200/80">
+            The secret link was{" "}
+            <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
+              {pivot}
+            </span>
+            .
+          </p>
         </>
       )}
-      <p className="mt-3 text-sm text-indigo-200/80">
-        The shared word was{" "}
-        <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
-          {pivot}
-        </span>
-        .
-      </p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         <button
           onClick={onExit}
@@ -614,6 +717,56 @@ function EndCard({
               All done 🎉
             </button>
           ))}
+      </div>
+    </motion.div>
+  );
+}
+
+const COACH = [
+  {
+    title: "Meet the secret link",
+    body: "One hidden word belongs to every group. It stays masked up top — you'll reveal it at the very end.",
+    cta: "Next",
+  },
+  {
+    title: "Find a pair",
+    body: "Tap the two highlighted words that share a theme, then hit Submit pair. The hidden link joins them automatically.",
+    cta: null, // advances when the player solves their first pair
+  },
+  {
+    title: "You've got it!",
+    body: "Find the other pairs, then guess the secret word that links them all. Good luck!",
+    cta: "Let's go",
+  },
+];
+
+function Coach({ step, onNext, onDone }: { step: number; onNext: () => void; onDone: () => void }) {
+  const c = COACH[step];
+  if (!c) return null;
+  return (
+    <motion.div
+      initial={{ y: 60, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 60, opacity: 0 }}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-5"
+    >
+      <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/15 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur">
+        <div className="flex items-center gap-2">
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-sm">
+            💡
+          </span>
+          <span className="font-bold text-white">{c.title}</span>
+        </div>
+        <p className="mt-2 text-sm leading-snug text-indigo-100/85">{c.body}</p>
+        {c.cta && (
+          <button
+            onClick={step === COACH.length - 1 ? onDone : onNext}
+            className="mt-3 w-full rounded-xl bg-white py-2.5 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          >
+            {c.cta}
+          </button>
+        )}
+        {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-fuchsia-300">Your turn ↑</div>}
       </div>
     </motion.div>
   );

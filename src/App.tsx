@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { PUZZLES } from "./puzzles";
 import {
@@ -21,14 +21,19 @@ export default function App() {
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
   const [muted, setMutedState] = useState(() => isMuted());
   const [showHelp, setShowHelp] = useState(false);
-
-  // Show the tutorial once on the very first visit.
-  useEffect(() => {
+  // The interactive coached tutorial runs once, on the player's first level.
+  const [tutorialPending, setTutorialPending] = useState(() => {
     try {
-      if (!localStorage.getItem("wordgrid:seen")) {
-        setShowHelp(true);
-        localStorage.setItem("wordgrid:seen", "1");
-      }
+      return !localStorage.getItem("wordgrid:tutorial");
+    } catch {
+      return true;
+    }
+  });
+
+  const finishTutorial = useCallback(() => {
+    setTutorialPending(false);
+    try {
+      localStorage.setItem("wordgrid:tutorial", "1");
     } catch {
       /* ignore */
     }
@@ -122,11 +127,13 @@ export default function App() {
               puzzleIndex={levelIndex}
               reduce={reduce}
               streak={progress.streak}
+              tutorial={tutorialPending && levelIndex === 0}
               onWin={handleWin}
               onLoss={handleLoss}
               onExit={() => setScreen("levels")}
               onNext={levelIndex < PUZZLES.length - 1 ? nextLevel : undefined}
               onHelp={() => setShowHelp(true)}
+              onTutorialDone={finishTutorial}
             />
           </ScreenWrap>
         )}
@@ -155,22 +162,22 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
 
 const STEPS = [
   {
-    icon: "🔤",
-    grad: "from-sky-400 to-cyan-300",
-    title: "Find four groups",
-    body: "Nine words hide four groups of three. Tap three that belong together, then Submit.",
+    icon: "🔗",
+    grad: "from-violet-400 to-fuchsia-400",
+    title: "There's a secret link",
+    body: "One hidden word belongs to every group. It stays masked at the top until the very end.",
   },
   {
-    icon: "🔑",
-    grad: "from-violet-400 to-fuchsia-400",
-    title: "One word is shared",
-    body: "A single secret word belongs to every group — reuse it each time. It stays disguised among the tiles until you win.",
+    icon: "🔤",
+    grad: "from-sky-400 to-cyan-300",
+    title: "Pair up the words",
+    body: "Tap two words that share a theme, then Submit. The hidden link joins them to make a group.",
   },
   {
     icon: "⭐",
     grad: "from-amber-300 to-orange-400",
-    title: "Earn three stars",
-    body: "You get four mistakes. The fewer you make, the more stars you collect.",
+    title: "Guess the link, earn stars",
+    body: "Find all four pairs (four mistakes allowed), then guess the secret word that links them all.",
   },
 ];
 
