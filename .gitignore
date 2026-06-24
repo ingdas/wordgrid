@@ -1,0 +1,9 @@
+node_modules
+dist
+*.local
+.DS_Store
+.vite
+
+# NOTE: /docs is intentionally committed — it is the GitHub Pages build.
+
+*.tsbuildinfo
