@@ -12,7 +12,10 @@ export interface Progress {
   best: Record<string, number>; // level id -> best time in ms (lower is better)
   daily: { lastDate: string; streak: number }; // daily-challenge streak
   achievements: string[]; // unlocked achievement ids
+  hints: number; // bank of category-description hints
 }
+
+export const STARTING_HINTS = 3;
 
 const KEY = "wordgrid:progress";
 
@@ -29,6 +32,7 @@ export function loadProgress(): Progress {
         best: p.best ?? {},
         daily: p.daily ?? { lastDate: "", streak: 0 },
         achievements: p.achievements ?? [],
+        hints: p.hints ?? STARTING_HINTS,
       };
     }
   } catch {
@@ -42,6 +46,7 @@ export function loadProgress(): Progress {
     best: {},
     daily: { lastDate: "", streak: 0 },
     achievements: [],
+    hints: STARTING_HINTS,
   };
 }
 

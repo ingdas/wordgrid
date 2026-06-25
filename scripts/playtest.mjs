@@ -87,6 +87,16 @@ if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during pl
 if (/star power/i.test(midText)) note("Level title leaks the link during play.");
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
+// 4b. Hint: reveal a category description (token from a bank of 3, no solve)
+if (!/reveal a group's theme · 3 left/i.test(midText)) note("Hint bank should start at 3.");
+await clickText("button", "Hint");
+await sleep(350);
+const afterHint = await bodyText();
+log("hint decremented bank:", /· 2 left/.test(afterHint));
+if (!/· 2 left/.test(afterHint)) note("Hint bank did not decrement to 2.");
+if (!/▢/.test(afterHint)) note("Hint did not show a placeholder group banner.");
+await p.screenshot({ path: `${SHOT}/r-hint.png` });
+
 // 5. Solve groups (coach auto-advances after the first; group 4 auto-solves)
 await solveGroup(GROUPS[0]);
 await clickText("button", "Let's go"); // dismiss coach step 2

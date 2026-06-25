@@ -18,10 +18,10 @@ const MAX_MISTAKES = 4;
 // A distinct shape per group so colour is never the only differentiator
 // (colourblind-friendly).
 export const CATEGORY_THEMES = [
-  { grad: "from-amber-300 to-orange-400", ink: "#3b1f00", emoji: "🟨", shape: "●" },
-  { grad: "from-sky-400 to-cyan-300", ink: "#04293a", emoji: "🟦", shape: "▲" },
-  { grad: "from-violet-400 to-fuchsia-400", ink: "#2a0a3a", emoji: "🟪", shape: "■" },
-  { grad: "from-emerald-400 to-teal-300", ink: "#04302a", emoji: "🟩", shape: "◆" },
+  { grad: "from-amber-300 to-orange-400", ink: "#3b1f00", emoji: "🟨", shape: "●", tint: "#fbbf24" },
+  { grad: "from-sky-400 to-cyan-300", ink: "#04293a", emoji: "🟦", shape: "▲", tint: "#38bdf8" },
+  { grad: "from-violet-400 to-fuchsia-400", ink: "#2a0a3a", emoji: "🟪", shape: "■", tint: "#c084fc" },
+  { grad: "from-emerald-400 to-teal-300", ink: "#04302a", emoji: "🟩", shape: "◆", tint: "#34d399" },
 ];
 
 const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
@@ -35,6 +35,8 @@ interface GameProps {
   tutorial: boolean;
   daily: boolean;
   bestMs?: number;
+  hintBank: number;
+  onUseHint: () => void;
   onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number }) => void;
   onLoss: () => void;
   onExit: () => void;
@@ -55,6 +57,8 @@ export default function Game({
   tutorial,
   daily,
   bestMs,
+  hintBank,
+  onUseHint,
   onWin,
   onLoss,
   onExit,
@@ -77,7 +81,7 @@ export default function Game({
   const [toast, setToast] = useState<string | null>(null);
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
-  const [hintsUsed, setHintsUsed] = useState(0);
+  const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
   const [moves, setMoves] = useState(0);
   const [order, setOrder] = useState<string[]>(spokeTiles);
   const [now, setNow] = useState(Date.now());
@@ -168,8 +172,8 @@ export default function Game({
   const linkGuessed = linkGuess != null;
   const linkCorrect = linkGuessed && linkMatches(linkGuess!, puzzle.pivot, puzzle.accept);
 
-  // Final stars: from pairing mistakes, minus a missed link and any hints.
-  const finalStars = computeStars({ mistakes, linkGuessed, linkCorrect, hintsUsed });
+  // Final stars: from pairing mistakes, minus a missed link guess.
+  const finalStars = computeStars({ mistakes, linkGuessed, linkCorrect });
 
   // Report the result up exactly once.
   useEffect(() => {
@@ -244,12 +248,22 @@ export default function Game({
     setOrder((o) => shuffle(o));
   }, []);
 
-  // Hint: auto-solve one unsolved group for the cost of a star.
-  const useHint = useCallback(() => {
-    if (status !== "playing" || unsolvedCategories.length <= 1) return;
-    setHintsUsed((h) => h + 1);
-    solveCategory(unsolvedCategories[0], solved.length);
-  }, [status, unsolvedCategories, solveCategory, solved.length]);
+  // The unsolved categories whose theme hasn't been revealed yet.
+  const hintableCategories = useMemo(
+    () => unsolvedCategories.filter((c) => !revealedHints.has(c.name)),
+    [unsolvedCategories, revealedHints]
+  );
+  const canHint = status === "playing" && hintBank > 0 && hintableCategories.length > 0;
+
+  // Hint: spend a token to reveal one category's description (not its words).
+  const revealCategory = useCallback(() => {
+    if (!canHint) return;
+    const cat = hintableCategories[0];
+    setRevealedHints((prev) => new Set(prev).add(cat.name));
+    setToast(`Hint: a group is “${cat.name}”.`);
+    onUseHint();
+    playSelect();
+  }, [canHint, hintableCategories, onUseHint]);
 
   const restart = useCallback(() => {
     reported.current = false;
@@ -264,7 +278,7 @@ export default function Game({
     setToast(null);
     setPastGuesses(new Set());
     setLinkGuess(null);
-    setHintsUsed(0);
+    setRevealedHints(new Set());
     setMoves(0);
     setOrder(shuffle(spokeTiles));
   }, [spokeTiles]);
@@ -342,7 +356,7 @@ export default function Game({
           spotlight={coach === 0}
         />
 
-        {bannerCats.length > 0 && (
+        {(bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
               {bannerCats.map((cat) => (
@@ -353,6 +367,12 @@ export default function Game({
                   faded={status === "lost" && !solved.includes(cat)}
                 />
               ))}
+              {status !== "lost" &&
+                puzzle.categories
+                  .filter((c) => !solved.includes(c) && revealedHints.has(c.name))
+                  .map((cat) => (
+                    <HintBanner key={`hint-${cat.name}`} cat={cat} themeIndex={indexByName.get(cat.name) ?? 0} />
+                  ))}
             </AnimatePresence>
           </div>
         )}
@@ -403,10 +423,11 @@ export default function Game({
             max={MAX_MISTAKES}
             canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
-            canHint={unsolvedCategories.length > 1}
+            canHint={canHint}
+            hintBank={hintBank}
             onSubmit={submit}
             onClear={clearSelection}
-            onHint={useHint}
+            onHint={revealCategory}
           />
         )}
 
@@ -605,12 +626,39 @@ function SolvedBanner({ cat, themeIndex, faded }: { cat: Category; themeIndex: n
   );
 }
 
+// A hinted-but-unsolved group: shows the theme and placeholders, never the words.
+function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) {
+  const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.9, y: -8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+      className="flex items-center justify-between rounded-2xl border-2 border-dashed px-4 py-2.5"
+      style={{ borderColor: theme.tint, background: `${theme.tint}14`, color: theme.tint }}
+    >
+      <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest">
+        <span aria-hidden className="text-xs">{theme.shape}</span>
+        {cat.name}
+      </span>
+      <span className="flex gap-1.5 text-sm font-extrabold opacity-70" aria-label="words not revealed">
+        {cat.spokes.map((_, i) => (
+          <span key={i} aria-hidden>▢</span>
+        ))}
+      </span>
+    </motion.div>
+  );
+}
+
 function Controls({
   mistakes,
   max,
   canSubmit,
   hasSelection,
   canHint,
+  hintBank,
   onSubmit,
   onClear,
   onHint,
@@ -620,6 +668,7 @@ function Controls({
   canSubmit: boolean;
   hasSelection: boolean;
   canHint: boolean;
+  hintBank: number;
   onSubmit: () => void;
   onClear: () => void;
   onHint: () => void;
@@ -659,7 +708,7 @@ function Controls({
         disabled={!canHint}
         className="text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-30"
       >
-        💡 Hint — reveal a group (costs a star)
+        💡 Hint — reveal a group's theme · {hintBank} left
       </button>
     </div>
   );

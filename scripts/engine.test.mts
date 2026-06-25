@@ -41,11 +41,11 @@ test("starsForMistakes: 0->3, 1->2, 2+->1", () => {
   assert.equal(starsForMistakes(3), 1);
 });
 
-test("computeStars docks for wrong link and hints, floor 1", () => {
-  assert.equal(computeStars({ mistakes: 0, linkGuessed: true, linkCorrect: true, hintsUsed: 0 }), 3);
-  assert.equal(computeStars({ mistakes: 0, linkGuessed: true, linkCorrect: false, hintsUsed: 0 }), 2);
-  assert.equal(computeStars({ mistakes: 0, linkGuessed: true, linkCorrect: true, hintsUsed: 1 }), 2);
-  assert.equal(computeStars({ mistakes: 2, linkGuessed: true, linkCorrect: false, hintsUsed: 2 }), 1);
+test("computeStars docks for a missed link guess, floor 1", () => {
+  assert.equal(computeStars({ mistakes: 0, linkGuessed: true, linkCorrect: true }), 3);
+  assert.equal(computeStars({ mistakes: 0, linkGuessed: true, linkCorrect: false }), 2);
+  assert.equal(computeStars({ mistakes: 1, linkGuessed: false, linkCorrect: false }), 2);
+  assert.equal(computeStars({ mistakes: 3, linkGuessed: true, linkCorrect: false }), 1);
 });
 
 test("shuffle preserves the multiset and length", () => {

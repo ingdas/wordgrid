@@ -31,16 +31,11 @@ export function starsForMistakes(mistakes: number): number {
 }
 
 /**
- * Final stars: start from the mistake-based rating, then dock one for a wrong
- * link guess and one per hint used. Never below 1.
+ * Final stars: the mistake-based rating, docked one for a missed link guess.
+ * Never below 1. (Hints come from a separate token bank and don't cost stars.)
  */
-export function computeStars(opts: {
-  mistakes: number;
-  linkGuessed: boolean;
-  linkCorrect: boolean;
-  hintsUsed: number;
-}): number {
-  const penalty = (opts.linkGuessed && !opts.linkCorrect ? 1 : 0) + opts.hintsUsed;
+export function computeStars(opts: { mistakes: number; linkGuessed: boolean; linkCorrect: boolean }): number {
+  const penalty = opts.linkGuessed && !opts.linkCorrect ? 1 : 0;
   return Math.max(1, starsForMistakes(opts.mistakes) - penalty);
 }
 

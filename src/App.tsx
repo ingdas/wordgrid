@@ -116,6 +116,7 @@ export default function App() {
             ...prev.best,
             [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
           },
+          hints: prev.hints + 1, // earn a hint for clearing a level
         };
         if (playingDaily) next = recordDaily(next);
         const fresh = newlyUnlocked(next, {
@@ -136,6 +137,15 @@ export default function App() {
     },
     [levelIndex, playingDaily]
   );
+
+  const useHintToken = useCallback(() => {
+    setProgress((prev) => {
+      if (prev.hints <= 0) return prev;
+      const next = { ...prev, hints: prev.hints - 1 };
+      saveProgress(next);
+      return next;
+    });
+  }, []);
 
   const handleLoss = useCallback(() => {
     setProgress((prev) => {
@@ -204,6 +214,8 @@ export default function App() {
               tutorial={tutorialPending && levelIndex === 0}
               daily={playingDaily}
               bestMs={progress.best[LEVELS[levelIndex].id]}
+              hintBank={progress.hints}
+              onUseHint={useHintToken}
               onWin={handleWin}
               onLoss={handleLoss}
               onExit={exitToLevels}
@@ -253,6 +265,7 @@ function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => 
     ["Levels cleared", `${cleared} / ${LEVELS.length}`],
     ["Completion", `${Math.round((cleared / LEVELS.length) * 100)}%`],
     ["Links guessed", `${progress.linksGuessed}`],
+    ["Hints available", `💡 ${progress.hints}`],
     ["Current streak", `🔥 ${progress.streak}`],
     ["Best streak", `${progress.bestStreak}`],
   ];
