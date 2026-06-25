@@ -16,6 +16,8 @@ export default function LevelSelect({
   onStats,
   muted,
   onToggleMute,
+  musicOn,
+  onToggleMusic,
 }: {
   progress: Progress;
   onPick: (index: number) => void;
@@ -24,6 +26,8 @@ export default function LevelSelect({
   onStats: () => void;
   muted: boolean;
   onToggleMute: () => void;
+  musicOn: boolean;
+  onToggleMusic: () => void;
 }) {
   const stars = totalStars(progress);
   const nextIndex = LEVELS.findIndex((p, i) => isUnlocked(progress, i) && !(progress.stars[p.id] > 0));
@@ -47,8 +51,17 @@ export default function LevelSelect({
         </button>
         <div className="flex gap-2">
           <button
+            onClick={onToggleMusic}
+            aria-label={musicOn ? "Turn music off" : "Turn music on"}
+            className={`grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base transition hover:bg-white/15 active:scale-95 ${
+              musicOn ? "" : "opacity-50"
+            }`}
+          >
+            🎵
+          </button>
+          <button
             onClick={onToggleMute}
-            aria-label={muted ? "Unmute" : "Mute"}
+            aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
             className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base transition hover:bg-white/15 active:scale-95"
           >
             {muted ? "🔇" : "🔊"}

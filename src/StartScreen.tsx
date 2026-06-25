@@ -1,31 +1,49 @@
 import { motion } from "framer-motion";
-import { MAX_STARS, totalStars, type Progress } from "./progress";
+import { MAX_STARS, totalStars, dailyDoneToday, type Progress } from "./progress";
 
 export default function StartScreen({
   progress,
   onPlay,
+  onDaily,
   onHelp,
   muted,
   onToggleMute,
+  musicOn,
+  onToggleMusic,
 }: {
   progress: Progress;
   onPlay: () => void;
+  onDaily: () => void;
   onHelp: () => void;
   muted: boolean;
   onToggleMute: () => void;
+  musicOn: boolean;
+  onToggleMusic: () => void;
 }) {
   const stars = totalStars(progress);
   const returning = stars > 0 || progress.bestStreak > 0;
+  const dailyDone = dailyDoneToday(progress);
 
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 text-center">
-      <button
-        onClick={onToggleMute}
-        aria-label={muted ? "Unmute" : "Mute"}
-        className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95"
-      >
-        {muted ? "🔇" : "🔊"}
-      </button>
+      <div className="absolute right-4 top-4 flex gap-2">
+        <button
+          onClick={onToggleMusic}
+          aria-label={musicOn ? "Turn music off" : "Turn music on"}
+          className={`grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95 ${
+            musicOn ? "" : "opacity-50"
+          }`}
+        >
+          🎵
+        </button>
+        <button
+          onClick={onToggleMute}
+          aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+          className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95"
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
+      </div>
 
       <motion.div
         initial={{ scale: 0, rotate: -30 }}
@@ -66,6 +84,17 @@ export default function StartScreen({
           className="w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-4 text-lg font-bold text-white shadow-xl shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
         >
           {returning ? "Continue" : "Play"}
+        </button>
+        <button
+          onClick={onDaily}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-base font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+        >
+          📅 Daily Challenge
+          {dailyDone ? (
+            <span className="text-emerald-300">✓</span>
+          ) : (
+            progress.daily.streak > 0 && <span className="text-amber-300">🔥 {progress.daily.streak}</span>
+          )}
         </button>
         <button
           onClick={onHelp}

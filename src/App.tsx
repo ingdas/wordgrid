@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { LEVELS } from "./puzzles";
 import {
@@ -6,10 +6,13 @@ import {
   saveProgress,
   totalStars,
   clearedCount,
+  recordDaily,
+  dailyIndex,
   MAX_STARS,
   type Progress,
 } from "./progress";
-import { initAudio, isMuted, setMuted } from "./audio";
+import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic } from "./audio";
+import { initSdk, gameplayStart, gameplayStop, happytime, showInterstitial } from "./sdk";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
@@ -22,8 +25,14 @@ export default function App() {
   const [levelIndex, setLevelIndex] = useState(0);
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
   const [muted, setMutedState] = useState(() => isMuted());
+  const [musicOn, setMusicOnState] = useState(() => isMusicOn());
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [playingDaily, setPlayingDaily] = useState(false);
+
+  useEffect(() => {
+    initSdk();
+  }, []);
   // The interactive coached tutorial runs once, on the player's first level.
   const [tutorialPending, setTutorialPending] = useState(() => {
     try {
@@ -51,24 +60,46 @@ export default function App() {
     });
   }, []);
 
+  const toggleMusic = useCallback(() => {
+    setMusicOnState((m) => {
+      const next = !m;
+      setMusicOn(next); // also starts/stops the loop
+      return next;
+    });
+  }, []);
+
   const play = useCallback(() => {
     initAudio(); // unlock the AudioContext from this user gesture
+    startMusic(); // no-op unless music is enabled
     setScreen("levels");
   }, []);
 
   const pickLevel = useCallback((index: number) => {
+    setPlayingDaily(false);
     setLevelIndex(index);
     setScreen("game");
+    gameplayStart();
+  }, []);
+
+  const playDaily = useCallback(() => {
+    initAudio();
+    startMusic();
+    setPlayingDaily(true);
+    setLevelIndex(dailyIndex());
+    setScreen("game");
+    gameplayStart();
   }, []);
 
   const handleWin = useCallback(
     (result: { stars: number; linkCorrect: boolean; timeMs: number }) => {
+      happytime();
       setProgress((prev) => {
         const id = LEVELS[levelIndex].id;
         const bestStars = Math.max(prev.stars[id] ?? 0, result.stars);
         const streak = prev.streak + 1;
         const prevBestTime = prev.best[id];
-        const next: Progress = {
+        let next: Progress = {
+          ...prev,
           stars: { ...prev.stars, [id]: bestStars },
           streak,
           bestStreak: Math.max(prev.bestStreak, streak),
@@ -78,11 +109,12 @@ export default function App() {
             [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
           },
         };
+        if (playingDaily) next = recordDaily(next);
         saveProgress(next);
         return next;
       });
     },
-    [levelIndex]
+    [levelIndex, playingDaily]
   );
 
   const handleLoss = useCallback(() => {
@@ -94,7 +126,14 @@ export default function App() {
   }, []);
 
   const nextLevel = useCallback(() => {
+    showInterstitial(); // between-level ad break (no-op without the SDK)
     setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1));
+    gameplayStart();
+  }, []);
+
+  const exitToLevels = useCallback(() => {
+    gameplayStop();
+    setScreen("levels");
   }, []);
 
   return (
@@ -108,9 +147,12 @@ export default function App() {
             <StartScreen
               progress={progress}
               onPlay={play}
+              onDaily={playDaily}
               onHelp={() => setShowHelp(true)}
               muted={muted}
               onToggleMute={toggleMute}
+              musicOn={musicOn}
+              onToggleMusic={toggleMusic}
             />
           </ScreenWrap>
         )}
@@ -125,6 +167,8 @@ export default function App() {
               onStats={() => setShowStats(true)}
               muted={muted}
               onToggleMute={toggleMute}
+              musicOn={musicOn}
+              onToggleMusic={toggleMusic}
             />
           </ScreenWrap>
         )}
@@ -139,7 +183,7 @@ export default function App() {
               tutorial={tutorialPending && levelIndex === 0}
               onWin={handleWin}
               onLoss={handleLoss}
-              onExit={() => setScreen("levels")}
+              onExit={exitToLevels}
               onNext={levelIndex < LEVELS.length - 1 ? nextLevel : undefined}
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}

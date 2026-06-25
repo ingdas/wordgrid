@@ -92,3 +92,65 @@ export function playStar(index = 0) {
   initAudio();
   blip(880 * Math.pow(2, index / 12), 0, 0.25, "triangle", 0.16);
 }
+
+// --- Ambient background music (synthesized, independent of the SFX mute) -----
+
+let musicTimer: ReturnType<typeof setInterval> | null = null;
+let musicOn = false;
+try {
+  musicOn = localStorage.getItem("wordgrid:music") === "1";
+} catch {
+  /* ignore */
+}
+
+const PENTATONIC = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25]; // C D E G A C
+
+export function isMusicOn() {
+  return musicOn;
+}
+
+export function setMusicOn(on: boolean) {
+  musicOn = on;
+  try {
+    localStorage.setItem("wordgrid:music", on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+  if (on) startMusic();
+  else stopMusic();
+}
+
+function pad(freq: number, dur: number, peak: number) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(peak, t + 0.5);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.start(t);
+  osc.stop(t + dur + 0.1);
+}
+
+export function startMusic() {
+  initAudio();
+  if (!ctx || !musicOn || musicTimer) return;
+  const tick = () => {
+    const note = PENTATONIC[Math.floor(Math.random() * PENTATONIC.length)];
+    pad(note, 2.8, 0.04);
+    if (Math.random() < 0.45) pad(note / 2, 3.4, 0.025); // occasional low drone
+  };
+  tick();
+  musicTimer = setInterval(tick, 2000);
+}
+
+export function stopMusic() {
+  if (musicTimer) {
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
+}

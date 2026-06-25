@@ -15,11 +15,13 @@ import {
 
 const MAX_MISTAKES = 4;
 
+// A distinct shape per group so colour is never the only differentiator
+// (colourblind-friendly).
 export const CATEGORY_THEMES = [
-  { grad: "from-amber-300 to-orange-400", ink: "#3b1f00", emoji: "🟨" },
-  { grad: "from-sky-400 to-cyan-300", ink: "#04293a", emoji: "🟦" },
-  { grad: "from-violet-400 to-fuchsia-400", ink: "#2a0a3a", emoji: "🟪" },
-  { grad: "from-emerald-400 to-teal-300", ink: "#04302a", emoji: "🟩" },
+  { grad: "from-amber-300 to-orange-400", ink: "#3b1f00", emoji: "🟨", shape: "●" },
+  { grad: "from-sky-400 to-cyan-300", ink: "#04293a", emoji: "🟦", shape: "▲" },
+  { grad: "from-violet-400 to-fuchsia-400", ink: "#2a0a3a", emoji: "🟪", shape: "■" },
+  { grad: "from-emerald-400 to-teal-300", ink: "#04302a", emoji: "🟩", shape: "◆" },
 ];
 
 const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
@@ -120,11 +122,14 @@ export default function Game({
     [puzzle, solved]
   );
 
+  const [announce, setAnnounce] = useState("");
+
   const solveCategory = useCallback(
     (cat: Category, combo: number) => {
       playCorrect(combo);
       buzz(30);
       setBurst((b) => b + 1);
+      setAnnounce(`Group found: ${cat.name}. ${combo + 1} of 4.`);
       setSolved((prev) => [...prev, cat]);
       setSelected([]);
     },
@@ -164,10 +169,12 @@ export default function Game({
       reported.current = true;
       playWin();
       buzz([0, 40, 60, 40]);
+      setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
       onWin({ stars: finalStars, linkCorrect: linkGuess === puzzle.pivot, timeMs: Date.now() - startedAt.current });
     } else if (status === "lost") {
       reported.current = true;
+      setAnnounce(`Out of guesses. The secret link was ${puzzle.pivot}.`);
       onLoss();
     }
   }, [status, finalStars, onWin, onLoss, buzz, linkGuess, puzzle.pivot]);
@@ -373,7 +380,7 @@ export default function Game({
       </main>
 
       <div className="sr-only" role="status" aria-live="polite">
-        {toast}
+        {announce} {toast}
       </div>
       <AnimatePresence>
         {toast && (
@@ -505,7 +512,10 @@ function SolvedBanner({ cat, themeIndex, faded }: { cat: Category; themeIndex: n
       className={`flex items-center justify-between rounded-2xl bg-gradient-to-r ${theme.grad} px-4 py-2.5 shadow-lg`}
       style={{ color: theme.ink }}
     >
-      <span className="text-[0.7rem] font-bold uppercase tracking-widest opacity-80">{cat.name}</span>
+      <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest opacity-80">
+        <span aria-hidden className="text-xs">{theme.shape}</span>
+        {cat.name}
+      </span>
       <span className="flex gap-1.5 text-sm font-extrabold">
         {cat.spokes.map((w) => (
           <span key={w} className="rounded-md px-2 py-0.5" style={{ background: "rgba(255,255,255,0.28)" }}>
