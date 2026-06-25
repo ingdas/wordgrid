@@ -1,98 +1,73 @@
 # WordGrid — Critical Evaluation & Backlog
 
-_Last updated: iteration 5._
+_Last updated: iteration 7 (full backlog pass)._
 
-The game is a casual word puzzle: **62 levels**, each a board of 12 words that
-sort into 4 themed groups of four, all joined by one **hidden link word**
-revealed only at the end. Flow: **Start → Level Map → Game (group + guess the
-link)**.
+A casual word puzzle: **62 levels**, each a board of 12 words that sort into 4
+themed groups of four, all joined by one **hidden link word** revealed only at
+the end. Flow: **Start → Level Map → Game (group + guess the link)**.
 
-> Iteration 6: expanded each level from 4×3 (8 spokes) to **4×4 (12 spokes)** —
-> every category gained a third themed spoke. All 62 re-validated. The ambiguity
-> risk (P1 below) grows with the bigger groups and still wants a human audit.
-
-An automated headless-Chrome runthrough (`scripts/playtest.mjs`) drives the full
-flow and currently passes with **zero console errors and zero issues**,
-including the assertion that the link word never appears on screen mid-game.
+Tooling: `npm run build` (type-check + build to `/docs`), `npm run validate`
+(puzzle structure), `npm run audit` (ambiguity helper), `npm test` (engine unit
+tests). A headless-Chrome runthrough (`scripts/playtest.mjs`) drives the whole
+flow and passes with **zero console errors / zero issues**, including the check
+that the link word never appears on screen mid-game.
 
 ---
 
-## Critical evaluation (honest pass)
+## Done in the full backlog pass (iteration 7)
 
-### What works well
-- **Concealment is now airtight.** The link is a masked tile (`◆ ? ? ?`); its
-  word is never rendered until the reveal, and it's never a board tile you could
-  deduce by elimination. This fully resolves the long-running leak.
-- **Strong loop:** pair matching → "guess the secret word" climax → stars →
-  next level. The guess restores the original "find the shared word" challenge
-  as a payoff instead of a giveaway.
-- **Onboarding:** an in-context coached tutorial (not a wall of text) that waits
-  for the player to actually make their first pair.
-- **Game feel:** synthesized SFX, per-solve confetti, haptics, star animations.
-- **Self-contained:** fonts bundled, audio synthesized, builds to `/docs`.
+### P1 — correctness & fairness ✅
+- Manual ambiguity review of all 62 levels; fixed 4 ambiguous spokes
+  (ring BAND→HALO, mold SHAPE→SWAY, well BORE→OASIS, trunk LIMB→BOUGH) and added
+  an `npm run audit` helper.
+- A wrong "guess the link" now costs a star (engine-enforced, message on the card).
 
-### Weaknesses / risks (ranked)
-1. **[content] Pair ambiguity risk.** With pick-2, a level is only fair if each
-   themed pair is unambiguous and no spoke plausibly pairs across groups. The 62
-   puzzles are hand-checked for structure (unique tiles, pivot fits) but **not**
-   for cross-pair ambiguity. A human pass / playtest of each is needed. *High.*
-2. **[depth] The link guess is multiple-choice (1 of 4)** and the distractors
-   are random other-puzzle pivots, often easy to eliminate by theme. Low
-   challenge; no penalty for a wrong guess. *Medium.*
-3. **[balance] Pairing can be easier than the old pick-3** — 8 tiles into 4
-   pairs is gentle. Difficulty curve across 62 levels is undifferentiated. *Med.*
-4. **[progression] Hard sequential gating** of 62 levels may frustrate players
-   who want to jump around or who get stuck on an ambiguous one. *Medium.*
-5. **[replay] Replaying a cleared level is trivial** — you already know the link,
-   so the finale is a freebie; stars are easy to farm. *Low.*
-6. **[a11y] The guess/reveal isn't announced** to screen readers; banner colours
-   aren't colourblind-differentiated (no icons/patterns). *Medium.*
-7. **[mobile] Tall layouts** (link card + 4 banners + grid + controls) can
-   require scrolling on small phones near the end. *Low.*
-8. **[audio] No background music / no master volume** beyond mute. *Low.*
-9. **[meta] Streak only lives in localStorage**; no daily challenge, no
-   leaderboard, nothing social beyond the share string. *Medium.*
+### P2 — depth, balance, progression ✅
+- Difficulty tiers (Easy/Medium/Hard) via a word-length/rarity heuristic; levels
+  ordered easiest-first (STAR pinned), tier dot on each node.
+- Hint button: reveal a group for a star (also a rewarded-ad hook).
+- Smarter link decoys (biased to the answer's length).
+- Looser gating: a window of levels (lookahead 3) stays unlocked.
 
-### Fixed this iteration
-- New masked-link mechanic (the core concealment fix).
-- Interactive coached tutorial on first level.
-- Doubled content: 31 → **62 levels** (all validated).
-- **Loss now reveals all four groups** (previously only solved ones showed).
-- Coach disappears on win/loss and records completion once the first pair lands.
-- Tutorial/help copy rewritten to match the pair-and-link mechanic.
+### P3 — polish & retention ✅
+- Colourblind-safe groups (distinct ●▲■◆ shapes) + aria-live announcements.
+- Daily Challenge (date-seeded) with its own streak, on the start screen.
+- Stats modal: stars, levels cleared, completion %, links guessed, streaks.
+- Background music: synthesized ambient loop with its own 🎵 toggle (default off).
+- CrazyGames SDK shim (`src/sdk.ts`), wired for gameplay lifecycle, interstitials,
+  rewarded ads, and happytime; commented script tag in `index.html`.
+
+### Carried-over ✅
+- Pure, unit-tested engine (`src/engine.ts`, `npm test`).
+- Shuffle tiles; live timer + move counter; per-level best time on the win card.
+- Keyboard shortcuts (Enter submits, Escape clears).
+- i18n scaffold (`src/i18n.ts`) with a few strings wired.
 
 ---
 
-## Backlog (prioritised)
+## Still open / honest caveats
 
-### P1 — correctness & fairness
-- **Audit all 62 puzzles for pair ambiguity.** Write a checker that flags any
-  spoke which could plausibly belong to another group's theme; human-review the
-  flags. Consider a small playtest where solvers report "unfair" pairs.
-- **Make the link guess matter.** Options: cost a star (or a "perfect" badge) on
-  a wrong guess; or replace MC with typed entry + fuzzy match for a star bonus;
-  or escalate options (6 instead of 4) on later levels.
+1. **[content, high] Ambiguity is hand-reviewed, not solver-proven.** With
+   groups of four the risk is real; a word that fits two themes will feel unfair.
+   `npm run audit` only flags generic/short spokes, not semantic overlap. Wants a
+   real playtest or an LLM-judge pass over all 248 groups.
+2. **[depth] The link finale is still 1-of-4 multiple choice.** Decoys are
+   smarter but a typed-entry mode (with fuzzy match) would be a bigger challenge.
+3. **[balance] Difficulty is a length heuristic**, not true semantic difficulty;
+   the curve is approximate.
+4. **[i18n] Only a handful of strings are externalized.** Most copy is still
+   inline; full extraction + a second locale remains.
+5. **[ads] CrazyGames integration is a shim.** Real ads/analytics only work once
+   embedded on CrazyGames with their SDK script and an approved build.
+6. **[music] Ambient loop is minimal** (random pentatonic pads); a richer,
+   layered track with a real volume slider would feel more premium.
+7. **[a11y] Not audited with a real screen reader / keyboard-only run**; tile
+   selection works via Tab+Space but hasn't been formally tested.
+8. **[mobile] Tall end-state layouts** (link card + 4 banners + grid) can scroll
+   on small phones.
 
-### P2 — depth, balance, progression
-- **Difficulty tiers.** Tag levels easy/medium/hard (e.g. by abstractness of the
-  link); order the map as a curve and show the tier on each node.
-- **Smarter distractors.** Pick link decoys that are thematically near the real
-  link, not random, so the guess takes thought.
-- **Looser gating / level jump.** Unlock in small batches, or allow replaying any
-  cleared level and jumping ahead a few.
-- **Hint system** (natural rewarded-ad hook): reveal one pair, or one decoy is
-  removed from the link guess, at the cost of a star.
-
-### P3 — polish & retention
-- **Colourblind-safe banners** (icons/patterns per group) + screen-reader
-  announcements for solves and the reveal.
-- **Daily challenge** (date-seeded level) with a streak and a shareable
-  "WordGrid #N — ★★☆" result.
-- **CrazyGames SDK**: rewarded video for hints, interstitial between levels,
-  analytics. Level boundaries are already clean ad breaks.
-- **Background music** loop with its own volume control.
-- **Stats screen**: best stars per level, total %, links guessed, best streak.
-
-### Carried-over ideas (not yet done)
-- Shuffle remaining tiles; move counter/timer; keyboard shortcuts; i18n;
-  unit tests for the reducer; per-level best-time.
+## Possible next ideas
+- Leaderboards / cloud save (needs a backend).
+- Achievements (perfect streaks, all-Easy 3-stars, daily streak milestones).
+- Theme/colour settings; larger-text mode.
+- A puzzle-authoring tool that runs the ambiguity check as you write.

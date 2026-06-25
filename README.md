@@ -32,7 +32,9 @@ next, and chase the ⭐ total and your 🔥 streak.
 npm install
 npm run dev       # local dev server
 npm run build     # type-check + build to /docs
-npm run validate  # structurally check every puzzle (9 unique tiles, pivot fits)
+npm test          # unit tests for the pure game engine (src/engine.ts)
+npm run validate  # structurally check every puzzle (13 unique tiles, link fits)
+npm run audit     # flag spokes that may be ambiguous, for human review
 ```
 
 ### Automated playtest
