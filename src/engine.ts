@@ -53,3 +53,20 @@ export function shuffle<T>(input: readonly T[]): T[] {
   }
   return arr;
 }
+
+/** Upper-case and strip everything but letters, for forgiving text matching. */
+export function normalizeWord(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z]/g, "");
+}
+
+/**
+ * Does the typed guess match the secret link? Accepts the pivot and any
+ * author-listed synonyms ("if the categories allow it"), and is forgiving about
+ * case, spacing, and simple singular/plural differences.
+ */
+export function linkMatches(input: string, pivot: string, accept: string[] = []): boolean {
+  const n = normalizeWord(input);
+  if (!n) return false;
+  return [pivot, ...accept].map(normalizeWord).some((t) => t === n || `${t}S` === n || t === `${n}S`);
+}
+

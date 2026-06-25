@@ -7,6 +7,7 @@ export default function StartScreen({
   onPlay,
   onDaily,
   onHelp,
+  onStats,
   muted,
   onToggleMute,
   musicOn,
@@ -16,6 +17,7 @@ export default function StartScreen({
   onPlay: () => void;
   onDaily: () => void;
   onHelp: () => void;
+  onStats: () => void;
   muted: boolean;
   onToggleMute: () => void;
   musicOn: boolean;
@@ -27,6 +29,13 @@ export default function StartScreen({
 
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-12 pt-24 text-center sm:pt-28">
+      <button
+        onClick={onStats}
+        aria-label="Achievements & stats"
+        className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95"
+      >
+        🏆
+      </button>
       <div className="absolute right-4 top-4 flex gap-2">
         <button
           onClick={onToggleMusic}

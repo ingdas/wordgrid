@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, TIER_LABELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
-import { computeStars, evaluateGuess, guessKey, shuffle } from "./engine";
+import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches } from "./engine";
 import Confetti from "./Confetti";
 import {
   playSelect,
@@ -107,20 +107,6 @@ export default function Game({
     return m;
   }, [puzzle]);
 
-  // Four multiple-choice options for the finale: the real link + 3 decoys.
-  // Decoys are biased toward a similar length to the answer so they can't be
-  // eliminated at a glance — a bit more thought than purely random picks.
-  const linkOptions = useMemo(() => {
-    const pool = LEVELS.map((p) => p.pivot).filter((w) => w !== puzzle.pivot);
-    const near = pool
-      .map((w) => ({ w, d: Math.abs(w.length - puzzle.pivot.length) + Math.random() }))
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 8)
-      .map((x) => x.w);
-    const decoys = near.sort(() => Math.random() - 0.5).slice(0, 3);
-    return [puzzle.pivot, ...decoys].sort(() => Math.random() - 0.5);
-  }, [puzzle]);
-
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 1900);
@@ -177,13 +163,13 @@ export default function Game({
     }
   }, [coach, solved.length, onTutorialDone]);
 
-  // Final stars: from pairing mistakes, minus a wrong link guess and any hints.
-  const finalStars = computeStars({
-    mistakes,
-    linkGuessed: linkGuess != null,
-    linkCorrect: linkGuess === puzzle.pivot,
-    hintsUsed,
-  });
+  // The link is "resolved" once typed correctly or revealed; correctness allows
+  // synonyms the puzzle permits (and is forgiving about case/plurals).
+  const linkGuessed = linkGuess != null;
+  const linkCorrect = linkGuessed && linkMatches(linkGuess!, puzzle.pivot, puzzle.accept);
+
+  // Final stars: from pairing mistakes, minus a missed link and any hints.
+  const finalStars = computeStars({ mistakes, linkGuessed, linkCorrect, hintsUsed });
 
   // Report the result up exactly once.
   useEffect(() => {
@@ -196,13 +182,13 @@ export default function Game({
       buzz([0, 40, 60, 40]);
       setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect: linkGuess === puzzle.pivot, timeMs: t });
+      onWin({ stars: finalStars, linkCorrect, timeMs: t });
     } else if (status === "lost") {
       reported.current = true;
       setAnnounce(`Out of guesses. The secret link was ${puzzle.pivot}.`);
       onLoss();
     }
-  }, [status, finalStars, onWin, onLoss, buzz, linkGuess, puzzle.pivot]);
+  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.pivot]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -294,15 +280,26 @@ export default function Game({
     return () => window.removeEventListener("keydown", onKey);
   }, [status, selected.length, submit, clearSelection]);
 
-  const guessLink = useCallback(
-    (word: string) => {
-      setLinkGuess(word);
-      if (word === puzzle.pivot) playStar(2);
-      else playWrong();
-      setTimeout(() => setStatus("won"), 900);
+  // Returns true if the typed guess is accepted; otherwise the caller shows an
+  // inline "try again" (no penalty for retries).
+  const submitLink = useCallback(
+    (text: string): boolean => {
+      if (!linkMatches(text, puzzle.pivot, puzzle.accept)) return false;
+      setLinkGuess(text);
+      playStar(2);
+      buzz(40);
+      setTimeout(() => setStatus("won"), 800);
+      return true;
     },
-    [puzzle.pivot]
+    [puzzle.pivot, puzzle.accept, buzz]
   );
+
+  // Give up: reveal the word (counts as a miss → costs a star).
+  const revealLinkWord = useCallback(() => {
+    setLinkGuess(" "); // a value that never matches
+    playWrong();
+    setTimeout(() => setStatus("won"), 700);
+  }, []);
 
   const revealLink = status === "won" || status === "lost";
   const stars = finalStars;
@@ -414,7 +411,7 @@ export default function Game({
         )}
 
         {status === "guessing" && (
-          <LinkGuess options={linkOptions} chosen={linkGuess} answer={puzzle.pivot} onGuess={guessLink} />
+          <LinkGuess resolved={linkGuess != null} onSubmit={submitLink} onReveal={revealLinkWord} />
         )}
 
         <AnimatePresence>
@@ -427,7 +424,7 @@ export default function Game({
               mistakes={mistakes}
               streak={streak}
               pivot={puzzle.pivot}
-              linkCorrect={linkGuess === puzzle.pivot}
+              linkCorrect={linkCorrect}
               timeMs={finalMs}
               bestMs={prevBest.current}
               shareText={buildShare({
@@ -436,7 +433,7 @@ export default function Game({
                 won: status === "won",
                 stars: finalStars,
                 mistakes,
-                linkCorrect: linkGuess === puzzle.pivot,
+                linkCorrect,
                 timeMs: finalMs,
                 order:
                   status === "won"
@@ -669,46 +666,78 @@ function Controls({
 }
 
 function LinkGuess({
-  options,
-  chosen,
-  answer,
-  onGuess,
+  resolved,
+  onSubmit,
+  onReveal,
 }: {
-  options: string[];
-  chosen: string | null;
-  answer: string;
-  onGuess: (w: string) => void;
+  resolved: boolean;
+  onSubmit: (text: string) => boolean;
+  onReveal: () => void;
 }) {
+  const [text, setText] = useState("");
+  const [wrong, setWrong] = useState(false);
+  const [shakeKey, setShakeKey] = useState(0);
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (resolved || !text.trim()) return;
+    const ok = onSubmit(text);
+    if (ok) {
+      setWrong(false);
+    } else {
+      setWrong(true);
+      setShakeKey((k) => k + 1);
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mt-7 text-center"
-    >
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-white">All four groups found!</h3>
-      <p className="mt-1 text-sm text-indigo-200/80">Now — what's the secret word linking them all?</p>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {options.map((w) => {
-          const isChosen = chosen === w;
-          const isAnswer = w === answer;
-          let cls = "border-white/15 bg-white/[0.06] text-indigo-50 hover:bg-white/[0.12]";
-          if (chosen) {
-            if (isAnswer) cls = "border-transparent bg-gradient-to-r from-emerald-400 to-teal-300 text-emerald-950";
-            else if (isChosen) cls = "border-transparent bg-gradient-to-r from-rose-400 to-pink-500 text-white";
-            else cls = "border-white/10 bg-white/[0.04] text-indigo-100/40";
-          }
-          return (
-            <button
-              key={w}
-              disabled={!!chosen}
-              onClick={() => onGuess(w)}
-              className={`rounded-2xl border px-3 py-3 text-base font-bold uppercase tracking-wide transition ${cls}`}
-            >
-              {w}
-            </button>
-          );
-        })}
-      </div>
+      <p className="mt-1 text-sm text-indigo-200/80">
+        Now — type the secret word that links them all.
+      </p>
+      <motion.form
+        key={shakeKey}
+        onSubmit={submit}
+        animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className="mx-auto mt-4 flex max-w-xs gap-2"
+      >
+        <input
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setWrong(false);
+          }}
+          disabled={resolved}
+          autoFocus
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-label="Type the secret word"
+          placeholder="your guess…"
+          className="min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/[0.06] px-4 py-3 text-center text-base font-bold uppercase tracking-wide text-white placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-indigo-200/40 focus:border-fuchsia-300 focus:outline-none disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={resolved || !text.trim()}
+          className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-lg shadow-black/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+        >
+          Guess
+        </button>
+      </motion.form>
+      {wrong ? (
+        <p className="mt-2 text-sm font-semibold text-rose-300">Not the word — try again.</p>
+      ) : (
+        <p className="mt-2 text-xs text-indigo-200/50">Synonyms count if they fit all four groups.</p>
+      )}
+      <button
+        onClick={onReveal}
+        disabled={resolved}
+        className="mt-2 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+      >
+        I give up — reveal it (costs a star)
+      </button>
     </motion.div>
   );
 }

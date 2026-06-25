@@ -169,6 +169,7 @@ export default function App() {
               onPlay={play}
               onDaily={playDaily}
               onHelp={() => setShowHelp(true)}
+              onStats={() => setShowStats(true)}
               muted={muted}
               onToggleMute={toggleMute}
               musicOn={musicOn}

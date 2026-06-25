@@ -95,12 +95,17 @@ await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
 await sleep(1200); // auto-solve final group → guessing
 
-// 6. Guess-the-link finale
-const guessing = /secret word/i.test(await bodyText());
-log("guess-the-link step shown:", guessing);
-if (!guessing) note("Guess-the-link finale did not appear.");
+// 6. Guess-the-link finale — type the answer (test forgiving lowercase match)
+const guessing = /type the secret word/i.test(await bodyText());
+log("typed guess step shown:", guessing);
+if (!guessing) note("Typed guess-the-link finale did not appear.");
 await p.screenshot({ path: `${SHOT}/r5-guess.png` });
-if (!(await clickText("main button", "STAR"))) note("Could not find STAR among the link options.");
+const input = await p.$("main input");
+if (!input) note("No text input for the link guess.");
+else {
+  await input.type("star"); // lowercase on purpose
+  await clickText("main button", "Guess");
+}
 await sleep(1300);
 
 // 7. Win

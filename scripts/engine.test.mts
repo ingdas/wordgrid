@@ -1,7 +1,7 @@
 // Unit tests for the pure game engine. No test framework needed:
 //   npm test
 import assert from "node:assert/strict";
-import { evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes } from "../src/engine.ts";
+import { evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes, linkMatches } from "../src/engine.ts";
 import type { Category } from "../src/puzzles.ts";
 
 const cat = (name: string, spokes: string[]): Category => ({ name, spokes, members: ["LINK", ...spokes] });
@@ -54,6 +54,16 @@ test("shuffle preserves the multiset and length", () => {
   assert.equal(out.length, input.length);
   assert.deepEqual([...out].sort(), [...input].sort());
   assert.deepEqual(input, ["A", "B", "C", "D", "E"]); // input not mutated
+});
+
+test("linkMatches: forgiving on case/space/plural, plus synonyms", () => {
+  assert.equal(linkMatches("star", "STAR"), true);
+  assert.equal(linkMatches("  Star ", "STAR"), true);
+  assert.equal(linkMatches("STARS", "STAR"), true); // plural typed
+  assert.equal(linkMatches("comet", "STAR"), false);
+  assert.equal(linkMatches("", "STAR"), false);
+  assert.equal(linkMatches("autumn", "FALL", ["AUTUMN"]), true); // synonym allowed
+  assert.equal(linkMatches("winter", "FALL", ["AUTUMN"]), false);
 });
 
 console.log(`\n${passed} engine tests passed ✓`);

@@ -19,6 +19,8 @@ export interface RawPuzzle {
   /** The word shared by all four categories — kept hidden during play. */
   pivot: string;
   categories: [RawCategory, RawCategory, RawCategory, RawCategory];
+  /** Optional synonyms also accepted as the link, when the categories allow it. */
+  accept?: string[];
 }
 
 export const PUZZLES: RawPuzzle[] = [
@@ -722,6 +724,8 @@ export interface Puzzle {
   pivot: string;
   words: string[];
   categories: Category[];
+  /** Synonyms also accepted as the typed link answer. */
+  accept: string[];
 }
 
 // A deterministic shuffle so a given puzzle id + seed always lays out the same.
@@ -750,6 +754,7 @@ export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
     pivot,
     words: seededShuffle(allWords, seed + raw.id.length * 7),
     categories,
+    accept: (raw.accept ?? []).map((w) => w.toUpperCase()),
   };
 }
 
