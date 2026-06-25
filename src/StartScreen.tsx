@@ -26,7 +26,7 @@ export default function StartScreen({
   const dailyDone = dailyDoneToday(progress);
 
   return (
-    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 text-center">
+    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-12 pt-24 text-center sm:pt-28">
       <div className="absolute right-4 top-4 flex gap-2">
         <button
           onClick={onToggleMusic}
