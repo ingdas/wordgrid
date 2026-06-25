@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
-import { starsForMistakes } from "./progress";
+import { computeStars, evaluateGuess, guessKey, shuffle, starsForMistakes } from "./engine";
 import Confetti from "./Confetti";
 import {
   playSelect,
@@ -33,6 +33,7 @@ interface GameProps {
   reduce: boolean;
   streak: number;
   tutorial: boolean;
+  bestMs?: number;
   onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number }) => void;
   onLoss: () => void;
   onExit: () => void;
@@ -41,11 +42,17 @@ interface GameProps {
   onTutorialDone: () => void;
 }
 
+function fmtTime(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export default function Game({
   puzzleIndex,
   reduce,
   streak,
   tutorial,
+  bestMs,
   onWin,
   onLoss,
   onExit,
@@ -56,7 +63,7 @@ export default function Game({
   const raw = LEVELS[puzzleIndex];
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
-  // The 8 spoke tiles (everything except the hidden link), in shuffled order.
+  // The 12 spoke tiles (everything except the hidden link), in shuffled order.
   const spokeTiles = useMemo(() => puzzle.words.filter((w) => w !== puzzle.pivot), [puzzle]);
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -69,9 +76,21 @@ export default function Game({
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
+  const [moves, setMoves] = useState(0);
+  const [order, setOrder] = useState<string[]>(spokeTiles);
+  const [now, setNow] = useState(Date.now());
   const [coach, setCoach] = useState(tutorial ? 0 : -1);
+  const [finalMs, setFinalMs] = useState(0);
   const reported = useRef(false);
   const startedAt = useRef(Date.now());
+  const prevBest = useRef(bestMs); // captured once, before this run updates it
+
+  // Tick a clock once a second while playing, for the timer display.
+  useEffect(() => {
+    if (status !== "playing") return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [status]);
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -113,8 +132,8 @@ export default function Game({
   }, [solved]);
 
   const remainingSpokes = useMemo(
-    () => spokeTiles.filter((w) => !solvedSpokes.has(w)),
-    [spokeTiles, solvedSpokes]
+    () => order.filter((w) => !solvedSpokes.has(w)),
+    [order, solvedSpokes]
   );
 
   const unsolvedCategories = useMemo(
@@ -157,21 +176,25 @@ export default function Game({
   }, [coach, solved.length, onTutorialDone]);
 
   // Final stars: from pairing mistakes, minus a wrong link guess and any hints.
-  const finalStars = Math.max(
-    1,
-    starsForMistakes(mistakes) - (linkGuess && linkGuess !== puzzle.pivot ? 1 : 0) - hintsUsed
-  );
+  const finalStars = computeStars({
+    mistakes,
+    linkGuessed: linkGuess != null,
+    linkCorrect: linkGuess === puzzle.pivot,
+    hintsUsed,
+  });
 
   // Report the result up exactly once.
   useEffect(() => {
     if (reported.current) return;
     if (status === "won") {
       reported.current = true;
+      const t = Date.now() - startedAt.current;
+      setFinalMs(t);
       playWin();
       buzz([0, 40, 60, 40]);
       setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect: linkGuess === puzzle.pivot, timeMs: Date.now() - startedAt.current });
+      onWin({ stars: finalStars, linkCorrect: linkGuess === puzzle.pivot, timeMs: t });
     } else if (status === "lost") {
       reported.current = true;
       setAnnounce(`Out of guesses. The secret link was ${puzzle.pivot}.`);
@@ -197,20 +220,18 @@ export default function Game({
 
   const submit = useCallback(() => {
     if (status !== "playing" || selected.length !== 3) return;
-    const sel = new Set(selected);
-    const match = unsolvedCategories.find((c) => c.spokes.every((s) => sel.has(s)));
-    if (match) {
-      solveCategory(match, solved.length);
+    setMoves((m) => m + 1);
+    const result = evaluateGuess(unsolvedCategories, selected, pastGuesses);
+    if (result.kind === "solved") {
+      solveCategory(result.category, solved.length);
       return;
     }
-
-    const key = [...selected].sort().join("|");
-    if (pastGuesses.has(key)) {
+    if (result.kind === "repeat") {
       setToast("You already tried that group.");
       setShake((s) => s + 1);
       return;
     }
-    setPastGuesses((prev) => new Set(prev).add(key));
+    setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
     setToast("Those three aren't a group.");
     playWrong();
     buzz([0, 50, 30, 50]);
@@ -230,6 +251,11 @@ export default function Game({
     setSelected([]);
   }, [selected.length]);
 
+  const shuffleTiles = useCallback(() => {
+    playSelect();
+    setOrder((o) => shuffle(o));
+  }, []);
+
   // Hint: auto-solve one unsolved group for the cost of a star.
   const useHint = useCallback(() => {
     if (status !== "playing" || unsolvedCategories.length <= 1) return;
@@ -240,6 +266,7 @@ export default function Game({
   const restart = useCallback(() => {
     reported.current = false;
     startedAt.current = Date.now();
+    setNow(Date.now());
     setSolved([]);
     setSelected([]);
     setMistakes(0);
@@ -250,7 +277,20 @@ export default function Game({
     setPastGuesses(new Set());
     setLinkGuess(null);
     setHintsUsed(0);
-  }, []);
+    setMoves(0);
+    setOrder(shuffle(spokeTiles));
+  }, [spokeTiles]);
+
+  // Keyboard shortcuts: Enter submits, Escape clears.
+  useEffect(() => {
+    if (status !== "playing") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && selected.length === 3) submit();
+      else if (e.key === "Escape" && selected.length) clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [status, selected.length, submit, clearSelection]);
 
   const guessLink = useCallback(
     (word: string) => {
@@ -343,6 +383,20 @@ export default function Game({
         )}
 
         {status === "playing" && (
+          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-indigo-200/70">
+            <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
+            <span aria-hidden>·</span>
+            <span>{moves} {moves === 1 ? "move" : "moves"}</span>
+            <button
+              onClick={shuffleTiles}
+              className="rounded-full border border-white/15 px-2.5 py-1 font-semibold text-indigo-100 transition hover:bg-white/10 active:scale-95"
+            >
+              🔀 Shuffle
+            </button>
+          </div>
+        )}
+
+        {status === "playing" && (
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
@@ -369,6 +423,8 @@ export default function Game({
               streak={streak}
               pivot={puzzle.pivot}
               linkCorrect={linkGuess === puzzle.pivot}
+              timeMs={finalMs}
+              bestMs={prevBest.current}
               shareText={buildShare(puzzle, solved, indexByName, mistakes, status === "won")}
               onShareToast={() => setToast("Result copied to clipboard!")}
               onExit={onExit}
@@ -661,6 +717,8 @@ function EndCard({
   streak,
   pivot,
   linkCorrect,
+  timeMs,
+  bestMs,
   shareText,
   onShareToast,
   onExit,
@@ -673,12 +731,15 @@ function EndCard({
   streak: number;
   pivot: string;
   linkCorrect: boolean;
+  timeMs: number;
+  bestMs?: number;
   shareText: string;
   onShareToast: () => void;
   onExit: () => void;
   onRestart: () => void;
   onNext?: () => void;
 }) {
+  const newBest = won && (bestMs == null || timeMs < bestMs);
   const share = async () => {
     try {
       if (navigator.share) {
@@ -718,6 +779,14 @@ function EndCard({
             . {linkCorrect ? "🔑 You guessed it!" : "Missed the link — that cost a star."}
           </p>
           {streak >= 2 && <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>}
+          <div className="mt-1 text-xs text-indigo-200/70">
+            ⏱ {fmtTime(timeMs)}
+            {newBest ? (
+              <span className="ml-1 font-semibold text-emerald-300">— new best!</span>
+            ) : (
+              bestMs != null && <span className="ml-1">· best {fmtTime(bestMs)}</span>
+            )}
+          </div>
         </>
       ) : (
         <>

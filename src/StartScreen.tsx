@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { MAX_STARS, totalStars, dailyDoneToday, type Progress } from "./progress";
+import { t } from "./i18n";
 
 export default function StartScreen({
   progress,
@@ -83,13 +84,13 @@ export default function StartScreen({
           onClick={onPlay}
           className="w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-4 text-lg font-bold text-white shadow-xl shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
         >
-          {returning ? "Continue" : "Play"}
+          {returning ? t("btn.continue") : t("btn.play")}
         </button>
         <button
           onClick={onDaily}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-base font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
         >
-          📅 Daily Challenge
+          📅 {t("btn.daily")}
           {dailyDone ? (
             <span className="text-emerald-300">✓</span>
           ) : (
@@ -100,7 +101,7 @@ export default function StartScreen({
           onClick={onHelp}
           className="text-sm font-semibold text-indigo-200/80 underline-offset-4 transition hover:text-white hover:underline"
         >
-          How to play
+          {t("btn.howToPlay")}
         </button>
       </motion.div>
 
