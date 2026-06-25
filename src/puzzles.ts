@@ -788,3 +788,34 @@ export const LEVELS: Level[] = orderedRaw.map((raw, i) => ({
 }));
 
 export const TIER_LABELS: Record<Tier, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
+
+// ---------------------------------------------------------------------------
+// Chapters: a light story-flavoured grouping of the difficulty-ordered levels.
+// The last level of each chapter is a "boss".
+
+export interface Chapter {
+  name: string;
+  flavor: string;
+  start: number; // inclusive index into LEVELS
+  end: number; // exclusive
+  boss: number; // index of the chapter's final (boss) level
+}
+
+const CHAPTER_META = [
+  { name: "First Light", flavor: "Find your footing." },
+  { name: "Warming Up", flavor: "The links get sneakier." },
+  { name: "Crossed Wires", flavor: "Words with double lives." },
+  { name: "Double Meanings", flavor: "One word, many masks." },
+  { name: "Twists & Turns", flavor: "Expect the unexpected." },
+  { name: "Deep Cuts", flavor: "For the seasoned solver." },
+  { name: "Mind Benders", flavor: "Only the sharp survive." },
+  { name: "The Gauntlet", flavor: "Everything you've learned." },
+];
+
+const CHAPTER_SIZE = Math.ceil(LEVELS.length / CHAPTER_META.length);
+
+export const CHAPTERS: Chapter[] = CHAPTER_META.map((c, i) => {
+  const start = i * CHAPTER_SIZE;
+  const end = Math.min(start + CHAPTER_SIZE, LEVELS.length);
+  return { ...c, start, end, boss: end - 1 };
+}).filter((c) => c.start < LEVELS.length);

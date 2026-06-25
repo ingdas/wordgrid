@@ -5,7 +5,7 @@ import type { Category } from "./puzzles";
 export type GuessResult =
   | { kind: "solved"; category: Category }
   | { kind: "repeat" }
-  | { kind: "wrong" };
+  | { kind: "wrong"; oneAway: boolean };
 
 /** Resolve a 3-spoke selection against the unsolved categories. */
 export function evaluateGuess(
@@ -17,7 +17,9 @@ export function evaluateGuess(
   const match = unsolved.find((c) => c.spokes.length === sel.size && c.spokes.every((s) => sel.has(s)));
   if (match) return { kind: "solved", category: match };
   if (pastGuesses.has(guessKey(selected))) return { kind: "repeat" };
-  return { kind: "wrong" };
+  // "One away" = two of the three picks belong to a single unsolved group.
+  const bestOverlap = Math.max(0, ...unsolved.map((c) => c.spokes.filter((s) => sel.has(s)).length));
+  return { kind: "wrong", oneAway: bestOverlap === 2 };
 }
 
 /** A canonical key for a selection, order-independent. */

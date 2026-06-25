@@ -82,6 +82,7 @@ export default function Game({
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
   const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
+  const [revealedLetters, setRevealedLetters] = useState(0);
   const [moves, setMoves] = useState(0);
   const [order, setOrder] = useState<string[]>(spokeTiles);
   const [now, setNow] = useState(Date.now());
@@ -224,7 +225,7 @@ export default function Game({
       return;
     }
     setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
-    setToast("Those three aren't a group.");
+    setToast(result.oneAway ? "🎯 So close — one away!" : "Those three aren't a group.");
     playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
@@ -265,6 +266,15 @@ export default function Game({
     playSelect();
   }, [canHint, hintableCategories, onUseHint]);
 
+  // Finale hint: spend a token to reveal the next letter of the secret link.
+  const canRevealLetter = hintBank > 0 && revealedLetters < puzzle.pivot.length;
+  const revealLetter = useCallback(() => {
+    if (hintBank <= 0) return;
+    setRevealedLetters((n) => Math.min(n + 1, puzzle.pivot.length));
+    onUseHint();
+    playSelect();
+  }, [hintBank, puzzle.pivot.length, onUseHint]);
+
   const restart = useCallback(() => {
     reported.current = false;
     startedAt.current = Date.now();
@@ -279,6 +289,7 @@ export default function Game({
     setPastGuesses(new Set());
     setLinkGuess(null);
     setRevealedHints(new Set());
+    setRevealedLetters(0);
     setMoves(0);
     setOrder(shuffle(spokeTiles));
   }, [spokeTiles]);
@@ -432,7 +443,16 @@ export default function Game({
         )}
 
         {status === "guessing" && (
-          <LinkGuess resolved={linkGuess != null} onSubmit={submitLink} onReveal={revealLinkWord} />
+          <LinkGuess
+            resolved={linkGuess != null}
+            pivot={puzzle.pivot}
+            revealedLetters={revealedLetters}
+            hintBank={hintBank}
+            canRevealLetter={canRevealLetter}
+            onRevealLetter={revealLetter}
+            onSubmit={submitLink}
+            onReveal={revealLinkWord}
+          />
         )}
 
         <AnimatePresence>
@@ -725,10 +745,20 @@ function Controls({
 
 function LinkGuess({
   resolved,
+  pivot,
+  revealedLetters,
+  hintBank,
+  canRevealLetter,
+  onRevealLetter,
   onSubmit,
   onReveal,
 }: {
   resolved: boolean;
+  pivot: string;
+  revealedLetters: number;
+  hintBank: number;
+  canRevealLetter: boolean;
+  onRevealLetter: () => void;
   onSubmit: (text: string) => boolean;
   onReveal: () => void;
 }) {
@@ -754,6 +784,24 @@ function LinkGuess({
       <p className="mt-1 text-sm text-indigo-200/80">
         Now — type the secret word that links them all.
       </p>
+
+      {/* Masked letter pattern; the reveal-a-letter hint fills it left to right */}
+      <div className="mt-4 flex justify-center gap-1.5" aria-label={`${pivot.length} letters`}>
+        {pivot.split("").map((ch, i) => {
+          const shown = resolved || i < revealedLetters;
+          return (
+            <span
+              key={i}
+              className={`grid h-9 w-7 place-items-center rounded-md border text-base font-extrabold ${
+                shown ? "border-fuchsia-300/60 bg-fuchsia-300/10 text-white" : "border-white/15 text-white/30"
+              }`}
+            >
+              {shown ? ch : "_"}
+            </span>
+          );
+        })}
+      </div>
+
       <motion.form
         key={shakeKey}
         onSubmit={submit}
@@ -789,13 +837,25 @@ function LinkGuess({
       ) : (
         <p className="mt-2 text-xs text-indigo-200/50">Synonyms count if they fit all four groups.</p>
       )}
-      <button
-        onClick={onReveal}
-        disabled={resolved}
-        className="mt-2 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
-      >
-        I give up — reveal it (costs a star)
-      </button>
+      <div className="mt-3 flex flex-col items-center gap-2">
+        <button
+          onClick={onRevealLetter}
+          disabled={resolved || !canRevealLetter}
+          className="flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-300/15 px-4 py-2 text-xs font-bold text-amber-200 transition enabled:hover:bg-amber-300/25 enabled:active:scale-95 disabled:opacity-35"
+        >
+          💡 Reveal a letter
+          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-300 px-1 text-[0.65rem] font-extrabold text-amber-950">
+            {hintBank}
+          </span>
+        </button>
+        <button
+          onClick={onReveal}
+          disabled={resolved}
+          className="text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+        >
+          I give up — reveal it (costs a star)
+        </button>
+      </div>
     </motion.div>
   );
 }

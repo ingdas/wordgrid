@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, type Tier } from "./puzzles";
+import { LEVELS, CHAPTERS, TIER_LABELS, type Tier } from "./puzzles";
 import { isUnlocked, MAX_STARS, totalStars, type Progress } from "./progress";
 
 const TIER_DOT: Record<Tier, string> = {
@@ -44,10 +44,12 @@ export default function LevelSelect({
         </button>
         <button
           onClick={onStats}
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-semibold text-indigo-100 transition hover:bg-white/15"
+          aria-label="Stats and achievements"
+          className="flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-semibold text-indigo-100 shadow transition hover:bg-white/15 active:scale-95"
         >
           <span>⭐ {stars}/{MAX_STARS}</span>
           {progress.streak >= 2 && <span className="text-amber-300">🔥 {progress.streak}</span>}
+          <span aria-hidden className="text-indigo-300/70">›</span>
         </button>
         <div className="flex gap-2">
           <button
@@ -77,26 +79,51 @@ export default function LevelSelect({
       </div>
 
       <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-white">
-        Choose a level
+        Your journey
       </h2>
-      <p className="mt-1 text-center text-sm text-indigo-200/70">
-        Levels ramp up in difficulty. Fewer mistakes earn more stars.
-      </p>
 
-      <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4">
-        {LEVELS.map((p, i) => {
-          const unlocked = isUnlocked(progress, i);
-          const earned = progress.stars[p.id] ?? 0;
+      <div className="mt-5 space-y-7">
+        {CHAPTERS.map((chap, ci) => {
+          const slice = LEVELS.slice(chap.start, chap.end);
+          const chapStars = slice.reduce((n, p) => n + (progress.stars[p.id] ?? 0), 0);
+          const chapDone = slice.every((p) => (progress.stars[p.id] ?? 0) > 0);
+          const chapUnlocked = isUnlocked(progress, chap.start);
           return (
-            <LevelNode
-              key={p.id}
-              index={i}
-              tier={p.tier}
-              unlocked={unlocked}
-              earned={earned}
-              highlight={i === nextIndex}
-              onClick={() => unlocked && onPick(i)}
-            />
+            <section key={ci}>
+              <div className="flex items-end justify-between px-1">
+                <div className="min-w-0">
+                  <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
+                    <span className="text-indigo-300/70">{ci + 1}.</span>
+                    {chapUnlocked ? chap.name : "Locked"}
+                    {chapDone && <span aria-hidden>✓</span>}
+                  </h3>
+                  <p className="truncate text-xs text-indigo-200/60">
+                    {chapUnlocked ? chap.flavor : "Clear the previous chapter to unlock."}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-amber-300">
+                  ⭐ {chapStars}/{slice.length * 3}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-4 gap-3">
+                {slice.map((p, j) => {
+                  const i = chap.start + j;
+                  return (
+                    <LevelNode
+                      key={p.id}
+                      index={i}
+                      tier={p.tier}
+                      unlocked={isUnlocked(progress, i)}
+                      earned={progress.stars[p.id] ?? 0}
+                      highlight={i === nextIndex}
+                      boss={i === chap.boss}
+                      onClick={() => isUnlocked(progress, i) && onPick(i)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
           );
         })}
       </div>
@@ -110,6 +137,7 @@ function LevelNode({
   unlocked,
   earned,
   highlight,
+  boss,
   onClick,
 }: {
   index: number;
@@ -117,23 +145,25 @@ function LevelNode({
   unlocked: boolean;
   earned: number;
   highlight: boolean;
+  boss: boolean;
   onClick: () => void;
 }) {
   const done = earned > 0;
 
   let face = "border border-white/10 bg-white/[0.05] text-indigo-100";
   if (done) face = "border-transparent bg-gradient-to-br from-amber-300 to-orange-400 text-orange-950";
+  else if (unlocked && boss) face = "border-transparent bg-gradient-to-br from-fuchsia-400 to-purple-500 text-white";
   else if (unlocked) face = "border-transparent bg-white text-slate-900";
 
   return (
     <motion.button
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: Math.min(index * 0.012, 0.4), type: "spring", stiffness: 320, damping: 24 }}
+      transition={{ delay: Math.min(index * 0.01, 0.3), type: "spring", stiffness: 320, damping: 24 }}
       whileTap={unlocked ? { scale: 0.92 } : undefined}
       onClick={onClick}
       disabled={!unlocked}
-      aria-label={`Level ${index + 1}, ${TIER_LABELS[tier]}${
+      aria-label={`Level ${index + 1}${boss ? ", boss" : ""}, ${TIER_LABELS[tier]}${
         done ? `, ${earned} of 3 stars` : unlocked ? "" : ", locked"
       }`}
       className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-lg transition disabled:cursor-default ${face}`}
@@ -142,14 +172,19 @@ function LevelNode({
         <motion.span
           aria-hidden
           className="absolute inset-0 rounded-2xl ring-2 ring-fuchsia-300"
-          animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+          animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.05, 1] }}
           transition={{ duration: 1.6, repeat: Infinity }}
         />
       )}
+      {boss && unlocked && (
+        <span aria-hidden className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-sm drop-shadow">
+          👑
+        </span>
+      )}
       {unlocked ? (
         <>
-          <span className="font-display text-2xl font-bold leading-none">{index + 1}</span>
-          <span className="mt-1 flex gap-0.5 text-[0.65rem] leading-none">
+          <span className="font-display text-xl font-bold leading-none">{index + 1}</span>
+          <span className="mt-1 flex gap-0.5 text-[0.6rem] leading-none">
             {[0, 1, 2].map((s) => (
               <span key={s} className={s < earned ? "" : "opacity-30"}>
                 {s < earned ? "⭐" : "☆"}
@@ -157,15 +192,12 @@ function LevelNode({
             ))}
           </span>
           {!done && (
-            <span
-              className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full ${TIER_DOT[tier]}`}
-              aria-hidden
-            />
+            <span className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full ${TIER_DOT[tier]}`} aria-hidden />
           )}
         </>
       ) : (
-        <span className="text-xl opacity-60" aria-hidden>
-          🔒
+        <span className="text-lg opacity-60" aria-hidden>
+          {boss ? "👑" : "🔒"}
         </span>
       )}
     </motion.button>

@@ -24,11 +24,13 @@ Walked the whole game and compared it to the intended ideal. Issues found:
    first) with a modal reachable from Home (📜) and Stats.
 3. ✅ **Home top-aligned with a dead void** — added a quick-action row (How to
    play · Achievements · History) and a stars/hints/streak chip.
-4. ⬜ **Level map is a monotonous wall of identical padlocks** — wants section
-   headers (Easy/Medium/Hard), a path/world feel, or bigger tier coloring.
+4. ✅ **Level map monotony** — replaced the flat padlock wall with named
+   **chapters** ("Your journey"), per-chapter star counts, 👑 **boss** nodes,
+   and locked chapters teased as "Locked".
 5. ✅ **Ghost-hint placeholders faint** — now clearer dashed boxes.
-6. ⬜ **Stats pill on the level map doesn't read as a button.**
-7. ⬜ **Bottom control cluster is busy** — could tidy spacing/grouping.
+6. ✅ **Stats pill didn't read as a button** — added a `›` affordance + label.
+7. ◐ **Bottom control cluster** — improved via the prominent hint pill; minor
+   spacing tidy still possible.
 
 ## 20 reworks & features to make WordGrid more engaging
 
@@ -42,14 +44,17 @@ G. **Combo/score multiplier** — fast consecutive solves build a visible combo.
 H. **Streak freeze / wildcard** — spend currency to protect a daily streak.
 I. **Coins economy** — earn coins; spend on hints, shuffles, board themes.
 J. **Cosmetic themes** — unlockable tile skins, backgrounds, confetti styles.
-K. **Reveal-a-letter hint tier** — a cheaper hint that reveals one link letter.
-L. **"One away" radar** — optional assist that flags near-miss guesses.
+K. ✅ **Reveal-a-letter hint tier** — finale letter mask; spend a token to
+   reveal the next letter of the link.
+L. ✅ **"One away" radar** — wrong guesses with two correct picks show
+   "🎯 So close — one away!" (engine-detected, unit-tested).
 M. **Adaptive difficulty** — tune board difficulty to the player's win rate.
-N. **Story/level-map progression** — chapters with a light narrative + bosses.
+N. ✅ **Story/level-map progression** — chapters with flavor text + boss nodes.
 O. **Player-created puzzles** — an authoring tool + community puzzle feed.
 P. **Hint-from-a-friend** — share a board; a friend can send one theme hint.
 Q. **Rich animated share card** — render a per-result image, not just text.
-R. **Achievements 2.0** — tiers (bronze/silver/gold), progress bars, rewards.
+R. ✅ **Achievements 2.0** — Bronze/Silver/Gold tiers, progress bars, and hint
+   rewards per tier (shown in the stats modal).
 S. **Sound/track packs** — selectable music beds + a real volume slider.
 T. **Localization** — finish i18n and ship 2–3 languages for reach.
 

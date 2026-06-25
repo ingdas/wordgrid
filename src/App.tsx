@@ -14,7 +14,13 @@ import {
 } from "./progress";
 import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic } from "./audio";
 import { initSdk, gameplayStart, gameplayStop, happytime, showInterstitial } from "./sdk";
-import { ACHIEVEMENTS, newlyUnlocked, type Achievement } from "./achievements";
+import {
+  ACHIEVEMENTS,
+  evaluateUnlocks,
+  achievementStatus,
+  TIER_NAMES,
+  TIER_COLORS,
+} from "./achievements";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
@@ -32,7 +38,7 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
-  const [unlockedAch, setUnlockedAch] = useState<Achievement | null>(null);
+  const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string } | null>(null);
 
   useEffect(() => {
     if (!unlockedAch) return;
@@ -122,17 +128,19 @@ export default function App() {
           hints: prev.hints + 1, // earn a hint for clearing a level
         };
         if (playingDaily) next = recordDaily(next);
-        const fresh = newlyUnlocked(next, {
-          stars: result.stars,
-          timeMs: result.timeMs,
-          linkCorrect: result.linkCorrect,
-          daily: playingDaily,
-        });
-        if (fresh.length) {
-          next = { ...next, achievements: [...next.achievements, ...fresh] };
-          const first = ACHIEVEMENTS.find((a) => a.id === fresh[0]) ?? null;
-          // defer the toast out of the state updater
-          setTimeout(() => setUnlockedAch(first), 1800);
+        // Tiered achievements: award newly-reached tiers + their hint rewards.
+        const { unlocked, reward, keys } = evaluateUnlocks(next);
+        if (unlocked.length) {
+          next = {
+            ...next,
+            achievements: [...next.achievements, ...keys],
+            hints: next.hints + reward,
+          };
+          const top = unlocked[unlocked.length - 1];
+          setTimeout(
+            () => setUnlockedAch({ icon: top.def.icon, label: `${TIER_NAMES[top.tier]} · ${top.def.title}` }),
+            1800
+          );
         }
         next = pushHistory(next, {
           at: Date.now(),
@@ -290,7 +298,7 @@ export default function App() {
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-amber-300">
                   Achievement unlocked
                 </div>
-                <div className="text-sm font-bold text-white">{unlockedAch.title}</div>
+                <div className="text-sm font-bold text-white">{unlockedAch.label}</div>
               </div>
             </div>
           </motion.div>
@@ -348,24 +356,47 @@ function StatsModal({
           ))}
         </dl>
 
-        <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-indigo-300/80">
-          Achievements {progress.achievements.length}/{ACHIEVEMENTS.length}
-        </h4>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {ACHIEVEMENTS.map((a) => {
-            const got = progress.achievements.includes(a.id);
+        {(() => {
+          const earnedTiers = ACHIEVEMENTS.reduce((n, d) => n + achievementStatus(progress, d).tier + 1, 0);
+          return (
+            <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-indigo-300/80">
+              Achievements {earnedTiers}/{ACHIEVEMENTS.length * 3}
+            </h4>
+          );
+        })()}
+        <div className="mt-3 space-y-2">
+          {ACHIEVEMENTS.map((def) => {
+            const { tier, value, nextThreshold } = achievementStatus(progress, def);
+            const prevThreshold = tier >= 0 ? def.tiers[tier] : 0;
+            const target = nextThreshold ?? def.tiers[2];
+            const pct = nextThreshold
+              ? Math.min(100, Math.round(((value - prevThreshold) / (target - prevThreshold)) * 100))
+              : 100;
             return (
-              <div
-                key={a.id}
-                title={`${a.title} — ${a.desc}`}
-                className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-center ${
-                  got ? "border-amber-300/40 bg-amber-300/10" : "border-white/10 bg-white/[0.03]"
-                }`}
-              >
-                <span className={`text-xl ${got ? "" : "opacity-30 grayscale"}`}>{got ? a.icon : "🔒"}</span>
-                <span className={`text-[0.6rem] font-semibold leading-tight ${got ? "text-white" : "text-indigo-100/40"}`}>
-                  {a.title}
-                </span>
+              <div key={def.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg" aria-hidden>{def.icon}</span>
+                  <span className="flex-1 text-sm font-bold text-white">{def.title}</span>
+                  {tier >= 0 ? (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase"
+                      style={{ background: `${TIER_COLORS[tier]}33`, color: TIER_COLORS[tier] }}
+                    >
+                      {TIER_NAMES[tier]}
+                    </span>
+                  ) : (
+                    <span className="text-[0.6rem] font-semibold uppercase text-indigo-200/40">Locked</span>
+                  )}
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-[0.65rem] text-indigo-200/60">
+                  {nextThreshold ? `${value} / ${nextThreshold} ${def.unit}` : `Maxed · ${value} ${def.unit}`}
+                </div>
               </div>
             );
           })}

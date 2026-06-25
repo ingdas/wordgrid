@@ -15,6 +15,7 @@ function test(name: string, fn: () => void) {
 
 const A = cat("A", ["ONE", "TWO", "THREE"]);
 const B = cat("B", ["FOUR", "FIVE", "SIX"]);
+const C = cat("C", ["SEVEN", "EIGHT", "NINE"]);
 
 test("evaluateGuess solves an exact spoke set (order-independent)", () => {
   const r = evaluateGuess([A, B], ["THREE", "ONE", "TWO"], new Set());
@@ -27,8 +28,16 @@ test("evaluateGuess flags a repeat of a known-wrong guess", () => {
   assert.equal(evaluateGuess([A, B], ["FOUR", "ONE", "FIVE"], past).kind, "repeat");
 });
 
-test("evaluateGuess returns wrong for a novel non-group", () => {
-  assert.equal(evaluateGuess([A, B], ["ONE", "FOUR", "SIX"], new Set()).kind, "wrong");
+test("evaluateGuess wrong, not one-away when picks span three groups", () => {
+  const r = evaluateGuess([A, B, C], ["ONE", "FOUR", "SEVEN"], new Set()); // 1 from each
+  assert.equal(r.kind, "wrong");
+  if (r.kind === "wrong") assert.equal(r.oneAway, false);
+});
+
+test("evaluateGuess flags one-away when two picks share a group", () => {
+  const r = evaluateGuess([A, B, C], ["FOUR", "FIVE", "ONE"], new Set()); // FOUR+FIVE are B
+  assert.equal(r.kind, "wrong");
+  if (r.kind === "wrong") assert.equal(r.oneAway, true);
 });
 
 test("guessKey is order-independent", () => {
