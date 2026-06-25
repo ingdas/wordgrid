@@ -11,6 +11,7 @@ export interface Progress {
   linksGuessed: number; // lifetime count of correct link guesses
   best: Record<string, number>; // level id -> best time in ms (lower is better)
   daily: { lastDate: string; streak: number }; // daily-challenge streak
+  achievements: string[]; // unlocked achievement ids
 }
 
 const KEY = "wordgrid:progress";
@@ -27,12 +28,21 @@ export function loadProgress(): Progress {
         linksGuessed: p.linksGuessed ?? 0,
         best: p.best ?? {},
         daily: p.daily ?? { lastDate: "", streak: 0 },
+        achievements: p.achievements ?? [],
       };
     }
   } catch {
     /* ignore */
   }
-  return { stars: {}, streak: 0, bestStreak: 0, linksGuessed: 0, best: {}, daily: { lastDate: "", streak: 0 } };
+  return {
+    stars: {},
+    streak: 0,
+    bestStreak: 0,
+    linksGuessed: 0,
+    best: {},
+    daily: { lastDate: "", streak: 0 },
+    achievements: [],
+  };
 }
 
 export function saveProgress(p: Progress) {

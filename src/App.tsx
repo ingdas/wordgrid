@@ -13,6 +13,7 @@ import {
 } from "./progress";
 import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic } from "./audio";
 import { initSdk, gameplayStart, gameplayStop, happytime, showInterstitial } from "./sdk";
+import { ACHIEVEMENTS, newlyUnlocked, type Achievement } from "./achievements";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
@@ -29,6 +30,13 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
+  const [unlockedAch, setUnlockedAch] = useState<Achievement | null>(null);
+
+  useEffect(() => {
+    if (!unlockedAch) return;
+    const t = setTimeout(() => setUnlockedAch(null), 3200);
+    return () => clearTimeout(t);
+  }, [unlockedAch]);
 
   useEffect(() => {
     initSdk();
@@ -110,6 +118,18 @@ export default function App() {
           },
         };
         if (playingDaily) next = recordDaily(next);
+        const fresh = newlyUnlocked(next, {
+          stars: result.stars,
+          timeMs: result.timeMs,
+          linkCorrect: result.linkCorrect,
+          daily: playingDaily,
+        });
+        if (fresh.length) {
+          next = { ...next, achievements: [...next.achievements, ...fresh] };
+          const first = ACHIEVEMENTS.find((a) => a.id === fresh[0]) ?? null;
+          // defer the toast out of the state updater
+          setTimeout(() => setUnlockedAch(first), 1800);
+        }
         saveProgress(next);
         return next;
       });
@@ -198,6 +218,29 @@ export default function App() {
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
         {showStats && <StatsModal progress={progress} onClose={() => setShowStats(false)} />}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {unlockedAch && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4"
+          >
+            <div className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-[#1b1740]/95 px-4 py-2.5 shadow-2xl backdrop-blur">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-400 text-lg">
+                {unlockedAch.icon}
+              </span>
+              <div className="text-left">
+                <div className="text-[0.65rem] font-bold uppercase tracking-widest text-amber-300">
+                  Achievement unlocked
+                </div>
+                <div className="text-sm font-bold text-white">{unlockedAch.title}</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -229,7 +272,7 @@ function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => 
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
       >
         <h3 className="font-display text-2xl font-bold text-white">Your stats</h3>
         <dl className="mt-4 divide-y divide-white/10">
@@ -240,6 +283,30 @@ function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => 
             </div>
           ))}
         </dl>
+
+        <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-indigo-300/80">
+          Achievements {progress.achievements.length}/{ACHIEVEMENTS.length}
+        </h4>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {ACHIEVEMENTS.map((a) => {
+            const got = progress.achievements.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                title={`${a.title} — ${a.desc}`}
+                className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-center ${
+                  got ? "border-amber-300/40 bg-amber-300/10" : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+                <span className={`text-xl ${got ? "" : "opacity-30 grayscale"}`}>{got ? a.icon : "🔒"}</span>
+                <span className={`text-[0.6rem] font-semibold leading-tight ${got ? "text-white" : "text-indigo-100/40"}`}>
+                  {a.title}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         <button
           onClick={onClose}
           className="mt-5 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
