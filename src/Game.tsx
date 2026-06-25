@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, TIER_LABELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, starsForMistakes } from "./engine";
 import Confetti from "./Confetti";
 import {
@@ -319,9 +319,11 @@ export default function Game({
           <span aria-hidden>‹</span> Levels
         </button>
         <div className="text-center">
-          <div className="font-display text-lg font-bold leading-none text-white">{puzzle.title}</div>
-          <div className="mt-0.5 text-[0.7rem] uppercase tracking-widest text-indigo-300/70">
+          <div className="font-display text-lg font-bold leading-none text-white">
             Level {puzzleIndex + 1}
+          </div>
+          <div className="mt-0.5 text-[0.7rem] uppercase tracking-widest text-indigo-300/70">
+            {revealLink ? raw.title : TIER_LABELS[raw.tier]}
           </div>
         </div>
         <button
@@ -418,6 +420,7 @@ export default function Game({
             <EndCard
               key={status}
               won={status === "won"}
+              title={raw.title}
               stars={stars}
               mistakes={mistakes}
               streak={streak}
@@ -712,6 +715,7 @@ function StarRow({ stars }: { stars: number }) {
 
 function EndCard({
   won,
+  title,
   stars,
   mistakes,
   streak,
@@ -726,6 +730,7 @@ function EndCard({
   onNext,
 }: {
   won: boolean;
+  title: string;
   stars: number;
   mistakes: number;
   streak: number;
@@ -771,6 +776,7 @@ function EndCard({
           <h3 className="mt-3 font-display text-2xl font-bold text-white">
             {RATINGS[Math.min(mistakes, RATINGS.length - 1)]}
           </h3>
+          <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-fuchsia-300/90">{title}</p>
           <p className="mt-2 text-sm text-indigo-200/80">
             The secret link was{" "}
             <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">

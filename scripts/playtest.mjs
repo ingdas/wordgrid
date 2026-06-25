@@ -78,10 +78,13 @@ await p.screenshot({ path: `${SHOT}/r4-coach.png` });
 await clickText("button", "Next"); // dismiss coach step 0
 await sleep(300);
 
-// 4. Concealment: the link WORD (STAR) must not be visible mid-game
+// 4. Concealment: neither the link WORD (STAR) nor the title ("Star Power",
+//    which spells out the link) may be visible mid-game.
 const midText = await bodyText();
-log("link word hidden mid-game:", !/\bSTAR\b/.test(midText));
+// The link tile/reveal would render as uppercase STAR; the title as "Star Power".
+log("link word hidden mid-game:", !/\bSTAR\b/.test(midText) && !/star power/i.test(midText));
 if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during play.");
+if (/star power/i.test(midText)) note("Level title leaks the link during play.");
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
 // 5. Solve groups (coach auto-advances after the first; group 4 auto-solves)
@@ -105,6 +108,7 @@ const winText = await bodyText();
 const won = /secret link was/i.test(winText);
 log("won + reveal shown:", won);
 if (!won) note("Win/reveal did not appear.");
+if (!/star power/i.test(winText)) note("Level title not revealed on the win card.");
 const starCount = (winText.match(/⭐/g) || []).length;
 log("stars on win card:", starCount);
 if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`);

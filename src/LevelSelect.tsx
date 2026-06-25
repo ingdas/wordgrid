@@ -91,7 +91,6 @@ export default function LevelSelect({
             <LevelNode
               key={p.id}
               index={i}
-              title={p.title}
               tier={p.tier}
               unlocked={unlocked}
               earned={earned}
@@ -107,7 +106,6 @@ export default function LevelSelect({
 
 function LevelNode({
   index,
-  title,
   tier,
   unlocked,
   earned,
@@ -115,7 +113,6 @@ function LevelNode({
   onClick,
 }: {
   index: number;
-  title: string;
   tier: Tier;
   unlocked: boolean;
   earned: number;
@@ -136,7 +133,7 @@ function LevelNode({
       whileTap={unlocked ? { scale: 0.92 } : undefined}
       onClick={onClick}
       disabled={!unlocked}
-      aria-label={`Level ${index + 1}, ${title}, ${TIER_LABELS[tier]}${
+      aria-label={`Level ${index + 1}, ${TIER_LABELS[tier]}${
         done ? `, ${earned} of 3 stars` : unlocked ? "" : ", locked"
       }`}
       className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-lg transition disabled:cursor-default ${face}`}
