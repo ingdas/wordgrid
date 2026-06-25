@@ -8,6 +8,7 @@ import {
   clearedCount,
   recordDaily,
   dailyIndex,
+  pushHistory,
   MAX_STARS,
   type Progress,
 } from "./progress";
@@ -29,6 +30,7 @@ export default function App() {
   const [musicOn, setMusicOnState] = useState(() => isMusicOn());
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
   const [unlockedAch, setUnlockedAch] = useState<Achievement | null>(null);
 
@@ -99,10 +101,11 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (result: { stars: number; linkCorrect: boolean; timeMs: number }) => {
+    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number }) => {
       happytime();
       setProgress((prev) => {
-        const id = LEVELS[levelIndex].id;
+        const lvl = LEVELS[levelIndex];
+        const id = lvl.id;
         const bestStars = Math.max(prev.stars[id] ?? 0, result.stars);
         const streak = prev.streak + 1;
         const prevBestTime = prev.best[id];
@@ -131,6 +134,18 @@ export default function App() {
           // defer the toast out of the state updater
           setTimeout(() => setUnlockedAch(first), 1800);
         }
+        next = pushHistory(next, {
+          at: Date.now(),
+          id,
+          level: levelIndex + 1,
+          title: lvl.title,
+          won: true,
+          stars: result.stars,
+          mistakes: result.mistakes,
+          timeMs: result.timeMs,
+          linkCorrect: result.linkCorrect,
+          daily: playingDaily,
+        });
         saveProgress(next);
         return next;
       });
@@ -147,13 +162,29 @@ export default function App() {
     });
   }, []);
 
-  const handleLoss = useCallback(() => {
-    setProgress((prev) => {
-      const next = { ...prev, streak: 0 };
-      saveProgress(next);
-      return next;
-    });
-  }, []);
+  const handleLoss = useCallback(
+    (result: { timeMs: number; mistakes: number }) => {
+      setProgress((prev) => {
+        const lvl = LEVELS[levelIndex];
+        let next = { ...prev, streak: 0 };
+        next = pushHistory(next, {
+          at: Date.now(),
+          id: lvl.id,
+          level: levelIndex + 1,
+          title: lvl.title,
+          won: false,
+          stars: 0,
+          mistakes: result.mistakes,
+          timeMs: result.timeMs,
+          linkCorrect: false,
+          daily: playingDaily,
+        });
+        saveProgress(next);
+        return next;
+      });
+    },
+    [levelIndex, playingDaily]
+  );
 
   const nextLevel = useCallback(() => {
     showInterstitial(); // between-level ad break (no-op without the SDK)
@@ -180,6 +211,7 @@ export default function App() {
               onDaily={playDaily}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
+              onHistory={() => setShowHistory(true)}
               muted={muted}
               onToggleMute={toggleMute}
               musicOn={musicOn}
@@ -229,7 +261,17 @@ export default function App() {
 
       <AnimatePresence>
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
-        {showStats && <StatsModal progress={progress} onClose={() => setShowStats(false)} />}
+        {showStats && (
+          <StatsModal
+            progress={progress}
+            onClose={() => setShowStats(false)}
+            onHistory={() => {
+              setShowStats(false);
+              setShowHistory(true);
+            }}
+          />
+        )}
+        {showHistory && <HistoryModal progress={progress} onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -258,7 +300,15 @@ export default function App() {
   );
 }
 
-function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+function StatsModal({
+  progress,
+  onClose,
+  onHistory,
+}: {
+  progress: Progress;
+  onClose: () => void;
+  onHistory: () => void;
+}) {
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
     ["Stars collected", `${totalStars(progress)} / ${MAX_STARS}`],
@@ -322,8 +372,93 @@ function StatsModal({ progress, onClose }: { progress: Progress; onClose: () => 
         </div>
 
         <button
+          onClick={onHistory}
+          className="mt-5 w-full rounded-2xl border border-white/20 py-3 text-sm font-bold text-indigo-100 transition hover:bg-white/10"
+        >
+          📜 View play history
+        </button>
+        <button
           onClick={onClose}
-          className="mt-5 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          className="mt-2 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+        >
+          Close
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function relativeTime(at: number): string {
+  const s = Math.floor((Date.now() - at) / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? "yesterday" : `${d}d ago`;
+}
+
+function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+  const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Play history"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 24 }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+      >
+        <h3 className="font-display text-2xl font-bold text-white">Play history</h3>
+        {progress.history.length === 0 ? (
+          <p className="mt-6 text-center text-sm text-indigo-200/70">
+            No games yet — your finished levels will appear here.
+          </p>
+        ) : (
+          <ul className="mt-4 -mr-2 space-y-2 overflow-y-auto pr-2">
+            {progress.history.map((h, i) => (
+              <li
+                key={`${h.at}-${i}`}
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 truncate font-bold text-white">
+                    {h.daily && <span className="text-xs">📅</span>}
+                    {h.title}
+                  </div>
+                  <div className="text-[0.7rem] text-indigo-200/60">
+                    {h.daily ? "Daily" : `Level ${h.level}`} · {relativeTime(h.at)} · ⏱ {fmt(h.timeMs)}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  {h.won ? (
+                    <div className="font-bold text-amber-300">
+                      {"★".repeat(h.stars)}
+                      <span className="text-white/20">{"★".repeat(3 - h.stars)}</span>
+                    </div>
+                  ) : (
+                    <div className="font-bold text-rose-300">Missed</div>
+                  )}
+                  <div className="text-[0.7rem] text-indigo-200/60">{h.linkCorrect ? "🔑 link" : ""}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          onClick={onClose}
+          className="mt-4 w-full shrink-0 rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
         >
           Close
         </button>

@@ -8,6 +8,7 @@ export default function StartScreen({
   onDaily,
   onHelp,
   onStats,
+  onHistory,
   muted,
   onToggleMute,
   musicOn,
@@ -18,6 +19,7 @@ export default function StartScreen({
   onDaily: () => void;
   onHelp: () => void;
   onStats: () => void;
+  onHistory: () => void;
   muted: boolean;
   onToggleMute: () => void;
   musicOn: boolean;
@@ -106,25 +108,34 @@ export default function StartScreen({
             progress.daily.streak > 0 && <span className="text-amber-300">🔥 {progress.daily.streak}</span>
           )}
         </button>
-        <button
-          onClick={onHelp}
-          className="text-sm font-semibold text-indigo-200/80 underline-offset-4 transition hover:text-white hover:underline"
-        >
-          {t("btn.howToPlay")}
-        </button>
+        <div className="mt-1 grid w-full grid-cols-3 gap-2">
+          {[
+            { label: t("btn.howToPlay"), icon: "❔", onClick: onHelp },
+            { label: "Achievements", icon: "🏆", onClick: onStats },
+            { label: "History", icon: "📜", onClick: onHistory },
+          ].map((b) => (
+            <button
+              key={b.label}
+              onClick={b.onClick}
+              className="flex flex-col items-center gap-1 rounded-2xl border border-white/12 bg-white/[0.04] py-3 text-xs font-semibold text-indigo-100 transition hover:bg-white/10 active:scale-95"
+            >
+              <span className="text-lg" aria-hidden>{b.icon}</span>
+              {b.label}
+            </button>
+          ))}
+        </div>
       </motion.div>
 
-      {returning && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-indigo-100"
-        >
-          <span className="font-semibold">⭐ {stars}/{MAX_STARS}</span>
-          {progress.bestStreak > 0 && <span className="font-semibold">🔥 best {progress.bestStreak}</span>}
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-8 flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-indigo-100"
+      >
+        <span className="font-semibold">⭐ {stars}/{MAX_STARS}</span>
+        <span className="font-semibold">💡 {progress.hints}</span>
+        {progress.bestStreak > 0 && <span className="font-semibold">🔥 best {progress.bestStreak}</span>}
+      </motion.div>
     </div>
   );
 }

@@ -37,8 +37,8 @@ interface GameProps {
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
-  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number }) => void;
-  onLoss: () => void;
+  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number }) => void;
+  onLoss: (result: { timeMs: number; mistakes: number }) => void;
   onExit: () => void;
   onNext?: () => void;
   onHelp: () => void;
@@ -186,13 +186,13 @@ export default function Game({
       buzz([0, 40, 60, 40]);
       setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect, timeMs: t });
+      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes });
     } else if (status === "lost") {
       reported.current = true;
       setAnnounce(`Out of guesses. The secret link was ${puzzle.pivot}.`);
-      onLoss();
+      onLoss({ timeMs: Date.now() - startedAt.current, mistakes });
     }
-  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.pivot]);
+  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.pivot, mistakes]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -639,13 +639,18 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
       className="flex items-center justify-between rounded-2xl border-2 border-dashed px-4 py-2.5"
       style={{ borderColor: theme.tint, background: `${theme.tint}14`, color: theme.tint }}
     >
-      <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest">
-        <span aria-hidden className="text-xs">{theme.shape}</span>
+      <span className="flex items-center gap-1.5 text-[0.72rem] font-extrabold uppercase tracking-widest">
+        <span aria-hidden className="text-sm">{theme.shape}</span>
         {cat.name}
       </span>
-      <span className="flex gap-1.5 text-sm font-extrabold opacity-70" aria-label="words not revealed">
+      <span className="flex gap-1.5" aria-label="words not revealed">
         {cat.spokes.map((_, i) => (
-          <span key={i} aria-hidden>▢</span>
+          <span
+            key={i}
+            aria-hidden
+            className="h-5 w-7 rounded-md border-2 border-dashed"
+            style={{ borderColor: theme.tint, opacity: 0.6 }}
+          />
         ))}
       </span>
     </motion.div>
@@ -706,9 +711,13 @@ function Controls({
       <button
         onClick={onHint}
         disabled={!canHint}
-        className="text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-30"
+        className="flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-300/15 px-5 py-2.5 text-sm font-bold text-amber-200 shadow-lg shadow-amber-500/10 transition enabled:hover:bg-amber-300/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
       >
-        💡 Hint — reveal a group's theme · {hintBank} left
+        <span className="text-base" aria-hidden>💡</span>
+        Reveal a group's theme
+        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-300 px-1 text-xs font-extrabold text-amber-950">
+          {hintBank}
+        </span>
       </button>
     </div>
   );

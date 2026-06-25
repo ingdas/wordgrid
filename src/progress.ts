@@ -13,9 +13,29 @@ export interface Progress {
   daily: { lastDate: string; streak: number }; // daily-challenge streak
   achievements: string[]; // unlocked achievement ids
   hints: number; // bank of category-description hints
+  history: HistoryEntry[]; // recent finished games, newest first
 }
 
 export const STARTING_HINTS = 3;
+
+export interface HistoryEntry {
+  at: number; // timestamp
+  id: string;
+  level: number; // 1-based level number
+  title: string;
+  won: boolean;
+  stars: number;
+  mistakes: number;
+  timeMs: number;
+  linkCorrect: boolean;
+  daily: boolean;
+}
+
+const HISTORY_CAP = 40;
+
+export function pushHistory(p: Progress, entry: HistoryEntry): Progress {
+  return { ...p, history: [entry, ...p.history].slice(0, HISTORY_CAP) };
+}
 
 const KEY = "wordgrid:progress";
 
@@ -33,6 +53,7 @@ export function loadProgress(): Progress {
         daily: p.daily ?? { lastDate: "", streak: 0 },
         achievements: p.achievements ?? [],
         hints: p.hints ?? STARTING_HINTS,
+        history: p.history ?? [],
       };
     }
   } catch {
@@ -47,6 +68,7 @@ export function loadProgress(): Progress {
     daily: { lastDate: "", streak: 0 },
     achievements: [],
     hints: STARTING_HINTS,
+    history: [],
   };
 }
 

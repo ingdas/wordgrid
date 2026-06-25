@@ -87,14 +87,13 @@ if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during pl
 if (/star power/i.test(midText)) note("Level title leaks the link during play.");
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
-// 4b. Hint: reveal a category description (token from a bank of 3, no solve)
-if (!/reveal a group's theme · 3 left/i.test(midText)) note("Hint bank should start at 3.");
-await clickText("button", "Hint");
+// 4b. Hint: reveal a category description (token-based, no solve, no star cost)
+if (!/reveal a group's theme/i.test(midText)) note("Prominent hint button not found.");
+await clickText("button", "Reveal a group's theme");
 await sleep(350);
 const afterHint = await bodyText();
-log("hint decremented bank:", /· 2 left/.test(afterHint));
-if (!/· 2 left/.test(afterHint)) note("Hint bank did not decrement to 2.");
-if (!/▢/.test(afterHint)) note("Hint did not show a placeholder group banner.");
+log("hint revealed a category theme:", /words for a celebrity/i.test(afterHint));
+if (!/words for a celebrity/i.test(afterHint)) note("Hint did not reveal a category theme.");
 await p.screenshot({ path: `${SHOT}/r-hint.png` });
 
 // 5. Solve groups (coach auto-advances after the first; group 4 auto-solves)
@@ -137,6 +136,17 @@ const after = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e
 if (after[3] !== false) note("Level 4 not unlocked after clearing level 1 (window should extend).");
 if (!/⭐\s*3\/186/.test(await bodyText())) note("Star total not updated to 3/186.");
 await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
+
+// 9. Play history records the finished game
+await sleep(4000); // let the achievement toast clear so it can't intercept the click
+await clickText("button", "⭐"); // open stats
+await sleep(300);
+await clickText("button", "View play history");
+await sleep(300);
+const histText = await bodyText();
+log("history lists the played level:", /star power/i.test(histText));
+if (!/star power/i.test(histText)) note("Play history did not record the finished level.");
+await p.screenshot({ path: `${SHOT}/r8-history.png` });
 
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");
