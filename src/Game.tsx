@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, TIER_LABELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
-import { computeStars, evaluateGuess, guessKey, shuffle, starsForMistakes } from "./engine";
+import { computeStars, evaluateGuess, guessKey, shuffle } from "./engine";
 import Confetti from "./Confetti";
 import {
   playSelect,
@@ -33,6 +33,7 @@ interface GameProps {
   reduce: boolean;
   streak: number;
   tutorial: boolean;
+  daily: boolean;
   bestMs?: number;
   onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number }) => void;
   onLoss: () => void;
@@ -52,6 +53,7 @@ export default function Game({
   reduce,
   streak,
   tutorial,
+  daily,
   bestMs,
   onWin,
   onLoss,
@@ -428,7 +430,20 @@ export default function Game({
               linkCorrect={linkGuess === puzzle.pivot}
               timeMs={finalMs}
               bestMs={prevBest.current}
-              shareText={buildShare(puzzle, solved, indexByName, mistakes, status === "won")}
+              shareText={buildShare({
+                level: puzzleIndex + 1,
+                daily,
+                won: status === "won",
+                stars: finalStars,
+                mistakes,
+                linkCorrect: linkGuess === puzzle.pivot,
+                timeMs: finalMs,
+                order:
+                  status === "won"
+                    ? solved
+                    : [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))],
+                indexByName,
+              })}
               onShareToast={() => setToast("Result copied to clipboard!")}
               onExit={onExit}
               onRestart={restart}
@@ -468,19 +483,26 @@ export default function Game({
 
 // ---------------------------------------------------------------------------
 
-function buildShare(
-  puzzle: Puzzle,
-  solved: Category[],
-  indexByName: Map<string, number>,
-  mistakes: number,
-  won: boolean
-): string {
-  const order = (won ? solved : [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))])
-    .map((c) => CATEGORY_THEMES[indexByName.get(c.name) ?? 0].emoji)
-    .join("");
-  const s = starsForMistakes(mistakes);
-  const tag = won ? "★".repeat(s) + "☆".repeat(3 - s) : "didn't crack it";
-  return `WordGrid — ${puzzle.title}\n${order}\n${tag}\n${location.href}`;
+function buildShare(opts: {
+  level: number;
+  daily: boolean;
+  won: boolean;
+  stars: number;
+  mistakes: number;
+  linkCorrect: boolean;
+  timeMs: number;
+  order: Category[];
+  indexByName: Map<string, number>;
+}): string {
+  // Spoiler-free: shows the solve path as coloured squares, never the words or
+  // the level title (which would give the link away to whoever you share with).
+  const head = opts.daily ? "WordGrid Daily" : `WordGrid · Level ${opts.level}`;
+  const rating = opts.won ? "★".repeat(opts.stars) + "☆".repeat(3 - opts.stars) : "✖✖✖";
+  const grid = opts.order.map((c) => CATEGORY_THEMES[opts.indexByName.get(c.name) ?? 0].emoji).join("");
+  const detail = opts.won
+    ? `${opts.linkCorrect ? "🔑✅" : "🔑❌"}  ⏱️ ${fmtTime(opts.timeMs)}${opts.mistakes ? `  ❌${opts.mistakes}` : ""}`
+    : "So close!";
+  return `${head}  ${rating}\n${grid}\n${detail}\nPlay 👉 ${location.href}`;
 }
 
 function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string; spotlight: boolean }) {

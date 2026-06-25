@@ -10,3 +10,11 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>
 );
+
+// Register the service worker for offline play / installability. Uses a path
+// relative to the page so it works under any GitHub Pages subpath.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(new URL("sw.js", document.baseURI)).catch(() => {});
+  });
+}

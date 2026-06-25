@@ -1,0 +1,16 @@
+{
+  "name": "WordGrid — Find the Four",
+  "short_name": "WordGrid",
+  "description": "Four hidden groups. One secret word links them all. Can you find it?",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0a1f",
+  "theme_color": "#0f0c29",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

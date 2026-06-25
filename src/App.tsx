@@ -181,6 +181,7 @@ export default function App() {
               reduce={reduce}
               streak={progress.streak}
               tutorial={tutorialPending && levelIndex === 0}
+              daily={playingDaily}
               bestMs={progress.best[LEVELS[levelIndex].id]}
               onWin={handleWin}
               onLoss={handleLoss}
