@@ -79,8 +79,9 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 11. **Endless / Zen mode** — back-to-back boards, no fail, pure flow (commuters).
 12. ✅ **Surface a boss sooner** — front-loaded chapter sizes so the first boss
     now lands at level 6 (was 8) and the early map feels less like a wall.
-13. **Rewarded continue** — after 4 mistakes, watch-ad / spend coins to keep
-    going (retention + CrazyGames monetization).
+13. ✅ **Rewarded continue** — running out of guesses now offers a one-time
+    "second chance" (a rewarded ad via the SDK, instant in standalone play) that
+    hands back two tries before the run ends.
 
 **Word-fan depth:**
 14. **"Did you know" reveal** — show the link word's meaning / in a sentence on
@@ -101,7 +102,9 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
     to the next tier (a post-win nudge toast is still to come).
 22. **Daily streak calendar** + milestone rewards.
 23. **Cosmetic unlocks** (tile skins / confetti) bought with stars or coins.
-24. **Richer share card** — a rendered image, not just text.
+24. ✅ **Richer share card** — wins render a spoiler-free 1080×1080 image (stars,
+    the coloured solve path, score, link ✓, time) shared via the Web Share API
+    with the text caption, or saved + copied as a fallback.
 
 (Implemented this iteration: 1, 3, 7, 8 — see below.)
 

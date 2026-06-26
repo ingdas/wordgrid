@@ -180,15 +180,16 @@ else {
 }
 
 // 11. On a loss, the secret link must STAY hidden (so it can be guessed on replay)
-await p.evaluate(() => localStorage.clear());
+await p.evaluate(() => {
+  localStorage.clear();
+  localStorage.setItem("wordgrid:tutorial", "1"); // skip the coach for this run
+});
 await p.goto(BASE, { waitUntil: "networkidle0" });
 await sleep(400);
-await clickText("button", "Play");
+(await clickText("button", "Continue")) || (await clickText("button", "Play"));
 await sleep(400);
 await (await p.$("button[aria-label^='Level 1,']")).click();
 await sleep(500);
-await clickText("button", "Next"); // dismiss coach step 0 if present
-await sleep(300);
 // Four distinct non-groups → four mistakes → loss (each spans multiple groups).
 const WRONG = [
   ["ICON", "MOON", "JELLY"],
@@ -203,9 +204,16 @@ for (const g of WRONG) {
   await clickText("button", "Clear"); // a wrong guess keeps the tiles selected
   await sleep(150);
 }
+// Running out of guesses first offers a one-time "second chance" — decline it.
+await sleep(300);
+const offered = /second chance|don't stop now/i.test(await bodyText());
+log("second-chance offer shown:", offered);
+if (!offered) note("Second-chance offer did not appear after running out of guesses.");
+await clickText("button", "No thanks");
+await sleep(400);
 const lostText = await bodyText();
-log("loss reached:", /out of guesses/i.test(lostText));
-if (!/out of guesses/i.test(lostText)) note("Four wrong guesses did not produce a loss.");
+log("loss reached after declining:", /out of guesses/i.test(lostText));
+if (!/out of guesses/i.test(lostText)) note("Declining the second chance did not produce a loss.");
 log("link stays hidden on loss:", !/\bSTAR\b/.test(lostText) && !/star power/i.test(lostText));
 if (/\bSTAR\b/.test(lostText)) note("Secret link 'STAR' was revealed on a loss (should stay hidden).");
 if (/star power/i.test(lostText)) note("Level title was revealed on a loss (spoils the link).");

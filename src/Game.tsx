@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Puzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
+import { requestRewarded } from "./sdk";
+import { renderShareCard, type ShareCardData } from "./sharecard";
 import Confetti from "./Confetti";
 import {
   playSelect,
@@ -133,6 +135,10 @@ export default function Game({
   const [combo, setCombo] = useState(0);
   const [pops, setPops] = useState<{ id: number; text: string }[]>([]);
   const popId = useRef(0);
+  // Second chance: on the first time you run out of guesses, offer a rewarded
+  // continue (+2 tries) before the run actually ends.
+  const [offering, setOffering] = useState(false);
+  const [secondChanceUsed, setSecondChanceUsed] = useState(false);
   // Decoys are appended last, so shuffle once up front to scatter the impostors.
   const [order, setOrder] = useState<string[]>(() => (twist === "decoy" ? shuffle(spokeTiles) : spokeTiles));
   const [now, setNow] = useState(Date.now());
@@ -269,7 +275,7 @@ export default function Game({
 
   const toggleSelect = useCallback(
     (word: string) => {
-      if (status !== "playing") return;
+      if (status !== "playing" || offering) return;
       setSelected((prev) => {
         if (prev.includes(word)) {
           playDeselect();
@@ -280,11 +286,11 @@ export default function Game({
         return [...prev, word];
       });
     },
-    [status]
+    [status, offering]
   );
 
   const submit = useCallback(() => {
-    if (status !== "playing" || selected.length !== 3) return;
+    if (status !== "playing" || offering || selected.length !== 3) return;
     setMoves((m) => m + 1);
     const result = evaluateGuess(unsolvedCategories, selected, pastGuesses);
     if (result.kind === "solved") {
@@ -306,17 +312,33 @@ export default function Game({
     setMistakes((m) => {
       const next = m + 1;
       if (next >= MAX_MISTAKES) {
-        setStatus("lost");
         setSelected([]);
+        // Offer a one-time rewarded continue before ending the run.
+        if (!secondChanceUsed) setOffering(true);
+        else setStatus("lost");
       }
       return next;
     });
-  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
     setSelected([]);
   }, [selected.length]);
+
+  // Second chance: a rewarded ad (instant true when no SDK) buys +2 tries once.
+  const takeSecondChance = useCallback(async () => {
+    const ok = await requestRewarded();
+    if (!ok) return; // ad failed/declined — leave the offer up
+    setSecondChanceUsed(true);
+    setOffering(false);
+    setMistakes((m) => Math.max(0, m - 2));
+    setToast("Second chance! Two tries back. 🎬");
+  }, []);
+  const declineSecondChance = useCallback(() => {
+    setOffering(false);
+    setStatus("lost");
+  }, []);
 
   const shuffleTiles = useCallback(() => {
     playSelect();
@@ -368,6 +390,8 @@ export default function Game({
     setScore(0);
     setCombo(0);
     setPops([]);
+    setOffering(false);
+    setSecondChanceUsed(false);
     setOrder(shuffle(spokeTiles));
   }, [spokeTiles, twist]);
 
@@ -562,7 +586,7 @@ export default function Game({
                   emoji={twist === "emoji"}
                   selected={selected.includes(word)}
                   hinted={!!hintWords?.has(word)}
-                  disabled={status !== "playing"}
+                  disabled={status !== "playing" || offering}
                   onClick={() => toggleSelect(word)}
                 />
               ))}
@@ -575,7 +599,7 @@ export default function Game({
           </p>
         )}
 
-        {status === "playing" && (
+        {status === "playing" && !offering && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-indigo-200/70">
             <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
             <span aria-hidden>·</span>
@@ -589,7 +613,7 @@ export default function Game({
           </div>
         )}
 
-        {status === "playing" && (
+        {status === "playing" && !offering && (
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
@@ -602,6 +626,10 @@ export default function Game({
             onHint={revealCategory}
           />
         )}
+
+        <AnimatePresence>
+          {offering && <ContinueOffer onAccept={takeSecondChance} onDecline={declineSecondChance} />}
+        </AnimatePresence>
 
         {status === "guessing" && (
           <LinkGuess
@@ -645,7 +673,21 @@ export default function Game({
                     : [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))],
                 indexByName,
               })}
-              onShareToast={() => setToast("Result copied to clipboard!")}
+              shareData={{
+                level: puzzleIndex + 1,
+                daily,
+                won: status === "won",
+                stars: finalStars,
+                score,
+                mistakes,
+                linkCorrect,
+                timeMs: finalMs,
+                colors: (status === "won"
+                  ? solved
+                  : [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))]
+                ).map((c) => CATEGORY_THEMES[(indexByName.get(c.name) ?? 0) % CATEGORY_THEMES.length].tint),
+              }}
+              onShareToast={(msg) => setToast(msg)}
               onExit={onExit}
               onRestart={restart}
               onNext={onNext}
@@ -877,6 +919,47 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
           />
         ))}
       </span>
+    </motion.div>
+  );
+}
+
+function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>; onDecline: () => void }) {
+  const [pending, setPending] = useState(false);
+  const accept = async () => {
+    setPending(true);
+    try {
+      await onAccept();
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 16, scale: 0.96 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+      className="mt-7 rounded-3xl border border-amber-300/30 bg-gradient-to-b from-amber-300/10 to-transparent p-6 text-center"
+    >
+      <div className="text-4xl">😮‍💨</div>
+      <h3 className="mt-2 font-display text-2xl font-bold text-white">So close — don't stop now!</h3>
+      <p className="mt-1 text-sm text-indigo-200/80">Take a second chance and get two tries back.</p>
+      <button
+        onClick={accept}
+        disabled={pending}
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-7 py-3 text-base font-bold text-white shadow-lg shadow-orange-500/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
+      >
+        <span aria-hidden>🎬</span> {pending ? "Loading…" : "Watch & continue (+2)"}
+      </button>
+      <div>
+        <button
+          onClick={onDecline}
+          disabled={pending}
+          className="mt-3 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+        >
+          No thanks — end the run
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -1178,6 +1261,7 @@ function EndCard({
   bestMs,
   score,
   shareText,
+  shareData,
   onShareToast,
   onExit,
   onRestart,
@@ -1194,26 +1278,45 @@ function EndCard({
   bestMs?: number;
   score: number;
   shareText: string;
-  onShareToast: () => void;
+  shareData: ShareCardData;
+  onShareToast: (msg: string) => void;
   onExit: () => void;
   onRestart: () => void;
   onNext?: () => void;
 }) {
   const newBest = won && (bestMs == null || timeMs < bestMs);
   const share = async () => {
+    // Render the result image; share it with the caption when the platform
+    // supports file sharing, else copy the text and save the image.
+    const blob = await renderShareCard(shareData);
+    const file = blob ? new File([blob], "wordgrid.png", { type: "image/png" }) : null;
     try {
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text: shareText });
+        return;
+      }
       if (navigator.share) {
         await navigator.share({ text: shareText });
         return;
       }
     } catch {
-      /* fall through */
+      /* fall through to copy/save */
     }
     try {
       await navigator.clipboard.writeText(shareText);
-      onShareToast();
     } catch {
       /* ignore */
+    }
+    if (file) {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "wordgrid.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      onShareToast("Image saved · text copied!");
+    } else {
+      onShareToast("Result copied to clipboard!");
     }
   };
 
