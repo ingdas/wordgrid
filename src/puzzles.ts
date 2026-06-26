@@ -819,3 +819,10 @@ export const CHAPTERS: Chapter[] = CHAPTER_META.map((c, i) => {
   const end = Math.min(start + CHAPTER_SIZE, LEVELS.length);
   return { ...c, start, end, boss: end - 1 };
 }).filter((c) => c.start < LEVELS.length);
+
+const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
+
+/** Is this level (index into LEVELS) the boss of its chapter? */
+export function isBossLevel(index: number): boolean {
+  return BOSS_SET.has(index);
+}

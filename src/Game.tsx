@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, TIER_LABELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
-import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches } from "./engine";
+import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import Confetti from "./Confetti";
 import {
   playSelect,
@@ -34,6 +34,7 @@ interface GameProps {
   streak: number;
   tutorial: boolean;
   daily: boolean;
+  boss: boolean;
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
@@ -56,6 +57,7 @@ export default function Game({
   streak,
   tutorial,
   daily,
+  boss,
   bestMs,
   hintBank,
   onUseHint,
@@ -71,6 +73,14 @@ export default function Game({
 
   // The 12 spoke tiles (everything except the hidden link), in shuffled order.
   const spokeTiles = useMemo(() => puzzle.words.filter((w) => w !== puzzle.pivot), [puzzle]);
+
+  // Boss twist: tiles are shown as scrambled anagrams (the real word is kept
+  // for grouping and the solved banner). Stable per word so it doesn't reshuffle.
+  const displayOf = useMemo(() => {
+    const m = new Map<string, string>();
+    if (boss) spokeTiles.forEach((w) => m.set(w, scrambleWord(w)));
+    return (w: string) => m.get(w) ?? w;
+  }, [boss, spokeTiles]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
@@ -98,6 +108,11 @@ export default function Game({
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [status]);
+
+  // One-time boss intro.
+  useEffect(() => {
+    if (boss) setToast("👑 Boss fight — the tiles are scrambled. Unscramble, then group them!");
+  }, [boss]);
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -343,11 +358,16 @@ export default function Game({
           <span aria-hidden>‹</span> Levels
         </button>
         <div className="text-center">
-          <div className="font-display text-lg font-bold leading-none text-white">
+          <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-white">
+            {boss && !revealLink && <span aria-hidden>👑</span>}
             Level {puzzleIndex + 1}
           </div>
-          <div className="mt-0.5 text-[0.7rem] uppercase tracking-widest text-indigo-300/70">
-            {revealLink ? raw.title : TIER_LABELS[raw.tier]}
+          <div
+            className={`mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest ${
+              boss && !revealLink ? "text-fuchsia-300" : "text-indigo-300/70"
+            }`}
+          >
+            {revealLink ? raw.title : boss ? "Boss · scrambled tiles" : TIER_LABELS[raw.tier]}
           </div>
         </div>
         <button
@@ -400,6 +420,7 @@ export default function Game({
                 <WordTile
                   key={word}
                   word={word}
+                  display={displayOf(word)}
                   selected={selected.includes(word)}
                   hinted={!!hintWords?.has(word)}
                   disabled={status !== "playing"}
@@ -576,19 +597,22 @@ function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string
 
 function WordTile({
   word,
+  display,
   selected,
   hinted,
   disabled,
   onClick,
 }: {
   word: string;
+  display?: string;
   selected: boolean;
   hinted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
+  const shown = display ?? word;
   const sizeClass =
-    word.length >= 8 ? "text-[0.7rem] sm:text-xs" : word.length >= 7 ? "text-xs sm:text-sm" : "text-sm sm:text-base";
+    shown.length >= 8 ? "text-[0.7rem] sm:text-xs" : shown.length >= 7 ? "text-xs sm:text-sm" : "text-sm sm:text-base";
 
   let look = "border border-white/12 bg-white/[0.06] text-indigo-50 hover:bg-white/[0.12]";
   let style: React.CSSProperties | undefined;
@@ -615,7 +639,7 @@ function WordTile({
       className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${look} disabled:cursor-default`}
       style={style}
     >
-      {word}
+      {shown}
     </motion.button>
   );
 }

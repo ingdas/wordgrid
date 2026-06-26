@@ -56,6 +56,25 @@ export function normalizeWord(s: string): string {
   return s.toUpperCase().replace(/[^A-Z]/g, "");
 }
 
+/** A deterministic anagram of a word (boss twist). Same letters, reordered;
+ *  differs from the original when the letters allow it. */
+export function scrambleWord(word: string): string {
+  if (word.length < 2) return word;
+  let seed = 0;
+  for (const c of word) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const rand = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0x100000000;
+  let out = word;
+  for (let tries = 0; tries < 10 && out === word; tries++) {
+    const a = word.split("");
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    out = a.join("");
+  }
+  return out;
+}
+
 /**
  * Does the typed guess match the secret link? Accepts the pivot and any
  * author-listed synonyms ("if the categories allow it"), and is forgiving about

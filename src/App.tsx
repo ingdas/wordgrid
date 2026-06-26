@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS } from "./puzzles";
+import { LEVELS, isBossLevel } from "./puzzles";
 import {
   loadProgress,
   saveProgress,
@@ -253,6 +253,7 @@ export default function App() {
               streak={progress.streak}
               tutorial={tutorialPending && levelIndex === 0}
               daily={playingDaily}
+              boss={isBossLevel(levelIndex)}
               bestMs={progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}

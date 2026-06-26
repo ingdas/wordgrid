@@ -1,7 +1,7 @@
 // Unit tests for the pure game engine. No test framework needed:
 //   npm test
 import assert from "node:assert/strict";
-import { evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes, linkMatches } from "../src/engine.ts";
+import { evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes, linkMatches, scrambleWord } from "../src/engine.ts";
 import type { Category } from "../src/puzzles.ts";
 
 const cat = (name: string, spokes: string[]): Category => ({ name, spokes, members: ["LINK", ...spokes] });
@@ -73,6 +73,15 @@ test("linkMatches: forgiving on case/space/plural, plus synonyms", () => {
   assert.equal(linkMatches("", "STAR"), false);
   assert.equal(linkMatches("autumn", "FALL", ["AUTUMN"]), true); // synonym allowed
   assert.equal(linkMatches("winter", "FALL", ["AUTUMN"]), false);
+});
+
+test("scrambleWord is a deterministic anagram that differs from the input", () => {
+  const w = "PRETZEL";
+  const s = scrambleWord(w);
+  assert.equal([...s].sort().join(""), [...w].sort().join("")); // same letters
+  assert.notEqual(s, w); // reordered
+  assert.equal(scrambleWord(w), s); // deterministic
+  assert.equal(scrambleWord("A"), "A"); // single letter unchanged
 });
 
 console.log(`\n${passed} engine tests passed ✓`);

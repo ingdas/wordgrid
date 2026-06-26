@@ -148,6 +148,27 @@ log("history lists the played level:", /star power/i.test(histText));
 if (!/star power/i.test(histText)) note("Play history did not record the finished level.");
 await p.screenshot({ path: `${SHOT}/r8-history.png` });
 
+// 10. Boss level: tiles are scrambled (different gameplay)
+await p.evaluate(() => {
+  localStorage.setItem("wordgrid:tutorial", "1");
+  localStorage.setItem("wordgrid:progress", JSON.stringify({ stars: { star: 3, bark: 3, stick: 3, bug: 3, sheet: 3 } }));
+});
+await p.goto(BASE, { waitUntil: "networkidle0" });
+await sleep(400);
+(await clickText("button", "Continue")) || (await clickText("button", "Play"));
+await sleep(500);
+const bossNode = await p.$("button[aria-label^='Level 8,']");
+if (!bossNode) note("Boss level 8 was not unlocked for the boss test.");
+else {
+  await bossNode.click();
+  await sleep(600);
+  const bt = await bodyText();
+  log("boss shows scrambled tiles:", /scrambled/i.test(bt) && !/BURGER/.test(bt));
+  if (!/scrambled/i.test(bt)) note("Boss did not show the scrambled-tiles label.");
+  if (/BURGER/.test(bt)) note("Boss tile shows the real word instead of a scramble.");
+  await p.screenshot({ path: `${SHOT}/r9-boss.png` });
+}
+
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");
 console.log(errors.length ? errors.join("\n") : "(none)");
