@@ -859,26 +859,31 @@ export function isBossLevel(index: number): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Boss variety. Every chapter's boss plays differently. Twists are assigned in
-// a fixed order so no two adjacent chapters share one, with the dedicated emoji
-// puzzle slotted in once.
+// Boss variety. Every chapter's boss plays differently — and these are real
+// changes to how the game plays, not just cosmetics. Twists are assigned in a
+// fixed order so no two adjacent chapters share one.
 //
-//  - scramble:    tiles are anagrams you must unscramble before grouping.
-//  - emoji:       a bespoke picture-only board (the EMOJI_BOSS content).
-//  - suddenDeath: only two mistakes allowed instead of four.
-//  - blackout:    solved group themes stay hidden until the very end.
+//  - emoji:      a bespoke picture-only board (the EMOJI_BOSS content) — you
+//                read pictures instead of words.
+//  - scramble:   every tile is an anagram you must decode before grouping.
+//  - timeAttack: forget the mistake counter — you race a 90-second countdown;
+//                run out of time and it's over.
+//  - decoy:      three impostor tiles belong to NO group. Include one in a
+//                guess and the group busts; you have to spot the fakes.
+//  - blackout:   solved group names and words stay hidden until the reveal, so
+//                you can't lean on what you've already found.
 
-export type BossTwist = "scramble" | "emoji" | "suddenDeath" | "blackout";
+export type BossTwist = "scramble" | "emoji" | "timeAttack" | "decoy" | "blackout";
 
 const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
-  "suddenDeath",
+  "timeAttack",
   "emoji",
   "blackout",
+  "decoy",
+  "timeAttack",
   "scramble",
-  "suddenDeath",
-  "blackout",
-  "scramble",
+  "decoy",
 ];
 
 /** The twist for a given level index, or null if it isn't a boss. */
@@ -886,4 +891,27 @@ export function bossTwist(index: number): BossTwist | null {
   const chapter = CHAPTERS.findIndex((c) => c.boss === index);
   if (chapter === -1) return null;
   return CHAPTER_TWISTS[chapter % CHAPTER_TWISTS.length];
+}
+
+// The "decoy" boss salts the board with impostor words that fit no group. We
+// pull from a fixed pool, skipping anything that clashes with the real puzzle,
+// and pick deterministically from the puzzle id so a level is always the same.
+const DECOY_POOL = [
+  "OCEAN", "TIGER", "PIANO", "CASTLE", "ROCKET", "GARDEN", "PEPPER", "VELVET",
+  "MARBLE", "FALCON", "CANYON", "LANTERN", "BISCUIT", "HARBOR", "MEADOW",
+  "PRISM", "WALNUT", "ANCHOR", "COMPASS", "ORCHID",
+];
+
+export function decoyTiles(puzzle: Puzzle, count = 3): string[] {
+  const taken = new Set([puzzle.pivot, ...puzzle.words, ...puzzle.accept]);
+  const pool = DECOY_POOL.filter((w) => !taken.has(w));
+  let seed = 0;
+  for (const c of puzzle.id) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const picks: string[] = [];
+  while (picks.length < count && pool.length) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    const [w] = pool.splice(seed % pool.length, 1);
+    picks.push(w);
+  }
+  return picks;
 }

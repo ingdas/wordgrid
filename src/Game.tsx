@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, type BossTwist, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Puzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import Confetti from "./Confetti";
 import {
@@ -13,20 +13,23 @@ import {
   playStar,
 } from "./audio";
 
-const DEFAULT_MISTAKES = 4;
+const MAX_MISTAKES = 4;
+const TIME_ATTACK_MS = 90_000;
 
 // Per-twist flavour shown in the top bar and the one-time intro toast.
 const TWIST_LABEL: Record<BossTwist, string> = {
   scramble: "Boss · scrambled tiles",
   emoji: "Boss · emoji only",
-  suddenDeath: "Boss · sudden death",
+  timeAttack: "Boss · time attack",
+  decoy: "Boss · impostors",
   blackout: "Boss · blackout",
 };
 
 const TWIST_INTRO: Record<BossTwist, string> = {
   scramble: "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
   emoji: "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  suddenDeath: "👑 Boss fight — sudden death! Only two mistakes allowed.",
+  timeAttack: "👑 Boss fight — beat the clock! 90 seconds to find every group.",
+  decoy: "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
   blackout: "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
 };
 
@@ -90,8 +93,15 @@ export default function Game({
   const raw = twist === "emoji" ? EMOJI_BOSS : levelRaw;
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
-  // The 12 spoke tiles (everything except the hidden link), in shuffled order.
-  const spokeTiles = useMemo(() => puzzle.words.filter((w) => w !== puzzle.pivot), [puzzle]);
+  // The "decoy" boss salts the board with impostor tiles that fit no group.
+  const decoys = useMemo(() => (twist === "decoy" ? decoyTiles(puzzle) : []), [twist, puzzle]);
+
+  // The spoke tiles on the board (everything except the hidden link), plus any
+  // impostors. The set of decoys never changes, so they linger as red herrings.
+  const spokeTiles = useMemo(
+    () => [...puzzle.words.filter((w) => w !== puzzle.pivot), ...decoys],
+    [puzzle, decoys]
+  );
 
   // How each tile is shown: scrambled anagram, an emoji, or the plain word. The
   // real word is always kept for grouping and the solved banner. Stable per word.
@@ -101,9 +111,6 @@ export default function Game({
     else if (twist === "emoji") spokeTiles.forEach((w) => m.set(w, puzzle.emoji[w] ?? w));
     return (w: string) => m.get(w) ?? w;
   }, [twist, spokeTiles, puzzle.emoji]);
-
-  // Sudden death allows fewer mistakes; everything else gets the usual four.
-  const maxMistakes = twist === "suddenDeath" ? 2 : DEFAULT_MISTAKES;
 
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
@@ -117,7 +124,8 @@ export default function Game({
   const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
   const [revealedLetters, setRevealedLetters] = useState(0);
   const [moves, setMoves] = useState(0);
-  const [order, setOrder] = useState<string[]>(spokeTiles);
+  // Decoys are appended last, so shuffle once up front to scatter the impostors.
+  const [order, setOrder] = useState<string[]>(() => (twist === "decoy" ? shuffle(spokeTiles) : spokeTiles));
   const [now, setNow] = useState(Date.now());
   const [coach, setCoach] = useState(tutorial ? 0 : -1);
   const [finalMs, setFinalMs] = useState(0);
@@ -125,12 +133,23 @@ export default function Game({
   const startedAt = useRef(Date.now());
   const prevBest = useRef(bestMs); // captured once, before this run updates it
 
-  // Tick a clock once a second while playing, for the timer display.
+  // Tick a clock while playing, for the timer display. Time-attack ticks faster
+  // so its countdown reads smoothly.
   useEffect(() => {
     if (status !== "playing") return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(Date.now()), twist === "timeAttack" ? 250 : 1000);
     return () => clearInterval(t);
-  }, [status]);
+  }, [status, twist]);
+
+  // Time-attack boss: the clock, not the mistake counter, ends the run.
+  const timeLeftMs = twist === "timeAttack" ? Math.max(0, TIME_ATTACK_MS - (now - startedAt.current)) : 0;
+  useEffect(() => {
+    if (twist !== "timeAttack" || status !== "playing") return;
+    if (timeLeftMs <= 0) {
+      setStatus("lost");
+      setSelected([]);
+    }
+  }, [twist, status, timeLeftMs]);
 
   // One-time boss intro, tailored to this boss's twist.
   useEffect(() => {
@@ -270,13 +289,13 @@ export default function Game({
     setShake((s) => s + 1);
     setMistakes((m) => {
       const next = m + 1;
-      if (next >= maxMistakes) {
+      if (next >= MAX_MISTAKES) {
         setStatus("lost");
         setSelected([]);
       }
       return next;
     });
-  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, maxMistakes]);
+  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -413,6 +432,10 @@ export default function Game({
           spotlight={coach === 0}
         />
 
+        {twist === "timeAttack" && status === "playing" && (
+          <CountdownBar msLeft={timeLeftMs} totalMs={TIME_ATTACK_MS} />
+        )}
+
         {(bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
@@ -435,27 +458,29 @@ export default function Game({
           </div>
         )}
 
-        <motion.div
-          key={shake}
-          animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
-          transition={{ duration: 0.45 }}
-          className="mt-4 flex flex-wrap justify-center gap-3"
-        >
-          <AnimatePresence mode="popLayout">
-            {remainingSpokes.map((word) => (
-              <WordTile
-                key={word}
-                word={word}
-                display={displayOf(word)}
-                emoji={twist === "emoji"}
-                selected={selected.includes(word)}
-                hinted={!!hintWords?.has(word)}
-                disabled={status !== "playing"}
-                onClick={() => toggleSelect(word)}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        {(status === "playing" || status === "lost") && (
+          <motion.div
+            key={shake}
+            animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
+            transition={{ duration: 0.45 }}
+            className="mt-4 flex flex-wrap justify-center gap-3"
+          >
+            <AnimatePresence mode="popLayout">
+              {remainingSpokes.map((word) => (
+                <WordTile
+                  key={word}
+                  word={word}
+                  display={displayOf(word)}
+                  emoji={twist === "emoji"}
+                  selected={selected.includes(word)}
+                  hinted={!!hintWords?.has(word)}
+                  disabled={status !== "playing"}
+                  onClick={() => toggleSelect(word)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
         {status === "lost" && (
           <p className="mt-6 text-center text-sm text-indigo-200/70">
             Out of guesses — the link is still a secret. Replay to crack it!
@@ -464,8 +489,12 @@ export default function Game({
 
         {status === "playing" && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-indigo-200/70">
-            <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
-            <span aria-hidden>·</span>
+            {twist !== "timeAttack" && (
+              <>
+                <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
+                <span aria-hidden>·</span>
+              </>
+            )}
             <span>{moves} {moves === 1 ? "move" : "moves"}</span>
             <button
               onClick={shuffleTiles}
@@ -479,7 +508,7 @@ export default function Game({
         {status === "playing" && (
           <Controls
             mistakes={mistakes}
-            max={maxMistakes}
+            max={MAX_MISTAKES}
             canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
             canHint={canHint}
@@ -619,6 +648,35 @@ function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string
         )}
       </div>
     </motion.div>
+  );
+}
+
+function CountdownBar({ msLeft, totalMs }: { msLeft: number; totalMs: number }) {
+  const pct = Math.max(0, Math.min(100, (msLeft / totalMs) * 100));
+  const secs = Math.ceil(msLeft / 1000);
+  const danger = secs <= 15;
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between text-[0.7rem] font-bold uppercase tracking-widest">
+        <span className="text-indigo-200/70">Time remaining</span>
+        <motion.span
+          key={secs}
+          animate={danger ? { scale: [1, 1.25, 1] } : {}}
+          className={danger ? "text-rose-300" : "text-amber-200"}
+        >
+          ⏳ {fmtTime(msLeft)}
+        </motion.span>
+      </div>
+      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-white/10">
+        <motion.div
+          animate={{ width: `${pct}%` }}
+          transition={{ ease: "linear", duration: 0.25 }}
+          className={`h-full rounded-full ${
+            danger ? "bg-gradient-to-r from-rose-500 to-pink-500" : "bg-gradient-to-r from-amber-300 to-orange-400"
+          }`}
+        />
+      </div>
+    </div>
   );
 }
 

@@ -50,13 +50,18 @@ L. ✅ **"One away" radar** — wrong guesses with two correct picks show
    "🎯 So close — one away!" (engine-detected, unit-tested).
 M. **Adaptive difficulty** — tune board difficulty to the player's win rate.
 N. ✅ **Story/level-map progression** — chapters with flavor text + boss nodes.
-   **Every boss now plays differently** via a per-chapter twist (no two adjacent
-   chapters share one):
-   - **scramble** — tiles are anagrams you must decode before grouping.
+   **Every boss now plays differently** — and these are real changes to how the
+   game plays, not just cosmetics. One twist per chapter, no two adjacent alike:
    - **emoji** — a bespoke picture-only board (pivot BOLT, concrete-noun spokes,
-     lightning emoji deliberately omitted so the link isn't spoiled).
-   - **sudden death** — only two mistakes allowed instead of four.
-   - **blackout** — solved group names/words stay hidden until the final reveal.
+     lightning emoji deliberately omitted so the link isn't spoiled); you read
+     pictures instead of words.
+   - **scramble** — every tile is an anagram you decode before grouping.
+   - **time attack** — the mistake counter steps aside: you race a 90-second
+     countdown (with a live draining bar that turns red in the final 15s).
+   - **impostors (decoy)** — three trap tiles belong to NO group; include one in
+     a guess and the group busts, so you have to spot the fakes (15-tile board).
+   - **blackout** — solved group names/words stay hidden until the final reveal,
+     so you can't lean on what you've already found.
    On a **loss the secret link is no longer revealed** — it stays masked so you
    can still discover (and type) it on a replay; play history hides a lost
    level's title too, since the title spells the link.
