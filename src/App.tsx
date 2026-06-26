@@ -9,6 +9,7 @@ import {
   recordDaily,
   dailyIndex,
   pushHistory,
+  playerRank,
   MAX_STARS,
   type Progress,
 } from "./progress";
@@ -50,7 +51,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
-  const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string } | null>(null);
+  const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string; header?: string } | null>(null);
 
   useEffect(() => {
     if (!unlockedAch) return;
@@ -164,6 +165,14 @@ export default function App() {
           score: prev.score + result.score, // lifetime points
         };
         if (playingDaily) next = recordDaily(next);
+        // Rank-up celebration when the lifetime-score ladder ticks over.
+        const afterRank = playerRank(next.score);
+        if (afterRank.level > playerRank(prev.score).level) {
+          setTimeout(
+            () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
+            2100
+          );
+        }
         // Tiered achievements: award newly-reached tiers + their hint rewards.
         const { unlocked, reward, keys } = evaluateUnlocks(next);
         if (unlocked.length) {
@@ -346,7 +355,7 @@ export default function App() {
               </span>
               <div className="text-left">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-amber-300">
-                  Achievement unlocked
+                  {unlockedAch.header ?? "Achievement unlocked"}
                 </div>
                 <div className="text-sm font-bold text-white">{unlockedAch.label}</div>
               </div>

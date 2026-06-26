@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { LEVELS } from "./puzzles";
-import { MAX_STARS, totalStars, dailyDoneToday, furthestCleared, type Progress } from "./progress";
+import { MAX_STARS, totalStars, dailyDoneToday, furthestCleared, playerRank, type Progress } from "./progress";
 import { t } from "./i18n";
 
 export default function StartScreen({
@@ -32,6 +32,7 @@ export default function StartScreen({
   const returning = stars > 0 || progress.bestStreak > 0;
   const dailyDone = dailyDoneToday(progress);
   const nextLevel = Math.min(furthestCleared(progress) + 2, LEVELS.length);
+  const rank = playerRank(progress.score);
 
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-12 pt-24 text-center sm:pt-28">
@@ -131,10 +132,34 @@ export default function StartScreen({
       </motion.div>
 
       <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.46 }}
+        className="mt-8 w-full max-w-xs rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+      >
+        <div className="flex items-baseline justify-between">
+          <span className="font-display text-sm font-bold text-white">
+            Lv {rank.level} · <span className="text-fuchsia-300">{rank.title}</span>
+          </span>
+          <span className="text-[0.7rem] font-semibold text-indigo-200/70">
+            {rank.into}/{rank.span} XP
+          </span>
+        </div>
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${rank.pct}%` }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-500"
+          />
+        </div>
+      </motion.div>
+
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="mt-8 flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-indigo-100"
+        className="mt-3 flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-indigo-100"
       >
         <span className="font-semibold">⭐ {stars}/{MAX_STARS}</span>
         <span className="font-semibold">💡 {progress.hints}</span>

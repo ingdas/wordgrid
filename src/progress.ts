@@ -97,6 +97,41 @@ export function clearedCount(p: Progress): number {
   return Object.values(p.stars).filter((s) => s > 0).length;
 }
 
+// --- Player rank ----------------------------------------------------------
+// A lightweight XP ladder off lifetime score, for a constant sense of growth.
+// Each level costs ~25% more than the last; titles repeat the top once maxed.
+const RANK_TITLES = [
+  "Novice", "Apprentice", "Wordsmith", "Sharp Eye", "Cryptic Mind",
+  "Mastermind", "Luminary", "Grandmaster", "Legend",
+];
+
+export interface Rank {
+  level: number; // 1-based
+  title: string;
+  into: number; // XP into the current level
+  span: number; // XP needed to finish the current level
+  pct: number; // 0-100 progress to next level
+}
+
+export function playerRank(score: number): Rank {
+  let level = 0;
+  let acc = 0;
+  let need = 500;
+  while (score >= acc + need && level < 98) {
+    acc += need;
+    level++;
+    need = Math.round(need * 1.25);
+  }
+  const into = score - acc;
+  return {
+    level: level + 1,
+    title: RANK_TITLES[Math.min(level, RANK_TITLES.length - 1)],
+    into,
+    span: need,
+    pct: Math.min(100, Math.round((into / need) * 100)),
+  };
+}
+
 // How many levels ahead of your furthest clear stay unlocked.
 const LOOKAHEAD = 3;
 

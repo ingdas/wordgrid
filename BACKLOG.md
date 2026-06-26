@@ -73,8 +73,9 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
    every level.
 9. ✅ **Escalating juice** — the confetti burst scales with the combo, so a
     streak of solves feels increasingly celebratory.
-10. **Player level / rank meta** — an XP bar that fills across levels for a
-    sense of growth beyond stars.
+10. ✅ **Player level / rank meta** — lifetime score now feeds an XP ladder
+    (Novice → Legend) with a progress bar on home and a "Rank up!" toast when
+    you tick over.
 11. **Endless / Zen mode** — back-to-back boards, no fail, pure flow (commuters).
 12. ✅ **Surface a boss sooner** — front-loaded chapter sizes so the first boss
     now lands at level 6 (was 8) and the early map feels less like a wall.
