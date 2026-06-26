@@ -14,6 +14,29 @@ that the link word never appears on screen mid-game.
 
 ---
 
+## Content quality pass (iteration 12)
+
+Read all 62 puzzles and replaced genuinely obscure spokes with more common,
+interesting words (none needed deleting — every level was salvageable). 18
+puzzles touched:
+
+- **bark**: sailing jargon SLOOP/KETCH/YAWL → "Kinds of boat" YACHT/CANOE/FERRY
+  (this single fix made bark a fair Level 2 again).
+- **well**: AQUIFER→STREAM, HALE→ROBUST, DERRICK→DRILL.
+- **cell**: ANODE/CATHODE → SOLAR/DYNAMO (also more accurate "power sources").
+- **stamp**: QUASH/ERADICATE → ERASE/DESTROY.
+- **tank**: APC→CHOPPER, CISTERN→JUG.
+- **shower**: FETE→FIESTA, BESTOW→SPLURGE.
+- **sole**: PLAICE→FLOUNDER ("Fish on the menu").
+- **note** TENNER→DOLLAR, **drop** LOZENGE/PASTILLE→LOLLIPOP/GUMDROP,
+  **check** GINGHAM→FLORAL, **forge** BELLOWS→TONGS, **break** RESPITE→BREATHER,
+  **pen** CLINK→SLAMMER, **trunk** BOUGH/COFFER→BRANCH/LOCKER, **nail**
+  BRAD→STAPLE, **date** TRYST→AFFAIR, **track** SLEEPER→SIGNAL, **fire**
+  ARDOR→DRIVE.
+
+The difficulty scorer's obscure-word set was pruned to match. `npm run validate`
+and `npm run audit` are clean.
+
 ## Device / resolution pass (iteration 11)
 
 Ran the full flow across eight viewports (tiny 320×568, 360×640, 390×844,
