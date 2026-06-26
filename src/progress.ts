@@ -97,6 +97,23 @@ export function clearedCount(p: Progress): number {
 // How many levels ahead of your furthest clear stay unlocked.
 const LOOKAHEAD = 3;
 
+// Debug switch: add `?debug` to the URL (it's remembered afterwards) or set
+// localStorage["wordgrid:debug"]="1" to unlock every level immediately. Add
+// `?debug=0` to turn it back off. Read once per load.
+const DEBUG_KEY = "wordgrid:debug";
+let debugCache: boolean | null = null;
+export function isDebug(): boolean {
+  if (debugCache !== null) return debugCache;
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.has("debug")) localStorage.setItem(DEBUG_KEY, q.get("debug") === "0" ? "0" : "1");
+    debugCache = localStorage.getItem(DEBUG_KEY) === "1";
+  } catch {
+    debugCache = false;
+  }
+  return debugCache;
+}
+
 /** Index (in LEVELS order) of the furthest cleared level, or -1. */
 export function furthestCleared(p: Progress): number {
   let furthest = -1;
@@ -108,6 +125,7 @@ export function furthestCleared(p: Progress): number {
 
 /** Looser gating: the first few levels plus a window ahead of your progress. */
 export function isUnlocked(p: Progress, index: number): boolean {
+  if (isDebug()) return true; // debug: everything open
   return index <= furthestCleared(p) + LOOKAHEAD;
 }
 

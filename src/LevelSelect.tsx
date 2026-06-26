@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { LEVELS, CHAPTERS, TIER_LABELS, type Tier } from "./puzzles";
-import { isUnlocked, MAX_STARS, totalStars, type Progress } from "./progress";
+import { isUnlocked, isDebug, MAX_STARS, totalStars, type Progress } from "./progress";
 
 const TIER_DOT: Record<Tier, string> = {
   1: "bg-emerald-400",
@@ -81,6 +81,11 @@ export default function LevelSelect({
       <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-white">
         Your journey
       </h2>
+      {isDebug() && (
+        <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-emerald-300/90">
+          🛠 Debug · all levels unlocked
+        </p>
+      )}
 
       <div className="mt-5 space-y-7">
         {CHAPTERS.map((chap, ci) => {
