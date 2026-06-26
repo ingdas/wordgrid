@@ -62,14 +62,27 @@ export default function StartScreen({
         </button>
       </div>
 
-      <motion.div
-        initial={{ scale: 0, rotate: -30 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", stiffness: 200, damping: 14 }}
-        className="grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-4xl text-white shadow-2xl shadow-fuchsia-500/40"
-      >
-        <span aria-hidden>◆</span>
-      </motion.div>
+      <div className="relative grid place-items-center">
+        {/* Soft pulsing aura behind the mark */}
+        <motion.div
+          aria-hidden
+          className="absolute h-28 w-28 rounded-full bg-fuchsia-500/30 blur-2xl"
+          animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          initial={{ scale: 0, rotate: -30 }}
+          animate={{ scale: 1, rotate: 0, y: [0, -6, 0] }}
+          transition={{
+            scale: { type: "spring", stiffness: 200, damping: 14 },
+            rotate: { type: "spring", stiffness: 200, damping: 14 },
+            y: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
+          }}
+          className="relative grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-4xl text-white shadow-2xl shadow-fuchsia-500/40"
+        >
+          <span aria-hidden>◆</span>
+        </motion.div>
+      </div>
 
       <motion.h1
         initial={{ opacity: 0, y: 16 }}

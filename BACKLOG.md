@@ -91,7 +91,8 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 **Aesthetic / accessibility / retention:**
 17. ◐ **Settings panel** — sound, music, **calm mode** (dial back confetti &
     motion), and reset-progress with a confirm. (Large-text still to come.)
-18. **Animated home** — a looping tile/preview so the landing isn't static.
+18. ✅ **Animated home** — the logo gently floats over a soft pulsing aura so the
+    landing screen isn't static.
 19. ✅ **Resume CTA** — the home button reads "Continue · Level N" for returning
     players, pointing at their next level.
 20. **De-intimidate progress** — focus the current chapter, collapse far ones,
