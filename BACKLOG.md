@@ -1,6 +1,6 @@
 # WordGrid — Critical Evaluation & Backlog
 
-_Last updated: iteration 7 (full backlog pass)._
+_Last updated: iteration 10 (persona playtest + scoring/combo, finale & difficulty fixes)._
 
 A casual word puzzle: **62 levels**, each a board of 12 words that sort into 4
 themed groups of four, all joined by one **hidden link word** revealed only at
@@ -13,6 +13,89 @@ flow and passes with **zero console errors / zero issues**, including the check
 that the link word never appears on screen mid-game.
 
 ---
+
+## Persona playtest (iteration 10)
+
+Played the game cold (cleared storage, ignored prior context) end-to-end, then
+re-played through three distinct CrazyGames personas. Verbatim takeaways:
+
+**1. "Tap-happy Tyler" — 13, hypercasual mobile gamer, ~50 games/week.**
+- _Clear?_ Skipped the coach. Got "tap 3, submit" fast, but the **typed-link
+  finale stalled him** — pulling up a keyboard to type a word feels like
+  homework on mobile.
+- _Engaging?_ Loved the confetti/stars, but every level gives the **same
+  reward** — no score, no combo, no "+points" dopamine, nothing to beat.
+- _Visual?_ "Looks sick." Gradients & juice land well.
+- _Bored?_ **Yes, by level 3.** Identical loop, no escalation, bosses are
+  locked far away (level 8).
+
+**2. "Crossword Carol" — 55, NYT Connections/crossword devotee.**
+- _Clear?_ Instantly — the "secret link" spin is clever and she liked it.
+- _Engaging?_ Enjoyed the deduction; wants **more wordplay payoff** (definition
+  / "used in a sentence" on reveal) and tighter fairness.
+- _Visual?_ Good, a touch flashy; wishes for a **larger-text / calmer mode**.
+- _Bored?_ Hit an early wall: **level 2 is sailing vessels (KETCH/SLOOP/YAWL)** —
+  obscure words ranked "Easy". Felt unfair so soon. Difficulty curve is shaky.
+
+**3. "Commuter Priya" — 30, casual, 5-minute phone sessions.**
+- _Clear?_ Yes. But **186 stars + 8 locked chapters** reads as a big commitment
+  for a quick game.
+- _Engaging?_ Likes the Daily. Wants to **feel progress fast** and resume
+  instantly.
+- _Visual?_ Appealing. The **finale screen scrolls** on a small phone (link card
+  + 4 banners + input + buttons).
+- _Bored?_ Would drop without a fresh hook surfaced early; the interesting boss
+  modes are hidden too deep.
+
+### Backlog from the playtest (impact-ranked)
+
+**Friction / clarity (do first):**
+1. ✅ **Free first letter in the finale** — kill blank-page paralysis; the link
+   mask reveals letter #1 for free (reveal-a-letter hint continues from #2).
+2. **Tap-to-build link option** — a letter/word bank to assemble the answer
+   without summoning a keyboard (hypercasual-friendly).
+3. **Difficulty re-tune** — ✅ obscurity weighting so rare short words
+   (KETCH/SLOOP/YAWL, ARDOR, OBOE…) stop appearing in "Easy"; longer term, an
+   LLM-judged ordering.
+4. **Compact finale layout** — fit the end-state on one phone screen (collapse
+   solved banners to chips during the guess).
+5. **Coach covers the whole loop** — show the typed finale + hints up front so
+   the keyboard step isn't a surprise.
+6. **Clarify the home ◆/🏆 affordances** — the top-left trophy and the
+   "Achievements" tile both open stats (redundant); make one a Settings gear.
+
+**Engagement / dopamine:**
+7. ✅ **Score + combo system** — points per group, a consecutive-solve combo
+   multiplier, floating "+N" popups, score on the win card + lifetime total.
+8. ✅ **Win-card variety** — score/combo praise so the reward isn't identical
+   every level.
+9. **Escalating juice** — bigger burst/sound as the combo climbs.
+10. **Player level / rank meta** — an XP bar that fills across levels for a
+    sense of growth beyond stars.
+11. **Endless / Zen mode** — back-to-back boards, no fail, pure flow (commuters).
+12. **Surface a boss sooner** — shrink early chapters so the first boss lands
+    ~level 5, or add a boss "teaser".
+13. **Rewarded continue** — after 4 mistakes, watch-ad / spend coins to keep
+    going (retention + CrazyGames monetization).
+
+**Word-fan depth:**
+14. **"Did you know" reveal** — show the link word's meaning / in a sentence on
+    the win card.
+15. **Definition-on-tap** for solved words (educational hook).
+16. **Harder ranked modes / no-hint challenge** for experts.
+
+**Aesthetic / accessibility / retention:**
+17. **Settings panel** — sound, music, **large-text**, colourblind, reset.
+18. **Animated home** — a looping tile/preview so the landing isn't static.
+19. **Resume CTA** — "Continue · Level N" with the next node teased on home.
+20. **De-intimidate progress** — focus the current chapter, collapse far ones,
+    show "Chapter ⭐ x/24" rather than the scary 186.
+21. **Achievement nudges** — "1 away from Silver!" prompts in stats/after wins.
+22. **Daily streak calendar** + milestone rewards.
+23. **Cosmetic unlocks** (tile skins / confetti) bought with stars or coins.
+24. **Richer share card** — a rendered image, not just text.
+
+(Implemented this iteration: 1, 3, 7, 8 — see below.)
 
 ## Visual/UX review (iteration 9)
 

@@ -55,7 +55,7 @@ interface GameProps {
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
-  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string }) => void;
+  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => void;
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
@@ -123,8 +123,16 @@ export default function Game({
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
   const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
-  const [revealedLetters, setRevealedLetters] = useState(0);
+  // The first letter of the link is shown for free to avoid blank-page paralysis;
+  // the reveal-a-letter hint continues from the second letter.
+  const [revealedLetters, setRevealedLetters] = useState(1);
   const [moves, setMoves] = useState(0);
+  // Score & combo: gentle dopamine, not pressure. Points per solved group, a
+  // consecutive-solve multiplier, and floating "+N" popups.
+  const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [pops, setPops] = useState<{ id: number; text: string }[]>([]);
+  const popId = useRef(0);
   // Decoys are appended last, so shuffle once up front to scatter the impostors.
   const [order, setOrder] = useState<string[]>(() => (twist === "decoy" ? shuffle(spokeTiles) : spokeTiles));
   const [now, setNow] = useState(Date.now());
@@ -183,16 +191,31 @@ export default function Game({
 
   const [announce, setAnnounce] = useState("");
 
+  // Floating reward popups ("+200 ×2") that rise and fade near the link card.
+  const pushPop = useCallback((text: string) => {
+    const id = ++popId.current;
+    setPops((prev) => [...prev, { id, text }]);
+    setTimeout(() => setPops((prev) => prev.filter((p) => p.id !== id)), 1100);
+  }, []);
+
   const solveCategory = useCallback(
-    (cat: Category, combo: number) => {
-      playCorrect(combo);
+    (cat: Category, index: number) => {
+      playCorrect(index);
       buzz(30);
       setBurst((b) => b + 1);
-      setAnnounce(`Group found: ${cat.name}. ${combo + 1} of 4.`);
+      setAnnounce(`Group found: ${cat.name}. ${index + 1} of 4.`);
       setSolved((prev) => [...prev, cat]);
       setSelected([]);
+      // A consecutive-solve combo multiplies the 100-point base.
+      setCombo((c) => {
+        const nc = c + 1;
+        const pts = 100 * nc;
+        setScore((s) => s + pts);
+        pushPop(nc > 1 ? `+${pts}  ×${nc}` : `+${pts}`);
+        return nc;
+      });
     },
-    [buzz]
+    [buzz, pushPop]
   );
 
   // Auto-solve the final pair, then move on. Normally that's the "guess the
@@ -235,14 +258,14 @@ export default function Game({
       buzz([0, 40, 60, 40]);
       setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes, title: puzzle.title });
+      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes, title: puzzle.title, score });
     } else if (status === "lost") {
       reported.current = true;
       // The link stays secret on a loss so it can still be guessed on a replay.
       setAnnounce("Out of guesses. Replay the level to discover the secret link.");
       onLoss({ timeMs: Date.now() - startedAt.current, mistakes, title: puzzle.title });
     }
-  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.title, mistakes]);
+  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.title, mistakes, score]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -278,6 +301,8 @@ export default function Game({
     playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
+    setCombo(0); // a wrong guess breaks the combo
+    if (combo >= 2) pushPop("Combo lost");
     setMistakes((m) => {
       const next = m + 1;
       if (next >= MAX_MISTAKES) {
@@ -286,7 +311,7 @@ export default function Game({
       }
       return next;
     });
-  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz]);
+  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -338,8 +363,11 @@ export default function Game({
     setPastGuesses(new Set());
     setLinkGuess(null);
     setRevealedHints(new Set());
-    setRevealedLetters(0);
+    setRevealedLetters(1);
     setMoves(0);
+    setScore(0);
+    setCombo(0);
+    setPops([]);
     setOrder(shuffle(spokeTiles));
   }, [spokeTiles, twist]);
 
@@ -360,6 +388,8 @@ export default function Game({
     (text: string): boolean => {
       if (!linkMatches(text, puzzle.pivot, puzzle.accept)) return false;
       setLinkGuess(text);
+      setScore((s) => s + 250);
+      pushPop("+250  🔑");
       playStar(2);
       buzz(40);
       // The Oracle names the link first, then drops into grouping; everyone
@@ -367,7 +397,7 @@ export default function Game({
       setTimeout(() => setStatus(twist === "oracle" ? "playing" : "won"), 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz, twist]
+    [puzzle.pivot, puzzle.accept, buzz, twist, pushPop]
   );
 
   // Give up: reveal the word (counts as a miss → costs a star). For the Oracle
@@ -422,12 +452,32 @@ export default function Game({
         </button>
       </div>
 
-      <main className="mt-4 flex-1">
+      <main className="relative mt-4 flex-1">
+        {/* Floating reward popups ("+200 ×2") rising near the link card */}
+        <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex flex-col items-center gap-1">
+          <AnimatePresence>
+            {pops.map((p) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 12, scale: 0.7 }}
+                animate={{ opacity: 1, y: -16, scale: 1 }}
+                exit={{ opacity: 0, y: -40, scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-3 py-1 text-sm font-extrabold text-amber-950 shadow-lg"
+              >
+                {p.text}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
         {/* The secret link — present in every group, word hidden until the end */}
         <SecretLink
           reveal={revealLink}
           word={puzzle.pivot}
           spotlight={coach === 0}
+          score={score}
+          combo={combo}
         />
 
         {oraclePending && (
@@ -559,6 +609,7 @@ export default function Game({
               linkCorrect={linkCorrect}
               timeMs={finalMs}
               bestMs={prevBest.current}
+              score={score}
               shareText={buildShare({
                 level: puzzleIndex + 1,
                 daily,
@@ -634,7 +685,19 @@ function buildShare(opts: {
   return `${head}  ${rating}\n${grid}\n${detail}\nPlay 👉 ${location.href}`;
 }
 
-function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string; spotlight: boolean }) {
+function SecretLink({
+  reveal,
+  word,
+  spotlight,
+  score,
+  combo,
+}: {
+  reveal: boolean;
+  word: string;
+  spotlight: boolean;
+  score: number;
+  combo: number;
+}) {
   return (
     <motion.div
       animate={spotlight ? { scale: [1, 1.04, 1] } : {}}
@@ -644,6 +707,13 @@ function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string
       }`}
       style={{ background: "linear-gradient(110deg,rgba(129,140,248,0.18),rgba(232,121,249,0.18))" }}
     >
+      {score > 0 && (
+        <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-black/25 px-2 py-0.5 text-xs font-extrabold text-amber-200">
+          <span aria-hidden>✦</span>
+          {score.toLocaleString()}
+          {combo >= 2 && <span className="ml-0.5 text-orange-300">🔥{combo}</span>}
+        </div>
+      )}
       <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-indigo-200/80">
         Secret link · in every group
       </div>
@@ -1009,6 +1079,7 @@ function EndCard({
   linkCorrect,
   timeMs,
   bestMs,
+  score,
   shareText,
   onShareToast,
   onExit,
@@ -1024,6 +1095,7 @@ function EndCard({
   linkCorrect: boolean;
   timeMs: number;
   bestMs?: number;
+  score: number;
   shareText: string;
   onShareToast: () => void;
   onExit: () => void;
@@ -1071,7 +1143,11 @@ function EndCard({
             . {linkCorrect ? "🔑 You guessed it!" : "Missed the link — that cost a star."}
           </p>
           {streak >= 2 && <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>}
-          <div className="mt-1 text-xs text-indigo-200/70">
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-300/20 to-orange-400/20 px-4 py-1.5 text-base font-extrabold text-amber-200">
+            <span aria-hidden>✦</span> {score.toLocaleString()} pts
+            {stars === 3 && <span className="text-sm font-bold text-orange-300">· full combo!</span>}
+          </div>
+          <div className="mt-2 text-xs text-indigo-200/70">
             ⏱ {fmtTime(timeMs)}
             {newBest ? (
               <span className="ml-1 font-semibold text-emerald-300">— new best!</span>

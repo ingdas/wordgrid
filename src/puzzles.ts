@@ -800,11 +800,24 @@ export interface Level extends RawPuzzle {
   tier: Tier;
 }
 
+// Short words can still be brutally obscure (KETCH, OBOE, ARDOR…), which the
+// length heuristic misses — so a curated set adds weight and keeps them out of
+// the early "Easy" levels where a fresh player would feel ambushed.
+const OBSCURE = new Set([
+  "KETCH", "SLOOP", "YAWL", "ARDOR", "NARWHAL", "ANVIL", "BELLOWS", "GOBLET",
+  "MONOCLE", "PORCELAIN", "VERANDA", "PLAICE", "HALIBUT", "AQUIFER", "DERRICK",
+  "ANODE", "CATHODE", "OBOE", "CLARINET", "HOOKAH", "GRADIENT", "SCEPTER",
+  "COFFER", "CISTERN", "HUMVEE", "PASTILLE", "LOZENGE", "GINGHAM", "BRAD",
+  "CUTICLE", "BOUGH", "INSTEP", "EYELET", "STENCIL", "QUASH", "ERADICATE",
+  "POSTMARK", "TROUSSEAU", "TRYST", "DEVOTEE", "FANATIC",
+]);
+
 function difficultyScore(raw: RawPuzzle): number {
   const spokes = raw.categories.flatMap((c) => c.words);
   const avgLen = spokes.reduce((s, w) => s + w.length, 0) / spokes.length;
   const longCount = spokes.filter((w) => w.length >= 8).length;
-  return avgLen + longCount * 0.6;
+  const obscureCount = spokes.filter((w) => OBSCURE.has(w)).length;
+  return avgLen + longCount * 0.6 + obscureCount * 1.6;
 }
 
 const orderedRaw = PUZZLES.slice().sort((a, b) => {

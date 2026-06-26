@@ -107,7 +107,7 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string }) => {
+    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => {
       happytime();
       setProgress((prev) => {
         const lvl = LEVELS[levelIndex];
@@ -126,6 +126,7 @@ export default function App() {
             [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
           },
           hints: prev.hints + 1, // earn a hint for clearing a level
+          score: prev.score + result.score, // lifetime points
         };
         if (playingDaily) next = recordDaily(next);
         // Tiered achievements: award newly-reached tiers + their hint rewards.
@@ -320,6 +321,7 @@ function StatsModal({
 }) {
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
+    ["Total score", `✦ ${progress.score.toLocaleString()}`],
     ["Stars collected", `${totalStars(progress)} / ${MAX_STARS}`],
     ["Levels cleared", `${cleared} / ${LEVELS.length}`],
     ["Completion", `${Math.round((cleared / LEVELS.length) * 100)}%`],

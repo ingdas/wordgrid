@@ -14,6 +14,7 @@ export interface Progress {
   achievements: string[]; // unlocked achievement ids
   hints: number; // bank of category-description hints
   history: HistoryEntry[]; // recent finished games, newest first
+  score: number; // lifetime points (groups + combos + links)
 }
 
 export const STARTING_HINTS = 3;
@@ -54,6 +55,7 @@ export function loadProgress(): Progress {
         achievements: p.achievements ?? [],
         hints: p.hints ?? STARTING_HINTS,
         history: p.history ?? [],
+        score: p.score ?? 0,
       };
     }
   } catch {
@@ -69,6 +71,7 @@ export function loadProgress(): Progress {
     achievements: [],
     hints: STARTING_HINTS,
     history: [],
+    score: 0,
   };
 }
 
