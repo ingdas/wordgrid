@@ -924,6 +924,23 @@ function Controls({
   );
 }
 
+// Build a deterministic letter bank: the pivot's letters plus filler letters,
+// shuffled, totalling ~13–15 tiles. The pivot is always spellable from it.
+function buildLetterBank(pivot: string): string[] {
+  const letters = pivot.split("");
+  const total = Math.min(15, Math.max(13, pivot.length + 8));
+  const POOL = "EAIOTNRSLCUDPMHGBFYWKVXZJQ";
+  let seed = 7;
+  for (const c of pivot) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const rand = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0x100000000;
+  while (letters.length < total) letters.push(POOL[Math.floor(rand() * POOL.length)]);
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  return letters;
+}
+
 function LinkGuess({
   oracle,
   resolved,
@@ -945,20 +962,62 @@ function LinkGuess({
   onSubmit: (text: string) => boolean;
   onReveal: () => void;
 }) {
-  const [text, setText] = useState("");
+  const bank = useMemo(() => buildLetterBank(pivot), [pivot]);
+  // Indices of bank tiles the player has tapped, in order (the suffix after the
+  // free/ revealed prefix). Cleared whenever the revealed prefix grows.
+  const [taps, setTaps] = useState<number[]>([]);
   const [wrong, setWrong] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
+  const submitting = useRef(false);
 
-  const submit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (resolved || !text.trim()) return;
-    const ok = onSubmit(text);
-    if (ok) {
-      setWrong(false);
-    } else {
-      setWrong(true);
-      setShakeKey((k) => k + 1);
+  useEffect(() => {
+    setTaps([]);
+  }, [revealedLetters]);
+
+  // Bank tiles consumed: greedily by the locked prefix, then the player's taps.
+  const used = useMemo(() => {
+    const s = new Set<number>();
+    for (let k = 0; k < revealedLetters && k < pivot.length; k++) {
+      const ch = pivot[k];
+      for (let i = 0; i < bank.length; i++) {
+        if (!s.has(i) && bank[i] === ch) { s.add(i); break; }
+      }
     }
+    taps.forEach((i) => s.add(i));
+    return s;
+  }, [bank, pivot, revealedLetters, taps]);
+
+  const prefix = pivot.slice(0, revealedLetters);
+  const built = prefix + taps.map((i) => bank[i]).join("");
+  const full = built.length >= pivot.length;
+
+  // Auto-check once every slot is filled (no keyboard, no Submit button).
+  useEffect(() => {
+    if (resolved || !full || submitting.current) return;
+    submitting.current = true;
+    const t = setTimeout(() => {
+      const ok = onSubmit(built);
+      submitting.current = false;
+      if (!ok) {
+        setWrong(true);
+        setShakeKey((k) => k + 1);
+        setTaps([]);
+      }
+    }, 280);
+    return () => { clearTimeout(t); submitting.current = false; };
+  }, [full, built, resolved, onSubmit]);
+
+  const tap = (i: number) => {
+    if (resolved || used.has(i) || full) return;
+    setWrong(false);
+    playSelect();
+    setTaps((prev) => [...prev, i]);
+  };
+  const backspace = () => {
+    if (!taps.length) return;
+    playDeselect();
+    setWrong(false);
+    setTaps((prev) => prev.slice(0, -1));
   };
 
   return (
@@ -968,63 +1027,78 @@ function LinkGuess({
       </h3>
       <p className="mt-1 text-sm text-indigo-200/80">
         {oracle
-          ? "Read the words and themes above. What single word belongs to every group?"
-          : "Now — type the secret word that links them all."}
+          ? "Read the words and themes above — tap letters to spell the word that joins them."
+          : "Tap the letters to spell the secret word that links them all."}
       </p>
 
-      {/* Masked letter pattern; the reveal-a-letter hint fills it left to right */}
-      <div className="mt-4 flex justify-center gap-1.5" aria-label={`${pivot.length} letters`}>
-        {pivot.split("").map((ch, i) => {
-          const shown = resolved || i < revealedLetters;
+      {/* The answer so far. The free first letter is locked; taps fill the rest. */}
+      <motion.div
+        key={shakeKey}
+        animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className="mt-4 flex flex-wrap justify-center gap-1.5"
+        aria-label={`${pivot.length} letters`}
+      >
+        {pivot.split("").map((_, i) => {
+          const locked = i < revealedLetters;
+          const placed = i < built.length;
+          const next = i === built.length && !resolved;
           return (
             <span
               key={i}
-              className={`grid h-9 w-7 place-items-center rounded-md border text-base font-extrabold ${
-                shown ? "border-fuchsia-300/60 bg-fuchsia-300/10 text-white" : "border-white/15 text-white/30"
+              className={`grid h-10 w-8 place-items-center rounded-md border text-lg font-extrabold transition ${
+                resolved || placed
+                  ? locked
+                    ? "border-amber-300/60 bg-amber-300/10 text-amber-100"
+                    : "border-fuchsia-300/60 bg-fuchsia-300/15 text-white"
+                  : next
+                    ? "border-fuchsia-300 text-white/30"
+                    : "border-white/15 text-white/25"
               }`}
             >
-              {shown ? ch : "_"}
+              {resolved ? pivot[i] : placed ? built[i] : "_"}
             </span>
+          );
+        })}
+      </motion.div>
+
+      {wrong ? (
+        <p className="mt-2 text-sm font-semibold text-rose-300">Not the word — try again.</p>
+      ) : (
+        <p className="mt-2 text-xs text-indigo-200/50">Tap a tile to place it; each letter is used once.</p>
+      )}
+
+      {/* The letter bank */}
+      <div className="mx-auto mt-3 flex max-w-sm flex-wrap justify-center gap-2">
+        {bank.map((ch, i) => {
+          const isUsed = used.has(i);
+          return (
+            <motion.button
+              key={i}
+              whileTap={isUsed || resolved ? undefined : { scale: 0.88 }}
+              onClick={() => tap(i)}
+              disabled={isUsed || resolved || full}
+              aria-label={`Letter ${ch}${isUsed ? ", used" : ""}`}
+              className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
+                isUsed
+                  ? "border border-white/5 bg-white/[0.02] text-white/15"
+                  : "border border-white/15 bg-white/[0.08] text-indigo-50 hover:bg-white/[0.16] active:scale-95"
+              }`}
+            >
+              {ch}
+            </motion.button>
           );
         })}
       </div>
 
-      <motion.form
-        key={shakeKey}
-        onSubmit={submit}
-        animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="mx-auto mt-4 flex max-w-xs gap-2"
-      >
-        <input
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setWrong(false);
-          }}
-          disabled={resolved}
-          autoFocus
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          aria-label="Type the secret word"
-          placeholder="your guess…"
-          className="min-w-0 flex-1 rounded-2xl border border-white/20 bg-white/[0.06] px-4 py-3 text-center text-base font-bold uppercase tracking-wide text-white placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-indigo-200/40 focus:border-fuchsia-300 focus:outline-none disabled:opacity-50"
-        />
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <button
-          type="submit"
-          disabled={resolved || !text.trim()}
-          className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-lg shadow-black/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+          onClick={backspace}
+          disabled={resolved || !taps.length}
+          className="flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-indigo-100 transition enabled:hover:bg-white/10 enabled:active:scale-95 disabled:opacity-35"
         >
-          Guess
+          ⌫ Undo
         </button>
-      </motion.form>
-      {wrong ? (
-        <p className="mt-2 text-sm font-semibold text-rose-300">Not the word — try again.</p>
-      ) : (
-        <p className="mt-2 text-xs text-indigo-200/50">Synonyms count if they fit all four groups.</p>
-      )}
-      <div className="mt-3 flex flex-col items-center gap-2">
         <button
           onClick={onRevealLetter}
           disabled={resolved || !canRevealLetter}
@@ -1038,9 +1112,9 @@ function LinkGuess({
         <button
           onClick={onReveal}
           disabled={resolved}
-          className="text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+          className="rounded-full px-3 py-2 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
         >
-          I give up — reveal it (costs a star)
+          Give up (costs a star)
         </button>
       </div>
     </motion.div>

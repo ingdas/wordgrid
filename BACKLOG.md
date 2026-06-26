@@ -50,10 +50,11 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 ### Backlog from the playtest (impact-ranked)
 
 **Friction / clarity (do first):**
-1. ✅ **Free first letter in the finale** — kill blank-page paralysis; the link
-   mask reveals letter #1 for free (reveal-a-letter hint continues from #2).
-2. **Tap-to-build link option** — a letter/word bank to assemble the answer
-   without summoning a keyboard (hypercasual-friendly).
+1. ✅ **Tap-to-build link finale (no keyboard)** — replaced the text input with a
+   ~13-tile letter bank; tap letters to spell the word, each tile used once,
+   Undo to take one back, auto-checks when full. The first letter is pre-placed
+   for free, and the reveal-a-letter hint locks in the next correct letter.
+   (Combines former items 1 + 2.)
 3. **Difficulty re-tune** — ✅ obscurity weighting so rare short words
    (KETCH/SLOOP/YAWL, ARDOR, OBOE…) stop appearing in "Easy"; longer term, an
    LLM-judged ordering.

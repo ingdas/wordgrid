@@ -104,16 +104,26 @@ await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
 await sleep(1200); // auto-solve final group → guessing
 
-// 6. Guess-the-link finale — type the answer (test forgiving lowercase match)
-const guessing = /type the secret word/i.test(await bodyText());
-log("typed guess step shown:", guessing);
-if (!guessing) note("Typed guess-the-link finale did not appear.");
+// 6. Guess-the-link finale — tap-to-build the answer from a letter bank (the
+//    first letter is pre-filled for free, so we only tap the remaining letters).
+const guessing = /spell the secret word/i.test(await bodyText());
+log("tap-to-build finale shown:", guessing);
+if (!guessing) note("Tap-to-build guess-the-link finale did not appear.");
 await p.screenshot({ path: `${SHOT}/r5-guess.png` });
-const input = await p.$("main input");
-if (!input) note("No text input for the link guess.");
-else {
-  await input.type("star"); // lowercase on purpose
-  await clickText("main button", "Guess");
+const bankCount = await p.$$eval("main button[aria-label^='Letter ']", (els) => els.length);
+log("letter bank tiles:", bankCount);
+if (bankCount < 10) note(`Letter bank looks too small (${bankCount} tiles).`);
+async function tapLetter(ch) {
+  for (const h of await p.$$("main button[aria-label^='Letter ']")) {
+    const disabled = await h.evaluate((e) => e.disabled);
+    if (!disabled && (await h.evaluate((e) => e.textContent.trim())) === ch) { await h.click(); return true; }
+  }
+  return false;
+}
+// STAR: 'S' is the free first letter; tap T, A, R.
+for (const ch of ["T", "A", "R"]) {
+  if (!(await tapLetter(ch))) note(`Could not tap letter ${ch} from the bank.`);
+  await sleep(200);
 }
 await sleep(1300);
 
