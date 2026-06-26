@@ -58,8 +58,9 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 3. **Difficulty re-tune** — ✅ obscurity weighting so rare short words
    (KETCH/SLOOP/YAWL, ARDOR, OBOE…) stop appearing in "Easy"; longer term, an
    LLM-judged ordering.
-4. **Compact finale layout** — fit the end-state on one phone screen (collapse
-   solved banners to chips during the guess).
+4. ✅ **Compact finale layout** — the four solved groups collapse into a
+   two-column chip strip during the guess so the whole end-state fits one
+   phone screen.
 5. **Coach covers the whole loop** — show the typed finale + hints up front so
    the keyboard step isn't a surprise.
 6. **Clarify the home ◆/🏆 affordances** — the top-left trophy and the
@@ -70,12 +71,13 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
    multiplier, floating "+N" popups, score on the win card + lifetime total.
 8. ✅ **Win-card variety** — score/combo praise so the reward isn't identical
    every level.
-9. **Escalating juice** — bigger burst/sound as the combo climbs.
+9. ✅ **Escalating juice** — the confetti burst scales with the combo, so a
+    streak of solves feels increasingly celebratory.
 10. **Player level / rank meta** — an XP bar that fills across levels for a
     sense of growth beyond stars.
 11. **Endless / Zen mode** — back-to-back boards, no fail, pure flow (commuters).
-12. **Surface a boss sooner** — shrink early chapters so the first boss lands
-    ~level 5, or add a boss "teaser".
+12. ✅ **Surface a boss sooner** — front-loaded chapter sizes so the first boss
+    now lands at level 6 (was 8) and the early map feels less like a wall.
 13. **Rewarded continue** — after 4 mistakes, watch-ad / spend coins to keep
     going (retention + CrazyGames monetization).
 
@@ -88,10 +90,12 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 **Aesthetic / accessibility / retention:**
 17. **Settings panel** — sound, music, **large-text**, colourblind, reset.
 18. **Animated home** — a looping tile/preview so the landing isn't static.
-19. **Resume CTA** — "Continue · Level N" with the next node teased on home.
+19. ✅ **Resume CTA** — the home button reads "Continue · Level N" for returning
+    players, pointing at their next level.
 20. **De-intimidate progress** — focus the current chapter, collapse far ones,
     show "Chapter ⭐ x/24" rather than the scary 186.
-21. **Achievement nudges** — "1 away from Silver!" prompts in stats/after wins.
+21. ◐ **Achievement nudges** — stats now flag "🔥 N to Silver!" when you're close
+    to the next tier (a post-win nudge toast is still to come).
 22. **Daily streak calendar** + milestone rewards.
 23. **Cosmetic unlocks** (tile skins / confetti) bought with stars or coins.
 24. **Richer share card** — a rendered image, not just text.

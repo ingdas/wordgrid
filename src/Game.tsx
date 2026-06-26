@@ -503,7 +503,28 @@ export default function Game({
           </div>
         )}
 
-        {(bannerCats.length > 0 || revealedHints.size > 0) && (
+        {/* During the typed finale, collapse the solved groups into a compact
+            two-column strip so the whole end-state fits one phone screen. */}
+        {status === "guessing" && !oraclePending && bannerCats.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {bannerCats.map((cat) => {
+              const theme = CATEGORY_THEMES[(indexByName.get(cat.name) ?? 0) % CATEGORY_THEMES.length];
+              return (
+                <div
+                  key={cat.name}
+                  className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[0.7rem] font-bold"
+                  style={{ background: `${theme.tint}24`, color: theme.tint }}
+                >
+                  <span aria-hidden>{theme.shape}</span>
+                  <span className="truncate leading-tight">{cat.name}</span>
+                  <span className="ml-auto" aria-hidden>✓</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {status !== "guessing" && (bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
               {bannerCats.map((cat, i) => (
@@ -649,7 +670,9 @@ export default function Game({
         )}
       </AnimatePresence>
 
-      {!reduce && burst > 0 && status === "playing" && <Confetti key={burst} count={24} />}
+      {!reduce && burst > 0 && status === "playing" && (
+        <Confetti key={burst} count={Math.min(64, 16 + combo * 12)} />
+      )}
       {status === "won" && !reduce && <Confetti count={110} />}
 
       <AnimatePresence>

@@ -856,13 +856,22 @@ const CHAPTER_META = [
   { name: "The Gauntlet", flavor: "Everything you've learned." },
 ];
 
-const CHAPTER_SIZE = Math.ceil(LEVELS.length / CHAPTER_META.length);
+// Front-loaded chapter sizes: the first chapter is short so a player meets a
+// boss (the most distinctive content) by ~level 6 instead of level 8, and the
+// early map feels less like a wall. The last chapter swallows any remainder.
+const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 10];
 
-export const CHAPTERS: Chapter[] = CHAPTER_META.map((c, i) => {
-  const start = i * CHAPTER_SIZE;
-  const end = Math.min(start + CHAPTER_SIZE, LEVELS.length);
-  return { ...c, start, end, boss: end - 1 };
-}).filter((c) => c.start < LEVELS.length);
+export const CHAPTERS: Chapter[] = (() => {
+  const out: Chapter[] = [];
+  let start = 0;
+  for (let i = 0; i < CHAPTER_META.length && start < LEVELS.length; i++) {
+    const last = i === CHAPTER_META.length - 1;
+    const end = last ? LEVELS.length : Math.min(start + (CHAPTER_SIZES[i] ?? 8), LEVELS.length);
+    out.push({ ...CHAPTER_META[i], start, end, boss: end - 1 });
+    start = end;
+  }
+  return out;
+})();
 
 const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
 

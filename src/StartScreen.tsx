@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { MAX_STARS, totalStars, dailyDoneToday, type Progress } from "./progress";
+import { LEVELS } from "./puzzles";
+import { MAX_STARS, totalStars, dailyDoneToday, furthestCleared, type Progress } from "./progress";
 import { t } from "./i18n";
 
 export default function StartScreen({
@@ -28,6 +29,7 @@ export default function StartScreen({
   const stars = totalStars(progress);
   const returning = stars > 0 || progress.bestStreak > 0;
   const dailyDone = dailyDoneToday(progress);
+  const nextLevel = Math.min(furthestCleared(progress) + 2, LEVELS.length);
 
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-12 pt-24 text-center sm:pt-28">
@@ -95,7 +97,7 @@ export default function StartScreen({
           onClick={onPlay}
           className="w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-4 text-lg font-bold text-white shadow-xl shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
         >
-          {returning ? t("btn.continue") : t("btn.play")}
+          {returning ? `${t("btn.continue")} · Level ${nextLevel}` : t("btn.play")}
         </button>
         <button
           onClick={onDaily}

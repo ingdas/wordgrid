@@ -375,6 +375,8 @@ function StatsModal({
             const pct = nextThreshold
               ? Math.min(100, Math.round(((value - prevThreshold) / (target - prevThreshold)) * 100))
               : 100;
+            const remaining = nextThreshold ? nextThreshold - value : 0;
+            const almost = nextThreshold != null && remaining > 0 && remaining <= Math.max(1, Math.ceil(nextThreshold * 0.15));
             return (
               <div key={def.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                 <div className="flex items-center gap-2">
@@ -397,8 +399,15 @@ function StatsModal({
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="mt-1 text-[0.65rem] text-indigo-200/60">
-                  {nextThreshold ? `${value} / ${nextThreshold} ${def.unit}` : `Maxed · ${value} ${def.unit}`}
+                <div className="mt-1 flex items-center justify-between text-[0.65rem]">
+                  <span className="text-indigo-200/60">
+                    {nextThreshold ? `${value} / ${nextThreshold} ${def.unit}` : `Maxed · ${value} ${def.unit}`}
+                  </span>
+                  {almost && (
+                    <span className="font-bold text-amber-300">
+                      🔥 {remaining} to {TIER_NAMES[tier + 1]}!
+                    </span>
+                  )}
                 </div>
               </div>
             );
