@@ -694,6 +694,15 @@ export default function Game({
             />
           )}
         </AnimatePresence>
+
+        {/* The coach sits in the game flow (just below the board) so it stays
+            close to the action on wide/tall desktop screens, not pinned far away
+            at the bottom of the viewport. */}
+        <AnimatePresence>
+          {coach >= 0 && coach <= 2 && status === "playing" && (
+            <Coach step={coach} onNext={() => setCoach((c) => c + 1)} onDone={() => { setCoach(-1); onTutorialDone(); }} />
+          )}
+        </AnimatePresence>
       </main>
 
       <div className="sr-only" role="status" aria-live="polite">
@@ -716,12 +725,6 @@ export default function Game({
         <Confetti key={burst} count={Math.min(64, 16 + combo * 12)} />
       )}
       {status === "won" && !reduce && <Confetti count={110} />}
-
-      <AnimatePresence>
-        {coach >= 0 && coach <= 2 && status === "playing" && (
-          <Coach step={coach} onNext={() => setCoach((c) => c + 1)} onDone={() => { setCoach(-1); onTutorialDone(); }} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -1422,29 +1425,27 @@ function Coach({ step, onNext, onDone }: { step: number; onNext: () => void; onD
   if (!c) return null;
   return (
     <motion.div
-      initial={{ y: 60, opacity: 0 }}
+      initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 60, opacity: 0 }}
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-5"
+      exit={{ y: 20, opacity: 0 }}
+      className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-fuchsia-300/30 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur"
     >
-      <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/15 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur">
-        <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-sm">
-            💡
-          </span>
-          <span className="font-bold text-white">{c.title}</span>
-        </div>
-        <p className="mt-2 text-sm leading-snug text-indigo-100/85">{c.body}</p>
-        {c.cta && (
-          <button
-            onClick={step === COACH.length - 1 ? onDone : onNext}
-            className="mt-3 w-full rounded-xl bg-white py-2.5 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
-          >
-            {c.cta}
-          </button>
-        )}
-        {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-fuchsia-300">Your turn ↑</div>}
+      <div className="flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-sm">
+          💡
+        </span>
+        <span className="font-bold text-white">{c.title}</span>
       </div>
+      <p className="mt-2 text-sm leading-snug text-indigo-100/85">{c.body}</p>
+      {c.cta && (
+        <button
+          onClick={step === COACH.length - 1 ? onDone : onNext}
+          className="mt-3 w-full rounded-xl bg-white py-2.5 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+        >
+          {c.cta}
+        </button>
+      )}
+      {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-fuchsia-300">Your turn ↑</div>}
     </motion.div>
   );
 }
