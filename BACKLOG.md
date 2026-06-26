@@ -61,10 +61,10 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 4. ✅ **Compact finale layout** — the four solved groups collapse into a
    two-column chip strip during the guess so the whole end-state fits one
    phone screen.
-5. **Coach covers the whole loop** — show the typed finale + hints up front so
-   the keyboard step isn't a surprise.
-6. **Clarify the home ◆/🏆 affordances** — the top-left trophy and the
-   "Achievements" tile both open stats (redundant); make one a Settings gear.
+5. ✅ **Coach covers the whole loop** — the tutorial now tells you you'll *tap
+   out* the link (no typing) so the finale isn't a surprise.
+6. ✅ **Clarify the home affordances** — the redundant top-left trophy is now a
+   ⚙️ Settings gear (Achievements still reachable from its own tile).
 
 **Engagement / dopamine:**
 7. ✅ **Score + combo system** — points per group, a consecutive-solve combo
@@ -88,7 +88,8 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 16. **Harder ranked modes / no-hint challenge** for experts.
 
 **Aesthetic / accessibility / retention:**
-17. **Settings panel** — sound, music, **large-text**, colourblind, reset.
+17. ◐ **Settings panel** — sound, music, **calm mode** (dial back confetti &
+    motion), and reset-progress with a confirm. (Large-text still to come.)
 18. **Animated home** — a looping tile/preview so the landing isn't static.
 19. ✅ **Resume CTA** — the home button reads "Continue · Level N" for returning
     players, pointing at their next level.

@@ -27,8 +27,19 @@ import Game from "./Game";
 
 type Screen = "home" | "levels" | "game";
 
+const CALM_KEY = "wordgrid:calm";
+const readCalm = () => {
+  try {
+    return localStorage.getItem(CALM_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
 export default function App() {
-  const reduce = useReducedMotion() ?? false;
+  const systemReduce = useReducedMotion() ?? false;
+  const [calm, setCalm] = useState(readCalm);
+  const reduce = systemReduce || calm; // calm mode = no confetti / minimal motion
   const [screen, setScreen] = useState<Screen>("home");
   const [levelIndex, setLevelIndex] = useState(0);
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
@@ -37,6 +48,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
   const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string } | null>(null);
 
@@ -82,6 +94,29 @@ export default function App() {
       setMusicOn(next); // also starts/stops the loop
       return next;
     });
+  }, []);
+
+  const toggleCalm = useCallback(() => {
+    setCalm((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(CALM_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const resetProgress = useCallback(() => {
+    try {
+      localStorage.removeItem("wordgrid:progress");
+    } catch {
+      /* ignore */
+    }
+    setProgress(loadProgress());
+    setShowSettings(false);
+    setScreen("home");
   }, []);
 
   const play = useCallback(() => {
@@ -221,6 +256,7 @@ export default function App() {
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
+              onSettings={() => setShowSettings(true)}
               muted={muted}
               onToggleMute={toggleMute}
               musicOn={musicOn}
@@ -282,6 +318,18 @@ export default function App() {
           />
         )}
         {showHistory && <HistoryModal progress={progress} onClose={() => setShowHistory(false)} />}
+        {showSettings && (
+          <SettingsModal
+            muted={muted}
+            musicOn={musicOn}
+            calm={calm}
+            onToggleMute={toggleMute}
+            onToggleMusic={toggleMusic}
+            onToggleCalm={toggleCalm}
+            onReset={resetProgress}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -505,6 +553,129 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
           className="mt-4 w-full shrink-0 rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
         >
           Close
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  on,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-3">
+      <div className="min-w-0">
+        <div className="text-sm font-bold text-white">{label}</div>
+        <div className="text-[0.7rem] text-indigo-200/60">{hint}</div>
+      </div>
+      <button
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={onToggle}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-emerald-400" : "bg-white/15"}`}
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? "left-[1.375rem]" : "left-0.5"}`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function SettingsModal({
+  muted,
+  musicOn,
+  calm,
+  onToggleMute,
+  onToggleMusic,
+  onToggleCalm,
+  onReset,
+  onClose,
+}: {
+  muted: boolean;
+  musicOn: boolean;
+  calm: boolean;
+  onToggleMute: () => void;
+  onToggleMusic: () => void;
+  onToggleCalm: () => void;
+  onReset: () => void;
+  onClose: () => void;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 24 }}
+        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+      >
+        <h3 className="font-display text-2xl font-bold text-white">Settings</h3>
+        <div className="mt-3 divide-y divide-white/10">
+          <ToggleRow label="Sound effects" hint="Taps, solves, wins" on={!muted} onToggle={onToggleMute} />
+          <ToggleRow label="Music" hint="Ambient background loop" on={musicOn} onToggle={onToggleMusic} />
+          <ToggleRow
+            label="Calm mode"
+            hint="Dial back confetti & motion"
+            on={calm}
+            onToggle={onToggleCalm}
+          />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/5 p-3">
+          {confirm ? (
+            <div className="text-center">
+              <p className="text-sm font-semibold text-rose-200">Erase all stars, scores & history?</p>
+              <div className="mt-2 flex justify-center gap-2">
+                <button
+                  onClick={() => setConfirm(false)}
+                  className="rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-indigo-100 transition hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onReset}
+                  className="rounded-full bg-rose-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-400 active:scale-95"
+                >
+                  Reset everything
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirm(true)}
+              className="w-full text-sm font-bold text-rose-300 transition hover:text-rose-200"
+            >
+              Reset progress
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="mt-4 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+        >
+          Done
         </button>
       </motion.div>
     </motion.div>

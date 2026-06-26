@@ -1309,7 +1309,7 @@ const COACH = [
   },
   {
     title: "You've got it!",
-    body: "Find the other groups, then guess the secret word that links them all. Good luck!",
+    body: "Find the other groups, then tap out the secret word that links them all — no typing needed. Good luck!",
     cta: "Let's go",
   },
 ];
