@@ -56,8 +56,10 @@ N. ✅ **Story/level-map progression** — chapters with flavor text + boss node
      lightning emoji deliberately omitted so the link isn't spoiled); you read
      pictures instead of words.
    - **scramble** — every tile is an anagram you decode before grouping.
-   - **time attack** — the mistake counter steps aside: you race a 90-second
-     countdown (with a live draining bar that turns red in the final 15s).
+   - **the oracle** — the puzzle turned inside out. You're shown all twelve
+     words *and* the four theme names up front, and must deduce + type the
+     hidden link FIRST; only then do you group. No timer, free retries — a
+     chill, lateral-thinking inversion (kept the game relaxed: no time pressure).
    - **impostors (decoy)** — three trap tiles belong to NO group; include one in
      a guess and the group busts, so you have to spot the fakes (15-tile board).
    - **blackout** — solved group names/words stay hidden until the final reveal,

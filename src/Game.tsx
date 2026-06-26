@@ -14,13 +14,12 @@ import {
 } from "./audio";
 
 const MAX_MISTAKES = 4;
-const TIME_ATTACK_MS = 90_000;
 
 // Per-twist flavour shown in the top bar and the one-time intro toast.
 const TWIST_LABEL: Record<BossTwist, string> = {
   scramble: "Boss · scrambled tiles",
   emoji: "Boss · emoji only",
-  timeAttack: "Boss · time attack",
+  oracle: "Boss · the oracle",
   decoy: "Boss · impostors",
   blackout: "Boss · blackout",
 };
@@ -28,7 +27,7 @@ const TWIST_LABEL: Record<BossTwist, string> = {
 const TWIST_INTRO: Record<BossTwist, string> = {
   scramble: "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
   emoji: "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  timeAttack: "👑 Boss fight — beat the clock! 90 seconds to find every group.",
+  oracle: "🔮 The Oracle — every word and theme is laid bare. Name the hidden link first, then group at your leisure.",
   decoy: "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
   blackout: "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
 };
@@ -115,7 +114,9 @@ export default function Game({
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
   const [mistakes, setMistakes] = useState(0);
-  const [status, setStatus] = useState<Status>("playing");
+  // The Oracle boss flips the flow: name the link first (a "guessing" phase up
+  // front), then group. Every other mode starts straight into grouping.
+  const [status, setStatus] = useState<Status>(twist === "oracle" ? "guessing" : "playing");
   const [shake, setShake] = useState(0);
   const [burst, setBurst] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -133,23 +134,12 @@ export default function Game({
   const startedAt = useRef(Date.now());
   const prevBest = useRef(bestMs); // captured once, before this run updates it
 
-  // Tick a clock while playing, for the timer display. Time-attack ticks faster
-  // so its countdown reads smoothly.
+  // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {
     if (status !== "playing") return;
-    const t = setInterval(() => setNow(Date.now()), twist === "timeAttack" ? 250 : 1000);
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [status, twist]);
-
-  // Time-attack boss: the clock, not the mistake counter, ends the run.
-  const timeLeftMs = twist === "timeAttack" ? Math.max(0, TIME_ATTACK_MS - (now - startedAt.current)) : 0;
-  useEffect(() => {
-    if (twist !== "timeAttack" || status !== "playing") return;
-    if (timeLeftMs <= 0) {
-      setStatus("lost");
-      setSelected([]);
-    }
-  }, [twist, status, timeLeftMs]);
+  }, [status]);
 
   // One-time boss intro, tailored to this boss's twist.
   useEffect(() => {
@@ -205,7 +195,8 @@ export default function Game({
     [buzz]
   );
 
-  // Auto-solve the final pair, then move to the "guess the link" finale.
+  // Auto-solve the final pair, then move on. Normally that's the "guess the
+  // link" finale; the Oracle already knows the link, so it wins outright.
   useEffect(() => {
     if (status !== "playing") return;
     if (solved.length === puzzle.categories.length - 1) {
@@ -213,8 +204,8 @@ export default function Game({
       const t = setTimeout(() => solveCategory(last, solved.length), 600);
       return () => clearTimeout(t);
     }
-    if (solved.length === puzzle.categories.length) setStatus("guessing");
-  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory]);
+    if (solved.length === puzzle.categories.length) setStatus(twist === "oracle" ? "won" : "guessing");
+  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, twist]);
 
   // Advance the coach once the player lands their first pair, and record that
   // the tutorial has been completed so it never re-triggers.
@@ -340,7 +331,7 @@ export default function Game({
     setSolved([]);
     setSelected([]);
     setMistakes(0);
-    setStatus("playing");
+    setStatus(twist === "oracle" ? "guessing" : "playing");
     setShake(0);
     setBurst(0);
     setToast(null);
@@ -350,7 +341,7 @@ export default function Game({
     setRevealedLetters(0);
     setMoves(0);
     setOrder(shuffle(spokeTiles));
-  }, [spokeTiles]);
+  }, [spokeTiles, twist]);
 
   // Keyboard shortcuts: Enter submits, Escape clears.
   useEffect(() => {
@@ -371,21 +362,28 @@ export default function Game({
       setLinkGuess(text);
       playStar(2);
       buzz(40);
-      setTimeout(() => setStatus("won"), 800);
+      // The Oracle names the link first, then drops into grouping; everyone
+      // else has already grouped, so a correct link wins.
+      setTimeout(() => setStatus(twist === "oracle" ? "playing" : "won"), 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz]
+    [puzzle.pivot, puzzle.accept, buzz, twist]
   );
 
-  // Give up: reveal the word (counts as a miss → costs a star).
+  // Give up: reveal the word (counts as a miss → costs a star). For the Oracle
+  // this still hands you the link and moves you into the grouping phase.
   const revealLinkWord = useCallback(() => {
     setLinkGuess(" "); // a value that never matches
     playWrong();
-    setTimeout(() => setStatus("won"), 700);
-  }, []);
+    setTimeout(() => setStatus(twist === "oracle" ? "playing" : "won"), 700);
+  }, [twist]);
 
-  // Only a win reveals the link — a loss keeps it secret for the replay.
-  const revealLink = status === "won";
+  // The Oracle's "name the link first" phase: shown all words + themes, link
+  // still hidden, before any grouping.
+  const oraclePending = twist === "oracle" && status === "guessing" && linkGuess == null;
+  // A win reveals the link; a loss keeps it secret for the replay. The Oracle
+  // also reveals it the moment you've named it (you've earned the sight).
+  const revealLink = status === "won" || (twist === "oracle" && linkGuess != null);
   const stars = finalStars;
   const hintWords = coach === 1 ? new Set(puzzle.categories[0].spokes) : null;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
@@ -432,8 +430,27 @@ export default function Game({
           spotlight={coach === 0}
         />
 
-        {twist === "timeAttack" && status === "playing" && (
-          <CountdownBar msLeft={timeLeftMs} totalMs={TIME_ATTACK_MS} />
+        {oraclePending && (
+          <div className="mt-3 rounded-2xl border border-fuchsia-300/30 bg-fuchsia-300/5 p-3">
+            <div className="text-center text-[0.7rem] font-bold uppercase tracking-widest text-fuchsia-200/80">
+              The four themes — what single word joins them all?
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {puzzle.categories.map((cat) => {
+                const theme = CATEGORY_THEMES[(indexByName.get(cat.name) ?? 0) % CATEGORY_THEMES.length];
+                return (
+                  <div
+                    key={cat.name}
+                    className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[0.72rem] font-bold"
+                    style={{ background: `${theme.tint}1f`, color: theme.tint }}
+                  >
+                    <span aria-hidden>{theme.shape}</span>
+                    <span className="leading-tight">{cat.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {(bannerCats.length > 0 || revealedHints.size > 0) && (
@@ -458,7 +475,7 @@ export default function Game({
           </div>
         )}
 
-        {(status === "playing" || status === "lost") && (
+        {(status === "playing" || status === "lost" || oraclePending) && (
           <motion.div
             key={shake}
             animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
@@ -489,12 +506,8 @@ export default function Game({
 
         {status === "playing" && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-indigo-200/70">
-            {twist !== "timeAttack" && (
-              <>
-                <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
-                <span aria-hidden>·</span>
-              </>
-            )}
+            <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
+            <span aria-hidden>·</span>
             <span>{moves} {moves === 1 ? "move" : "moves"}</span>
             <button
               onClick={shuffleTiles}
@@ -521,6 +534,7 @@ export default function Game({
 
         {status === "guessing" && (
           <LinkGuess
+            oracle={twist === "oracle"}
             resolved={linkGuess != null}
             pivot={puzzle.pivot}
             revealedLetters={revealedLetters}
@@ -648,35 +662,6 @@ function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string
         )}
       </div>
     </motion.div>
-  );
-}
-
-function CountdownBar({ msLeft, totalMs }: { msLeft: number; totalMs: number }) {
-  const pct = Math.max(0, Math.min(100, (msLeft / totalMs) * 100));
-  const secs = Math.ceil(msLeft / 1000);
-  const danger = secs <= 15;
-  return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between text-[0.7rem] font-bold uppercase tracking-widest">
-        <span className="text-indigo-200/70">Time remaining</span>
-        <motion.span
-          key={secs}
-          animate={danger ? { scale: [1, 1.25, 1] } : {}}
-          className={danger ? "text-rose-300" : "text-amber-200"}
-        >
-          ⏳ {fmtTime(msLeft)}
-        </motion.span>
-      </div>
-      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-white/10">
-        <motion.div
-          animate={{ width: `${pct}%` }}
-          transition={{ ease: "linear", duration: 0.25 }}
-          className={`h-full rounded-full ${
-            danger ? "bg-gradient-to-r from-rose-500 to-pink-500" : "bg-gradient-to-r from-amber-300 to-orange-400"
-          }`}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -870,6 +855,7 @@ function Controls({
 }
 
 function LinkGuess({
+  oracle,
   resolved,
   pivot,
   revealedLetters,
@@ -879,6 +865,7 @@ function LinkGuess({
   onSubmit,
   onReveal,
 }: {
+  oracle: boolean;
   resolved: boolean;
   pivot: string;
   revealedLetters: number;
@@ -906,9 +893,13 @@ function LinkGuess({
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
-      <h3 className="font-display text-xl font-bold text-white">All four groups found!</h3>
+      <h3 className="font-display text-xl font-bold text-white">
+        {oracle ? "🔮 Name the hidden link" : "All four groups found!"}
+      </h3>
       <p className="mt-1 text-sm text-indigo-200/80">
-        Now — type the secret word that links them all.
+        {oracle
+          ? "Read the words and themes above. What single word belongs to every group?"
+          : "Now — type the secret word that links them all."}
       </p>
 
       {/* Masked letter pattern; the reveal-a-letter hint fills it left to right */}

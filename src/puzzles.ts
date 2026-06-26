@@ -863,26 +863,28 @@ export function isBossLevel(index: number): boolean {
 // changes to how the game plays, not just cosmetics. Twists are assigned in a
 // fixed order so no two adjacent chapters share one.
 //
-//  - emoji:      a bespoke picture-only board (the EMOJI_BOSS content) — you
-//                read pictures instead of words.
-//  - scramble:   every tile is an anagram you must decode before grouping.
-//  - timeAttack: forget the mistake counter — you race a 90-second countdown;
-//                run out of time and it's over.
-//  - decoy:      three impostor tiles belong to NO group. Include one in a
-//                guess and the group busts; you have to spot the fakes.
-//  - blackout:   solved group names and words stay hidden until the reveal, so
-//                you can't lean on what you've already found.
+//  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
+//              pictures instead of words.
+//  - scramble: every tile is an anagram you must decode before grouping.
+//  - oracle:   the puzzle is turned inside out. You're shown all twelve words
+//              AND the four theme names up front, and must deduce + type the
+//              hidden link FIRST; only then do you group. No timer, free
+//              retries — pure lateral thinking.
+//  - decoy:    three impostor tiles belong to NO group. Include one in a guess
+//              and the group busts; you have to spot the fakes.
+//  - blackout: solved group names and words stay hidden until the reveal, so
+//              you can't lean on what you've already found.
 
-export type BossTwist = "scramble" | "emoji" | "timeAttack" | "decoy" | "blackout";
+export type BossTwist = "scramble" | "emoji" | "oracle" | "decoy" | "blackout";
 
 const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
-  "timeAttack",
+  "oracle",
   "emoji",
   "blackout",
   "decoy",
-  "timeAttack",
   "scramble",
+  "oracle",
   "decoy",
 ];
 
