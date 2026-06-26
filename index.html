@@ -44,6 +44,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Shown only on short landscape viewports (phones turned sideways). A
+         portrait word puzzle plays best upright; tablets/desktop never see it. -->
+    <div class="rotate-hint" role="alert">
+      <div class="rotate-hint__icon" aria-hidden="true">📲</div>
+      <div class="rotate-hint__title">Rotate to portrait</div>
+      <p class="rotate-hint__body">WordGrid plays best with your phone upright.</p>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

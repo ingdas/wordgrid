@@ -14,6 +14,27 @@ that the link word never appears on screen mid-game.
 
 ---
 
+## Device / resolution pass (iteration 11)
+
+Ran the full flow across eight viewports (tiny 320×568, 360×640, 390×844,
+430×932, phone-landscape 844×390, tablet portrait/landscape, desktop 1440×900),
+measuring vertical overflow per screen.
+
+Findings & fixes:
+- ✅ **Landscape phones were broken** (board/finale/home overflowed by 200–500px;
+  the Play button sat below the fold). Added a CSS **rotate-to-portrait hint**
+  shown only on short landscape viewports (`max-height: 500px`) — tablets and
+  desktop (tall enough) never see it.
+- ✅ **Short phones overflowed** the board/finale. Trimmed the game container's
+  dead padding (`pb-16 pt-5` → `pb-8 pt-4`) and the home's top padding; the
+  finale now fits on a 360-wide phone and the board fits to ~390.
+- ◐ **Tiny 320×568** still scrolls a little on the board/finale, but every core
+  control (tiles, submit, letter bank, buttons) is reachable and the page
+  scrolls cleanly. Acceptable for the smallest legacy phones.
+- ✅ **Tablet & desktop** render cleanly — content centred in a max-w-xl column,
+  no overflow.
+- Dropped the free-first-letter reveal in the finale (redundant with the bank).
+
 ## Persona playtest (iteration 10)
 
 Played the game cold (cleared storage, ignored prior context) end-to-end, then
@@ -52,9 +73,10 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 **Friction / clarity (do first):**
 1. ✅ **Tap-to-build link finale (no keyboard)** — replaced the text input with a
    ~13-tile letter bank; tap letters to spell the word, each tile used once,
-   Undo to take one back, auto-checks when full. The first letter is pre-placed
-   for free, and the reveal-a-letter hint locks in the next correct letter.
-   (Combines former items 1 + 2.)
+   Undo to take one back, auto-checks when full. The reveal-a-letter hint locks
+   in the next correct letter. (Combines former items 1 + 2. The earlier
+   free-first-letter reveal was dropped — the bank already removes blank-page
+   paralysis, so the link now starts fully blank.)
 3. **Difficulty re-tune** — ✅ obscurity weighting so rare short words
    (KETCH/SLOOP/YAWL, ARDOR, OBOE…) stop appearing in "Easy"; longer term, an
    LLM-judged ordering.

@@ -120,8 +120,8 @@ async function tapLetter(ch) {
   }
   return false;
 }
-// STAR: 'S' is the free first letter; tap T, A, R.
-for (const ch of ["T", "A", "R"]) {
+// STAR: tap every letter from the bank (no free first letter).
+for (const ch of ["S", "T", "A", "R"]) {
   if (!(await tapLetter(ch))) note(`Could not tap letter ${ch} from the bank.`);
   await sleep(200);
 }

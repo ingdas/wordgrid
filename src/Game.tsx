@@ -125,9 +125,9 @@ export default function Game({
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
   const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
-  // The first letter of the link is shown for free to avoid blank-page paralysis;
-  // the reveal-a-letter hint continues from the second letter.
-  const [revealedLetters, setRevealedLetters] = useState(1);
+  // No letters revealed up front — the letter bank already removes blank-page
+  // paralysis. The reveal-a-letter hint locks in letters one at a time.
+  const [revealedLetters, setRevealedLetters] = useState(0);
   const [moves, setMoves] = useState(0);
   // Score & combo: gentle dopamine, not pressure. Points per solved group, a
   // consecutive-solve multiplier, and floating "+N" popups.
@@ -385,7 +385,7 @@ export default function Game({
     setPastGuesses(new Set());
     setLinkGuess(null);
     setRevealedHints(new Set());
-    setRevealedLetters(1);
+    setRevealedLetters(0);
     setMoves(0);
     setScore(0);
     setCombo(0);
@@ -446,7 +446,7 @@ export default function Game({
   const bannerCats: Category[] = solved;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5">
+    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4">
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -1137,7 +1137,7 @@ function LinkGuess({
           : "Tap the letters to spell the secret word that links them all."}
       </p>
 
-      {/* The answer so far. The free first letter is locked; taps fill the rest. */}
+      {/* The answer so far. Tapped letters fill the slots; reveal-a-letter locks some. */}
       <motion.div
         key={shakeKey}
         animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}

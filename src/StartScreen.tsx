@@ -35,7 +35,7 @@ export default function StartScreen({
   const rank = playerRank(progress.score);
 
   return (
-    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-12 pt-24 text-center sm:pt-28">
+    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-14 text-center sm:pt-20">
       <button
         onClick={onSettings}
         aria-label="Settings"

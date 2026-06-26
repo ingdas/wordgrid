@@ -81,6 +81,53 @@ button:focus-visible {
   border: 0;
 }
 
+/* Rotate-to-portrait hint: only on short, wide viewports (phones in landscape).
+   Tablets (tall enough) and desktops never trigger it. */
+.rotate-hint {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.5rem;
+    text-align: center;
+    background: linear-gradient(160deg, #0b0a1f 0%, #15122e 60%, #0b0a1f 100%);
+    color: #e0e7ff;
+  }
+  .rotate-hint__icon {
+    font-size: 2.75rem;
+    animation: rotate-nudge 2.2s ease-in-out infinite;
+  }
+  .rotate-hint__title {
+    font-family: "Fraunces Variable", Georgia, serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+  }
+  .rotate-hint__body {
+    margin: 0;
+    max-width: 22rem;
+    font-size: 0.9rem;
+    color: rgba(199, 210, 254, 0.75);
+  }
+  /* Keep the app from peeking through / being interacted with behind it. */
+  #root {
+    pointer-events: none;
+  }
+}
+
+@keyframes rotate-nudge {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  75% { transform: rotate(-25deg); }
+  90% { transform: rotate(-25deg); }
+}
+
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
   .aurora::after {
