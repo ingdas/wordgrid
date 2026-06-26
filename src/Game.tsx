@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, buildPuzzle, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, type BossTwist, type Category, type Puzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import Confetti from "./Confetti";
 import {
@@ -13,7 +13,22 @@ import {
   playStar,
 } from "./audio";
 
-const MAX_MISTAKES = 4;
+const DEFAULT_MISTAKES = 4;
+
+// Per-twist flavour shown in the top bar and the one-time intro toast.
+const TWIST_LABEL: Record<BossTwist, string> = {
+  scramble: "Boss · scrambled tiles",
+  emoji: "Boss · emoji only",
+  suddenDeath: "Boss · sudden death",
+  blackout: "Boss · blackout",
+};
+
+const TWIST_INTRO: Record<BossTwist, string> = {
+  scramble: "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
+  emoji: "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
+  suddenDeath: "👑 Boss fight — sudden death! Only two mistakes allowed.",
+  blackout: "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
+};
 
 // A distinct shape per group so colour is never the only differentiator
 // (colourblind-friendly).
@@ -34,12 +49,12 @@ interface GameProps {
   streak: number;
   tutorial: boolean;
   daily: boolean;
-  boss: boolean;
+  twist: BossTwist | null;
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
-  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number }) => void;
-  onLoss: (result: { timeMs: number; mistakes: number }) => void;
+  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string }) => void;
+  onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
   onHelp: () => void;
@@ -57,7 +72,7 @@ export default function Game({
   streak,
   tutorial,
   daily,
-  boss,
+  twist,
   bestMs,
   hintBank,
   onUseHint,
@@ -68,19 +83,27 @@ export default function Game({
   onHelp,
   onTutorialDone,
 }: GameProps) {
-  const raw = LEVELS[puzzleIndex];
+  const boss = twist != null;
+  // The emoji boss swaps in a bespoke picture board; every other twist plays the
+  // chapter's own level with a different presentation/rule.
+  const levelRaw = LEVELS[puzzleIndex];
+  const raw = twist === "emoji" ? EMOJI_BOSS : levelRaw;
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
   // The 12 spoke tiles (everything except the hidden link), in shuffled order.
   const spokeTiles = useMemo(() => puzzle.words.filter((w) => w !== puzzle.pivot), [puzzle]);
 
-  // Boss twist: tiles are shown as scrambled anagrams (the real word is kept
-  // for grouping and the solved banner). Stable per word so it doesn't reshuffle.
+  // How each tile is shown: scrambled anagram, an emoji, or the plain word. The
+  // real word is always kept for grouping and the solved banner. Stable per word.
   const displayOf = useMemo(() => {
     const m = new Map<string, string>();
-    if (boss) spokeTiles.forEach((w) => m.set(w, scrambleWord(w)));
+    if (twist === "scramble") spokeTiles.forEach((w) => m.set(w, scrambleWord(w)));
+    else if (twist === "emoji") spokeTiles.forEach((w) => m.set(w, puzzle.emoji[w] ?? w));
     return (w: string) => m.get(w) ?? w;
-  }, [boss, spokeTiles]);
+  }, [twist, spokeTiles, puzzle.emoji]);
+
+  // Sudden death allows fewer mistakes; everything else gets the usual four.
+  const maxMistakes = twist === "suddenDeath" ? 2 : DEFAULT_MISTAKES;
 
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
@@ -109,10 +132,10 @@ export default function Game({
     return () => clearInterval(t);
   }, [status]);
 
-  // One-time boss intro.
+  // One-time boss intro, tailored to this boss's twist.
   useEffect(() => {
-    if (boss) setToast("👑 Boss fight — the tiles are scrambled. Unscramble, then group them!");
-  }, [boss]);
+    if (twist) setToast(TWIST_INTRO[twist]);
+  }, [twist]);
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -202,13 +225,14 @@ export default function Game({
       buzz([0, 40, 60, 40]);
       setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes });
+      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes, title: puzzle.title });
     } else if (status === "lost") {
       reported.current = true;
-      setAnnounce(`Out of guesses. The secret link was ${puzzle.pivot}.`);
-      onLoss({ timeMs: Date.now() - startedAt.current, mistakes });
+      // The link stays secret on a loss so it can still be guessed on a replay.
+      setAnnounce("Out of guesses. Replay the level to discover the secret link.");
+      onLoss({ timeMs: Date.now() - startedAt.current, mistakes, title: puzzle.title });
     }
-  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.pivot, mistakes]);
+  }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.title, mistakes]);
 
   const toggleSelect = useCallback(
     (word: string) => {
@@ -246,13 +270,13 @@ export default function Game({
     setShake((s) => s + 1);
     setMistakes((m) => {
       const next = m + 1;
-      if (next >= MAX_MISTAKES) {
+      if (next >= maxMistakes) {
         setStatus("lost");
         setSelected([]);
       }
       return next;
     });
-  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz]);
+  }, [status, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, maxMistakes]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -336,17 +360,19 @@ export default function Game({
 
   // Give up: reveal the word (counts as a miss → costs a star).
   const revealLinkWord = useCallback(() => {
-    setLinkGuess(" "); // a value that never matches
+    setLinkGuess(" "); // a value that never matches
     playWrong();
     setTimeout(() => setStatus("won"), 700);
   }, []);
 
-  const revealLink = status === "won" || status === "lost";
+  // Only a win reveals the link — a loss keeps it secret for the replay.
+  const revealLink = status === "won";
   const stars = finalStars;
   const hintWords = coach === 1 ? new Set(puzzle.categories[0].spokes) : null;
-  // On a loss, reveal every group (solved first, then the rest, faded).
-  const bannerCats: Category[] =
-    status === "lost" ? [...solved, ...puzzle.categories.filter((c) => !solved.includes(c))] : solved;
+  // Blackout boss: keep solved group names/words hidden until the final reveal.
+  const maskSolved = twist === "blackout" && !revealLink;
+  // Show only the groups actually solved (never the unsolved ones on a loss).
+  const bannerCats: Category[] = solved;
 
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5">
@@ -367,7 +393,7 @@ export default function Game({
               boss && !revealLink ? "text-fuchsia-300" : "text-indigo-300/70"
             }`}
           >
-            {revealLink ? raw.title : boss ? "Boss · scrambled tiles" : TIER_LABELS[raw.tier]}
+            {revealLink ? puzzle.title : twist ? TWIST_LABEL[twist] : TIER_LABELS[levelRaw.tier]}
           </div>
         </div>
         <button
@@ -390,12 +416,13 @@ export default function Game({
         {(bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
-              {bannerCats.map((cat) => (
+              {bannerCats.map((cat, i) => (
                 <SolvedBanner
                   key={cat.name}
                   cat={cat}
                   themeIndex={indexByName.get(cat.name) ?? 0}
-                  faded={status === "lost" && !solved.includes(cat)}
+                  masked={maskSolved}
+                  order={i}
                 />
               ))}
               {status !== "lost" &&
@@ -408,30 +435,30 @@ export default function Game({
           </div>
         )}
 
-        {status !== "lost" ? (
-          <motion.div
-            key={shake}
-            animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
-            transition={{ duration: 0.45 }}
-            className="mt-4 flex flex-wrap justify-center gap-3"
-          >
-            <AnimatePresence mode="popLayout">
-              {remainingSpokes.map((word) => (
-                <WordTile
-                  key={word}
-                  word={word}
-                  display={displayOf(word)}
-                  selected={selected.includes(word)}
-                  hinted={!!hintWords?.has(word)}
-                  disabled={status !== "playing"}
-                  onClick={() => toggleSelect(word)}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        ) : (
+        <motion.div
+          key={shake}
+          animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
+          transition={{ duration: 0.45 }}
+          className="mt-4 flex flex-wrap justify-center gap-3"
+        >
+          <AnimatePresence mode="popLayout">
+            {remainingSpokes.map((word) => (
+              <WordTile
+                key={word}
+                word={word}
+                display={displayOf(word)}
+                emoji={twist === "emoji"}
+                selected={selected.includes(word)}
+                hinted={!!hintWords?.has(word)}
+                disabled={status !== "playing"}
+                onClick={() => toggleSelect(word)}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+        {status === "lost" && (
           <p className="mt-6 text-center text-sm text-indigo-200/70">
-            The groups are revealed above — give it another go!
+            Out of guesses — the link is still a secret. Replay to crack it!
           </p>
         )}
 
@@ -452,7 +479,7 @@ export default function Game({
         {status === "playing" && (
           <Controls
             mistakes={mistakes}
-            max={MAX_MISTAKES}
+            max={maxMistakes}
             canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
             canHint={canHint}
@@ -598,6 +625,7 @@ function SecretLink({ reveal, word, spotlight }: { reveal: boolean; word: string
 function WordTile({
   word,
   display,
+  emoji,
   selected,
   hinted,
   disabled,
@@ -605,14 +633,20 @@ function WordTile({
 }: {
   word: string;
   display?: string;
+  emoji?: boolean;
   selected: boolean;
   hinted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
   const shown = display ?? word;
-  const sizeClass =
-    shown.length >= 8 ? "text-[0.7rem] sm:text-xs" : shown.length >= 7 ? "text-xs sm:text-sm" : "text-sm sm:text-base";
+  const sizeClass = emoji
+    ? "text-3xl sm:text-4xl"
+    : shown.length >= 8
+      ? "text-[0.7rem] sm:text-xs"
+      : shown.length >= 7
+        ? "text-xs sm:text-sm"
+        : "text-sm sm:text-base";
 
   let look = "border border-white/12 bg-white/[0.06] text-indigo-50 hover:bg-white/[0.12]";
   let style: React.CSSProperties | undefined;
@@ -644,25 +678,35 @@ function WordTile({
   );
 }
 
-function SolvedBanner({ cat, themeIndex, faded }: { cat: Category; themeIndex: number; faded: boolean }) {
+function SolvedBanner({
+  cat,
+  themeIndex,
+  masked,
+  order,
+}: {
+  cat: Category;
+  themeIndex: number;
+  masked: boolean;
+  order: number;
+}) {
   const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
   return (
     <motion.div
       layout
       initial={{ opacity: 0, scale: 0.9, y: -8 }}
-      animate={{ opacity: faded ? 0.55 : 1, scale: 1, y: 0 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
       className={`flex items-center justify-between rounded-2xl bg-gradient-to-r ${theme.grad} px-4 py-2.5 shadow-lg`}
       style={{ color: theme.ink }}
     >
       <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest opacity-80">
         <span aria-hidden className="text-xs">{theme.shape}</span>
-        {cat.name}
+        {masked ? `Group ${order + 1} · locked` : cat.name}
       </span>
       <span className="flex gap-1.5 text-sm font-extrabold">
         {cat.spokes.map((w) => (
           <span key={w} className="rounded-md px-2 py-0.5" style={{ background: "rgba(255,255,255,0.28)" }}>
-            {w}
+            {masked ? "•••" : w}
           </span>
         ))}
       </span>
@@ -992,11 +1036,7 @@ function EndCard({
           <div className="text-4xl">🧩</div>
           <h3 className="mt-2 font-display text-2xl font-bold text-white">Out of guesses</h3>
           <p className="mt-2 text-sm text-indigo-200/80">
-            The secret link was{" "}
-            <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
-              {pivot}
-            </span>
-            .
+            The secret link stays hidden — replay the level and you can still crack it.
           </p>
         </>
       )}

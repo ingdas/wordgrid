@@ -148,7 +148,7 @@ log("history lists the played level:", /star power/i.test(histText));
 if (!/star power/i.test(histText)) note("Play history did not record the finished level.");
 await p.screenshot({ path: `${SHOT}/r8-history.png` });
 
-// 10. Boss level: tiles are scrambled (different gameplay)
+// 10. Boss level: chapter-1 boss is the "scramble" twist (different gameplay)
 await p.evaluate(() => {
   localStorage.setItem("wordgrid:tutorial", "1");
   localStorage.setItem("wordgrid:progress", JSON.stringify({ stars: { star: 3, bark: 3, stick: 3, bug: 3, sheet: 3 } }));
@@ -168,6 +168,39 @@ else {
   if (/BURGER/.test(bt)) note("Boss tile shows the real word instead of a scramble.");
   await p.screenshot({ path: `${SHOT}/r9-boss.png` });
 }
+
+// 11. On a loss, the secret link must STAY hidden (so it can be guessed on replay)
+await p.evaluate(() => localStorage.clear());
+await p.goto(BASE, { waitUntil: "networkidle0" });
+await sleep(400);
+await clickText("button", "Play");
+await sleep(400);
+await (await p.$("button[aria-label^='Level 1,']")).click();
+await sleep(500);
+await clickText("button", "Next"); // dismiss coach step 0 if present
+await sleep(300);
+// Four distinct non-groups → four mistakes → loss (each spans multiple groups).
+const WRONG = [
+  ["ICON", "MOON", "JELLY"],
+  ["ICON", "MOON", "HEART"],
+  ["ICON", "COMET", "JELLY"],
+  ["ICON", "COMET", "HEART"],
+];
+for (const g of WRONG) {
+  for (const w of g) await clickWord(w);
+  await clickText("button", "Submit group");
+  await sleep(450);
+  await clickText("button", "Clear"); // a wrong guess keeps the tiles selected
+  await sleep(150);
+}
+const lostText = await bodyText();
+log("loss reached:", /out of guesses/i.test(lostText));
+if (!/out of guesses/i.test(lostText)) note("Four wrong guesses did not produce a loss.");
+log("link stays hidden on loss:", !/\bSTAR\b/.test(lostText) && !/star power/i.test(lostText));
+if (/\bSTAR\b/.test(lostText)) note("Secret link 'STAR' was revealed on a loss (should stay hidden).");
+if (/star power/i.test(lostText)) note("Level title was revealed on a loss (spoils the link).");
+if (!/replay/i.test(lostText)) note("Loss card should invite the player to replay.");
+await p.screenshot({ path: `${SHOT}/r10-loss.png` });
 
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");

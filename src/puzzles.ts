@@ -21,6 +21,8 @@ export interface RawPuzzle {
   categories: [RawCategory, RawCategory, RawCategory, RawCategory];
   /** Optional synonyms also accepted as the link, when the categories allow it. */
   accept?: string[];
+  /** Optional emoji shown instead of each spoke word (for the emoji boss). */
+  emoji?: Record<string, string>;
 }
 
 export const PUZZLES: RawPuzzle[] = [
@@ -709,6 +711,30 @@ export const PUZZLES: RawPuzzle[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Dedicated emoji boss. Every spoke is shown as an emoji only — no letters —
+// so you have to read the pictures, group them, then guess the link (BOLT).
+// The lightning emoji is deliberately avoided so the link isn't spoiled.
+
+export const EMOJI_BOSS: RawPuzzle = {
+  id: "emoji-bolt",
+  title: "Bolt from the Blue",
+  pivot: "BOLT",
+  categories: [
+    { name: "Quick on their feet", words: ["SPRINTER", "CHEETAH", "HORSE"] },
+    { name: "In the toolbox", words: ["WRENCH", "GEAR", "SCREW"] },
+    { name: "Stormy weather", words: ["RAIN", "CLOUD", "WIND"] },
+    { name: "Lock it up", words: ["LOCK", "KEY", "DOOR"] },
+  ],
+  accept: ["LIGHTNING"],
+  emoji: {
+    SPRINTER: "🏃", CHEETAH: "🐆", HORSE: "🐎",
+    WRENCH: "🔧", GEAR: "⚙️", SCREW: "🔩",
+    RAIN: "🌧️", CLOUD: "☁️", WIND: "🌬️",
+    LOCK: "🔒", KEY: "🔑", DOOR: "🚪",
+  },
+};
+
+// ---------------------------------------------------------------------------
 
 export interface Category {
   name: string;
@@ -726,6 +752,8 @@ export interface Puzzle {
   categories: Category[];
   /** Synonyms also accepted as the typed link answer. */
   accept: string[];
+  /** Emoji shown instead of each spoke word (emoji boss only). */
+  emoji: Record<string, string>;
 }
 
 // A deterministic shuffle so a given puzzle id + seed always lays out the same.
@@ -755,6 +783,9 @@ export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
     words: seededShuffle(allWords, seed + raw.id.length * 7),
     categories,
     accept: (raw.accept ?? []).map((w) => w.toUpperCase()),
+    emoji: Object.fromEntries(
+      Object.entries(raw.emoji ?? {}).map(([k, v]) => [k.toUpperCase(), v]),
+    ),
   };
 }
 
@@ -825,4 +856,34 @@ const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
 /** Is this level (index into LEVELS) the boss of its chapter? */
 export function isBossLevel(index: number): boolean {
   return BOSS_SET.has(index);
+}
+
+// ---------------------------------------------------------------------------
+// Boss variety. Every chapter's boss plays differently. Twists are assigned in
+// a fixed order so no two adjacent chapters share one, with the dedicated emoji
+// puzzle slotted in once.
+//
+//  - scramble:    tiles are anagrams you must unscramble before grouping.
+//  - emoji:       a bespoke picture-only board (the EMOJI_BOSS content).
+//  - suddenDeath: only two mistakes allowed instead of four.
+//  - blackout:    solved group themes stay hidden until the very end.
+
+export type BossTwist = "scramble" | "emoji" | "suddenDeath" | "blackout";
+
+const CHAPTER_TWISTS: BossTwist[] = [
+  "scramble",
+  "suddenDeath",
+  "emoji",
+  "blackout",
+  "scramble",
+  "suddenDeath",
+  "blackout",
+  "scramble",
+];
+
+/** The twist for a given level index, or null if it isn't a boss. */
+export function bossTwist(index: number): BossTwist | null {
+  const chapter = CHAPTERS.findIndex((c) => c.boss === index);
+  if (chapter === -1) return null;
+  return CHAPTER_TWISTS[chapter % CHAPTER_TWISTS.length];
 }

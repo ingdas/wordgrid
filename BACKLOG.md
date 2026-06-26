@@ -50,11 +50,16 @@ L. ✅ **"One away" radar** — wrong guesses with two correct picks show
    "🎯 So close — one away!" (engine-detected, unit-tested).
 M. **Adaptive difficulty** — tune board difficulty to the player's win rate.
 N. ✅ **Story/level-map progression** — chapters with flavor text + boss nodes.
-   Bosses now play differently: their tiles are **scrambled anagrams** you must
-   decode before grouping. (Literal emoji tiles don't fit the abstract word-pun
-   puzzles — the auto-selected bosses are the hardest, most abstract levels — so
-   scrambling is the fair, robust "different tile representation" twist. A
-   dedicated emoji-grouping mini-mode remains possible as a separate feature.)
+   **Every boss now plays differently** via a per-chapter twist (no two adjacent
+   chapters share one):
+   - **scramble** — tiles are anagrams you must decode before grouping.
+   - **emoji** — a bespoke picture-only board (pivot BOLT, concrete-noun spokes,
+     lightning emoji deliberately omitted so the link isn't spoiled).
+   - **sudden death** — only two mistakes allowed instead of four.
+   - **blackout** — solved group names/words stay hidden until the final reveal.
+   On a **loss the secret link is no longer revealed** — it stays masked so you
+   can still discover (and type) it on a replay; play history hides a lost
+   level's title too, since the title spells the link.
 O. **Player-created puzzles** — an authoring tool + community puzzle feed.
 P. **Hint-from-a-friend** — share a board; a friend can send one theme hint.
 Q. **Rich animated share card** — render a per-result image, not just text.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, isBossLevel } from "./puzzles";
+import { LEVELS, bossTwist } from "./puzzles";
 import {
   loadProgress,
   saveProgress,
@@ -107,7 +107,7 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number }) => {
+    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string }) => {
       happytime();
       setProgress((prev) => {
         const lvl = LEVELS[levelIndex];
@@ -146,7 +146,7 @@ export default function App() {
           at: Date.now(),
           id,
           level: levelIndex + 1,
-          title: lvl.title,
+          title: result.title,
           won: true,
           stars: result.stars,
           mistakes: result.mistakes,
@@ -171,7 +171,7 @@ export default function App() {
   }, []);
 
   const handleLoss = useCallback(
-    (result: { timeMs: number; mistakes: number }) => {
+    (result: { timeMs: number; mistakes: number; title: string }) => {
       setProgress((prev) => {
         const lvl = LEVELS[levelIndex];
         let next = { ...prev, streak: 0 };
@@ -179,7 +179,7 @@ export default function App() {
           at: Date.now(),
           id: lvl.id,
           level: levelIndex + 1,
-          title: lvl.title,
+          title: result.title,
           won: false,
           stars: 0,
           mistakes: result.mistakes,
@@ -253,7 +253,7 @@ export default function App() {
               streak={progress.streak}
               tutorial={tutorialPending && levelIndex === 0}
               daily={playingDaily}
-              boss={isBossLevel(levelIndex)}
+              twist={bossTwist(levelIndex)}
               bestMs={progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
@@ -467,7 +467,8 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 truncate font-bold text-white">
                     {h.daily && <span className="text-xs">📅</span>}
-                    {h.title}
+                    {/* A lost level's title spells the link, so keep it hidden until cleared. */}
+                    {h.won ? h.title : <span className="text-indigo-200/70">🔒 Link still hidden</span>}
                   </div>
                   <div className="text-[0.7rem] text-indigo-200/60">
                     {h.daily ? "Daily" : `Level ${h.level}`} · {relativeTime(h.at)} · ⏱ {fmt(h.timeMs)}
