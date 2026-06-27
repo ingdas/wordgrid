@@ -28,6 +28,8 @@ import Game from "./Game";
 
 type Screen = "home" | "levels" | "game";
 
+const noop = () => {};
+
 const CALM_KEY = "wordgrid:calm";
 const readCalm = () => {
   try {
@@ -266,6 +268,80 @@ export default function App() {
     setScreen("levels");
   }, []);
 
+  // --- Endless / Zen mode ------------------------------------------------
+  const [endless, setEndless] = useState(false);
+  const endlessQueue = useRef<number[]>([]);
+  const [endlessPos, setEndlessPos] = useState(0);
+  const [endlessSolved, setEndlessSolved] = useState(0);
+  const [endlessScore, setEndlessScore] = useState(0);
+
+  const shuffleQueue = () => {
+    const q = [...Array(LEVELS.length).keys()];
+    for (let i = q.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [q[i], q[j]] = [q[j], q[i]];
+    }
+    return q;
+  };
+
+  const playEndless = useCallback(() => {
+    initAudio();
+    startMusic();
+    endlessQueue.current = shuffleQueue();
+    setEndlessPos(0);
+    setEndlessSolved(0);
+    setEndlessScore(0);
+    setPlayingDaily(false);
+    setEndless(true);
+    setLevelIndex(endlessQueue.current[0]);
+    setScreen("game");
+    gameplayStart();
+  }, []);
+
+  const handleEndlessWin = useCallback((result: { score: number }) => {
+    happytime();
+    setEndlessSolved((n) => n + 1);
+    setEndlessScore((s) => s + result.score);
+    setProgress((prev) => {
+      const next = { ...prev, score: prev.score + result.score };
+      const afterRank = playerRank(next.score);
+      if (afterRank.level > playerRank(prev.score).level) {
+        setTimeout(
+          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
+          2100
+        );
+      }
+      saveProgress(next);
+      return next;
+    });
+  }, []);
+
+  const nextEndless = useCallback(() => {
+    showInterstitial();
+    setEndlessPos((pos) => {
+      let np = pos + 1;
+      if (np >= endlessQueue.current.length) {
+        endlessQueue.current = shuffleQueue();
+        np = 0;
+      }
+      setLevelIndex(endlessQueue.current[np]);
+      return np;
+    });
+    gameplayStart();
+  }, []);
+
+  const exitEndless = useCallback(() => {
+    gameplayStop();
+    setProgress((prev) => {
+      if (endlessSolved <= prev.endlessBest) return prev;
+      const next = { ...prev, endlessBest: endlessSolved };
+      saveProgress(next);
+      return next;
+    });
+    setEndless(false);
+    setScreen("home");
+  }, [endlessSolved]);
+
   return (
     <>
       <div className="aurora" />
@@ -278,6 +354,7 @@ export default function App() {
               progress={progress}
               onPlay={play}
               onDaily={playDaily}
+              onEndless={playEndless}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -309,20 +386,22 @@ export default function App() {
         {screen === "game" && (
           <ScreenWrap key="game">
             <Game
-              key={levelIndex}
+              key={endless ? `e${endlessPos}` : levelIndex}
               puzzleIndex={levelIndex}
               reduce={reduce}
               streak={progress.streak}
-              tutorial={tutorialPending && levelIndex === 0}
+              tutorial={!endless && tutorialPending && levelIndex === 0}
               daily={playingDaily}
-              twist={bossTwist(levelIndex)}
-              bestMs={progress.best[LEVELS[levelIndex].id]}
+              endless={endless}
+              endlessInfo={endless ? { solved: endlessSolved, score: endlessScore, best: progress.endlessBest } : undefined}
+              twist={endless ? null : bossTwist(levelIndex)}
+              bestMs={endless ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
-              onWin={handleWin}
-              onLoss={handleLoss}
-              onExit={exitToLevels}
-              onNext={levelIndex < LEVELS.length - 1 ? nextLevel : undefined}
+              onWin={endless ? handleEndlessWin : handleWin}
+              onLoss={endless ? noop : handleLoss}
+              onExit={endless ? exitEndless : exitToLevels}
+              onNext={endless ? nextEndless : levelIndex < LEVELS.length - 1 ? nextLevel : undefined}
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}
             />

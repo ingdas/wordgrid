@@ -54,6 +54,8 @@ interface GameProps {
   tutorial: boolean;
   daily: boolean;
   twist: BossTwist | null;
+  endless?: boolean;
+  endlessInfo?: { solved: number; score: number; best: number };
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
@@ -77,6 +79,8 @@ export default function Game({
   tutorial,
   daily,
   twist,
+  endless = false,
+  endlessInfo,
   bestMs,
   hintBank,
   onUseHint,
@@ -88,6 +92,8 @@ export default function Game({
   onTutorialDone,
 }: GameProps) {
   const boss = twist != null;
+  // Endless/Zen mode never fails: no mistake cap, no second-chance/loss path.
+  const maxMistakes = endless ? Number.POSITIVE_INFINITY : MAX_MISTAKES;
   // The emoji boss swaps in a bespoke picture board; every other twist plays the
   // chapter's own level with a different presentation/rule.
   const levelRaw = LEVELS[puzzleIndex];
@@ -340,7 +346,7 @@ export default function Game({
     if (combo >= 2) pushPop("Combo lost");
     setMistakes((m) => {
       const next = m + 1;
-      if (next >= MAX_MISTAKES) {
+      if (next >= maxMistakes) {
         setSelected([]);
         // Offer a one-time rewarded continue before ending the run.
         if (!secondChanceUsed) setOffering(true);
@@ -348,7 +354,7 @@ export default function Game({
       }
       return next;
     });
-  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -482,19 +488,31 @@ export default function Game({
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-2 pl-2.5 pr-4 text-sm font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
         >
-          <span aria-hidden>‹</span> Levels
+          <span aria-hidden>‹</span> {endless ? "End run" : "Levels"}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-white">
-            {boss && !revealLink && <span aria-hidden>👑</span>}
-            Level {puzzleIndex + 1}
+            {endless ? (
+              <><span aria-hidden>🧘</span> Endless</>
+            ) : (
+              <>
+                {boss && !revealLink && <span aria-hidden>👑</span>}
+                Level {puzzleIndex + 1}
+              </>
+            )}
           </div>
           <div
             className={`mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest ${
               boss && !revealLink ? "text-fuchsia-300" : "text-indigo-300/70"
             }`}
           >
-            {revealLink ? puzzle.title : twist ? TWIST_LABEL[twist] : TIER_LABELS[levelRaw.tier]}
+            {endless
+              ? `Solved ${endlessInfo?.solved ?? 0} · ✦ ${(endlessInfo?.score ?? 0).toLocaleString()}`
+              : revealLink
+                ? puzzle.title
+                : twist
+                  ? TWIST_LABEL[twist]
+                  : TIER_LABELS[levelRaw.tier]}
           </div>
         </div>
         <button
@@ -630,6 +648,7 @@ export default function Game({
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
+            hideMistakes={endless}
             canSubmit={selected.length === 3}
             hasSelection={selected.length > 0}
             canHint={canHint}
@@ -701,6 +720,8 @@ export default function Game({
                 ).map((c) => CATEGORY_THEMES[(indexByName.get(c.name) ?? 0) % CATEGORY_THEMES.length].tint),
               }}
               onShareToast={(msg) => setToast(msg)}
+              endless={endless}
+              endlessInfo={endlessInfo}
               onExit={onExit}
               onRestart={restart}
               onNext={onNext}
@@ -1006,6 +1027,7 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
 function Controls({
   mistakes,
   max,
+  hideMistakes,
   canSubmit,
   hasSelection,
   canHint,
@@ -1016,6 +1038,7 @@ function Controls({
 }: {
   mistakes: number;
   max: number;
+  hideMistakes?: boolean;
   canSubmit: boolean;
   hasSelection: boolean;
   canHint: boolean;
@@ -1026,18 +1049,24 @@ function Controls({
 }) {
   return (
     <div className="mt-7 flex flex-col items-center gap-4">
-      <div className="flex items-center gap-2 text-sm text-indigo-200/80">
-        <span>Mistakes left</span>
-        <div className="flex gap-1.5" role="img" aria-label={`${max - mistakes} of ${max} guesses remaining`}>
-          {Array.from({ length: max }).map((_, i) => (
-            <motion.span
-              key={i}
-              animate={{ scale: i < max - mistakes ? 1 : 0.7, opacity: i < max - mistakes ? 1 : 0.25 }}
-              className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-rose-400 to-pink-500"
-            />
-          ))}
+      {hideMistakes ? (
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-300/90">
+          <span aria-hidden>🧘</span> Zen — no fail, just flow
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-2 text-sm text-indigo-200/80">
+          <span>Mistakes left</span>
+          <div className="flex gap-1.5" role="img" aria-label={`${max - mistakes} of ${max} guesses remaining`}>
+            {Array.from({ length: max }).map((_, i) => (
+              <motion.span
+                key={i}
+                animate={{ scale: i < max - mistakes ? 1 : 0.7, opacity: i < max - mistakes ? 1 : 0.25 }}
+                className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-rose-400 to-pink-500"
+              />
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex gap-3">
         <button
           onClick={onClear}
@@ -1314,6 +1343,8 @@ function EndCard({
   score,
   shareText,
   shareData,
+  endless,
+  endlessInfo,
   onShareToast,
   onExit,
   onRestart,
@@ -1331,6 +1362,8 @@ function EndCard({
   score: number;
   shareText: string;
   shareData: ShareCardData;
+  endless?: boolean;
+  endlessInfo?: { solved: number; score: number; best: number };
   onShareToast: (msg: string) => void;
   onExit: () => void;
   onRestart: () => void;
@@ -1399,14 +1432,25 @@ function EndCard({
             <span aria-hidden>✦</span> {score.toLocaleString()} pts
             {stars === 3 && <span className="text-sm font-bold text-orange-300">· full combo!</span>}
           </div>
-          <div className="mt-2 text-xs text-indigo-200/70">
-            ⏱ {fmtTime(timeMs)}
-            {newBest ? (
-              <span className="ml-1 font-semibold text-emerald-300">— new best!</span>
-            ) : (
-              bestMs != null && <span className="ml-1">· best {fmtTime(bestMs)}</span>
-            )}
-          </div>
+          {endless && endlessInfo ? (
+            <div className="mt-2 text-sm font-semibold text-emerald-300">
+              🧘 {endlessInfo.solved} solved this run
+              {endlessInfo.solved > 0 && endlessInfo.solved >= endlessInfo.best ? (
+                <span className="ml-1 text-amber-300">· new best!</span>
+              ) : (
+                endlessInfo.best > 0 && <span className="ml-1 text-emerald-300/70">· best {endlessInfo.best}</span>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 text-xs text-indigo-200/70">
+              ⏱ {fmtTime(timeMs)}
+              {newBest ? (
+                <span className="ml-1 font-semibold text-emerald-300">— new best!</span>
+              ) : (
+                bestMs != null && <span className="ml-1">· best {fmtTime(bestMs)}</span>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -1422,7 +1466,7 @@ function EndCard({
           onClick={onExit}
           className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-indigo-100 transition hover:bg-white/10"
         >
-          Levels
+          {endless ? "End run" : "Levels"}
         </button>
         <button
           onClick={won ? share : onRestart}
@@ -1436,7 +1480,7 @@ function EndCard({
               onClick={onNext}
               className="rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
             >
-              Next level →
+              {endless ? "Next puzzle →" : "Next level →"}
             </button>
           ) : (
             <button

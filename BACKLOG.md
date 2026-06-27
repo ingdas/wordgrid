@@ -176,7 +176,11 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 10. ✅ **Player level / rank meta** — lifetime score now feeds an XP ladder
     (Novice → Legend) with a progress bar on home and a "Rank up!" toast when
     you tick over.
-11. **Endless / Zen mode** — back-to-back boards, no fail, pure flow (commuters).
+11. ✅ **Endless / Zen mode** — a 🧘 mode from Home: back-to-back random boards,
+    **no fail** (no mistake cap, no loss), a running "Solved N · ✦ score"
+    counter, a "Next puzzle" loop, and a best-run saved (`endlessBest`). Wins
+    still feed lifetime score/rank. The "one more" session-extender CrazyGames
+    rewards — first deliverable of the success rework.
 12. ✅ **Surface a boss sooner** — front-loaded chapter sizes so the first boss
     now lands at level 6 (was 8) and the early map feels less like a wall.
 13. ✅ **Rewarded continue** — running out of guesses now offers a one-time

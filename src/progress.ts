@@ -15,6 +15,7 @@ export interface Progress {
   hints: number; // bank of category-description hints
   history: HistoryEntry[]; // recent finished games, newest first
   score: number; // lifetime points (groups + combos + links)
+  endlessBest: number; // most puzzles cleared in one Endless run
 }
 
 export const STARTING_HINTS = 3;
@@ -56,6 +57,7 @@ export function loadProgress(): Progress {
         hints: p.hints ?? STARTING_HINTS,
         history: p.history ?? [],
         score: p.score ?? 0,
+        endlessBest: p.endlessBest ?? 0,
       };
     }
   } catch {
@@ -72,6 +74,7 @@ export function loadProgress(): Progress {
     hints: STARTING_HINTS,
     history: [],
     score: 0,
+    endlessBest: 0,
   };
 }
 

@@ -7,6 +7,7 @@ export default function StartScreen({
   progress,
   onPlay,
   onDaily,
+  onEndless,
   onHelp,
   onStats,
   onHistory,
@@ -19,6 +20,7 @@ export default function StartScreen({
   progress: Progress;
   onPlay: () => void;
   onDaily: () => void;
+  onEndless: () => void;
   onHelp: () => void;
   onStats: () => void;
   onHistory: () => void;
@@ -115,17 +117,26 @@ export default function StartScreen({
         >
           {returning ? `${t("btn.continue")} · Level ${nextLevel}` : t("btn.play")}
         </button>
-        <button
-          onClick={onDaily}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-base font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
-        >
-          📅 {t("btn.daily")}
-          {dailyDone ? (
-            <span className="text-emerald-300">✓</span>
-          ) : (
-            progress.daily.streak > 0 && <span className="text-amber-300">🔥 {progress.daily.streak}</span>
-          )}
-        </button>
+        <div className="grid w-full grid-cols-2 gap-3">
+          <button
+            onClick={onDaily}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+          >
+            📅 {t("btn.daily")}
+            {dailyDone ? (
+              <span className="text-emerald-300">✓</span>
+            ) : (
+              progress.daily.streak > 0 && <span className="text-amber-300">🔥 {progress.daily.streak}</span>
+            )}
+          </button>
+          <button
+            onClick={onEndless}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+          >
+            🧘 Endless
+            {progress.endlessBest > 0 && <span className="text-emerald-300">{progress.endlessBest}</span>}
+          </button>
+        </div>
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
           {[
             { label: t("btn.howToPlay"), icon: "❔", onClick: onHelp },
