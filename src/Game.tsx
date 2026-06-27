@@ -801,7 +801,7 @@ function SecretLink({
         </div>
       )}
       <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-indigo-200/80">
-        Secret link · in every group
+        {score > 0 ? "Secret link" : "Secret link · in every group"}
       </div>
       <div className="mt-1 flex items-center justify-center gap-2">
         <span aria-hidden className="text-lg">◆</span>
@@ -869,7 +869,7 @@ function WordTile({
       disabled={disabled}
       aria-pressed={selected}
       aria-label={word}
-      className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${look} disabled:cursor-default`}
+      className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide transition-colors duration-150 ${sizeClass} ${look} disabled:cursor-default`}
       style={style}
     >
       {shown}
@@ -1166,10 +1166,11 @@ function LinkGuess({
           : "Tap the letters to spell the secret word that links them all."}
       </p>
 
-      {/* The answer so far. Tapped letters fill the slots; reveal-a-letter locks some. */}
+      {/* The answer so far. Tapped letters pop into the slots; a wrong word
+          shakes; a correct word gives the whole row a quick success pulse. */}
       <motion.div
         key={shakeKey}
-        animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        animate={resolved ? { scale: [1, 1.08, 1] } : wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
         transition={{ duration: 0.4 }}
         className="mt-4 flex flex-wrap justify-center gap-1.5"
         aria-label={`${pivot.length} letters`}
@@ -1178,20 +1179,32 @@ function LinkGuess({
           const locked = i < revealedLetters;
           const placed = i < built.length;
           const next = i === built.length && !resolved;
+          const ch = resolved ? pivot[i] : placed ? built[i] : "";
           return (
             <span
               key={i}
-              className={`grid h-10 w-8 place-items-center rounded-md border text-lg font-extrabold transition ${
+              className={`grid h-10 w-8 place-items-center rounded-md border text-lg font-extrabold transition-colors ${
                 resolved || placed
                   ? locked
                     ? "border-amber-300/60 bg-amber-300/10 text-amber-100"
                     : "border-fuchsia-300/60 bg-fuchsia-300/15 text-white"
                   : next
-                    ? "border-fuchsia-300 text-white/30"
+                    ? "border-fuchsia-300 text-white/30 ring-2 ring-fuchsia-300/40"
                     : "border-white/15 text-white/25"
               }`}
             >
-              {resolved ? pivot[i] : placed ? built[i] : "_"}
+              {ch ? (
+                <motion.span
+                  key={ch + i}
+                  initial={{ scale: 1.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 24 }}
+                >
+                  {ch}
+                </motion.span>
+              ) : (
+                "_"
+              )}
             </span>
           );
         })}

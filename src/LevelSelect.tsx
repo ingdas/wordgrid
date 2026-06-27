@@ -2,12 +2,6 @@ import { motion } from "framer-motion";
 import { LEVELS, CHAPTERS, TIER_LABELS, type Tier } from "./puzzles";
 import { isUnlocked, isDebug, MAX_STARS, totalStars, type Progress } from "./progress";
 
-const TIER_DOT: Record<Tier, string> = {
-  1: "bg-emerald-400",
-  2: "bg-amber-400",
-  3: "bg-rose-400",
-};
-
 export default function LevelSelect({
   progress,
   onPick,
@@ -181,7 +175,9 @@ function LevelNode({
           transition={{ duration: 1.6, repeat: Infinity }}
         />
       )}
-      {boss && unlocked && (
+      {/* The crown teases a boss on every boss node — even locked ones — while
+          the node face still shows a 🔒 so a locked boss never looks playable. */}
+      {boss && (
         <span aria-hidden className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-sm drop-shadow">
           👑
         </span>
@@ -196,13 +192,10 @@ function LevelNode({
               </span>
             ))}
           </span>
-          {!done && (
-            <span className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full ${TIER_DOT[tier]}`} aria-hidden />
-          )}
         </>
       ) : (
         <span className="text-lg opacity-60" aria-hidden>
-          {boss ? "👑" : "🔒"}
+          🔒
         </span>
       )}
     </motion.button>

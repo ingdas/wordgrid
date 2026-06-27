@@ -14,6 +14,31 @@ that the link word never appears on screen mid-game.
 
 ---
 
+## Animation & visual-polish review (iteration 14)
+
+Played the whole game watching motion. Findings + fixes:
+
+- **Missing animation (the big one): the finale felt flat.** Tapped letters
+  snapped into the answer slots with no feedback and there was no "correct!"
+  moment. Now each placed/revealed letter **pops in** (spring), the **next slot
+  has a pulsing fuchsia ring** so you always know where you're typing, and the
+  whole row gives a **success pulse** when the word resolves. (Reveal-a-letter
+  pops too, for free.)
+- **Hard cut on tile select** → added `transition-colors` so selecting /
+  deselecting a tile eases instead of snapping.
+- **Visual noise on the level map**: removed the per-node tier "dot," which read
+  like an unread/notification badge and was redundant (difficulty is shown
+  in-level and by chapter).
+- **Expectation mismatch**: a *locked* boss node showed only a 👑 (looked
+  playable). Locked bosses now show a 🔒 with the crown as a teaser above.
+- **Collision**: the live score badge overlapped the "…in every group" header.
+  The header shortens to "Secret link" once the score badge appears.
+
+Everything else (page transitions, tile/banner springs, secret-link reveal
+flip, score popups, combo-scaled confetti, coach slide, end-card + star
+stagger, mistake-dot pips, wrong-guess shake) was reviewed and left as-is —
+they read as purposeful, not noisy.
+
 ## Tutorial redesign + first-launch (iteration 13)
 
 - **Straight into gameplay**: a brand-new player now lands directly in the
