@@ -60,13 +60,14 @@ const onBoard = (await p.$("main button[aria-pressed]")) != null;
 log("first launch starts in-game:", onBoard);
 if (!onBoard) note("First launch did not start directly in the tutorial level.");
 const coach0 = await bodyText();
-log("welcome coach shown:", /welcome to wordgrid/i.test(coach0));
-if (!/welcome to wordgrid/i.test(coach0)) note("Welcome tutorial coach did not appear on first launch.");
-log("tutorial is skippable:", /\bskip\b/i.test(coach0));
-if (!/\bskip\b/i.test(coach0)) note("Tutorial has no Skip button.");
+const welcome = /how to play/i.test(coach0) && /links all four groups/i.test(coach0);
+log("welcome how-to overlay shown:", welcome);
+if (!welcome) note("Welcome how-to overlay did not appear on first launch.");
+log("tutorial is skippable:", /skip tutorial/i.test(coach0));
+if (!/skip tutorial/i.test(coach0)) note("Welcome overlay has no Skip button.");
 await p.screenshot({ path: `${SHOT}/r4-coach.png` });
-await clickText("button", "Show me"); // advance past the welcome step
-await sleep(300);
+if (!(await clickText("button", "Let's play"))) note("Welcome overlay has no 'Let's play' button.");
+await sleep(800); // let the overlay finish its exit animation before touching the board
 
 // 2. Concealment: neither the link WORD (STAR) nor the title ("Star Power")
 //    may be visible mid-game.

@@ -708,11 +708,10 @@ export default function Game({
           )}
         </AnimatePresence>
 
-        {/* The coach sits in the game flow (just below the board) so it stays
-            close to the action on wide/tall desktop screens, not pinned far away
-            at the bottom of the viewport. */}
+        {/* Steps 1–2 of the coach sit in the game flow (just below the board) so
+            they stay close to the action without pinning to the viewport. */}
         <AnimatePresence>
-          {coach >= 0 && coach <= 2 && status === "playing" && (
+          {coach >= 1 && coach <= 2 && status === "playing" && (
             <Coach
               step={coach}
               onNext={() => setCoach((c) => c + 1)}
@@ -722,6 +721,17 @@ export default function Game({
           )}
         </AnimatePresence>
       </main>
+
+      {/* The welcome step is a centred, dimmed overlay so a first-time player
+          reads the rules before the board tempts them into tapping. */}
+      <AnimatePresence>
+        {coach === 0 && status === "playing" && (
+          <WelcomeOverlay
+            onStart={() => setCoach(1)}
+            onSkip={() => { setCoach(-1); onTutorialDone(); }}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="sr-only" role="status" aria-live="polite">
         {announce} {toast}
@@ -1442,11 +1452,7 @@ function EndCard({
 }
 
 const COACH = [
-  {
-    title: "Welcome to WordGrid 👋",
-    body: "Hidden in these 12 words are four groups of three — and one secret word links them all. Let's find your first group together.",
-    cta: "Show me",
-  },
+  null, // step 0 is the WelcomeOverlay, not an inline coach card
   {
     title: "Your move: find the famous folk",
     body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out, so trust your gut.",
@@ -1457,7 +1463,77 @@ const COACH = [
     body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Go get 'em.",
     cta: "I'm on it",
   },
+] as const;
+
+const WELCOME_RULES = [
+  { icon: "🔗", text: "One hidden word links all four groups." },
+  { icon: "👆", text: "Tap 3 words that share a theme, then Submit." },
+  { icon: "⭐", text: "Find all four groups, then spell the secret word to win." },
 ];
+
+function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="How to play"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-5 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, y: 16 }}
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 text-center shadow-2xl"
+      >
+        <motion.div
+          initial={{ scale: 0, rotate: -25 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
+          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-3xl text-white shadow-lg shadow-fuchsia-500/40"
+        >
+          <span aria-hidden>◆</span>
+        </motion.div>
+        <h2 className="mt-4 font-display text-3xl font-bold text-white">How to play</h2>
+        <p className="mt-1 text-sm text-indigo-200/80">Three quick rules, then it's your turn.</p>
+        <div className="mt-5 space-y-2.5 text-left">
+          {WELCOME_RULES.map((r, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -14 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.18 + i * 0.09 }}
+              className="flex items-center gap-3 rounded-2xl bg-white/[0.05] p-3"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-400/30 to-fuchsia-500/30 text-xl" aria-hidden>
+                {r.icon}
+              </span>
+              <span className="text-sm font-semibold leading-snug text-indigo-50">{r.text}</span>
+            </motion.div>
+          ))}
+        </div>
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          onClick={onStart}
+          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-3.5 text-base font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.02] active:scale-95"
+        >
+          Let's play →
+        </motion.button>
+        <button
+          onClick={onSkip}
+          className="mx-auto mt-2 block py-1.5 text-xs font-semibold text-indigo-200/60 transition hover:text-white"
+        >
+          Skip tutorial
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 function Coach({
   step,

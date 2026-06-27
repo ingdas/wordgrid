@@ -45,6 +45,10 @@ they read as purposeful, not noisy.
   tutorial level (no menu) — playing within seconds. Returning players still get
   the home screen. (SDK gameplay session + audio unlock are wired for the
   direct-entry case.)
+- **Attention-grabbing welcome** (iteration 15 follow-up): the opening step is a
+  centred, dimmed **"How to play" modal** with the three core rules and a big
+  "Let's play" CTA — it gates the board so a first-timer reads the rules instead
+  of tapping past a quiet card. The hands-on coaching then continues inline.
 - **Hands-on, think-for-yourself coach**: instead of highlighting the answer
   tiles, the coach reveals a group's *theme* ("three of these mean a famous
   person") and lets the player find the words. Wrong guesses cost nothing during
