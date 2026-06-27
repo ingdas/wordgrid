@@ -49,6 +49,11 @@ they read as purposeful, not noisy.
   centred, dimmed **"How to play" modal** with the three core rules and a big
   "Let's play" CTA — it gates the board so a first-timer reads the rules instead
   of tapping past a quiet card. The hands-on coaching then continues inline.
+- **Coach never off-screen on small embeds** (iteration 16): the inline coach
+  (steps 1–2) is now `position: sticky` at the bottom — it sits in-flow just
+  below the board on tall screens, but pins to the bottom of the viewport on
+  short CrazyGames-style resolutions so it's always visible without scrolling.
+  (`main` lost its `flex-1` so the sticky box is content-sized, not full-height.)
 - **Hands-on, think-for-yourself coach**: instead of highlighting the answer
   tiles, the coach reveals a group's *theme* ("three of these mean a famous
   person") and lets the player find the words. Wrong guesses cost nothing during

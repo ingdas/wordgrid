@@ -506,7 +506,7 @@ export default function Game({
         </button>
       </div>
 
-      <main className="relative mt-4 flex-1">
+      <main className="relative mt-4">
         {/* Floating reward popups ("+200 ×2") rising near the link card */}
         <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex flex-col items-center gap-1">
           <AnimatePresence>
@@ -1553,7 +1553,9 @@ function Coach({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 20, opacity: 0 }}
-      className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-fuchsia-300/30 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur"
+      // Sticky: sits in-flow just below the board on tall screens, but pins to
+      // the bottom of the viewport on short ones so it's never off-screen.
+      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm rounded-2xl border border-fuchsia-300/40 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur"
     >
       <div className="flex items-center gap-2">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-sm">
