@@ -14,6 +14,27 @@ that the link word never appears on screen mid-game.
 
 ---
 
+## Tutorial redesign + first-launch (iteration 13)
+
+- **Straight into gameplay**: a brand-new player now lands directly in the
+  tutorial level (no menu) — playing within seconds. Returning players still get
+  the home screen. (SDK gameplay session + audio unlock are wired for the
+  direct-entry case.)
+- **Hands-on, think-for-yourself coach**: instead of highlighting the answer
+  tiles, the coach reveals a group's *theme* ("three of these mean a famous
+  person") and lets the player find the words. Wrong guesses cost nothing during
+  the tutorial and the nudge **escalates** — theme reminder → stronger theme
+  hint → finally a single word revealed ("ICON is one of the three") — but never
+  the whole group.
+- **Skippable**: every coach card has a Skip button.
+- **Finale prompt**: first time you reach the tap-to-spell step, a one-time hint
+  explains the four groups all point to one hidden word.
+- **Solved words stay visible**: solved groups keep showing their words through
+  the finale (the banners just shrink a little), per feedback — no more hiding
+  them behind a chip.
+- Kept STAR as the tutorial puzzle: celebrity / night sky / ___-FISH / symbols
+  all resolve to STAR — an ideal first "aha".
+
 ## Content quality pass (iteration 12)
 
 Read all 62 puzzles and replaced genuinely obscure spokes with more common,

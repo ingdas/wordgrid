@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { LEVELS, bossTwist } from "./puzzles";
 import {
@@ -41,7 +41,18 @@ export default function App() {
   const systemReduce = useReducedMotion() ?? false;
   const [calm, setCalm] = useState(readCalm);
   const reduce = systemReduce || calm; // calm mode = no confetti / minimal motion
-  const [screen, setScreen] = useState<Screen>("home");
+  // The interactive coached tutorial runs once, on the player's first level.
+  const [tutorialPending, setTutorialPending] = useState(() => {
+    try {
+      return !localStorage.getItem("wordgrid:tutorial");
+    } catch {
+      return true;
+    }
+  });
+  // First-ever launch drops straight into the tutorial level rather than the
+  // menu, so a new player is playing within seconds.
+  const startedInGame = useRef(tutorialPending).current;
+  const [screen, setScreen] = useState<Screen>(startedInGame ? "game" : "home");
   const [levelIndex, setLevelIndex] = useState(0);
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
   const [muted, setMutedState] = useState(() => isMuted());
@@ -62,14 +73,19 @@ export default function App() {
   useEffect(() => {
     initSdk();
   }, []);
-  // The interactive coached tutorial runs once, on the player's first level.
-  const [tutorialPending, setTutorialPending] = useState(() => {
-    try {
-      return !localStorage.getItem("wordgrid:tutorial");
-    } catch {
-      return true;
-    }
-  });
+
+  // On a direct-to-game first launch, start the SDK gameplay session and unlock
+  // audio on the player's first tap (there's no Play button gesture to do it).
+  useEffect(() => {
+    if (!startedInGame) return;
+    gameplayStart();
+    const unlock = () => {
+      initAudio();
+      startMusic();
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, [startedInGame]);
 
   const finishTutorial = useCallback(() => {
     setTutorialPending(false);

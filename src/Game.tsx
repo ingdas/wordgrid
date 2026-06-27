@@ -147,6 +147,11 @@ export default function Game({
   const reported = useRef(false);
   const startedAt = useRef(Date.now());
   const prevBest = useRef(bestMs); // captured once, before this run updates it
+  // Tutorial helpers: this stays true for the whole run even after the coach
+  // marks the tutorial done (so the finale can still nudge a first-timer).
+  const isTutorialRun = useRef(tutorial).current;
+  const coachMisses = useRef(0);
+  const finaleHinted = useRef(false);
 
   // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {
@@ -159,6 +164,14 @@ export default function Game({
   useEffect(() => {
     if (twist) setToast(TWIST_INTRO[twist]);
   }, [twist]);
+
+  // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
+  useEffect(() => {
+    if (isTutorialRun && status === "guessing" && !finaleHinted.current) {
+      finaleHinted.current = true;
+      setToast("🎯 Last step! All four groups point to ONE hidden word — tap it out.");
+    }
+  }, [isTutorialRun, status]);
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -302,11 +315,27 @@ export default function Game({
       setShake((s) => s + 1);
       return;
     }
-    setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
-    setToast(result.oneAway ? "🎯 So close — one away!" : "Those three aren't a group.");
     playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
+    // During the guided tutorial a wrong guess never costs anything — just nudge
+    // toward the theme, escalating to a real hint if they keep missing (but
+    // never handing over the whole group).
+    if (coach >= 0) {
+      const n = coachMisses.current++;
+      const firstWord = puzzle.categories[0].spokes[0];
+      const msg = result.oneAway
+        ? "🎯 So close — two of those belong together. Swap the odd one out!"
+        : n === 0
+          ? "Not a group — which three words mean a famous person? 🤔"
+          : n === 1
+            ? "Keep hunting — three words here all describe a superstar."
+            : `Tip: “${firstWord}” is one of the three. Find its two friends.`;
+      setToast(msg);
+      return;
+    }
+    setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
+    setToast(result.oneAway ? "🎯 So close — one away!" : "Those three aren't a group.");
     setCombo(0); // a wrong guess breaks the combo
     if (combo >= 2) pushPop("Combo lost");
     setMistakes((m) => {
@@ -319,7 +348,7 @@ export default function Game({
       }
       return next;
     });
-  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -392,6 +421,8 @@ export default function Game({
     setPops([]);
     setOffering(false);
     setSecondChanceUsed(false);
+    coachMisses.current = 0;
+    finaleHinted.current = false;
     setOrder(shuffle(spokeTiles));
   }, [spokeTiles, twist]);
 
@@ -439,7 +470,6 @@ export default function Game({
   // also reveals it the moment you've named it (you've earned the sight).
   const revealLink = status === "won" || (twist === "oracle" && linkGuess != null);
   const stars = finalStars;
-  const hintWords = coach === 1 ? new Set(puzzle.categories[0].spokes) : null;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
   const maskSolved = twist === "blackout" && !revealLink;
   // Show only the groups actually solved (never the unsolved ones on a loss).
@@ -527,28 +557,10 @@ export default function Game({
           </div>
         )}
 
-        {/* During the typed finale, collapse the solved groups into a compact
-            two-column strip so the whole end-state fits one phone screen. */}
-        {status === "guessing" && !oraclePending && bannerCats.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {bannerCats.map((cat) => {
-              const theme = CATEGORY_THEMES[(indexByName.get(cat.name) ?? 0) % CATEGORY_THEMES.length];
-              return (
-                <div
-                  key={cat.name}
-                  className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[0.7rem] font-bold"
-                  style={{ background: `${theme.tint}24`, color: theme.tint }}
-                >
-                  <span aria-hidden>{theme.shape}</span>
-                  <span className="truncate leading-tight">{cat.name}</span>
-                  <span className="ml-auto" aria-hidden>✓</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {status !== "guessing" && (bannerCats.length > 0 || revealedHints.size > 0) && (
+        {/* Solved groups stay on screen with their words — through the finale
+            too — so you can see what you've already found. Each banner shrinks a
+            little during the guess to keep the end-state compact. */}
+        {(bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
             <AnimatePresence initial={false}>
               {bannerCats.map((cat, i) => (
@@ -557,6 +569,7 @@ export default function Game({
                   cat={cat}
                   themeIndex={indexByName.get(cat.name) ?? 0}
                   masked={maskSolved}
+                  compact={status === "guessing"}
                   order={i}
                 />
               ))}
@@ -585,7 +598,7 @@ export default function Game({
                   display={displayOf(word)}
                   emoji={twist === "emoji"}
                   selected={selected.includes(word)}
-                  hinted={!!hintWords?.has(word)}
+                  hinted={false}
                   disabled={status !== "playing" || offering}
                   onClick={() => toggleSelect(word)}
                 />
@@ -700,7 +713,12 @@ export default function Game({
             at the bottom of the viewport. */}
         <AnimatePresence>
           {coach >= 0 && coach <= 2 && status === "playing" && (
-            <Coach step={coach} onNext={() => setCoach((c) => c + 1)} onDone={() => { setCoach(-1); onTutorialDone(); }} />
+            <Coach
+              step={coach}
+              onNext={() => setCoach((c) => c + 1)}
+              onDone={() => { setCoach(-1); onTutorialDone(); }}
+              onSkip={() => { setCoach(-1); onTutorialDone(); }}
+            />
           )}
         </AnimatePresence>
       </main>
@@ -863,11 +881,13 @@ function SolvedBanner({
   cat,
   themeIndex,
   masked,
+  compact,
   order,
 }: {
   cat: Category;
   themeIndex: number;
   masked: boolean;
+  compact?: boolean;
   order: number;
 }) {
   const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
@@ -877,16 +897,22 @@ function SolvedBanner({
       initial={{ opacity: 0, scale: 0.9, y: -8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className={`flex items-center justify-between rounded-2xl bg-gradient-to-r ${theme.grad} px-4 py-2.5 shadow-lg`}
+      className={`flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r ${theme.grad} shadow-lg ${
+        compact ? "px-3 py-1.5" : "px-4 py-2.5"
+      }`}
       style={{ color: theme.ink }}
     >
       <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest opacity-80">
         <span aria-hidden className="text-xs">{theme.shape}</span>
         {masked ? `Group ${order + 1} · locked` : cat.name}
       </span>
-      <span className="flex gap-1.5 text-sm font-extrabold">
+      <span className={`flex gap-1.5 font-extrabold ${compact ? "text-xs" : "text-sm"}`}>
         {cat.spokes.map((w) => (
-          <span key={w} className="rounded-md px-2 py-0.5" style={{ background: "rgba(255,255,255,0.28)" }}>
+          <span
+            key={w}
+            className={`rounded-md ${compact ? "px-1.5 py-0.5" : "px-2 py-0.5"}`}
+            style={{ background: "rgba(255,255,255,0.28)" }}
+          >
             {masked ? "•••" : w}
           </span>
         ))}
@@ -1404,23 +1430,33 @@ function EndCard({
 
 const COACH = [
   {
-    title: "Meet the secret link",
-    body: "One hidden word belongs to every group. It stays masked up top — you'll reveal it at the very end.",
-    cta: "Next",
+    title: "Welcome to WordGrid 👋",
+    body: "Hidden in these 12 words are four groups of three — and one secret word links them all. Let's find your first group together.",
+    cta: "Show me",
   },
   {
-    title: "Find a group",
-    body: "Tap the three highlighted words that share a theme, then hit Submit group. The hidden link joins them automatically.",
-    cta: null, // advances when the player solves their first group
+    title: "Your move: find the famous folk",
+    body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out, so trust your gut.",
+    cta: null, // advances when the player solves any group
   },
   {
-    title: "You've got it!",
-    body: "Find the other groups, then tap out the secret word that links them all — no typing needed. Good luck!",
-    cta: "Let's go",
+    title: "That's a group! 🎉",
+    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Go get 'em.",
+    cta: "I'm on it",
   },
 ];
 
-function Coach({ step, onNext, onDone }: { step: number; onNext: () => void; onDone: () => void }) {
+function Coach({
+  step,
+  onNext,
+  onDone,
+  onSkip,
+}: {
+  step: number;
+  onNext: () => void;
+  onDone: () => void;
+  onSkip: () => void;
+}) {
   const c = COACH[step];
   if (!c) return null;
   return (
@@ -1435,6 +1471,12 @@ function Coach({ step, onNext, onDone }: { step: number; onNext: () => void; onD
           💡
         </span>
         <span className="font-bold text-white">{c.title}</span>
+        <button
+          onClick={onSkip}
+          className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-indigo-200/60 transition hover:bg-white/10 hover:text-white"
+        >
+          Skip
+        </button>
       </div>
       <p className="mt-2 text-sm leading-snug text-indigo-100/85">{c.body}</p>
       {c.cta && (

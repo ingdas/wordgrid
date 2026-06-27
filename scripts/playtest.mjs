@@ -54,40 +54,33 @@ async function solveGroup(group) {
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
 
-// 1. Start screen (no auto-dialog now — tutorial is in-game)
-if (await p.$('[role="dialog"]')) note("A modal auto-opened on first visit (tutorial should be in-game).");
-await p.screenshot({ path: `${SHOT}/r2-start.png` });
-if (!(await clickText("button", "Play"))) note("No Play button on start screen.");
-await sleep(500);
-
-// 2. Level map: 62 nodes; looser gating opens the first few (lookahead 3)
-const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
-log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
-if (nodes.length !== 62) note(`Expected 62 level nodes, found ${nodes.length}.`);
-if (nodes[0] || nodes[1] || nodes[2]) note("Levels 1-3 should be unlocked from the start.");
-if (!nodes[3]) note("Level 4 should start locked (lookahead 3).");
-await p.screenshot({ path: `${SHOT}/r3-levels.png` });
-
-// 3. Enter level 1 → coached tutorial
-await (await p.$("button[aria-label^='Level 1,']")).click();
-await sleep(500);
-const coachShown = /secret link/i.test(await bodyText());
-log("coach tutorial shown:", coachShown);
-if (!coachShown) note("Interactive tutorial coach did not appear on first level.");
+// 1. First launch drops straight into the tutorial game — no menu.
+if (await clickText("button", "Play")) note("First launch showed a Play menu instead of starting the game.");
+const onBoard = (await p.$("main button[aria-pressed]")) != null;
+log("first launch starts in-game:", onBoard);
+if (!onBoard) note("First launch did not start directly in the tutorial level.");
+const coach0 = await bodyText();
+log("welcome coach shown:", /welcome to wordgrid/i.test(coach0));
+if (!/welcome to wordgrid/i.test(coach0)) note("Welcome tutorial coach did not appear on first launch.");
+log("tutorial is skippable:", /\bskip\b/i.test(coach0));
+if (!/\bskip\b/i.test(coach0)) note("Tutorial has no Skip button.");
 await p.screenshot({ path: `${SHOT}/r4-coach.png` });
-await clickText("button", "Next"); // dismiss coach step 0
+await clickText("button", "Show me"); // advance past the welcome step
 await sleep(300);
 
-// 4. Concealment: neither the link WORD (STAR) nor the title ("Star Power",
-//    which spells out the link) may be visible mid-game.
+// 2. Concealment: neither the link WORD (STAR) nor the title ("Star Power")
+//    may be visible mid-game.
 const midText = await bodyText();
-// The link tile/reveal would render as uppercase STAR; the title as "Star Power".
 log("link word hidden mid-game:", !/\bSTAR\b/.test(midText) && !/star power/i.test(midText));
 if (/\bSTAR\b/.test(midText)) note("Secret link word 'STAR' is visible during play.");
 if (/star power/i.test(midText)) note("Level title leaks the link during play.");
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
-// 4b. Hint: reveal a category description (token-based, no solve, no star cost)
+// 3. The tutorial guides by THEME (no tile is highlighted) so the player thinks.
+log("tutorial prompts a theme, not exact words:", /famous person/i.test(midText));
+if (!/famous person/i.test(midText)) note("Tutorial step-1 theme prompt missing.");
+
+// 3b. Hint: reveal a category description (token-based, no solve, no star cost)
 if (!/reveal a group's theme/i.test(midText)) note("Prominent hint button not found.");
 await clickText("button", "Reveal a group's theme");
 await sleep(350);
@@ -96,13 +89,18 @@ log("hint revealed a category theme:", /words for a celebrity/i.test(afterHint))
 if (!/words for a celebrity/i.test(afterHint)) note("Hint did not reveal a category theme.");
 await p.screenshot({ path: `${SHOT}/r-hint.png` });
 
-// 5. Solve groups (coach auto-advances after the first; group 4 auto-solves)
+// 4. Solve groups (coach advances after the first; group 4 auto-solves)
 await solveGroup(GROUPS[0]);
-await clickText("button", "Let's go"); // dismiss coach step 2
+await clickText("button", "I'm on it"); // dismiss coach step 2
 await sleep(200);
 await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
 await sleep(1200); // auto-solve final group → guessing
+
+// 4c. Solved groups keep showing their words during the finale.
+const dispNow = await bodyText();
+log("solved words still shown at finale:", /ICON/.test(dispNow) && /LEGEND/.test(dispNow));
+if (!/ICON/.test(dispNow)) note("Solved group words are not displayed during the finale.");
 
 // 6. Guess-the-link finale — tap-to-build the answer from a letter bank (the
 //    first letter is pre-filled for free, so we only tap the remaining letters).
@@ -139,11 +137,15 @@ if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`)
 log("link-guess acknowledged:", /guessed it/i.test(winText));
 await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
-// 8. Back to map: window extends after a clear, stars banked (62*3 = 186)
+// 8. Back to map: 62 nodes, window extends after a clear, stars banked (62*3 = 186)
 await clickText("button", "Levels");
 await sleep(500);
-const after = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
-if (after[3] !== false) note("Level 4 not unlocked after clearing level 1 (window should extend).");
+const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
+log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
+if (nodes.length !== 62) note(`Expected 62 level nodes, found ${nodes.length}.`);
+if (nodes[0]) note("Level 1 should be unlocked after clearing it.");
+if (nodes[3]) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
+if (!nodes[4]) note("Level 5 should still be locked after clearing only level 1.");
 if (!/⭐\s*3\/186/.test(await bodyText())) note("Star total not updated to 3/186.");
 await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
 
