@@ -27,9 +27,11 @@ impact on the platform:
    colours, chunky offset shadows, stamp-red accents, serif masthead). It
    matches the word-puzzle audience (NYT-games adjacent, older & calmer than
    the bloxd/Minecraft crowd) while staying playful. (Done this iteration.)
-2. **Landscape/desktop layout** — at 720p the Submit button falls below the
-   fold and 60% of the screen is empty gutter. On wide viewports, put solved
-   banners + controls in a side column next to the board.
+2. ✅ **Landscape/desktop layout** — on wide viewports (≥lg) the game now splits
+   into two columns: link card + banners + board on the left, timer/controls/
+   finale/end-card in a right-hand rail. At a 1280×720 embed everything sits
+   above the fold with zero page overflow (Submit at y≈222). Mobile flow is
+   untouched (the wrappers only flex at lg).
 3. **Enable the real CrazyGames SDK** — uncomment the script, verify init/
    gameplayStart/Stop/happytime against their QA tool, add loading events.
    Table stakes for approval.

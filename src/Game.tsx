@@ -482,7 +482,7 @@ export default function Game({
   const bannerCats: Category[] = solved;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4">
+    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4 lg:max-w-5xl">
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -547,6 +547,11 @@ export default function Game({
           </AnimatePresence>
         </div>
 
+        {/* On wide viewports (landscape embeds / desktop) the game splits into
+            two columns — board on the left, actions on the right — so the
+            controls never fall below the fold of a 720p iframe. */}
+        <div className="lg:flex lg:items-start lg:justify-center lg:gap-8">
+        <div className="min-w-0 lg:max-w-xl lg:flex-1">
         {/* The secret link — present in every group, word hidden until the end */}
         <SecretLink
           reveal={revealLink}
@@ -633,7 +638,10 @@ export default function Game({
             Out of guesses — the link is still a secret. Replay to crack it!
           </p>
         )}
+        </div>
 
+        {/* Right column on wide viewports: stats, controls, finale, end card. */}
+        <div className="lg:w-80 lg:shrink-0">
         {status === "playing" && !offering && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-soft">
             <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
@@ -746,6 +754,8 @@ export default function Game({
             />
           )}
         </AnimatePresence>
+        </div>
+        </div>
       </main>
 
       {/* The welcome step is a centred, dimmed overlay so a first-time player
