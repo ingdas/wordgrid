@@ -13,8 +13,17 @@ import {
   MAX_STARS,
   type Progress,
 } from "./progress";
-import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic } from "./audio";
-import { initSdk, gameplayStart, gameplayStop, happytime, showInterstitial } from "./sdk";
+import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic, suspendAudio, resumeAudio } from "./audio";
+import {
+  initSdk,
+  loadingStart,
+  loadingStop,
+  gameplayStart,
+  gameplayStop,
+  happytime,
+  showInterstitial,
+  requestRewarded,
+} from "./sdk";
 import {
   ACHIEVEMENTS,
   evaluateUnlocks,
@@ -73,8 +82,27 @@ export default function App() {
   }, [unlockedAch]);
 
   useEffect(() => {
+    loadingStart();
     initSdk();
+    // The bundle is already parsed by the time React mounts, so loading is
+    // effectively done here — tell the platform we're interactive.
+    loadingStop();
   }, []);
+
+  // Platform QA: pause the session + audio when the tab/iframe is hidden.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) {
+        gameplayStop();
+        suspendAudio();
+      } else {
+        resumeAudio();
+        if (screen === "game") gameplayStart();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [screen]);
 
   // On a direct-to-game first launch, start the SDK gameplay session and unlock
   // audio on the player's first tap (there's no Play button gesture to do it).
@@ -231,6 +259,18 @@ export default function App() {
       saveProgress(next);
       return next;
     });
+  }, []);
+
+  // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
+  const refillHints = useCallback(async (): Promise<boolean> => {
+    const ok = await requestRewarded();
+    if (!ok) return false;
+    setProgress((prev) => {
+      const next = { ...prev, hints: prev.hints + 3 };
+      saveProgress(next);
+      return next;
+    });
+    return true;
   }, []);
 
   const handleLoss = useCallback(
@@ -403,6 +443,7 @@ export default function App() {
               bestMs={endless ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
+              onRefillHints={refillHints}
               onWin={endless ? handleEndlessWin : handleWin}
               onLoss={endless ? noop : handleLoss}
               onExit={endless ? exitEndless : playingDaily ? exitToHome : exitToLevels}

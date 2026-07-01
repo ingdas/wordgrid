@@ -25,6 +25,24 @@ export function initAudio() {
   }
 }
 
+/** Pause all audio output (tab hidden / game backgrounded). */
+export function suspendAudio() {
+  try {
+    if (ctx && ctx.state === "running") void ctx.suspend();
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Resume audio after a suspend (tab visible again). */
+export function resumeAudio() {
+  try {
+    if (ctx && ctx.state === "suspended") void ctx.resume();
+  } catch {
+    /* ignore */
+  }
+}
+
 export function isMuted() {
   return muted;
 }

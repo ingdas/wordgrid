@@ -16,6 +16,11 @@ interface CrazySDK {
     gameplayStart?: () => void;
     gameplayStop?: () => void;
     happytime?: () => void;
+    loadingStart?: () => void;
+    loadingStop?: () => void;
+    /** v2 names, kept as fallbacks */
+    sdkGameLoadingStart?: () => void;
+    sdkGameLoadingStop?: () => void;
   };
   ad?: {
     requestAd?: (type: "midgame" | "rewarded", callbacks?: Record<string, () => void>) => void;
@@ -33,6 +38,26 @@ function sdk(): CrazySDK | null {
 export function initSdk() {
   try {
     void sdk()?.init?.();
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Tell the platform we're loading (call as early as possible). */
+export function loadingStart() {
+  try {
+    const g = sdk()?.game;
+    (g?.loadingStart ?? g?.sdkGameLoadingStart)?.();
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Tell the platform loading is done and the game is interactive. */
+export function loadingStop() {
+  try {
+    const g = sdk()?.game;
+    (g?.loadingStop ?? g?.sdkGameLoadingStop)?.();
   } catch {
     /* ignore */
   }

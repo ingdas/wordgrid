@@ -32,14 +32,16 @@ impact on the platform:
    finale/end-card in a right-hand rail. At a 1280×720 embed everything sits
    above the fold with zero page overflow (Submit at y≈222). Mobile flow is
    untouched (the wrappers only flex at lg).
-3. **Enable the real CrazyGames SDK** — uncomment the script, verify init/
-   gameplayStart/Stop/happytime against their QA tool, add loading events.
-   Table stakes for approval.
+3. ✅ **Enable the real CrazyGames SDK** — the v3 script now loads (async,
+   defensive: every call no-ops when it's absent, so local/GitHub Pages play is
+   unaffected), with loadingStart/loadingStop wired around app boot. Final QA
+   against their preview tool still needed at submission time.
 4. **Dedicated daily pool + content batch** — the daily currently redraws from
    the 62 campaign levels (repeats + spoilers). Author 60–100 new puzzles,
    reserve a slice for dailies.
-5. **Rewarded hint refill** — when the hint bank is empty the pill just greys
-   out; offer "🎬 watch to refill (+3)" (requestRewarded is already wired).
+5. ✅ **Rewarded hint refill** — an empty bank now swaps the hint pill (both
+   in-board and in the finale) for a stamp-red "🎬 refill (+3)" button backed by
+   requestRewarded (instant in standalone play, an ad on the platform).
 6. **Session quests** — 3 rotating dailies ("solve 2 puzzles", "hit a ×3
    combo", "guess a link first try") with hint/XP rewards; drives the
    session-length metric CrazyGames ranks by.
@@ -53,8 +55,9 @@ impact on the platform:
 10. **Save-data resilience in iframes** — localStorage can be partitioned or
     blocked in embeds; mirror progress through the CrazyGames data module when
     present.
-11. **Tab-blur pause** — call gameplayStop()/mute on visibilitychange, resume
-    on focus (platform QA checks this).
+11. ✅ **Tab-blur pause** — visibilitychange now suspends the AudioContext and
+    calls gameplayStop(); on return it resumes audio and re-opens the gameplay
+    session if a level is active.
 12. **First-5-levels curve** — the opening levels are near-identical difficulty;
     tighten so level 5 already feels like a step up.
 13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set

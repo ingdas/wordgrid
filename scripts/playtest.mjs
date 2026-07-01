@@ -26,7 +26,13 @@ const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--di
 const p = await b.newPage();
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 2 });
 const errors = [];
-p.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+// Ignore network noise from the (optional) CrazyGames SDK script, which can't
+// load in sandboxed/offline test environments; the game no-ops without it.
+p.on("console", (m) => {
+  if (m.type() !== "error") return;
+  if (/Failed to load resource/.test(m.text())) return;
+  errors.push(m.text());
+});
 p.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
 
 await p.goto(BASE, { waitUntil: "networkidle0" });

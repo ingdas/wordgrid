@@ -59,6 +59,7 @@ interface GameProps {
   bestMs?: number;
   hintBank: number;
   onUseHint: () => void;
+  onRefillHints: () => Promise<boolean>;
   onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => void;
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
@@ -84,6 +85,7 @@ export default function Game({
   bestMs,
   hintBank,
   onUseHint,
+  onRefillHints,
   onWin,
   onLoss,
   onExit,
@@ -406,6 +408,15 @@ export default function Game({
     playSelect();
   }, [hintBank, puzzle.pivot.length, onUseHint]);
 
+  // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
+  const refill = useCallback(async () => {
+    const ok = await onRefillHints();
+    if (ok) {
+      setToast("+3 hints! 💡");
+      playCorrect(0);
+    }
+  }, [onRefillHints]);
+
   const restart = useCallback(() => {
     reported.current = false;
     startedAt.current = Date.now();
@@ -665,9 +676,11 @@ export default function Game({
             hasSelection={selected.length > 0}
             canHint={canHint}
             hintBank={hintBank}
+            showRefill={hintBank === 0}
             onSubmit={submit}
             onClear={clearSelection}
             onHint={revealCategory}
+            onRefill={refill}
           />
         )}
 
@@ -684,6 +697,7 @@ export default function Game({
             hintBank={hintBank}
             canRevealLetter={canRevealLetter}
             onRevealLetter={revealLetter}
+            onRefill={refill}
             onSubmit={submitLink}
             onReveal={revealLinkWord}
           />
@@ -1047,9 +1061,11 @@ function Controls({
   hasSelection,
   canHint,
   hintBank,
+  showRefill,
   onSubmit,
   onClear,
   onHint,
+  onRefill,
 }: {
   mistakes: number;
   max: number;
@@ -1058,9 +1074,11 @@ function Controls({
   hasSelection: boolean;
   canHint: boolean;
   hintBank: number;
+  showRefill?: boolean;
   onSubmit: () => void;
   onClear: () => void;
   onHint: () => void;
+  onRefill: () => void;
 }) {
   return (
     <div className="mt-7 flex flex-col items-center gap-4">
@@ -1098,17 +1116,27 @@ function Controls({
           Submit group
         </button>
       </div>
-      <button
-        onClick={onHint}
-        disabled={!canHint}
-        className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
-      >
-        <span className="text-base" aria-hidden>💡</span>
-        Reveal a group's theme
-        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
-          {hintBank}
-        </span>
-      </button>
+      {showRefill ? (
+        <button
+          onClick={onRefill}
+          className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+        >
+          <span className="text-base" aria-hidden>🎬</span>
+          Out of hints — refill (+3)
+        </button>
+      ) : (
+        <button
+          onClick={onHint}
+          disabled={!canHint}
+          className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+        >
+          <span className="text-base" aria-hidden>💡</span>
+          Reveal a group's theme
+          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
+            {hintBank}
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -1138,6 +1166,7 @@ function LinkGuess({
   hintBank,
   canRevealLetter,
   onRevealLetter,
+  onRefill,
   onSubmit,
   onReveal,
 }: {
@@ -1148,6 +1177,7 @@ function LinkGuess({
   hintBank: number;
   canRevealLetter: boolean;
   onRevealLetter: () => void;
+  onRefill: () => void;
   onSubmit: (text: string) => boolean;
   onReveal: () => void;
 }) {
@@ -1301,16 +1331,25 @@ function LinkGuess({
         >
           ⌫ Undo
         </button>
-        <button
-          onClick={onRevealLetter}
-          disabled={resolved || !canRevealLetter}
-          className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-4 py-2 text-xs font-bold text-gold-deep transition enabled:hover:bg-gold/25 enabled:active:scale-95 disabled:opacity-35"
-        >
-          💡 Reveal a letter
-          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.65rem] font-extrabold text-ink">
-            {hintBank}
-          </span>
-        </button>
+        {hintBank === 0 && !resolved ? (
+          <button
+            onClick={onRefill}
+            className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+          >
+            🎬 Refill hints (+3)
+          </button>
+        ) : (
+          <button
+            onClick={onRevealLetter}
+            disabled={resolved || !canRevealLetter}
+            className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-4 py-2 text-xs font-bold text-gold-deep transition enabled:hover:bg-gold/25 enabled:active:scale-95 disabled:opacity-35"
+          >
+            💡 Reveal a letter
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.65rem] font-extrabold text-ink">
+              {hintBank}
+            </span>
+          </button>
+        )}
         <button
           onClick={onReveal}
           disabled={resolved}
