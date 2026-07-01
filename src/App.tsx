@@ -451,15 +451,15 @@ export default function App() {
             exit={{ y: -60, opacity: 0 }}
             className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4"
           >
-            <div className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-[#1b1740]/95 px-4 py-2.5 shadow-2xl backdrop-blur">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-400 text-lg">
+            <div className="flex items-center gap-3 rounded-2xl border border-gold/60 bg-paper px-4 py-2.5 shadow-2xl">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold text-lg">
                 {unlockedAch.icon}
               </span>
               <div className="text-left">
-                <div className="text-[0.65rem] font-bold uppercase tracking-widest text-amber-300">
+                <div className="text-[0.65rem] font-bold uppercase tracking-widest text-gold-deep">
                   {unlockedAch.header ?? "Achievement unlocked"}
                 </div>
-                <div className="text-sm font-bold text-white">{unlockedAch.label}</div>
+                <div className="text-sm font-bold text-ink">{unlockedAch.label}</div>
               </div>
             </div>
           </motion.div>
@@ -498,7 +498,7 @@ function StatsModal({
       role="dialog"
       aria-modal="true"
       aria-label="Your stats"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, y: 24 }}
@@ -506,14 +506,14 @@ function StatsModal({
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-white">Your stats</h3>
-        <dl className="mt-4 divide-y divide-white/10">
+        <h3 className="font-display text-2xl font-bold text-ink">Your stats</h3>
+        <dl className="mt-4 divide-y divide-ink/15">
           {stats.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between py-2.5">
-              <dt className="text-sm text-indigo-100/80">{k}</dt>
-              <dd className="font-bold text-white">{v}</dd>
+              <dt className="text-sm text-ink-soft">{k}</dt>
+              <dd className="font-bold text-ink">{v}</dd>
             </div>
           ))}
         </dl>
@@ -521,7 +521,7 @@ function StatsModal({
         {(() => {
           const earnedTiers = ACHIEVEMENTS.reduce((n, d) => n + achievementStatus(progress, d).tier + 1, 0);
           return (
-            <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-indigo-300/80">
+            <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-ink-soft">
               Achievements {earnedTiers}/{ACHIEVEMENTS.length * 3}
             </h4>
           );
@@ -537,10 +537,10 @@ function StatsModal({
             const remaining = nextThreshold ? nextThreshold - value : 0;
             const almost = nextThreshold != null && remaining > 0 && remaining <= Math.max(1, Math.ceil(nextThreshold * 0.15));
             return (
-              <div key={def.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+              <div key={def.id} className="rounded-2xl border border-ink/20 bg-white p-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg" aria-hidden>{def.icon}</span>
-                  <span className="flex-1 text-sm font-bold text-white">{def.title}</span>
+                  <span className="flex-1 text-sm font-bold text-ink">{def.title}</span>
                   {tier >= 0 ? (
                     <span
                       className="rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase"
@@ -549,21 +549,21 @@ function StatsModal({
                       {TIER_NAMES[tier]}
                     </span>
                   ) : (
-                    <span className="text-[0.6rem] font-semibold uppercase text-indigo-200/40">Locked</span>
+                    <span className="text-[0.6rem] font-semibold uppercase text-ink-soft">Locked</span>
                   )}
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400"
+                    className="h-full rounded-full bg-gold"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[0.65rem]">
-                  <span className="text-indigo-200/60">
+                  <span className="text-ink-soft">
                     {nextThreshold ? `${value} / ${nextThreshold} ${def.unit}` : `Maxed · ${value} ${def.unit}`}
                   </span>
                   {almost && (
-                    <span className="font-bold text-amber-300">
+                    <span className="font-bold text-gold-deep">
                       🔥 {remaining} to {TIER_NAMES[tier + 1]}!
                     </span>
                   )}
@@ -575,13 +575,13 @@ function StatsModal({
 
         <button
           onClick={onHistory}
-          className="mt-5 w-full rounded-2xl border border-white/20 py-3 text-sm font-bold text-indigo-100 transition hover:bg-white/10"
+          className="mt-5 w-full rounded-2xl border border-ink/30 py-3 text-sm font-bold text-ink transition hover:bg-cream"
         >
           📜 View play history
         </button>
         <button
           onClick={onClose}
-          className="mt-2 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          className="mt-2 w-full rounded-2xl bg-ink py-3 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           Close
         </button>
@@ -612,7 +612,7 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
       role="dialog"
       aria-modal="true"
       aria-label="Play history"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, y: 24 }}
@@ -620,11 +620,11 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-white">Play history</h3>
+        <h3 className="font-display text-2xl font-bold text-ink">Play history</h3>
         {progress.history.length === 0 ? (
-          <p className="mt-6 text-center text-sm text-indigo-200/70">
+          <p className="mt-6 text-center text-sm text-ink-soft">
             No games yet — your finished levels will appear here.
           </p>
         ) : (
@@ -632,28 +632,28 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
             {progress.history.map((h, i) => (
               <li
                 key={`${h.at}-${i}`}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
+                className="flex items-center justify-between rounded-2xl border border-ink/20 bg-white px-3 py-2.5"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 truncate font-bold text-white">
+                  <div className="flex items-center gap-1.5 truncate font-bold text-ink">
                     {h.daily && <span className="text-xs">📅</span>}
                     {/* A lost level's title spells the link, so keep it hidden until cleared. */}
-                    {h.won ? h.title : <span className="text-indigo-200/70">🔒 Link still hidden</span>}
+                    {h.won ? h.title : <span className="text-ink-soft">🔒 Link still hidden</span>}
                   </div>
-                  <div className="text-[0.7rem] text-indigo-200/60">
+                  <div className="text-[0.7rem] text-ink-soft">
                     {h.daily ? "Daily" : `Level ${h.level}`} · {relativeTime(h.at)} · ⏱ {fmt(h.timeMs)}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
                   {h.won ? (
-                    <div className="font-bold text-amber-300">
+                    <div className="font-bold text-gold-deep">
                       {"★".repeat(h.stars)}
-                      <span className="text-white/20">{"★".repeat(3 - h.stars)}</span>
+                      <span className="text-ink/20">{"★".repeat(3 - h.stars)}</span>
                     </div>
                   ) : (
-                    <div className="font-bold text-rose-300">Missed</div>
+                    <div className="font-bold text-press">Missed</div>
                   )}
-                  <div className="text-[0.7rem] text-indigo-200/60">{h.linkCorrect ? "🔑 link" : ""}</div>
+                  <div className="text-[0.7rem] text-ink-soft">{h.linkCorrect ? "🔑 link" : ""}</div>
                 </div>
               </li>
             ))}
@@ -661,7 +661,7 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         )}
         <button
           onClick={onClose}
-          className="mt-4 w-full shrink-0 rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          className="mt-4 w-full shrink-0 rounded-2xl bg-ink py-3 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           Close
         </button>
@@ -684,15 +684,15 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between gap-3 py-3">
       <div className="min-w-0">
-        <div className="text-sm font-bold text-white">{label}</div>
-        <div className="text-[0.7rem] text-indigo-200/60">{hint}</div>
+        <div className="text-sm font-bold text-ink">{label}</div>
+        <div className="text-[0.7rem] text-ink-soft">{hint}</div>
       </div>
       <button
         role="switch"
         aria-checked={on}
         aria-label={label}
         onClick={onToggle}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-emerald-400" : "bg-white/15"}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-leaf" : "bg-ink/15"}`}
       >
         <span
           className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? "left-[1.375rem]" : "left-0.5"}`}
@@ -731,7 +731,7 @@ function SettingsModal({
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, y: 24 }}
@@ -739,10 +739,10 @@ function SettingsModal({
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-white">Settings</h3>
-        <div className="mt-3 divide-y divide-white/10">
+        <h3 className="font-display text-2xl font-bold text-ink">Settings</h3>
+        <div className="mt-3 divide-y divide-ink/15">
           <ToggleRow label="Sound effects" hint="Taps, solves, wins" on={!muted} onToggle={onToggleMute} />
           <ToggleRow label="Music" hint="Ambient background loop" on={musicOn} onToggle={onToggleMusic} />
           <ToggleRow
@@ -753,20 +753,20 @@ function SettingsModal({
           />
         </div>
 
-        <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/5 p-3">
+        <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">
           {confirm ? (
             <div className="text-center">
-              <p className="text-sm font-semibold text-rose-200">Erase all stars, scores & history?</p>
+              <p className="text-sm font-semibold text-press">Erase all stars, scores & history?</p>
               <div className="mt-2 flex justify-center gap-2">
                 <button
                   onClick={() => setConfirm(false)}
-                  className="rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-indigo-100 transition hover:bg-white/10"
+                  className="rounded-full border border-ink/30 px-4 py-2 text-xs font-bold text-ink transition hover:bg-cream"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={onReset}
-                  className="rounded-full bg-rose-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-400 active:scale-95"
+                  className="rounded-full bg-press px-4 py-2 text-xs font-bold text-paper transition hover:bg-press-deep active:scale-95"
                 >
                   Reset everything
                 </button>
@@ -775,7 +775,7 @@ function SettingsModal({
           ) : (
             <button
               onClick={() => setConfirm(true)}
-              className="w-full text-sm font-bold text-rose-300 transition hover:text-rose-200"
+              className="w-full text-sm font-bold text-press transition hover:text-press"
             >
               Reset progress
             </button>
@@ -784,7 +784,7 @@ function SettingsModal({
 
         <button
           onClick={onClose}
-          className="mt-4 w-full rounded-2xl bg-white py-3 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          className="mt-4 w-full rounded-2xl bg-ink py-3 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           Done
         </button>
@@ -810,19 +810,19 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
 const STEPS = [
   {
     icon: "🔗",
-    grad: "from-violet-400 to-fuchsia-400",
+    grad: "from-[#c5a3e8] to-[#b48fd9]",
     title: "There's a secret link",
     body: "One hidden word belongs to every group. It stays masked at the top until the very end.",
   },
   {
     icon: "🔤",
-    grad: "from-sky-400 to-cyan-300",
+    grad: "from-[#7cc0e8] to-[#5eb0e0]",
     title: "Group the words",
     body: "Tap three words that share a theme, then Submit. The hidden link joins them to make a group of four.",
   },
   {
     icon: "⭐",
-    grad: "from-amber-300 to-orange-400",
+    grad: "from-[#f2b544] to-[#eda820]",
     title: "Guess the link, earn stars",
     body: "Find all four groups (four mistakes allowed), then guess the secret word that links them all.",
   },
@@ -838,7 +838,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="How to play"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, y: 24 }}
@@ -846,26 +846,26 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-3xl border border-white/12 bg-[#15122e] p-6 shadow-2xl"
+        className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
         <div className="flex items-center gap-2.5">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-lg text-white">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-press text-lg text-paper">
             <span aria-hidden>◆</span>
           </div>
-          <h3 className="font-display text-2xl font-bold text-white">How to play</h3>
+          <h3 className="font-display text-2xl font-bold text-ink">How to play</h3>
         </div>
 
         <div className="mt-5 space-y-3">
           {STEPS.map((s) => (
-            <div key={s.title} className="flex gap-3 rounded-2xl bg-white/[0.05] p-3">
+            <div key={s.title} className="flex gap-3 rounded-2xl bg-white p-3">
               <div
                 className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${s.grad} text-xl shadow-lg`}
               >
                 <span aria-hidden>{s.icon}</span>
               </div>
               <div>
-                <div className="font-bold text-white">{s.title}</div>
-                <p className="mt-0.5 text-sm leading-snug text-indigo-100/80">{s.body}</p>
+                <div className="font-bold text-ink">{s.title}</div>
+                <p className="mt-0.5 text-sm leading-snug text-ink-soft">{s.body}</p>
               </div>
             </div>
           ))}
@@ -873,7 +873,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 
         <button
           onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-3.5 text-base font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.02] active:scale-95"
+          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
         >
           Let's play
         </button>

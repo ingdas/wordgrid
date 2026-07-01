@@ -37,10 +37,10 @@ const TWIST_INTRO: Record<BossTwist, string> = {
 // A distinct shape per group so colour is never the only differentiator
 // (colourblind-friendly).
 export const CATEGORY_THEMES = [
-  { grad: "from-amber-300 to-orange-400", ink: "#3b1f00", emoji: "🟨", shape: "●", tint: "#fbbf24" },
-  { grad: "from-sky-400 to-cyan-300", ink: "#04293a", emoji: "🟦", shape: "▲", tint: "#38bdf8" },
-  { grad: "from-violet-400 to-fuchsia-400", ink: "#2a0a3a", emoji: "🟪", shape: "■", tint: "#c084fc" },
-  { grad: "from-emerald-400 to-teal-300", ink: "#04302a", emoji: "🟩", shape: "◆", tint: "#34d399" },
+  { grad: "from-[#f2b544] to-[#eda820]", ink: "#3b2703", emoji: "🟨", shape: "●", tint: "#a06e07" },
+  { grad: "from-[#7cc0e8] to-[#5eb0e0]", ink: "#0a344a", emoji: "🟦", shape: "▲", tint: "#186a9e" },
+  { grad: "from-[#c5a3e8] to-[#b48fd9]", ink: "#2f1547", emoji: "🟪", shape: "■", tint: "#7b47ad" },
+  { grad: "from-[#8fd6ab] to-[#6cc793]", ink: "#093b22", emoji: "🟩", shape: "◆", tint: "#177a48" },
 ];
 
 const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
@@ -486,12 +486,12 @@ export default function Game({
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
-          className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-2 pl-2.5 pr-4 text-sm font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
+          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           <span aria-hidden>‹</span> {endless ? "End run" : daily ? "Home" : "Levels"}
         </button>
         <div className="text-center">
-          <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-white">
+          <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-ink">
             {endless ? (
               <><span aria-hidden>🧘</span> Endless</>
             ) : daily ? (
@@ -505,7 +505,7 @@ export default function Game({
           </div>
           <div
             className={`mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest ${
-              boss && !revealLink ? "text-fuchsia-300" : "text-indigo-300/70"
+              boss && !revealLink ? "text-press" : "text-ink-soft"
             }`}
           >
             {endless
@@ -522,7 +522,7 @@ export default function Game({
         <button
           onClick={onHelp}
           aria-label="How to play"
-          className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
+          className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           ?
         </button>
@@ -539,7 +539,7 @@ export default function Game({
                 animate={{ opacity: 1, y: -16, scale: 1 }}
                 exit={{ opacity: 0, y: -40, scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-3 py-1 text-sm font-extrabold text-amber-950 shadow-lg"
+                className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-lg"
               >
                 {p.text}
               </motion.div>
@@ -557,8 +557,8 @@ export default function Game({
         />
 
         {oraclePending && (
-          <div className="mt-3 rounded-2xl border border-fuchsia-300/30 bg-fuchsia-300/5 p-3">
-            <div className="text-center text-[0.7rem] font-bold uppercase tracking-widest text-fuchsia-200/80">
+          <div className="mt-3 rounded-2xl border border-ink/20 bg-press/5 p-3">
+            <div className="text-center text-[0.7rem] font-bold uppercase tracking-widest text-press">
               The four themes — what single word joins them all?
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -629,19 +629,19 @@ export default function Game({
           </motion.div>
         )}
         {status === "lost" && (
-          <p className="mt-6 text-center text-sm text-indigo-200/70">
+          <p className="mt-6 text-center text-sm text-ink-soft">
             Out of guesses — the link is still a secret. Replay to crack it!
           </p>
         )}
 
         {status === "playing" && !offering && (
-          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-indigo-200/70">
+          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-soft">
             <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
             <span aria-hidden>·</span>
             <span>{moves} {moves === 1 ? "move" : "moves"}</span>
             <button
               onClick={shuffleTiles}
-              className="rounded-full border border-white/15 px-2.5 py-1 font-semibold text-indigo-100 transition hover:bg-white/10 active:scale-95"
+              className="rounded-full border-2 border-ink px-2.5 py-1 font-semibold text-ink transition hover:bg-cream active:scale-95"
             >
               🔀 Shuffle
             </button>
@@ -768,7 +768,7 @@ export default function Game({
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-white/95 px-5 py-2.5 text-center text-sm font-semibold text-slate-900 shadow-2xl shadow-black/40 backdrop-blur"
+            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-[4px_4px_0_rgba(38,34,26,0.4)]"
           >
             {toast}
           </motion.div>
@@ -825,18 +825,18 @@ function SecretLink({
       animate={spotlight ? { scale: [1, 1.04, 1] } : {}}
       transition={{ duration: 1.4, repeat: spotlight ? Infinity : 0 }}
       className={`relative overflow-hidden rounded-2xl border px-4 py-3 text-center ${
-        spotlight ? "border-fuchsia-300 ring-2 ring-fuchsia-300/70" : "border-white/15"
+        spotlight ? "border-press ring-2 ring-press/60" : "border-ink/25"
       }`}
-      style={{ background: "linear-gradient(110deg,rgba(129,140,248,0.18),rgba(232,121,249,0.18))" }}
+      style={{ background: "#fffdf6", border: "2px dashed rgba(38,34,26,0.45)", boxShadow: "3px 3px 0 rgba(38,34,26,0.25)" }}
     >
       {score > 0 && (
-        <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-black/25 px-2 py-0.5 text-xs font-extrabold text-amber-200">
+        <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-extrabold text-gold-deep">
           <span aria-hidden>✦</span>
           {score.toLocaleString()}
-          {combo >= 2 && <span className="ml-0.5 text-orange-300">🔥{combo}</span>}
+          {combo >= 2 && <span className="ml-0.5 text-press">🔥{combo}</span>}
         </div>
       )}
-      <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-indigo-200/80">
+      <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-ink-soft">
         {score > 0 ? "Secret link" : "Secret link · in every group"}
       </div>
       <div className="mt-1 flex items-center justify-center gap-2">
@@ -845,12 +845,12 @@ function SecretLink({
           <motion.span
             initial={{ rotateX: 90, opacity: 0 }}
             animate={{ rotateX: 0, opacity: 1 }}
-            className="font-display text-2xl font-bold uppercase tracking-wide text-white"
+            className="font-display text-2xl font-bold uppercase tracking-wide text-ink"
           >
             {word}
           </motion.span>
         ) : (
-          <span className="font-display text-2xl font-bold tracking-[0.3em] text-white/90">? ? ?</span>
+          <span className="font-display text-2xl font-bold tracking-[0.3em] text-ink">? ? ?</span>
         )}
       </div>
     </motion.div>
@@ -883,14 +883,14 @@ function WordTile({
         ? "text-xs sm:text-sm"
         : "text-sm sm:text-base";
 
-  let look = "border border-white/12 bg-white/[0.06] text-indigo-50 hover:bg-white/[0.12]";
+  let look = "border-2 border-ink bg-white text-ink hover:bg-cream";
   let style: React.CSSProperties | undefined;
   if (selected) {
-    look = "bg-white text-slate-900";
-    style = { boxShadow: "0 10px 30px -8px rgba(255,255,255,0.4)" };
+    look = "bg-ink text-paper";
+    style = { boxShadow: "2px 2px 0 rgba(38,34,26,0.5)" };
   } else if (hinted) {
-    look = "border-fuchsia-300 text-white";
-    style = { boxShadow: "0 0 0 2px rgba(240,171,252,0.8)" };
+    look = "border-press text-ink";
+    style = { boxShadow: "0 0 0 2px rgba(217,72,43,0.8)" };
   }
 
   return (
@@ -947,7 +947,7 @@ function SolvedBanner({
           <span
             key={w}
             className={`rounded-md ${compact ? "px-1.5 py-0.5" : "px-2 py-0.5"}`}
-            style={{ background: "rgba(255,255,255,0.28)" }}
+            style={{ background: "rgba(255,255,255,0.45)" }}
           >
             {masked ? "•••" : w}
           </span>
@@ -1004,15 +1004,15 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 16, scale: 0.96 }}
       transition={{ type: "spring", stiffness: 300, damping: 24 }}
-      className="mt-7 rounded-3xl border border-amber-300/30 bg-gradient-to-b from-amber-300/10 to-transparent p-6 text-center"
+      className="mt-7 rounded-3xl border border-gold/70 bg-gold/10 p-6 text-center"
     >
       <div className="text-4xl">😮‍💨</div>
-      <h3 className="mt-2 font-display text-2xl font-bold text-white">So close — don't stop now!</h3>
-      <p className="mt-1 text-sm text-indigo-200/80">Take a second chance and get two tries back.</p>
+      <h3 className="mt-2 font-display text-2xl font-bold text-ink">So close — don't stop now!</h3>
+      <p className="mt-1 text-sm text-ink-soft">Take a second chance and get two tries back.</p>
       <button
         onClick={accept}
         disabled={pending}
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-7 py-3 text-base font-bold text-white shadow-lg shadow-orange-500/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
       >
         <span aria-hidden>🎬</span> {pending ? "Loading…" : "Watch & continue (+2)"}
       </button>
@@ -1020,7 +1020,7 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
         <button
           onClick={onDecline}
           disabled={pending}
-          className="mt-3 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+          className="mt-3 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
         >
           No thanks — end the run
         </button>
@@ -1055,18 +1055,18 @@ function Controls({
   return (
     <div className="mt-7 flex flex-col items-center gap-4">
       {hideMistakes ? (
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-300/90">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-leaf">
           <span aria-hidden>🧘</span> Zen — no fail, just flow
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-sm text-indigo-200/80">
+        <div className="flex items-center gap-2 text-sm text-ink-soft">
           <span>Mistakes left</span>
           <div className="flex gap-1.5" role="img" aria-label={`${max - mistakes} of ${max} guesses remaining`}>
             {Array.from({ length: max }).map((_, i) => (
               <motion.span
                 key={i}
                 animate={{ scale: i < max - mistakes ? 1 : 0.7, opacity: i < max - mistakes ? 1 : 0.25 }}
-                className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-rose-400 to-pink-500"
+                className="h-2.5 w-2.5 rounded-full bg-press"
               />
             ))}
           </div>
@@ -1076,14 +1076,14 @@ function Controls({
         <button
           onClick={onClear}
           disabled={!hasSelection}
-          className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-indigo-100 transition enabled:hover:bg-white/10 disabled:opacity-35"
+          className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition enabled:hover:bg-cream disabled:opacity-35"
         >
           Clear
         </button>
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="rounded-full bg-white px-7 py-2.5 text-sm font-bold text-slate-900 shadow-lg shadow-black/30 transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+          className="rounded-full bg-ink px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
           Submit group
         </button>
@@ -1091,11 +1091,11 @@ function Controls({
       <button
         onClick={onHint}
         disabled={!canHint}
-        className="flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-300/15 px-5 py-2.5 text-sm font-bold text-amber-200 shadow-lg shadow-amber-500/10 transition enabled:hover:bg-amber-300/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+        className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
       >
         <span className="text-base" aria-hidden>💡</span>
         Reveal a group's theme
-        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-300 px-1 text-xs font-extrabold text-amber-950">
+        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
           {hintBank}
         </span>
       </button>
@@ -1201,10 +1201,10 @@ function LinkGuess({
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
-      <h3 className="font-display text-xl font-bold text-white">
+      <h3 className="font-display text-xl font-bold text-ink">
         {oracle ? "🔮 Name the hidden link" : "All four groups found!"}
       </h3>
-      <p className="mt-1 text-sm text-indigo-200/80">
+      <p className="mt-1 text-sm text-ink-soft">
         {oracle
           ? "Read the words and themes above — tap letters to spell the word that joins them."
           : "Tap the letters to spell the secret word that links them all."}
@@ -1230,11 +1230,11 @@ function LinkGuess({
               className={`grid h-10 w-8 place-items-center rounded-md border text-lg font-extrabold transition-colors ${
                 resolved || placed
                   ? locked
-                    ? "border-amber-300/60 bg-amber-300/10 text-amber-100"
-                    : "border-fuchsia-300/60 bg-fuchsia-300/15 text-white"
+                    ? "border-gold bg-gold/10 text-gold-deep"
+                    : "border-press/60 bg-press/10 text-ink"
                   : next
-                    ? "border-fuchsia-300 text-white/30 ring-2 ring-fuchsia-300/40"
-                    : "border-white/15 text-white/25"
+                    ? "border-press text-ink/30 ring-2 ring-press/40"
+                    : "border-ink/25 text-ink/25"
               }`}
             >
               {ch ? (
@@ -1255,9 +1255,9 @@ function LinkGuess({
       </motion.div>
 
       {wrong ? (
-        <p className="mt-2 text-sm font-semibold text-rose-300">Not the word — try again.</p>
+        <p className="mt-2 text-sm font-semibold text-press">Not the word — try again.</p>
       ) : (
-        <p className="mt-2 text-xs text-indigo-200/50">Tap a tile to place it; each letter is used once.</p>
+        <p className="mt-2 text-xs text-ink-soft">Tap a tile to place it; each letter is used once.</p>
       )}
 
       {/* The letter bank */}
@@ -1273,8 +1273,8 @@ function LinkGuess({
               aria-label={`Letter ${ch}${isUsed ? ", used" : ""}`}
               className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
                 isUsed
-                  ? "border border-white/5 bg-white/[0.02] text-white/15"
-                  : "border border-white/15 bg-white/[0.08] text-indigo-50 hover:bg-white/[0.16] active:scale-95"
+                  ? "border border-ink/10 bg-cream text-ink/15"
+                  : "border-2 border-ink bg-white text-ink hover:bg-cream active:scale-95"
               }`}
             >
               {ch}
@@ -1287,24 +1287,24 @@ function LinkGuess({
         <button
           onClick={backspace}
           disabled={resolved || !taps.length}
-          className="flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-indigo-100 transition enabled:hover:bg-white/10 enabled:active:scale-95 disabled:opacity-35"
+          className="flex items-center gap-1.5 rounded-full border border-ink/30 px-4 py-2 text-xs font-bold text-ink transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-35"
         >
           ⌫ Undo
         </button>
         <button
           onClick={onRevealLetter}
           disabled={resolved || !canRevealLetter}
-          className="flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-300/15 px-4 py-2 text-xs font-bold text-amber-200 transition enabled:hover:bg-amber-300/25 enabled:active:scale-95 disabled:opacity-35"
+          className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-4 py-2 text-xs font-bold text-gold-deep transition enabled:hover:bg-gold/25 enabled:active:scale-95 disabled:opacity-35"
         >
           💡 Reveal a letter
-          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-300 px-1 text-[0.65rem] font-extrabold text-amber-950">
+          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.65rem] font-extrabold text-ink">
             {hintBank}
           </span>
         </button>
         <button
           onClick={onReveal}
           disabled={resolved}
-          className="rounded-full px-3 py-2 text-xs font-semibold text-indigo-200/70 underline-offset-4 transition enabled:hover:text-white enabled:hover:underline disabled:opacity-40"
+          className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
         >
           Give up (costs a star)
         </button>
@@ -1325,7 +1325,7 @@ function StarRow({ stars }: { stars: number }) {
             animate={{ scale: earned ? 1 : 0.8, rotate: 0 }}
             transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.2 + i * 0.2 }}
             style={{ fontSize: 44 }}
-            className={earned ? "drop-shadow-[0_2px_10px_rgba(251,191,36,0.6)]" : "opacity-30 grayscale"}
+            className={earned ? "drop-shadow-[2px_2px_0_rgba(38,34,26,0.4)]" : "opacity-30 grayscale"}
           >
             {earned ? "⭐" : "☆"}
           </motion.div>
@@ -1418,48 +1418,48 @@ function EndCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
-      className="mt-8 rounded-3xl border border-white/12 bg-white/[0.06] p-6 text-center backdrop-blur-xl"
+      className="mt-8 rounded-3xl border-2 border-ink bg-white p-6 text-center"
     >
       {won ? (
         <>
           <StarRow stars={stars} />
-          <h3 className="mt-3 font-display text-2xl font-bold text-white">
+          <h3 className="mt-3 font-display text-2xl font-bold text-ink">
             {RATINGS[Math.min(mistakes, RATINGS.length - 1)]}
           </h3>
-          <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-fuchsia-300/90">{title}</p>
-          <p className="mt-2 text-sm text-indigo-200/80">
+          <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-press">{title}</p>
+          <p className="mt-2 text-sm text-ink-soft">
             The secret link was{" "}
-            <span className="font-bold text-white underline decoration-fuchsia-400/70 decoration-2 underline-offset-4">
+            <span className="font-bold text-ink underline decoration-press/70 decoration-2 underline-offset-4">
               {pivot}
             </span>
             . {linkCorrect ? "🔑 You guessed it!" : "Missed the link — that cost a star."}
           </p>
-          {streak >= 2 && <div className="mt-1 text-sm font-semibold text-amber-300">🔥 {streak} in a row!</div>}
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-300/20 to-orange-400/20 px-4 py-1.5 text-base font-extrabold text-amber-200">
+          {streak >= 2 && <div className="mt-1 text-sm font-semibold text-gold-deep">🔥 {streak} in a row!</div>}
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-4 py-1.5 text-base font-extrabold text-gold-deep">
             <span aria-hidden>✦</span> {score.toLocaleString()} pts
-            {stars === 3 && <span className="text-sm font-bold text-orange-300">· full combo!</span>}
+            {stars === 3 && <span className="text-sm font-bold text-press">· full combo!</span>}
           </div>
           {endless && endlessInfo ? (
-            <div className="mt-2 text-sm font-semibold text-emerald-300">
+            <div className="mt-2 text-sm font-semibold text-leaf">
               🧘 {endlessInfo.solved} solved this run
               {endlessInfo.solved > 0 && endlessInfo.solved >= endlessInfo.best ? (
-                <span className="ml-1 text-amber-300">· new best!</span>
+                <span className="ml-1 text-gold-deep">· new best!</span>
               ) : (
-                endlessInfo.best > 0 && <span className="ml-1 text-emerald-300/70">· best {endlessInfo.best}</span>
+                endlessInfo.best > 0 && <span className="ml-1 text-leaf/70">· best {endlessInfo.best}</span>
               )}
             </div>
           ) : (
-            <div className="mt-2 text-xs text-indigo-200/70">
+            <div className="mt-2 text-xs text-ink-soft">
               ⏱ {fmtTime(timeMs)}
               {newBest ? (
-                <span className="ml-1 font-semibold text-emerald-300">— new best!</span>
+                <span className="ml-1 font-semibold text-leaf">— new best!</span>
               ) : (
                 bestMs != null && <span className="ml-1">· best {fmtTime(bestMs)}</span>
               )}
             </div>
           )}
           {daily && (
-            <div className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/5 px-4 py-2 text-sm font-semibold text-amber-200">
+            <div className="mt-3 rounded-2xl border border-gold/70 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold-deep">
               🔥 Daily done — come back tomorrow to keep your streak!
             </div>
           )}
@@ -1467,8 +1467,8 @@ function EndCard({
       ) : (
         <>
           <div className="text-4xl">🧩</div>
-          <h3 className="mt-2 font-display text-2xl font-bold text-white">Out of guesses</h3>
-          <p className="mt-2 text-sm text-indigo-200/80">
+          <h3 className="mt-2 font-display text-2xl font-bold text-ink">Out of guesses</h3>
+          <p className="mt-2 text-sm text-ink-soft">
             The secret link stays hidden — replay the level and you can still crack it.
           </p>
         </>
@@ -1476,13 +1476,13 @@ function EndCard({
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         <button
           onClick={onExit}
-          className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-indigo-100 transition hover:bg-white/10"
+          className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
           {endless ? "End run" : "Levels"}
         </button>
         <button
           onClick={won ? share : onRestart}
-          className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-indigo-100 transition hover:bg-white/10"
+          className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
           {won ? "Share" : "Try again"}
         </button>
@@ -1490,14 +1490,14 @@ function EndCard({
           (onNext ? (
             <button
               onClick={onNext}
-              className="rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
+              className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
             >
               {endless ? "Next puzzle →" : "Next level →"}
             </button>
           ) : (
             <button
               onClick={onExit}
-              className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:scale-[1.03] active:scale-95"
+              className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
             >
               {daily ? "See you tomorrow 👋" : "All done 🎉"}
             </button>
@@ -1536,25 +1536,25 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
       role="dialog"
       aria-modal="true"
       aria-label="How to play"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-5"
     >
       <motion.div
         initial={{ scale: 0.9, y: 24 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.92, y: 16 }}
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
-        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#15122e] p-6 text-center shadow-2xl"
+        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-2xl"
       >
         <motion.div
           initial={{ scale: 0, rotate: -25 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
-          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-3xl text-white shadow-lg shadow-fuchsia-500/40"
+          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-press text-3xl text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)]"
         >
           <span aria-hidden>◆</span>
         </motion.div>
-        <h2 className="mt-4 font-display text-3xl font-bold text-white">How to play</h2>
-        <p className="mt-1 text-sm text-indigo-200/80">Three quick rules, then it's your turn.</p>
+        <h2 className="mt-4 font-display text-3xl font-bold text-ink">How to play</h2>
+        <p className="mt-1 text-sm text-ink-soft">Three quick rules, then it's your turn.</p>
         <div className="mt-5 space-y-2.5 text-left">
           {WELCOME_RULES.map((r, i) => (
             <motion.div
@@ -1562,12 +1562,12 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
               initial={{ opacity: 0, x: -14 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.18 + i * 0.09 }}
-              className="flex items-center gap-3 rounded-2xl bg-white/[0.05] p-3"
+              className="flex items-center gap-3 rounded-2xl bg-white p-3"
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-400/30 to-fuchsia-500/30 text-xl" aria-hidden>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>
                 {r.icon}
               </span>
-              <span className="text-sm font-semibold leading-snug text-indigo-50">{r.text}</span>
+              <span className="text-sm font-semibold leading-snug text-ink">{r.text}</span>
             </motion.div>
           ))}
         </div>
@@ -1576,13 +1576,13 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           onClick={onStart}
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-3.5 text-base font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.02] active:scale-95"
+          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
         >
           Let's play →
         </motion.button>
         <button
           onClick={onSkip}
-          className="mx-auto mt-2 block py-1.5 text-xs font-semibold text-indigo-200/60 transition hover:text-white"
+          className="mx-auto mt-2 block py-1.5 text-xs font-semibold text-ink-soft transition hover:text-ink"
         >
           Skip tutorial
         </button>
@@ -1611,30 +1611,31 @@ function Coach({
       exit={{ y: 20, opacity: 0 }}
       // Sticky: sits in-flow just below the board on tall screens, but pins to
       // the bottom of the viewport on short ones so it's never off-screen.
-      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm rounded-2xl border border-fuchsia-300/40 bg-[#1b1740]/95 p-4 shadow-2xl backdrop-blur"
+      // Styled as a sticky note pinned to the puzzle page.
+      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-[3px_4px_0_rgba(38,34,26,0.3)]"
     >
       <div className="flex items-center gap-2">
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-sm">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">
           💡
         </span>
-        <span className="font-bold text-white">{c.title}</span>
+        <span className="font-bold text-ink">{c.title}</span>
         <button
           onClick={onSkip}
-          className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-indigo-200/60 transition hover:bg-white/10 hover:text-white"
+          className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-cream hover:text-ink"
         >
           Skip
         </button>
       </div>
-      <p className="mt-2 text-sm leading-snug text-indigo-100/85">{c.body}</p>
+      <p className="mt-2 text-sm leading-snug text-ink-soft">{c.body}</p>
       {c.cta && (
         <button
           onClick={step === COACH.length - 1 ? onDone : onNext}
-          className="mt-3 w-full rounded-xl bg-white py-2.5 text-sm font-bold text-slate-900 transition hover:scale-[1.02] active:scale-95"
+          className="mt-3 w-full rounded-xl bg-ink py-2.5 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           {c.cta}
         </button>
       )}
-      {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-fuchsia-300">Your turn ↑</div>}
+      {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-press">Your turn ↑</div>}
     </motion.div>
   );
 }

@@ -32,24 +32,24 @@ export default function LevelSelect({
         <button
           onClick={onHome}
           aria-label="Home"
-          className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base text-indigo-100 transition hover:bg-white/15 active:scale-95"
+          className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base text-ink transition hover:bg-cream active:scale-95"
         >
           ‹
         </button>
         <button
           onClick={onStats}
           aria-label="Stats and achievements"
-          className="flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-semibold text-indigo-100 shadow transition hover:bg-white/15 active:scale-95"
+          className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow transition hover:bg-cream active:scale-95"
         >
           <span>⭐ {stars}/{MAX_STARS}</span>
-          {progress.streak >= 2 && <span className="text-amber-300">🔥 {progress.streak}</span>}
-          <span aria-hidden className="text-indigo-300/70">›</span>
+          {progress.streak >= 2 && <span className="text-gold-deep">🔥 {progress.streak}</span>}
+          <span aria-hidden className="text-ink-soft">›</span>
         </button>
         <div className="flex gap-2">
           <button
             onClick={onToggleMusic}
             aria-label={musicOn ? "Turn music off" : "Turn music on"}
-            className={`grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base transition hover:bg-white/15 active:scale-95 ${
+            className={`grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base transition hover:bg-cream active:scale-95 ${
               musicOn ? "" : "opacity-50"
             }`}
           >
@@ -58,25 +58,25 @@ export default function LevelSelect({
           <button
             onClick={onToggleMute}
             aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base transition hover:bg-white/15 active:scale-95"
+            className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base transition hover:bg-cream active:scale-95"
           >
             {muted ? "🔇" : "🔊"}
           </button>
           <button
             onClick={onHelp}
             aria-label="How to play"
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-base font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
+            className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base font-semibold text-ink transition hover:bg-cream active:scale-95"
           >
             ?
           </button>
         </div>
       </div>
 
-      <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-white">
+      <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink">
         Your journey
       </h2>
       {isDebug() && (
-        <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-emerald-300/90">
+        <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf">
           🛠 Debug · all levels unlocked
         </p>
       )}
@@ -91,16 +91,16 @@ export default function LevelSelect({
             <section key={ci}>
               <div className="flex items-end justify-between px-1">
                 <div className="min-w-0">
-                  <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                    <span className="text-indigo-300/70">{ci + 1}.</span>
+                  <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+                    <span className="text-ink-soft">{ci + 1}.</span>
                     {chapUnlocked ? chap.name : "Locked"}
                     {chapDone && <span aria-hidden>✓</span>}
                   </h3>
-                  <p className="truncate text-xs text-indigo-200/60">
+                  <p className="truncate text-xs text-ink-soft">
                     {chapUnlocked ? chap.flavor : "Clear the previous chapter to unlock."}
                   </p>
                 </div>
-                <span className="shrink-0 text-xs font-semibold text-amber-300">
+                <span className="shrink-0 text-xs font-semibold text-gold-deep">
                   ⭐ {chapStars}/{slice.length * 3}
                 </span>
               </div>
@@ -149,10 +149,10 @@ function LevelNode({
 }) {
   const done = earned > 0;
 
-  let face = "border border-white/10 bg-white/[0.05] text-indigo-100";
-  if (done) face = "border-transparent bg-gradient-to-br from-amber-300 to-orange-400 text-orange-950";
-  else if (unlocked && boss) face = "border-transparent bg-gradient-to-br from-fuchsia-400 to-purple-500 text-white";
-  else if (unlocked) face = "border-transparent bg-white text-slate-900";
+  let face = "border-2 border-dashed border-ink/25 bg-cream/70 text-ink";
+  if (done) face = "border-2 border-ink bg-gold text-ink";
+  else if (unlocked && boss) face = "border-2 border-ink bg-press text-paper";
+  else if (unlocked) face = "border-2 border-ink bg-white text-ink";
 
   return (
     <motion.button
@@ -165,12 +165,12 @@ function LevelNode({
       aria-label={`Level ${index + 1}${boss ? ", boss" : ""}, ${TIER_LABELS[tier]}${
         done ? `, ${earned} of 3 stars` : unlocked ? "" : ", locked"
       }`}
-      className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-lg transition disabled:cursor-default ${face}`}
+      className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-[3px_3px_0_rgba(38,34,26,0.3)] transition disabled:cursor-default ${face}`}
     >
       {highlight && (
         <motion.span
           aria-hidden
-          className="absolute inset-0 rounded-2xl ring-2 ring-fuchsia-300"
+          className="absolute inset-0 rounded-2xl ring-2 ring-press"
           animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.05, 1] }}
           transition={{ duration: 1.6, repeat: Infinity }}
         />

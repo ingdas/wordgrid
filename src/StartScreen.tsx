@@ -66,7 +66,7 @@ export default function StartScreen({
       <button
         onClick={onSettings}
         aria-label="Settings"
-        className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95"
+        className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
       >
         ⚙️
       </button>
@@ -74,7 +74,7 @@ export default function StartScreen({
         <button
           onClick={onToggleMusic}
           aria-label={musicOn ? "Turn music off" : "Turn music on"}
-          className={`grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95 ${
+          className={`grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95 ${
             musicOn ? "" : "opacity-50"
           }`}
         >
@@ -83,7 +83,7 @@ export default function StartScreen({
         <button
           onClick={onToggleMute}
           aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
-          className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/5 text-lg transition hover:bg-white/15 active:scale-95"
+          className="grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
         >
           {muted ? "🔇" : "🔊"}
         </button>
@@ -93,7 +93,7 @@ export default function StartScreen({
         {/* Soft pulsing aura behind the mark */}
         <motion.div
           aria-hidden
-          className="absolute h-28 w-28 rounded-full bg-fuchsia-500/30 blur-2xl"
+          className="absolute h-28 w-28 rounded-full bg-press/15 blur-2xl"
           animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.8, 0.5] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -105,7 +105,7 @@ export default function StartScreen({
             rotate: { type: "spring", stiffness: 200, damping: 14 },
             y: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
           }}
-          className="relative grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-4xl text-white shadow-2xl shadow-fuchsia-500/40"
+          className="relative grid h-20 w-20 place-items-center rounded-3xl bg-press text-4xl text-paper shadow-[4px_4px_0_rgba(38,34,26,0.85)]"
         >
           <span aria-hidden>◆</span>
         </motion.div>
@@ -115,7 +115,7 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mt-6 font-display text-6xl font-bold tracking-tight text-white"
+        className="mt-6 font-display text-6xl font-bold tracking-tight text-ink"
       >
         WordGrid
       </motion.h1>
@@ -124,9 +124,9 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-3 max-w-xs text-balance text-lg leading-relaxed text-indigo-100/90"
+        className="mt-3 max-w-xs text-balance text-lg leading-relaxed text-ink-soft"
       >
-        Four hidden groups. <span className="font-semibold text-white">One secret word</span> they all
+        Four hidden groups. <span className="font-semibold text-press">One secret word</span> they all
         share. Can you find it?
       </motion.p>
 
@@ -140,29 +140,29 @@ export default function StartScreen({
         <motion.button
           onClick={onDaily}
           whileTap={{ scale: 0.98 }}
-          className="w-full overflow-hidden rounded-3xl border border-fuchsia-300/30 bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 p-4 text-left shadow-lg shadow-fuchsia-500/10 transition hover:border-fuchsia-300/60"
+          className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-[3px_3px_0_rgba(38,34,26,0.25)] transition hover:border-press/60"
         >
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-display text-base font-bold text-white">
+            <span className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
               <span aria-hidden>📅</span> Daily Challenge
             </span>
-            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-indigo-200/70">{dateLabel}</span>
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink-soft">{dateLabel}</span>
           </div>
 
           <div className="mt-3 flex justify-between gap-1">
             {week.map((d) => (
               <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-[0.55rem] font-bold uppercase text-indigo-200/45">{d.label}</span>
+                <span className="text-[0.55rem] font-bold uppercase text-ink-soft">{d.label}</span>
                 <span
                   className={`grid h-7 w-full place-items-center rounded-lg text-xs ${
                     d.done
-                      ? "bg-gradient-to-br from-amber-300 to-orange-400"
+                      ? "bg-gold"
                       : d.today
-                        ? "border border-fuchsia-300/80 bg-fuchsia-300/10"
-                        : "border border-white/10 bg-white/[0.03]"
+                        ? "border border-press/80 bg-press/10"
+                        : "border border-ink/20 bg-white"
                   }`}
                 >
-                  {d.done ? "🔥" : d.today ? <span className="text-fuchsia-200">●</span> : ""}
+                  {d.done ? "🔥" : d.today ? <span className="text-press">●</span> : ""}
                 </span>
               </div>
             ))}
@@ -171,17 +171,17 @@ export default function StartScreen({
           <div className="mt-3 flex items-center justify-between">
             {dailyDone ? (
               <>
-                <span className="text-sm font-bold text-emerald-300">
+                <span className="text-sm font-bold text-leaf">
                   ✓ Solved! {progress.daily.streak > 0 && `🔥 ${progress.daily.streak}`}
                 </span>
-                <span className="text-xs font-semibold text-indigo-200/60">Next in {countdown}</span>
+                <span className="text-xs font-semibold text-ink-soft">Next in {countdown}</span>
               </>
             ) : (
               <>
-                <span className="text-sm font-semibold text-indigo-100">
+                <span className="text-sm font-semibold text-ink">
                   {progress.daily.streak > 0 ? `🔥 ${progress.daily.streak}-day streak` : "Start your streak"}
                 </span>
-                <span className="rounded-full bg-white px-4 py-1.5 text-sm font-bold text-slate-900">Solve →</span>
+                <span className="rounded-full bg-press px-4 py-1.5 text-sm font-bold text-paper">Solve →</span>
               </>
             )}
           </div>
@@ -190,16 +190,16 @@ export default function StartScreen({
         <div className="grid w-full grid-cols-2 gap-3">
           <button
             onClick={onPlay}
-            className="rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
+            className="rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
           >
             {returning ? `Continue · L${nextLevel}` : t("btn.play")}
           </button>
           <button
             onClick={onEndless}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3.5 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
           >
             🧘 Endless
-            {progress.endlessBest > 0 && <span className="text-emerald-300">{progress.endlessBest}</span>}
+            {progress.endlessBest > 0 && <span className="text-leaf">{progress.endlessBest}</span>}
           </button>
         </div>
 
@@ -212,7 +212,7 @@ export default function StartScreen({
             <button
               key={b.label}
               onClick={b.onClick}
-              className="flex flex-col items-center gap-1 rounded-2xl border border-white/12 bg-white/[0.04] py-3 text-xs font-semibold text-indigo-100 transition hover:bg-white/10 active:scale-95"
+              className="flex flex-col items-center gap-1 rounded-2xl border-2 border-ink bg-white py-3 text-xs font-semibold text-ink transition hover:bg-cream active:scale-95"
             >
               <span className="text-lg" aria-hidden>{b.icon}</span>
               {b.label}
@@ -225,22 +225,22 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.46 }}
-        className="mt-8 w-full max-w-xs rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+        className="mt-8 w-full max-w-xs rounded-2xl border border-ink/20 bg-white px-4 py-3"
       >
         <div className="flex items-baseline justify-between">
-          <span className="font-display text-sm font-bold text-white">
-            Lv {rank.level} · <span className="text-fuchsia-300">{rank.title}</span>
+          <span className="font-display text-sm font-bold text-ink">
+            Lv {rank.level} · <span className="text-press">{rank.title}</span>
           </span>
-          <span className="text-[0.7rem] font-semibold text-indigo-200/70">
+          <span className="text-[0.7rem] font-semibold text-ink-soft">
             {rank.into}/{rank.span} XP
           </span>
         </div>
-        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink/10">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${rank.pct}%` }}
             transition={{ delay: 0.6, duration: 0.6 }}
-            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-500"
+            className="h-full rounded-full bg-press"
           />
         </div>
       </motion.div>
@@ -249,7 +249,7 @@ export default function StartScreen({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="mt-3 flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-indigo-100"
+        className="mt-3 flex items-center gap-4 rounded-full border border-ink/20 bg-white px-5 py-2 text-sm text-ink"
       >
         <span className="font-semibold">⭐ {stars}/{MAX_STARS}</span>
         <span className="font-semibold">💡 {progress.hints}</span>

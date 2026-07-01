@@ -14,6 +14,52 @@ that the link word never appears on screen mid-game.
 
 ---
 
+## CrazyGames launch-readiness backlog (iteration 17)
+
+Played the game again as a CrazyGames submission reviewer (incl. a 1280×720
+landscape-iframe pass — their most common desktop embed). Ranked by expected
+impact on the platform:
+
+1. ✅ **Retheme away from the "AI default" look.** The dark purple/fuchsia
+   gradient + glassmorphism is exactly what every LLM generates; it reads
+   generic and dates the game. New identity: **"The Puzzle Press"** — a warm
+   paper/print daily-puzzle-page look (cream paper, ink type, flat category
+   colours, chunky offset shadows, stamp-red accents, serif masthead). It
+   matches the word-puzzle audience (NYT-games adjacent, older & calmer than
+   the bloxd/Minecraft crowd) while staying playful. (Done this iteration.)
+2. **Landscape/desktop layout** — at 720p the Submit button falls below the
+   fold and 60% of the screen is empty gutter. On wide viewports, put solved
+   banners + controls in a side column next to the board.
+3. **Enable the real CrazyGames SDK** — uncomment the script, verify init/
+   gameplayStart/Stop/happytime against their QA tool, add loading events.
+   Table stakes for approval.
+4. **Dedicated daily pool + content batch** — the daily currently redraws from
+   the 62 campaign levels (repeats + spoilers). Author 60–100 new puzzles,
+   reserve a slice for dailies.
+5. **Rewarded hint refill** — when the hint bank is empty the pill just greys
+   out; offer "🎬 watch to refill (+3)" (requestRewarded is already wired).
+6. **Session quests** — 3 rotating dailies ("solve 2 puzzles", "hit a ×3
+   combo", "guess a link first try") with hint/XP rewards; drives the
+   session-length metric CrazyGames ranks by.
+7. **Leaderboard on the daily** via the CrazyGames user/data SDK (their
+   platform accounts remove the need for our own backend).
+8. **Submission assets** — cover art (16:9 + square), 3–5 screenshots in the
+   new theme, short gameplay clip; regenerate og-image to match the retheme.
+9. **Global-English copy pass** — shorten idioms ("Worse Than Bite",
+   "hypercasual" phrasing) for the huge non-native-speaker share of the
+   audience.
+10. **Save-data resilience in iframes** — localStorage can be partitioned or
+    blocked in embeds; mirror progress through the CrazyGames data module when
+    present.
+11. **Tab-blur pause** — call gameplayStop()/mute on visibilitychange, resume
+    on focus (platform QA checks this).
+12. **First-5-levels curve** — the opening levels are near-identical difficulty;
+    tighten so level 5 already feels like a step up.
+13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set
+    (tile tap, group pop, win sting) would lift perceived quality a lot.
+14. **Interstitial pacing guard** — never show one within 60s of the last, per
+    CrazyGames policy.
+
 ## Animation & visual-polish review (iteration 14)
 
 Played the whole game watching motion. Findings + fixes:

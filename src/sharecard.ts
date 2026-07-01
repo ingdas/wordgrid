@@ -55,15 +55,15 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
 
     // Background gradient
     const bg = ctx.createLinearGradient(0, 0, S, S);
-    bg.addColorStop(0, "#1b1740");
-    bg.addColorStop(1, "#2a0a3a");
+    bg.addColorStop(0, "#faf5ea");
+    bg.addColorStop(1, "#f1e6cf");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, S, S);
 
     // Soft glow
     const glow = ctx.createRadialGradient(S / 2, 360, 40, S / 2, 360, 520);
-    glow.addColorStop(0, "rgba(232,121,249,0.22)");
-    glow.addColorStop(1, "rgba(232,121,249,0)");
+    glow.addColorStop(0, "rgba(217,72,43,0.10)");
+    glow.addColorStop(1, "rgba(217,72,43,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, S, S);
 
@@ -71,11 +71,11 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
     ctx.textBaseline = "middle";
 
     // Wordmark
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#26221a";
     ctx.font = "700 64px Georgia, 'Times New Roman', serif";
     ctx.fillText("◆ WordGrid", S / 2, 120);
 
-    ctx.fillStyle = "rgba(199,210,254,0.85)";
+    ctx.fillStyle = "#6f6757";
     ctx.font = "600 36px Arial, sans-serif";
     ctx.fillText(d.daily ? "Daily Challenge" : `Level ${d.level}`, S / 2, 188);
 
@@ -85,10 +85,10 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
       const gap = 150;
       const startX = S / 2 - gap;
       for (let i = 0; i < 3; i++) {
-        star(ctx, startX + i * gap, 300, sr, i < d.stars ? "#fbbf24" : "rgba(255,255,255,0.18)");
+        star(ctx, startX + i * gap, 300, sr, i < d.stars ? "#eda820" : "rgba(38,34,26,0.15)");
       }
     } else {
-      ctx.fillStyle = "#fb7185";
+      ctx.fillStyle = "#d9482b";
       ctx.font = "700 90px Arial, sans-serif";
       ctx.fillText("✕ ✕ ✕", S / 2, 300);
     }
@@ -114,20 +114,20 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
 
     // Score pill
     roundRect(ctx, S / 2 - 220, 660, 440, 96, 48);
-    ctx.fillStyle = "rgba(251,191,36,0.16)";
+    ctx.fillStyle = "rgba(237,168,32,0.18)";
     ctx.fill();
-    ctx.fillStyle = "#fcd34d";
+    ctx.fillStyle = "#8a5c00";
     ctx.font = "800 52px Arial, sans-serif";
     ctx.fillText(`✦ ${d.score.toLocaleString()} pts`, S / 2, 710);
 
     // Detail line
-    ctx.fillStyle = "rgba(226,232,255,0.9)";
+    ctx.fillStyle = "#26221a";
     ctx.font = "600 40px Arial, sans-serif";
     const link = d.won ? (d.linkCorrect ? "🔑 link ✓" : "link ✗") : "so close";
     ctx.fillText(`${link}    ⏱ ${fmtTime(d.timeMs)}${d.mistakes ? `    ✕ ${d.mistakes}` : ""}`, S / 2, 800);
 
     // Footer
-    ctx.fillStyle = "rgba(165,180,252,0.85)";
+    ctx.fillStyle = "#d9482b";
     ctx.font = "600 34px Arial, sans-serif";
     ctx.fillText("Play free → wordgrid", S / 2, 980);
 

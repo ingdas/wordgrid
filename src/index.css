@@ -1,7 +1,25 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   "The Puzzle Press" — a warm newsprint / puzzle-page identity.
+   Cream paper, ink type, flat print colours, chunky offset shadows and a
+   stamp-red accent. Deliberately NOT the dark-gradient glassmorphism look.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --color-paper: #faf5ea; /* page background */
+  --color-cream: #efe7d3; /* pressed / secondary surfaces */
+  --color-ink: #26221a; /* primary text & borders */
+  --color-ink-soft: #6f6757; /* secondary text */
+  --color-press: #d9482b; /* stamp red — CTAs & accents */
+  --color-press-deep: #a93318; /* pressed stamp red */
+  --color-gold: #eda820; /* stars, hints */
+  --color-gold-deep: #8a5c00; /* gold text on paper */
+  --color-leaf: #1c7a4d; /* success green on paper */
+}
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -16,55 +34,39 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
-  background: #0b0a1f;
+  background: #faf5ea;
+  color: #26221a;
 }
 
 .font-display {
   font-family: "Fraunces Variable", Georgia, serif;
 }
 
-/* Animated aurora backdrop */
+/* Paper backdrop: flat warm paper with the faintest press-ink vignette. */
 .aurora {
   position: fixed;
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(60% 60% at 15% 10%, rgba(99, 102, 241, 0.35), transparent 60%),
-    radial-gradient(55% 55% at 85% 20%, rgba(236, 72, 153, 0.28), transparent 60%),
-    radial-gradient(60% 60% at 50% 95%, rgba(34, 211, 238, 0.25), transparent 60%),
-    linear-gradient(160deg, #0b0a1f 0%, #120e2e 50%, #0b0a1f 100%);
-  filter: saturate(1.1);
+    radial-gradient(90% 70% at 50% 0%, rgba(217, 72, 43, 0.05), transparent 60%),
+    radial-gradient(100% 80% at 50% 110%, rgba(38, 34, 26, 0.07), transparent 55%),
+    #faf5ea;
 }
 
-.aurora::after {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background: radial-gradient(40% 40% at 30% 30%, rgba(168, 85, 247, 0.18), transparent 70%);
-  animation: drift 18s ease-in-out infinite alternate;
-}
-
+/* Newsprint grain — multiply so it darkens the paper like real pulp stock. */
 .grain {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.04;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-@keyframes drift {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  100% {
-    transform: translate3d(8%, 6%, 0) rotate(8deg);
-  }
-}
-
-/* Keep the focus ring tasteful */
+/* Keep the focus ring tasteful (ink on paper) */
 button:focus-visible {
-  outline: 2px solid rgba(165, 180, 252, 0.9);
+  outline: 2px solid rgba(38, 34, 26, 0.7);
   outline-offset: 2px;
 }
 
@@ -98,8 +100,8 @@ button:focus-visible {
     gap: 0.6rem;
     padding: 1.5rem;
     text-align: center;
-    background: linear-gradient(160deg, #0b0a1f 0%, #15122e 60%, #0b0a1f 100%);
-    color: #e0e7ff;
+    background: #faf5ea;
+    color: #26221a;
   }
   .rotate-hint__icon {
     font-size: 2.75rem;
@@ -114,7 +116,7 @@ button:focus-visible {
     margin: 0;
     max-width: 22rem;
     font-size: 0.9rem;
-    color: rgba(199, 210, 254, 0.75);
+    color: #6f6757;
   }
   /* Keep the app from peeking through / being interacted with behind it. */
   #root {
@@ -130,9 +132,6 @@ button:focus-visible {
 
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
-  .aurora::after {
-    animation: none;
-  }
   *,
   *::before,
   *::after {
