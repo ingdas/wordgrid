@@ -268,6 +268,11 @@ export default function App() {
     setScreen("levels");
   }, []);
 
+  const exitToHome = useCallback(() => {
+    gameplayStop();
+    setScreen("home");
+  }, []);
+
   // --- Endless / Zen mode ------------------------------------------------
   const [endless, setEndless] = useState(false);
   const endlessQueue = useRef<number[]>([]);
@@ -394,14 +399,16 @@ export default function App() {
               daily={playingDaily}
               endless={endless}
               endlessInfo={endless ? { solved: endlessSolved, score: endlessScore, best: progress.endlessBest } : undefined}
-              twist={endless ? null : bossTwist(levelIndex)}
+              twist={endless || playingDaily ? null : bossTwist(levelIndex)}
               bestMs={endless ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
               onWin={endless ? handleEndlessWin : handleWin}
               onLoss={endless ? noop : handleLoss}
-              onExit={endless ? exitEndless : exitToLevels}
-              onNext={endless ? nextEndless : levelIndex < LEVELS.length - 1 ? nextLevel : undefined}
+              onExit={endless ? exitEndless : playingDaily ? exitToHome : exitToLevels}
+              onNext={
+                endless ? nextEndless : playingDaily ? undefined : levelIndex < LEVELS.length - 1 ? nextLevel : undefined
+              }
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}
             />

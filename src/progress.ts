@@ -195,3 +195,40 @@ export function recordDaily(p: Progress, key = todayKey()): Progress {
   const continued = p.daily.lastDate === todayKey(y);
   return { ...p, daily: { lastDate: key, streak: continued ? p.daily.streak + 1 : 1 } };
 }
+
+export interface DayCell {
+  key: string;
+  label: string; // weekday initial
+  done: boolean;
+  today: boolean;
+}
+
+/** The last 7 days for the streak strip, derived from lastDate + streak. */
+export function dailyWeek(p: Progress, now = new Date()): DayCell[] {
+  const todayK = todayKey(now);
+  const done = new Set<string>();
+  if (p.daily.lastDate && p.daily.streak > 0) {
+    const [ly, lm, ld] = p.daily.lastDate.split("-").map(Number);
+    const last = new Date(ly, lm - 1, ld);
+    for (let i = 0; i < p.daily.streak; i++) {
+      const d = new Date(last);
+      d.setDate(d.getDate() - i);
+      done.add(todayKey(d));
+    }
+  }
+  const cells: DayCell[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = todayKey(d);
+    cells.push({ key, label: "SMTWTFS"[d.getDay()], done: done.has(key), today: key === todayK });
+  }
+  return cells;
+}
+
+/** Milliseconds until the next local midnight (when a fresh daily unlocks). */
+export function msUntilNextDaily(now = new Date()): number {
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  return next.getTime() - now.getTime();
+}

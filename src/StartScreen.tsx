@@ -1,7 +1,23 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LEVELS } from "./puzzles";
-import { MAX_STARS, totalStars, dailyDoneToday, furthestCleared, playerRank, type Progress } from "./progress";
+import {
+  MAX_STARS,
+  totalStars,
+  dailyDoneToday,
+  dailyWeek,
+  msUntilNextDaily,
+  furthestCleared,
+  playerRank,
+  type Progress,
+} from "./progress";
 import { t } from "./i18n";
+
+function fmtCountdown(ms: number): string {
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return `${h}h ${m}m`;
+}
 
 export default function StartScreen({
   progress,
@@ -30,11 +46,20 @@ export default function StartScreen({
   musicOn: boolean;
   onToggleMusic: () => void;
 }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const stars = totalStars(progress);
   const returning = stars > 0 || progress.bestStreak > 0;
   const dailyDone = dailyDoneToday(progress);
   const nextLevel = Math.min(furthestCleared(progress) + 2, LEVELS.length);
   const rank = playerRank(progress.score);
+  const week = dailyWeek(progress, now);
+  const countdown = fmtCountdown(msUntilNextDaily(now));
+  const dateLabel = now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-14 text-center sm:pt-20">
@@ -109,34 +134,75 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.32, type: "spring", stiffness: 260, damping: 20 }}
-        className="mt-9 flex w-full max-w-xs flex-col items-center gap-3"
+        className="mt-8 flex w-full max-w-sm flex-col items-center gap-3"
       >
-        <button
-          onClick={onPlay}
-          className="w-full rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-4 text-lg font-bold text-white shadow-xl shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
+        {/* Daily Challenge — the hero. A shared puzzle each day with a streak. */}
+        <motion.button
+          onClick={onDaily}
+          whileTap={{ scale: 0.98 }}
+          className="w-full overflow-hidden rounded-3xl border border-fuchsia-300/30 bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 p-4 text-left shadow-lg shadow-fuchsia-500/10 transition hover:border-fuchsia-300/60"
         >
-          {returning ? `${t("btn.continue")} · Level ${nextLevel}` : t("btn.play")}
-        </button>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 font-display text-base font-bold text-white">
+              <span aria-hidden>📅</span> Daily Challenge
+            </span>
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-indigo-200/70">{dateLabel}</span>
+          </div>
+
+          <div className="mt-3 flex justify-between gap-1">
+            {week.map((d) => (
+              <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-[0.55rem] font-bold uppercase text-indigo-200/45">{d.label}</span>
+                <span
+                  className={`grid h-7 w-full place-items-center rounded-lg text-xs ${
+                    d.done
+                      ? "bg-gradient-to-br from-amber-300 to-orange-400"
+                      : d.today
+                        ? "border border-fuchsia-300/80 bg-fuchsia-300/10"
+                        : "border border-white/10 bg-white/[0.03]"
+                  }`}
+                >
+                  {d.done ? "🔥" : d.today ? <span className="text-fuchsia-200">●</span> : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between">
+            {dailyDone ? (
+              <>
+                <span className="text-sm font-bold text-emerald-300">
+                  ✓ Solved! {progress.daily.streak > 0 && `🔥 ${progress.daily.streak}`}
+                </span>
+                <span className="text-xs font-semibold text-indigo-200/60">Next in {countdown}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-semibold text-indigo-100">
+                  {progress.daily.streak > 0 ? `🔥 ${progress.daily.streak}-day streak` : "Start your streak"}
+                </span>
+                <span className="rounded-full bg-white px-4 py-1.5 text-sm font-bold text-slate-900">Solve →</span>
+              </>
+            )}
+          </div>
+        </motion.button>
+
         <div className="grid w-full grid-cols-2 gap-3">
           <button
-            onClick={onDaily}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+            onClick={onPlay}
+            className="rounded-2xl bg-gradient-to-r from-indigo-400 to-fuchsia-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.03] active:scale-95"
           >
-            📅 {t("btn.daily")}
-            {dailyDone ? (
-              <span className="text-emerald-300">✓</span>
-            ) : (
-              progress.daily.streak > 0 && <span className="text-amber-300">🔥 {progress.daily.streak}</span>
-            )}
+            {returning ? `Continue · L${nextLevel}` : t("btn.play")}
           </button>
           <button
             onClick={onEndless}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 py-3.5 text-sm font-bold text-indigo-50 transition hover:bg-white/10 active:scale-95"
           >
             🧘 Endless
             {progress.endlessBest > 0 && <span className="text-emerald-300">{progress.endlessBest}</span>}
           </button>
         </div>
+
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
           {[
             { label: t("btn.howToPlay"), icon: "❔", onClick: onHelp },

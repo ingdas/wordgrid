@@ -488,12 +488,14 @@ export default function Game({
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-2 pl-2.5 pr-4 text-sm font-semibold text-indigo-100 transition hover:bg-white/15 active:scale-95"
         >
-          <span aria-hidden>‹</span> {endless ? "End run" : "Levels"}
+          <span aria-hidden>‹</span> {endless ? "End run" : daily ? "Home" : "Levels"}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-white">
             {endless ? (
               <><span aria-hidden>🧘</span> Endless</>
+            ) : daily ? (
+              <><span aria-hidden>📅</span> Daily</>
             ) : (
               <>
                 {boss && !revealLink && <span aria-hidden>👑</span>}
@@ -510,9 +512,11 @@ export default function Game({
               ? `Solved ${endlessInfo?.solved ?? 0} · ✦ ${(endlessInfo?.score ?? 0).toLocaleString()}`
               : revealLink
                 ? puzzle.title
-                : twist
-                  ? TWIST_LABEL[twist]
-                  : TIER_LABELS[levelRaw.tier]}
+                : daily
+                  ? "Today's challenge"
+                  : twist
+                    ? TWIST_LABEL[twist]
+                    : TIER_LABELS[levelRaw.tier]}
           </div>
         </div>
         <button
@@ -722,6 +726,7 @@ export default function Game({
               onShareToast={(msg) => setToast(msg)}
               endless={endless}
               endlessInfo={endlessInfo}
+              daily={daily}
               onExit={onExit}
               onRestart={restart}
               onNext={onNext}
@@ -1345,6 +1350,7 @@ function EndCard({
   shareData,
   endless,
   endlessInfo,
+  daily,
   onShareToast,
   onExit,
   onRestart,
@@ -1364,6 +1370,7 @@ function EndCard({
   shareData: ShareCardData;
   endless?: boolean;
   endlessInfo?: { solved: number; score: number; best: number };
+  daily?: boolean;
   onShareToast: (msg: string) => void;
   onExit: () => void;
   onRestart: () => void;
@@ -1451,6 +1458,11 @@ function EndCard({
               )}
             </div>
           )}
+          {daily && (
+            <div className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/5 px-4 py-2 text-sm font-semibold text-amber-200">
+              🔥 Daily done — come back tomorrow to keep your streak!
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -1487,7 +1499,7 @@ function EndCard({
               onClick={onExit}
               className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition hover:scale-[1.03] active:scale-95"
             >
-              All done 🎉
+              {daily ? "See you tomorrow 👋" : "All done 🎉"}
             </button>
           ))}
       </div>

@@ -176,6 +176,16 @@ re-played through three distinct CrazyGames personas. Verbatim takeaways:
 10. ✅ **Player level / rank meta** — lifetime score now feeds an XP ladder
     (Novice → Legend) with a progress bar on home and a "Rank up!" toast when
     you tick over.
+D2. ✅ **Daily-first (success rework, part 2)** — the Daily is now the Home
+    **hero**: a card with today's date, a **7-day streak strip** (🔥 for solved
+    days, a dot for today), and a Solve CTA that flips to "✓ Solved! 🔥N · next
+    in Xh Ym" once done. In-game it reads "📅 Daily · Today's challenge" (no
+    level-number leak, no boss twist), exits to Home, and the win card nudges
+    "come back tomorrow to keep your streak." Streak strip + countdown derive
+    from `daily.lastDate`/`streak` (no new storage). Still shares the same puzzle
+    for everyone each day. Next: a dedicated daily pool + more content so the
+    daily never repeats a campaign level.
+
 11. ✅ **Endless / Zen mode** — a 🧘 mode from Home: back-to-back random boards,
     **no fail** (no mistake cap, no loss), a running "Solved N · ✦ score"
     counter, a "Next puzzle" loop, and a best-run saved (`endlessBest`). Wins
