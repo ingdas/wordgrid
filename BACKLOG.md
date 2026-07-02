@@ -1,18 +1,137 @@
-# WordGrid — Critical Evaluation & Backlog
+# WordGrid — Project State & Backlog
 
-_Last updated: iteration 10 (persona playtest + scoring/combo, finale & difficulty fixes)._
+_Last updated: iteration 18. This file is the single source of truth — a fresh
+session should be able to continue from here without any prior chat context._
 
-A casual word puzzle: **62 levels**, each a board of 12 words that sort into 4
-themed groups of four, all joined by one **hidden link word** revealed only at
-the end. Flow: **Start → Level Map → Game (group + guess the link)**.
+## What this is
 
-Tooling: `npm run build` (type-check + build to `/docs`), `npm run validate`
-(puzzle structure), `npm run audit` (ambiguity helper), `npm test` (engine unit
-tests). A headless-Chrome runthrough (`scripts/playtest.mjs`) drives the whole
-flow and passes with **zero console errors / zero issues**, including the check
-that the link word never appears on screen mid-game.
+A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board of
+12 words that sort into 4 themed groups of three, all joined by one **hidden
+link word** (the "pivot", e.g. STAR) revealed by tapping letters at the end.
+Flow: first launch → straight into a guided tutorial; afterwards Home (Daily
+hero card) → Level map (8 chapters, boss at each chapter end) → Game.
+
+## How to work on this repo (session bootstrap)
+
+- **Push directly to `main`** (owner's standing instruction). Build output goes
+  to `docs/` (GitHub Pages). Always run `npm run build` before committing so
+  `docs/` stays in sync.
+- Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
+  structure), `npm run audit` (ambiguity helper), `npm test` (engine tests),
+  `node scripts/gen-assets.mjs` (og-image + icons → public/).
+- **Playtest** (must pass with zero issues before any push):
+  `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
+  `npx vite preview --port <fresh port>` (previews die between turns — always a
+  NEW port, never `pkill`), then
+  `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`.
+- Debug: append `?debug` to the URL → unlocks all levels (persists in
+  localStorage; `?debug=0` turns it off).
+- Commit style: imperative summary + short body; end with
+  `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
+  session's `Claude-Session:` URL trailer. Never mention the model id in code.
+- Verify visually with puppeteer screenshots (viewport 390×844 for phone,
+  1280×720 for the CrazyGames embed). Screenshot API rejects very large images —
+  use deviceScaleFactor 1 or JPEG clips.
+
+## Architecture map (src/)
+
+- `puzzles.ts` — 62 RawPuzzles (pivot + 4×3 spokes), buildPuzzle, difficulty
+  sort with hand-pinned OPENING = star,bark,bug,stick,drop,press; CHAPTERS
+  (sizes [6,7,7,8,8,8,8,10], boss = last of chapter), BossTwist type +
+  CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
+  owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles.
+- `engine.ts` — pure, unit-tested: evaluateGuess (one-away detection),
+  computeStars (mistakes + link-guess), linkMatches (case/plural/synonyms via
+  `accept`), scrambleWord, shuffle, guessKey.
+- `Game.tsx` — the whole in-game screen. Key props: puzzleIndex, twist,
+  daily, endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
+  onLoss (carry title+score), onNext/onExit. Systems inside: score+combo with
+  floating pops; tap-to-spell finale (buildLetterBank ~13 keys, auto-checks,
+  Undo, reveal-a-letter locks prefix); second-chance rewarded continue
+  (+2 tries, once per attempt); tutorial coach (WelcomeOverlay modal at step 0,
+  sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
+  the link (replayable); two-column layout at lg+ (board left, controls rail
+  right, fits 1280×720 above the fold).
+- `App.tsx` — screen router (home/levels/game), progress state, handleWin
+  (stars/streak/best/hints+1/score, achievements, rank-up toast, history),
+  daily (playingDaily → dailyIndex()), Endless mode (shuffled queue, no-fail,
+  endlessBest), settings modal (sound/music/calm/reset), stats/history modals,
+  visibilitychange pause, rewarded refillHints (+3).
+- `StartScreen.tsx` — Daily hero card (7-day streak strip, countdown,
+  Solve CTA), Continue·L{n} + Endless row, rank/XP bar (playerRank).
+- `LevelSelect.tsx` — chapters map; gold done / red boss / dashed locked nodes.
+- `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
+  best, daily{lastDate,streak}, achievements, hints, history, score,
+  endlessBest), loadProgress/save, isUnlocked (lookahead 3 + isDebug),
+  dailyIndex/dailyWeek/msUntilNextDaily, playerRank ladder.
+- `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
+- `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
+- `sdk.ts` — defensive CrazyGames v3 wrapper (init, loading, gameplay,
+  interstitial, requestRewarded → resolves true offline). Script tag is LIVE in
+  index.html (async, no-ops when absent).
+- `audio.ts` — synthesized SFX + ambient music, suspend/resumeAudio.
+- `index.css` — **"The Puzzle Press" theme tokens** via Tailwind v4 `@theme`:
+  paper #faf5ea, cream #efe7d3, ink #26221a, ink-soft #6f6757, press #d9482b,
+  press-deep #a93318, gold #eda820, gold-deep #8a5c00, leaf #1c7a4d. Hard
+  offset shadows `shadow-[3px_3px_0_rgba(38,34,26,…)]`, no gradients/glass.
+  Rotate-to-portrait hint for short landscape phones.
+
+## Owner preferences (hard requirements)
+
+1. **No time pressure** — chill game; Time Attack was built and removed.
+2. **Never the "AI default" theme** — keep the Puzzle Press print identity.
+3. Tutorial must be hands-on but never give the answer away; skippable.
+4. Loss must not reveal the secret link.
+5. Solved groups keep showing their words (incl. during the finale).
+6. Push to main; verify with the playtest + screenshots before pushing.
 
 ---
+
+## ACTIVE WORK — owner priorities: #4, #8, #9, #12 (iteration 18)
+
+- ✅ **#12 Opening curve** — OPENING pin (star→bark→bug→stick→drop→press);
+  first boss L6 = press (scramble). SHIPPED in this batch.
+- ✅ **#9 Global-English copy pass** — idiomatic titles renamed (All About Bark,
+  Nuts and Bolts, Plot Points, On Deck, Pound It, Flip the Switch, Courtside,
+  Bats and Balls), chapter flavors simplified, coach copy de-idiomed ("famous
+  people", "Take your best guess!", "Good luck!", "Keep looking"), rating
+  "Just made it!". SHIPPED in this batch.
+- ⬜ **#4 Daily pool + content batch** — NOT DONE. Full plan below; execute next.
+- ⬜ **#8 Submission assets** — NOT DONE. Plan below.
+
+### Execution plan for #4 (dedicated daily pool)
+
+Create `src/dailyPuzzles.ts` with `export const DAILY_PUZZLES: RawPuzzle[]`
+(~48 puzzles, ids/pivots must NOT collide with the 62 campaign pivots).
+Drafted pivot list (48): KEY, BOARD, WATCH, TRAIN, BAND, BRIDGE, BOX, CROWN,
+FILE, POOL, RACE, SHOT, TIP, TOAST, WING, YARD, BELT, CHARGE, SHADE, DRAFT,
+DRESS, DRILL, DUCK, FALL, FRAME, HORN, IRON, JACK, LAP, MODEL, MARCH, SCREEN,
+PATCH, PLANT, POINT, PUNCH, RANGE, SEASON, SHELL, SIGN, SPACE, SQUARE, STAFF,
+TIE, WAKE, BOOT, CURRENT, PILOT.
+Authoring rules (learned the hard way): common words only (no KETCH-tier
+obscurities), no duplicate words within a puzzle, pivot never appears as a
+spoke or inside a spoke (no REBOOT in BOOT), avoid two categories a solver
+could semantically swap, ~4–7-letter spokes, cross-puzzle word reuse is fine.
+Wiring: `dailyIndex(size, key)` (hash of date % size) in progress.ts; App
+passes `puzzleOverride={DAILY_PUZZLES[dailyIndex(DAILY_PUZZLES.length)]}` to
+Game when playingDaily; Game uses `raw = puzzleOverride ?? (twist==="emoji" ?
+EMOJI_BOSS : LEVELS[puzzleIndex])`. In handleWin/handleLoss, when playingDaily:
+do NOT write stars[]/best[] (would pollute the 186-star campaign totals) —
+history id = daily puzzle id, level 0, daily:true. bestMs prop → undefined for
+daily. Extend `scripts/validate.mts` to validate DAILY_PUZZLES too + assert no
+id overlap with PUZZLES.
+
+### Execution plan for #8 (submission assets)
+
+`scripts/gen-assets.mjs` still renders the OLD dark theme — rewrite its HTML to
+Puzzle Press (paper bg, ink serif wordmark, red ◆ logo tile, white word tiles
+with ink borders), regenerate og-image.png + icon-512/192 + apple-touch-icon
+into public/, rebuild so docs/ picks them up. Then add covers: 1920×1080 and
+1080×1080 into a committed `marketing/` folder, plus 4–5 gameplay screenshots
+(1280×720: home, board mid-solve, finale, win, level map) captured from the
+built app via puppeteer.
+
+## CrazyGames launch-readiness backlog (iteration 17)
 
 ## CrazyGames launch-readiness backlog (iteration 17)
 

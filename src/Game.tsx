@@ -43,7 +43,7 @@ export const CATEGORY_THEMES = [
   { grad: "from-[#8fd6ab] to-[#6cc793]", ink: "#093b22", emoji: "🟩", shape: "◆", tint: "#177a48" },
 ];
 
-const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
+const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Just made it!"];
 
 type Status = "playing" | "guessing" | "won" | "lost";
 
@@ -337,7 +337,7 @@ export default function Game({
         : n === 0
           ? "Not a group — which three words mean a famous person? 🤔"
           : n === 1
-            ? "Keep hunting — three words here all describe a superstar."
+            ? "Keep looking — three words here all describe a superstar."
             : `Tip: “${firstWord}” is one of the three. Find its two friends.`;
       setToast(msg);
       return;
@@ -1559,13 +1559,13 @@ function EndCard({
 const COACH = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
   {
-    title: "Your move: find the famous folk",
-    body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out, so trust your gut.",
+    title: "Your move: find the famous people",
+    body: "Three of these words all mean a famous person. Tap the three you think fit, then press Submit. Take your best guess!",
     cta: null, // advances when the player solves any group
   },
   {
     title: "That's a group! 🎉",
-    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Go get 'em.",
+    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Good luck!",
     cta: "I'm on it",
   },
 ] as const;

@@ -72,7 +72,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bolt",
-    title: "Bolt Upright",
+    title: "Nuts and Bolts",
     pivot: "BOLT",
     categories: [
       { name: "Hardware bits", words: ["SCREW", "NUT", "WASHER"] },
@@ -138,7 +138,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bark",
-    title: "Worse Than Bite",
+    title: "All About Bark",
     pivot: "BARK",
     categories: [
       { name: "Dog sounds", words: ["WOOF", "GROWL", "YAP"] },
@@ -259,7 +259,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "pound",
-    title: "Pound for Pound",
+    title: "Pound It",
     pivot: "POUND",
     categories: [
       { name: "Units of weight", words: ["OUNCE", "GRAM", "TON"] },
@@ -347,7 +347,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "plot",
-    title: "Lose the Plot",
+    title: "Plot Points",
     pivot: "PLOT",
     categories: [
       { name: "Story elements", words: ["THEME", "CHARACTER", "TWIST"] },
@@ -369,7 +369,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "court",
-    title: "Hold Court",
+    title: "Courtside",
     pivot: "COURT",
     categories: [
       { name: "Places you play", words: ["RINK", "PITCH", "FIELD"] },
@@ -402,7 +402,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bat",
-    title: "Off the Bat",
+    title: "Bats and Balls",
     pivot: "BAT",
     categories: [
       { name: "Creatures of the night", words: ["OWL", "MOTH", "RACCOON"] },
@@ -413,7 +413,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "deck",
-    title: "Deck the Halls",
+    title: "On Deck",
     pivot: "DECK",
     categories: [
       { name: "Parts of a ship", words: ["HULL", "MAST", "BOW"] },
@@ -446,7 +446,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "switch",
-    title: "Bait and Switch",
+    title: "Flip the Switch",
     pivot: "SWITCH",
     categories: [
       { name: "To swap", words: ["SWAP", "TRADE", "EXCHANGE"] },
@@ -817,9 +817,20 @@ function difficultyScore(raw: RawPuzzle): number {
   return avgLen + longCount * 0.6 + obscureCount * 1.6;
 }
 
+// Hand-curated opening so the first chapter has a deliberate ramp instead of
+// five near-identical easies: concrete nouns first (star, bark, bug), then the
+// first verb-sense boards (stick, drop) and a clear step up at the chapter boss
+// (press — multi-meaning verbs, played as the scramble twist).
+const OPENING = ["star", "bark", "bug", "stick", "drop", "press"];
+
 const orderedRaw = PUZZLES.slice().sort((a, b) => {
-  if (a.id === "star") return -1; // pin the tutorial level first
-  if (b.id === "star") return 1;
+  const oa = OPENING.indexOf(a.id);
+  const ob = OPENING.indexOf(b.id);
+  if (oa !== -1 || ob !== -1) {
+    if (oa === -1) return 1;
+    if (ob === -1) return -1;
+    return oa - ob;
+  }
   return difficultyScore(a) - difficultyScore(b);
 });
 
@@ -843,13 +854,13 @@ export interface Chapter {
 }
 
 const CHAPTER_META = [
-  { name: "First Light", flavor: "Find your footing." },
+  { name: "First Light", flavor: "Easy words to start." },
   { name: "Warming Up", flavor: "The links get sneakier." },
   { name: "Crossed Wires", flavor: "Words with double lives." },
   { name: "Double Meanings", flavor: "One word, many masks." },
   { name: "Twists & Turns", flavor: "Expect the unexpected." },
-  { name: "Deep Cuts", flavor: "For the seasoned solver." },
-  { name: "Mind Benders", flavor: "Only the sharp survive." },
+  { name: "Deep Cuts", flavor: "For experienced solvers." },
+  { name: "Mind Benders", flavor: "Seriously tricky." },
   { name: "The Gauntlet", flavor: "Everything you've learned." },
 ];
 
