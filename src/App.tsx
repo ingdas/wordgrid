@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { LEVELS, bossTwist } from "./puzzles";
+import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
   saveProgress,
@@ -179,11 +180,14 @@ export default function App() {
     gameplayStart();
   }, []);
 
+  // The daily draws from its own pool (src/dailyPuzzles.ts) so it can never
+  // spoil — or be spoiled by — a campaign level.
+  const todaysDaily = DAILY_PUZZLES[dailyIndex(DAILY_PUZZLES.length)];
+
   const playDaily = useCallback(() => {
     initAudio();
     startMusic();
     setPlayingDaily(true);
-    setLevelIndex(dailyIndex());
     setScreen("game");
     gameplayStart();
   }, []);
@@ -192,21 +196,20 @@ export default function App() {
     (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => {
       happytime();
       setProgress((prev) => {
-        const lvl = LEVELS[levelIndex];
-        const id = lvl.id;
-        const bestStars = Math.max(prev.stars[id] ?? 0, result.stars);
+        const id = playingDaily ? DAILY_PUZZLES[dailyIndex(DAILY_PUZZLES.length)].id : LEVELS[levelIndex].id;
         const streak = prev.streak + 1;
         const prevBestTime = prev.best[id];
         let next: Progress = {
           ...prev,
-          stars: { ...prev.stars, [id]: bestStars },
+          // Daily wins don't touch the campaign star/best-time maps (they'd
+          // pollute the 186-star total); everything else still counts.
+          stars: playingDaily ? prev.stars : { ...prev.stars, [id]: Math.max(prev.stars[id] ?? 0, result.stars) },
           streak,
           bestStreak: Math.max(prev.bestStreak, streak),
           linksGuessed: prev.linksGuessed + (result.linkCorrect ? 1 : 0),
-          best: {
-            ...prev.best,
-            [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
-          },
+          best: playingDaily
+            ? prev.best
+            : { ...prev.best, [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs },
           hints: prev.hints + 1, // earn a hint for clearing a level
           score: prev.score + result.score, // lifetime points
         };
@@ -276,11 +279,11 @@ export default function App() {
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
       setProgress((prev) => {
-        const lvl = LEVELS[levelIndex];
+        const id = playingDaily ? DAILY_PUZZLES[dailyIndex(DAILY_PUZZLES.length)].id : LEVELS[levelIndex].id;
         let next = { ...prev, streak: 0 };
         next = pushHistory(next, {
           at: Date.now(),
-          id: lvl.id,
+          id,
           level: levelIndex + 1,
           title: result.title,
           won: false,
@@ -431,16 +434,17 @@ export default function App() {
         {screen === "game" && (
           <ScreenWrap key="game">
             <Game
-              key={endless ? `e${endlessPos}` : levelIndex}
+              key={endless ? `e${endlessPos}` : playingDaily ? `daily-${todaysDaily.id}` : levelIndex}
               puzzleIndex={levelIndex}
+              puzzleOverride={playingDaily ? todaysDaily : undefined}
               reduce={reduce}
               streak={progress.streak}
-              tutorial={!endless && tutorialPending && levelIndex === 0}
+              tutorial={!endless && !playingDaily && tutorialPending && levelIndex === 0}
               daily={playingDaily}
               endless={endless}
               endlessInfo={endless ? { solved: endlessSolved, score: endlessScore, best: progress.endlessBest } : undefined}
               twist={endless || playingDaily ? null : bossTwist(levelIndex)}
-              bestMs={endless ? undefined : progress.best[LEVELS[levelIndex].id]}
+              bestMs={endless || playingDaily ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
               onRefillHints={refillHints}

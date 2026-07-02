@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Puzzle, type RawPuzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
 import { renderShareCard, type ShareCardData } from "./sharecard";
@@ -49,6 +49,8 @@ type Status = "playing" | "guessing" | "won" | "lost";
 
 interface GameProps {
   puzzleIndex: number;
+  /** Plays this puzzle instead of LEVELS[puzzleIndex] (used by the Daily). */
+  puzzleOverride?: RawPuzzle;
   reduce: boolean;
   streak: number;
   tutorial: boolean;
@@ -75,6 +77,7 @@ function fmtTime(ms: number): string {
 
 export default function Game({
   puzzleIndex,
+  puzzleOverride,
   reduce,
   streak,
   tutorial,
@@ -99,7 +102,7 @@ export default function Game({
   // The emoji boss swaps in a bespoke picture board; every other twist plays the
   // chapter's own level with a different presentation/rule.
   const levelRaw = LEVELS[puzzleIndex];
-  const raw = twist === "emoji" ? EMOJI_BOSS : levelRaw;
+  const raw = puzzleOverride ?? (twist === "emoji" ? EMOJI_BOSS : levelRaw);
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
   // The "decoy" boss salts the board with impostor tiles that fit no group.

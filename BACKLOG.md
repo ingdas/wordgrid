@@ -96,7 +96,11 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   Bats and Balls), chapter flavors simplified, coach copy de-idiomed ("famous
   people", "Take your best guess!", "Good luck!", "Keep looking"), rating
   "Just made it!". SHIPPED in this batch.
-- ⬜ **#4 Daily pool + content batch** — NOT DONE. Full plan below; execute next.
+- ✅ **#4 Daily pool + content batch** — SHIPPED: `src/dailyPuzzles.ts` holds 48
+  new daily-only puzzles (pool listed below); dailyIndex(size) hashes the date;
+  App passes `puzzleOverride` to Game when playingDaily; daily wins/losses no
+  longer touch campaign stars/best maps; validate covers all 110 puzzles + id
+  uniqueness across pools.
 - ⬜ **#8 Submission assets** — NOT DONE. Plan below.
 
 ### Execution plan for #4 (dedicated daily pool)
@@ -155,9 +159,9 @@ impact on the platform:
    defensive: every call no-ops when it's absent, so local/GitHub Pages play is
    unaffected), with loadingStart/loadingStop wired around app boot. Final QA
    against their preview tool still needed at submission time.
-4. **Dedicated daily pool + content batch** — the daily currently redraws from
-   the 62 campaign levels (repeats + spoilers). Author 60–100 new puzzles,
-   reserve a slice for dailies.
+4. ✅ **Dedicated daily pool + content batch** — 48 new daily-only puzzles in
+   `src/dailyPuzzles.ts`; the daily never repeats or spoils a campaign level.
+   (Growing the pool further is an evergreen content task.)
 5. ✅ **Rewarded hint refill** — an empty bank now swaps the hint pill (both
    in-board and in the finale) for a stamp-red "🎬 refill (+3)" button backed by
    requestRewarded (instant in standalone play, an ad on the platform).

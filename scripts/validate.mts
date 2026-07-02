@@ -1,11 +1,13 @@
 // Structural validation for every puzzle in src/puzzles.ts.
 // Run with:  npm run validate
 import { PUZZLES, buildPuzzle } from "../src/puzzles.ts";
+import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 let bad = 0;
 const seenIds = new Set<string>();
+const ALL = [...PUZZLES, ...DAILY_PUZZLES];
 
-for (const raw of PUZZLES) {
+for (const raw of ALL) {
   const p = buildPuzzle(raw, 7);
   const problems: string[] = [];
 
@@ -30,5 +32,5 @@ for (const raw of PUZZLES) {
   }
 }
 
-console.log(`\n${PUZZLES.length} puzzles checked — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`);
+console.log(`\n${ALL.length} puzzles checked — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`);
 process.exit(bad ? 1 : 0);

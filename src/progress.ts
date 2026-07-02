@@ -176,11 +176,11 @@ export function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-/** A deterministic level index for a given day. */
-export function dailyIndex(key = todayKey()): number {
+/** A deterministic index into the daily pool for a given day. */
+export function dailyIndex(size: number, key = todayKey()): number {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return h % LEVELS.length;
+  return h % Math.max(1, size);
 }
 
 export function dailyDoneToday(p: Progress, key = todayKey()): boolean {
