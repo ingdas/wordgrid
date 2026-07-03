@@ -24,6 +24,7 @@ export default function StartScreen({
   onPlay,
   onDaily,
   onEndless,
+  onPairs,
   onHelp,
   onStats,
   onHistory,
@@ -37,6 +38,7 @@ export default function StartScreen({
   onPlay: () => void;
   onDaily: () => void;
   onEndless: () => void;
+  onPairs: () => void;
   onHelp: () => void;
   onStats: () => void;
   onHistory: () => void;
@@ -187,19 +189,26 @@ export default function StartScreen({
           </div>
         </motion.button>
 
+        <button
+          onClick={onPlay}
+          className="w-full rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+        >
+          {returning ? `Continue · L${nextLevel}` : t("btn.play")}
+        </button>
         <div className="grid w-full grid-cols-2 gap-3">
-          <button
-            onClick={onPlay}
-            className="rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
-          >
-            {returning ? `Continue · L${nextLevel}` : t("btn.play")}
-          </button>
           <button
             onClick={onEndless}
             className="flex items-center justify-center gap-2 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
           >
             🧘 Endless
             {progress.endlessBest > 0 && <span className="text-leaf">{progress.endlessBest}</span>}
+          </button>
+          <button
+            onClick={onPairs}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+          >
+            🃏 Pairs
+            {progress.pairsBest > 0 && <span className="text-leaf">{progress.pairsBest}</span>}
           </button>
         </div>
 

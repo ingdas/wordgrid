@@ -35,8 +35,9 @@ import {
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
+import Pairs from "./Pairs";
 
-type Screen = "home" | "levels" | "game";
+type Screen = "home" | "levels" | "game" | "pairs";
 
 const noop = () => {};
 
@@ -383,6 +384,41 @@ export default function App() {
     gameplayStart();
   }, []);
 
+  // --- Pairs (memory) mode -------------------------------------------------
+  const playPairs = useCallback(() => {
+    initAudio();
+    startMusic();
+    setPlayingDaily(false);
+    setScreen("pairs");
+    gameplayStart();
+  }, []);
+
+  const exitPairs = useCallback(() => {
+    gameplayStop();
+    setScreen("home");
+  }, []);
+
+  // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
+  const handlePairsFinish = useCallback((result: { moves: number; score: number }) => {
+    happytime();
+    setProgress((prev) => {
+      const next = {
+        ...prev,
+        score: prev.score + result.score,
+        pairsBest: prev.pairsBest === 0 ? result.moves : Math.min(prev.pairsBest, result.moves),
+      };
+      const afterRank = playerRank(next.score);
+      if (afterRank.level > playerRank(prev.score).level) {
+        setTimeout(
+          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
+          2100
+        );
+      }
+      saveProgress(next);
+      return next;
+    });
+  }, []);
+
   const exitEndless = useCallback(() => {
     gameplayStop();
     setProgress((prev) => {
@@ -408,6 +444,7 @@ export default function App() {
               onPlay={play}
               onDaily={playDaily}
               onEndless={playEndless}
+              onPairs={playPairs}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -432,6 +469,17 @@ export default function App() {
               onToggleMute={toggleMute}
               musicOn={musicOn}
               onToggleMusic={toggleMusic}
+            />
+          </ScreenWrap>
+        )}
+
+        {screen === "pairs" && (
+          <ScreenWrap key="pairs">
+            <Pairs
+              reduce={reduce}
+              best={progress.pairsBest}
+              onFinish={handlePairsFinish}
+              onExit={exitPairs}
             />
           </ScreenWrap>
         )}

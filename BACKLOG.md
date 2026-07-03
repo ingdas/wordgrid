@@ -83,6 +83,21 @@ impact on the platform:
 14. **Interstitial pacing guard** — never show one within 60s of the last, per
     CrazyGames policy.
 
+## Pairs — a second game on the same boards (iteration 19)
+
+New home-screen mode: **🃏 Pairs**, a cozy memory game dealt from the same
+content database (campaign + daily pool, ~128 boards). The 12 spoke cards
+start face down; flip two and they match when they share a theme (the match
+names the theme and claims the pair in its category colour). Because every
+category holds three words, after four pairs exactly **four cards remain — one
+per category — and what THEY share is the secret link**: the round ends with
+the tap-to-spell letter bank for a +300 bonus. No timer, no fail; the metric
+is fewest moves (`pairsBest`), and cleared boards feed lifetime score/rank.
+Face-down cards never leak their word (aria-label included). Headless
+end-to-end test: learn → match all pairs → quad → spell → next board, zero
+console errors. This is the first "related game on the same board" — Odd One
+Out and The Cipher remain candidates for a daily "edition" page.
+
 ## Animation & visual-polish review (iteration 14)
 
 Played the whole game watching motion. Findings + fixes:

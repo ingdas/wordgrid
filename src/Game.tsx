@@ -1150,7 +1150,7 @@ function Controls({
 
 // Build a deterministic letter bank: the pivot's letters plus filler letters,
 // shuffled, totalling ~13–15 tiles. The pivot is always spellable from it.
-function buildLetterBank(pivot: string): string[] {
+export function buildLetterBank(pivot: string): string[] {
   const letters = pivot.split("");
   const total = Math.min(15, Math.max(13, pivot.length + 8));
   const POOL = "EAIOTNRSLCUDPMHGBFYWKVXZJQ";

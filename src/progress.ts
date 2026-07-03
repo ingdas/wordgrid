@@ -17,6 +17,7 @@ export interface Progress {
   history: HistoryEntry[]; // recent finished games, newest first
   score: number; // lifetime points (groups + combos + links)
   endlessBest: number; // most puzzles cleared in one Endless run
+  pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
 }
 
 export const STARTING_HINTS = 3;
@@ -59,6 +60,7 @@ export function loadProgress(): Progress {
         history: p.history ?? [],
         score: p.score ?? 0,
         endlessBest: p.endlessBest ?? 0,
+        pairsBest: p.pairsBest ?? 0,
       };
     }
   } catch {
@@ -76,6 +78,7 @@ export function loadProgress(): Progress {
     history: [],
     score: 0,
     endlessBest: 0,
+    pairsBest: 0,
   };
 }
 
