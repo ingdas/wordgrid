@@ -7,7 +7,7 @@ import type { RawPuzzle } from "./puzzles";
 // repeat or spoil a level the player hasn't reached. No pivot here is reused
 // from the campaign. The daily rotation walks a fixed shuffled tour of this
 // pool (see progress.ts), so a daily never repeats within a full cycle
-// (~two months). Endless mode also mixes these in, doubling its variety.
+// (80 days). Endless mode and Pairs also draw from this pool.
 //
 // Same shape as the campaign: 1 hidden pivot + 4 categories x 3 spokes.
 // House style: category names in plain, global English — short words, no
@@ -739,6 +739,162 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Sailing gear", words: ["HELM", "RUDDER", "SAIL"] },
       { name: "To turn in place", words: ["PIVOT", "SWIVEL", "ROTATE"] },
       { name: "Rides at a fair", words: ["COASTER", "CAROUSEL", "SLIDE"] },
+    ],
+  },
+  // --- Merged from the parallel daily batch (word swaps applied to avoid ----
+  // --- cross-pool category dupes and 3x spoke reuse) ------------------------
+  {
+    id: "bridge",
+    title: "Build a Bridge",
+    pivot: "BRIDGE",
+    categories: [
+      { name: "Ways to cross a river", words: ["TUNNEL", "FERRY", "RAFT"] },
+      { name: "Card games", words: ["POKER", "SOLITAIRE", "RUMMY"] },
+      { name: "Parts of a song", words: ["CHORUS", "VERSE", "INTRO"] },
+      { name: "On a ship", words: ["HELM", "CABIN", "ANCHOR"] },
+    ],
+  },
+  {
+    id: "race",
+    title: "Race You",
+    pivot: "RACE",
+    categories: [
+      { name: "Running events", words: ["MARATHON", "SPRINT", "RELAY"] },
+      { name: "To hurry", words: ["RUSH", "HURRY", "HUSTLE"] },
+      { name: "Horse-track words", words: ["JOCKEY", "SADDLE", "STABLE"] },
+      { name: "A scared heart does this", words: ["THUMP", "POUND", "FLUTTER"] },
+    ],
+  },
+  {
+    id: "belt",
+    title: "Buckle Up",
+    pivot: "BELT",
+    categories: [
+      { name: "Holds up trousers", words: ["BUCKLE", "SUSPENDERS", "WAISTBAND"] },
+      { name: "To sing very loudly", words: ["BELLOW", "HOLLER", "ROAR"] },
+      { name: "Zones and regions", words: ["ZONE", "REGION", "AREA"] },
+      { name: "Car safety features", words: ["AIRBAG", "BRAKE", "MIRROR"] },
+    ],
+  },
+  {
+    id: "dress",
+    title: "Dress Code",
+    pivot: "DRESS",
+    categories: [
+      { name: "Clothes", words: ["TUXEDO", "BLOUSE", "SKIRT"] },
+      { name: "To put clothes on", words: ["WEAR", "CLOTHE", "STYLE"] },
+      { name: "Salad preparation", words: ["TOSS", "MIX", "GARNISH"] },
+      { name: "First-aid actions", words: ["BANDAGE", "TREAT", "WRAP"] },
+    ],
+  },
+  {
+    id: "horn",
+    title: "Honk Honk",
+    pivot: "HORN",
+    categories: [
+      { name: "Car sounds", words: ["BEEP", "HONK", "TOOT"] },
+      { name: "Brass instruments", words: ["TRUMPET", "TUBA", "TROMBONE"] },
+      { name: "On animal heads", words: ["ANTLER", "TUSK", "SPIKE"] },
+      { name: "Warning signals", words: ["SIREN", "BUOY", "BEACON"] },
+    ],
+  },
+  {
+    id: "point",
+    title: "Good Point",
+    pivot: "POINT",
+    categories: [
+      { name: "Ways to score", words: ["GOAL", "TOUCHDOWN", "TALLY"] },
+      { name: "To aim a finger", words: ["AIM", "GESTURE", "INDICATE"] },
+      { name: "On a compass", words: ["NORTH", "EAST", "WEST"] },
+      { name: "The main idea", words: ["GIST", "MESSAGE", "MEANING"] },
+    ],
+  },
+  {
+    id: "punch",
+    title: "Fruit Punch",
+    pivot: "PUNCH",
+    categories: [
+      { name: "Party drinks", words: ["LEMONADE", "CIDER", "SODA"] },
+      { name: "Boxing words", words: ["UPPERCUT", "CROSS", "KNOCKOUT"] },
+      { name: "Strong flavours", words: ["ZESTY", "TANGY", "BOLD"] },
+      { name: "To press a button", words: ["CLICK", "PRESS", "PUSH"] },
+    ],
+  },
+  {
+    id: "season",
+    title: "In Season",
+    pivot: "SEASON",
+    categories: [
+      { name: "Parts of the year", words: ["QUARTER", "TERM", "SEMESTER"] },
+      { name: "To add flavour", words: ["SPICE", "PEPPER", "SALT"] },
+      { name: "TV-show words", words: ["EPISODE", "SERIES", "FINALE"] },
+      { name: "Sports calendar words", words: ["PLAYOFF", "OPENER", "TOURNAMENT"] },
+    ],
+  },
+  {
+    id: "space",
+    title: "Outer Space",
+    pivot: "SPACE",
+    categories: [
+      { name: "Out among the stars", words: ["ASTRONAUT", "GALAXY", "ROCKET"] },
+      { name: "Room to move", words: ["ROOM", "GAP", "OPENING"] },
+      { name: "Parking words", words: ["LOT", "GARAGE", "VALET"] },
+      { name: "Page-layout words", words: ["MARGIN", "INDENT", "TAB"] },
+    ],
+  },
+  {
+    id: "staff",
+    title: "Staff Meeting",
+    pivot: "STAFF",
+    categories: [
+      { name: "People at work", words: ["PERSONNEL", "WORKFORCE", "EMPLOYEES"] },
+      { name: "A wizard's kit", words: ["WAND", "CLOAK", "SPELLBOOK"] },
+      { name: "On sheet music", words: ["MEASURE", "TREBLE", "NOTATION"] },
+      { name: "Walking sticks", words: ["CANE", "CROOK", "ROD"] },
+    ],
+  },
+  {
+    id: "wake",
+    title: "Wake Up",
+    pivot: "WAKE",
+    categories: [
+      { name: "Morning things", words: ["ALARM", "SUNRISE", "COFFEE"] },
+      { name: "Behind a boat", words: ["RIPPLE", "FOAM", "SPLASH"] },
+      { name: "Solemn gatherings", words: ["FUNERAL", "VIGIL", "MEMORIAL"] },
+      { name: "What's left afterwards", words: ["AFTERMATH", "FALLOUT", "IMPACT"] },
+    ],
+  },
+  {
+    id: "boot",
+    title: "Boot Up",
+    pivot: "BOOT",
+    categories: [
+      { name: "Footwear", words: ["SLIPPER", "CLOG", "MOCCASIN"] },
+      { name: "To start a computer", words: ["RESTART", "STARTUP", "LOAD"] },
+      { name: "British English words", words: ["BONNET", "LORRY", "PETROL"] },
+      { name: "To kick someone out", words: ["EJECT", "EXPEL", "OUST"] },
+    ],
+  },
+  {
+    id: "current",
+    title: "Current Events",
+    pivot: "CURRENT",
+    categories: [
+      { name: "In the news", words: ["HEADLINE", "BULLETIN", "REPORT"] },
+      { name: "Electricity words", words: ["VOLTAGE", "AMP", "WATT"] },
+      { name: "Moving water", words: ["STREAM", "TIDE", "FLOW"] },
+      { name: "Up to date", words: ["MODERN", "LATEST", "RECENT"] },
+    ],
+  },
+  {
+    id: "pilot",
+    title: "The Pilot",
+    pivot: "PILOT",
+    categories: [
+      { name: "Flies a plane", words: ["CAPTAIN", "AVIATOR", "NAVIGATOR"] },
+      { name: "TV words", words: ["SITCOM", "NETWORK", "RERUN"] },
+      { name: "A trial run", words: ["TRIAL", "TEST", "EXPERIMENT"] },
+      { name: "Steering things", words: ["WHEEL", "JOYSTICK", "HANDLEBARS"] },
     ],
   },
 ];

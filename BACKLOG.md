@@ -1,18 +1,145 @@
-# WordGrid — Critical Evaluation & Backlog
+# WordGrid — Project State & Backlog
 
-_Last updated: iteration 18 (daily pool + content batch, submission assets, copy pass, opening curve)._
+_Last updated: iteration 19 (two parallel sessions merged: daily pool now 80
+puzzles, submission assets shipped, Pairs mode added). This file is the single
+source of truth — a fresh session should be able to continue from here without
+any prior chat context._
 
-A casual word puzzle: **62 levels**, each a board of 12 words that sort into 4
-themed groups of four, all joined by one **hidden link word** revealed only at
-the end. Flow: **Start → Level Map → Game (group + guess the link)**.
+## What this is
 
-Tooling: `npm run build` (type-check + build to `/docs`), `npm run validate`
-(puzzle structure), `npm run audit` (ambiguity helper), `npm test` (engine unit
-tests). A headless-Chrome runthrough (`scripts/playtest.mjs`) drives the whole
-flow and passes with **zero console errors / zero issues**, including the check
-that the link word never appears on screen mid-game.
+A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board of
+12 words that sort into 4 themed groups of three, all joined by one **hidden
+link word** (the "pivot", e.g. STAR) revealed by tapping letters at the end.
+Flow: first launch → straight into a guided tutorial; afterwards Home (Daily
+hero card) → Level map (8 chapters, boss at each chapter end) → Game.
+
+## How to work on this repo (session bootstrap)
+
+- **Push directly to `main`** (owner's standing instruction). Build output goes
+  to `docs/` (GitHub Pages). Always run `npm run build` before committing so
+  `docs/` stays in sync.
+- Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
+  structure), `npm run audit` (ambiguity helper), `npm test` (engine tests),
+  `node scripts/gen-assets.mjs` (og-image + icons → public/).
+- **Playtest** (must pass with zero issues before any push):
+  `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
+  `npx vite preview --port <fresh port>` (previews die between turns — always a
+  NEW port, never `pkill`), then
+  `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`.
+- Debug: append `?debug` to the URL → unlocks all levels (persists in
+  localStorage; `?debug=0` turns it off).
+- Commit style: imperative summary + short body; end with
+  `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
+  session's `Claude-Session:` URL trailer. Never mention the model id in code.
+- Verify visually with puppeteer screenshots (viewport 390×844 for phone,
+  1280×720 for the CrazyGames embed). Screenshot API rejects very large images —
+  use deviceScaleFactor 1 or JPEG clips.
+
+## Architecture map (src/)
+
+- `puzzles.ts` — 62 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
+  seededShuffle, difficulty sort with hand-pinned OPENING =
+  star,trunk,ring,bug,bank (concrete → abstract ramp); CHAPTERS
+  (sizes [6,7,7,8,8,8,8,10], boss = last of chapter), BossTwist type +
+  CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
+  owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles.
+- `engine.ts` — pure, unit-tested: evaluateGuess (one-away detection),
+  computeStars (mistakes + link-guess), linkMatches (case/plural/synonyms via
+  `accept`), scrambleWord, shuffle, guessKey.
+- `dailyPuzzles.ts` — the dedicated 80-puzzle DAILY pool (no pivot shared with
+  the campaign; plain global-English category names). Also feeds Endless and
+  Pairs.
+- `Game.tsx` — the whole in-game screen. Key props: puzzleIndex,
+  overrideRaw (play a non-campaign RawPuzzle — daily pool / Endless), twist,
+  daily, endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
+  onLoss (carry title+score), onNext/onExit. Exports CATEGORY_THEMES and
+  buildLetterBank (reused by Pairs). Systems inside: score+combo with
+  floating pops; tap-to-spell finale (buildLetterBank ~13 keys, auto-checks,
+  Undo, reveal-a-letter locks prefix); second-chance rewarded continue
+  (+2 tries, once per attempt); tutorial coach (WelcomeOverlay modal at step 0,
+  sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
+  the link (replayable); two-column layout at lg+ (board left, controls rail
+  right, fits 1280×720 above the fold).
+- `App.tsx` — screen router (home/levels/game/pairs), progress state,
+  handleWin (stars/streak/best/hints+1/score, achievements, rank-up toast,
+  history; daily wins never write campaign stars/best — history id = daily id,
+  level 0), daily (playingDaily → dailyPuzzle() from the dedicated pool via
+  overrideRaw), Endless mode (shuffled queue over campaign+daily pool,
+  no-fail, endlessBest), Pairs routing (handlePairsFinish → score+pairsBest),
+  settings modal (sound/music/calm/reset), stats/history modals,
+  visibilitychange pause, rewarded refillHints (+3).
+- `Pairs.tsx` — 🃏 memory mode on the same boards: 12 face-down cards, flip
+  two, they match when they share a theme (match reveals the theme in its
+  colour). After 4 pairs the remaining quad (one card per category) shares the
+  secret link → tap-to-spell finale (+300). No timer/fail; fewest moves =
+  pairsBest; cleared boards feed lifetime score. Face-down cards never leak
+  their word (aria-label "Face-down card").
+- `StartScreen.tsx` — Daily hero card (7-day streak strip, countdown,
+  Solve CTA), full-width Continue·L{n}, Endless + Pairs row (with bests),
+  rank/XP bar (playerRank).
+- `LevelSelect.tsx` — chapters map; gold done / red boss / dashed locked nodes.
+- `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
+  best, daily{lastDate,streak}, achievements, hints, history, score,
+  endlessBest, pairsBest), loadProgress/save, isUnlocked (lookahead 3 +
+  isDebug), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
+  shared, no repeat within an 80-day cycle), dailyWeek/msUntilNextDaily,
+  playerRank ladder.
+- `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
+- `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
+- `sdk.ts` — defensive CrazyGames v3 wrapper (init, loading, gameplay,
+  interstitial, requestRewarded → resolves true offline). Script tag is LIVE in
+  index.html (async, no-ops when absent).
+- `audio.ts` — synthesized SFX + ambient music, suspend/resumeAudio.
+- `index.css` — **"The Puzzle Press" theme tokens** via Tailwind v4 `@theme`:
+  paper #faf5ea, cream #efe7d3, ink #26221a, ink-soft #6f6757, press #d9482b,
+  press-deep #a93318, gold #eda820, gold-deep #8a5c00, leaf #1c7a4d. Hard
+  offset shadows `shadow-[3px_3px_0_rgba(38,34,26,…)]`, no gradients/glass.
+  Rotate-to-portrait hint for short landscape phones.
+
+## Owner preferences (hard requirements)
+
+1. **No time pressure** — chill game; Time Attack was built and removed.
+2. **Never the "AI default" theme** — keep the Puzzle Press print identity.
+3. Tutorial must be hands-on but never give the answer away; skippable.
+4. Loss must not reveal the secret link.
+5. Solved groups keep showing their words (incl. during the finale).
+6. Push to main; verify with the playtest + screenshots before pushing.
 
 ---
+
+## SHIPPED — owner priorities #4, #8, #9, #12 + Pairs (iterations 18–19)
+
+Two sessions worked these in parallel; the merge kept one implementation and
+combined the content.
+
+- ✅ **#4 Daily pool + content batch** — `src/dailyPuzzles.ts` holds **80**
+  daily-only puzzles (66 authored in one session + 14 unique pivots folded in
+  from the parallel batch: BRIDGE, RACE, BELT, DRESS, HORN, POINT, PUNCH,
+  SEASON, SPACE, STAFF, WAKE, BOOT, CURRENT, PILOT — with word swaps to avoid
+  cross-pool category dupes / 3× spoke reuse). Rotation: `dailyPuzzle()` walks
+  a fixed seeded tour — deterministic, same for everyone, no repeat within an
+  80-day cycle. App passes `overrideRaw` to Game when playingDaily; daily
+  wins/losses never touch campaign stars/best (history id = daily id, level 0,
+  bestMs undefined). Endless draws from campaign + daily (~142 boards).
+  validate covers all 143 puzzles + id uniqueness + no daily/campaign pivot
+  overlap.
+- ✅ **#8 Submission assets** — `scripts/gen-assets.mjs` rewritten to Puzzle
+  Press (og-image + PWA icons regenerated); `scripts/gen-submission.mjs`
+  renders covers (1920×1080 + 1080×1080) and captures 5 real gameplay
+  screenshots into `assets/submission/`. Shared launcher `scripts/browser.mjs`
+  (puppeteer → puppeteer-core + system Chromium fallback). Remaining: the
+  short gameplay **clip** needs a manual screen recording.
+- ✅ **#9 Global-English copy pass** — idiom-only titles renamed (Bark and
+  Bite, Bolt Away, A Blank Sheet, Fry Day, Plot Twist, One Pound, Swing the
+  Bat, Top Deck, The Lightning Bolt), chapter names/flavor simplified (Rare
+  Words, The Final Test), coach/rating copy de-idiomed. Titles that teach
+  their idiom via a category (e.g. Bank On It) kept as wordplay payoff. The
+  daily pool follows the plain-English house style.
+- ✅ **#12 Opening curve** — OPENING pin star→trunk→ring→bug→bank (all-concrete
+  nouns → verb groups → mostly abstract), scramble boss at L6.
+- ✅ **Pairs mode** (new engagement mechanic) — see `Pairs.tsx` in the
+  architecture map. First "second game on the same boards"; Odd One Out and
+  a spell-the-link Cipher mini remain candidates for a daily "edition" page.
 
 ## CrazyGames launch-readiness backlog (iteration 17)
 
@@ -36,13 +163,9 @@ impact on the platform:
    defensive: every call no-ops when it's absent, so local/GitHub Pages play is
    unaffected), with loadingStart/loadingStop wired around app boot. Final QA
    against their preview tool still needed at submission time.
-4. ✅ **Dedicated daily pool + content batch** — authored **66 brand-new
-   puzzles** (`src/dailyPuzzles.ts`, no pivot shared with the campaign). The
-   Daily now walks a fixed shuffled tour of that pool (no repeat within a
-   66-day cycle, same puzzle for everyone, campaign never spoiled) and no
-   longer writes campaign stars/best times. Endless draws from campaign +
-   daily pool combined (~128 boards). `npm run validate`/`audit` cover the new
-   pool; a headless daily-flow check passes.
+4. ✅ **Dedicated daily pool + content batch** — 80 daily-only puzzles in
+   `src/dailyPuzzles.ts`; the daily never repeats or spoils a campaign level.
+   (Growing the pool further is an evergreen content task.)
 5. ✅ **Rewarded hint refill** — an empty bank now swaps the hint pill (both
    in-board and in the finale) for a stamp-red "🎬 refill (+3)" button backed by
    requestRewarded (instant in standalone play, an ad on the platform).
@@ -51,52 +174,21 @@ impact on the platform:
    session-length metric CrazyGames ranks by.
 7. **Leaderboard on the daily** via the CrazyGames user/data SDK (their
    platform accounts remove the need for our own backend).
-8. ◐ **Submission assets** — og-image + PWA icons regenerated in the Puzzle
-   Press theme (`scripts/gen-assets.mjs` rewritten; shared headless-Chrome
-   launcher in `scripts/browser.mjs`). New `scripts/gen-submission.mjs`
-   renders cover art (1920×1080 + 1080×1080) and captures 5 real gameplay
-   screenshots (home, map, mid-game, finale, portrait) into
-   `assets/submission/`. Remaining: the short gameplay **clip** needs a manual
-   screen recording.
-9. ✅ **Global-English copy pass** — retitled the idiom-only levels ("Worse
-   Than Bite"→"Bark and Bite", "Deck the Halls"→"Top Deck", "Off the
-   Bat"→"Swing the Bat", "Lose the Plot"→"Plot Twist", "Small Fry"→"Fry Day",
-   "Clean Sheet"→"A Blank Sheet", "Bolt Upright"→"Bolt Away", "Pound for
-   Pound"→"One Pound", emoji boss →"The Lightning Bolt"); plain-English
-   chapter names/flavor ("Deep Cuts"→"Rare Words", "The Gauntlet"→"The Final
-   Test"); de-idiomed coach/end-card strings ("Phew—just made it", "Go get
-   'em", "trust your gut"). Titles that teach their idiom via a category
-   (e.g. "Bank On It") were kept as wordplay payoff. The daily pool was
-   written to the plain-English house style from the start.
+8. ◐ **Submission assets** — covers, screenshots and the og-image/icons are
+   done (see SHIPPED above); only the short gameplay clip is left (manual
+   screen recording).
+9. ✅ **Global-English copy pass** — shipped (see SHIPPED above).
 10. **Save-data resilience in iframes** — localStorage can be partitioned or
     blocked in embeds; mirror progress through the CrazyGames data module when
     present.
 11. ✅ **Tab-blur pause** — visibilitychange now suspends the AudioContext and
     calls gameplayStop(); on return it resumes audio and re-opens the gameplay
     session if a level is active.
-12. ✅ **First-5-levels curve** — the opening chapter is now hand-ordered as a
-    real ramp instead of the flat heuristic: STAR tutorial → trunk (all
-    concrete nouns) → ring (one verb group) → bug (mixed) → bank (mostly
-    abstract verb groups) → the scramble boss. Level 5 is a felt step up.
+12. ✅ **First-5-levels curve** — shipped (see SHIPPED above).
 13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set
     (tile tap, group pop, win sting) would lift perceived quality a lot.
 14. **Interstitial pacing guard** — never show one within 60s of the last, per
     CrazyGames policy.
-
-## Pairs — a second game on the same boards (iteration 19)
-
-New home-screen mode: **🃏 Pairs**, a cozy memory game dealt from the same
-content database (campaign + daily pool, ~128 boards). The 12 spoke cards
-start face down; flip two and they match when they share a theme (the match
-names the theme and claims the pair in its category colour). Because every
-category holds three words, after four pairs exactly **four cards remain — one
-per category — and what THEY share is the secret link**: the round ends with
-the tap-to-spell letter bank for a +300 bonus. No timer, no fail; the metric
-is fewest moves (`pairsBest`), and cleared boards feed lifetime score/rank.
-Face-down cards never leak their word (aria-label included). Headless
-end-to-end test: learn → match all pairs → quad → spell → next board, zero
-console errors. This is the first "related game on the same board" — Odd One
-Out and The Cipher remain candidates for a daily "edition" page.
 
 ## Animation & visual-polish review (iteration 14)
 
