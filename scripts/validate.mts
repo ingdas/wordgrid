@@ -1,11 +1,23 @@
-// Structural validation for every puzzle in src/puzzles.ts.
+// Structural validation for every puzzle: the campaign, the emoji boss and
+// the dedicated daily pool.
 // Run with:  npm run validate
-import { PUZZLES, buildPuzzle } from "../src/puzzles.ts";
+import { PUZZLES, EMOJI_BOSS, buildPuzzle } from "../src/puzzles.ts";
+import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
+const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
 let bad = 0;
 const seenIds = new Set<string>();
 
-for (const raw of PUZZLES) {
+// Daily pivots must be fresh content — never a campaign pivot re-used.
+const campaignPivots = new Set(PUZZLES.map((p) => p.pivot.toUpperCase()));
+for (const d of DAILY_PUZZLES) {
+  if (campaignPivots.has(d.pivot.toUpperCase())) {
+    bad++;
+    console.log(`✗ ${d.id}: daily pivot ${d.pivot} duplicates a campaign pivot`);
+  }
+}
+
+for (const raw of ALL) {
   const p = buildPuzzle(raw, 7);
   const problems: string[] = [];
 
@@ -30,5 +42,7 @@ for (const raw of PUZZLES) {
   }
 }
 
-console.log(`\n${PUZZLES.length} puzzles checked — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`);
+console.log(
+  `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,
+);
 process.exit(bad ? 1 : 0);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Puzzle } from "./puzzles";
+import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
 import { renderShareCard, type ShareCardData } from "./sharecard";
@@ -43,12 +43,14 @@ export const CATEGORY_THEMES = [
   { grad: "from-[#8fd6ab] to-[#6cc793]", ink: "#093b22", emoji: "🟩", shape: "◆", tint: "#177a48" },
 ];
 
-const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Phew — just made it!"];
+const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Just made it!"];
 
 type Status = "playing" | "guessing" | "won" | "lost";
 
 interface GameProps {
   puzzleIndex: number;
+  /** Play this puzzle instead of LEVELS[puzzleIndex] (daily pool / Endless). */
+  overrideRaw?: RawPuzzle;
   reduce: boolean;
   streak: number;
   tutorial: boolean;
@@ -75,6 +77,7 @@ function fmtTime(ms: number): string {
 
 export default function Game({
   puzzleIndex,
+  overrideRaw,
   reduce,
   streak,
   tutorial,
@@ -98,7 +101,9 @@ export default function Game({
   const maxMistakes = endless ? Number.POSITIVE_INFINITY : MAX_MISTAKES;
   // The emoji boss swaps in a bespoke picture board; every other twist plays the
   // chapter's own level with a different presentation/rule.
-  const levelRaw = LEVELS[puzzleIndex];
+  const levelRaw = overrideRaw ?? LEVELS[puzzleIndex];
+  // Campaign levels carry a difficulty tier; daily/Endless overrides don't.
+  const tier = (levelRaw as Partial<Level>).tier;
   const raw = twist === "emoji" ? EMOJI_BOSS : levelRaw;
   const puzzle: Puzzle = useMemo(() => buildPuzzle(raw, 7), [raw]);
 
@@ -337,7 +342,7 @@ export default function Game({
         : n === 0
           ? "Not a group — which three words mean a famous person? 🤔"
           : n === 1
-            ? "Keep hunting — three words here all describe a superstar."
+            ? "Keep looking — three words here all describe a superstar."
             : `Tip: “${firstWord}” is one of the three. Find its two friends.`;
       setToast(msg);
       return;
@@ -527,7 +532,9 @@ export default function Game({
                   ? "Today's challenge"
                   : twist
                     ? TWIST_LABEL[twist]
-                    : TIER_LABELS[levelRaw.tier]}
+                    : tier
+                      ? TIER_LABELS[tier]
+                      : ""}
           </div>
         </div>
         <button
@@ -1560,13 +1567,13 @@ const COACH = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
   {
     title: "Your move: find the famous folk",
-    body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out, so trust your gut.",
+    body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out. You can do this.",
     cta: null, // advances when the player solves any group
   },
   {
     title: "That's a group! 🎉",
-    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Go get 'em.",
-    cta: "I'm on it",
+    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Good luck!",
+    cta: "Got it",
   },
 ] as const;
 

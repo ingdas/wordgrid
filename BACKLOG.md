@@ -1,6 +1,6 @@
 # WordGrid — Critical Evaluation & Backlog
 
-_Last updated: iteration 10 (persona playtest + scoring/combo, finale & difficulty fixes)._
+_Last updated: iteration 18 (daily pool + content batch, submission assets, copy pass, opening curve)._
 
 A casual word puzzle: **62 levels**, each a board of 12 words that sort into 4
 themed groups of four, all joined by one **hidden link word** revealed only at
@@ -36,9 +36,13 @@ impact on the platform:
    defensive: every call no-ops when it's absent, so local/GitHub Pages play is
    unaffected), with loadingStart/loadingStop wired around app boot. Final QA
    against their preview tool still needed at submission time.
-4. **Dedicated daily pool + content batch** — the daily currently redraws from
-   the 62 campaign levels (repeats + spoilers). Author 60–100 new puzzles,
-   reserve a slice for dailies.
+4. ✅ **Dedicated daily pool + content batch** — authored **66 brand-new
+   puzzles** (`src/dailyPuzzles.ts`, no pivot shared with the campaign). The
+   Daily now walks a fixed shuffled tour of that pool (no repeat within a
+   66-day cycle, same puzzle for everyone, campaign never spoiled) and no
+   longer writes campaign stars/best times. Endless draws from campaign +
+   daily pool combined (~128 boards). `npm run validate`/`audit` cover the new
+   pool; a headless daily-flow check passes.
 5. ✅ **Rewarded hint refill** — an empty bank now swaps the hint pill (both
    in-board and in the finale) for a stamp-red "🎬 refill (+3)" button backed by
    requestRewarded (instant in standalone play, an ad on the platform).
@@ -47,19 +51,33 @@ impact on the platform:
    session-length metric CrazyGames ranks by.
 7. **Leaderboard on the daily** via the CrazyGames user/data SDK (their
    platform accounts remove the need for our own backend).
-8. **Submission assets** — cover art (16:9 + square), 3–5 screenshots in the
-   new theme, short gameplay clip; regenerate og-image to match the retheme.
-9. **Global-English copy pass** — shorten idioms ("Worse Than Bite",
-   "hypercasual" phrasing) for the huge non-native-speaker share of the
-   audience.
+8. ◐ **Submission assets** — og-image + PWA icons regenerated in the Puzzle
+   Press theme (`scripts/gen-assets.mjs` rewritten; shared headless-Chrome
+   launcher in `scripts/browser.mjs`). New `scripts/gen-submission.mjs`
+   renders cover art (1920×1080 + 1080×1080) and captures 5 real gameplay
+   screenshots (home, map, mid-game, finale, portrait) into
+   `assets/submission/`. Remaining: the short gameplay **clip** needs a manual
+   screen recording.
+9. ✅ **Global-English copy pass** — retitled the idiom-only levels ("Worse
+   Than Bite"→"Bark and Bite", "Deck the Halls"→"Top Deck", "Off the
+   Bat"→"Swing the Bat", "Lose the Plot"→"Plot Twist", "Small Fry"→"Fry Day",
+   "Clean Sheet"→"A Blank Sheet", "Bolt Upright"→"Bolt Away", "Pound for
+   Pound"→"One Pound", emoji boss →"The Lightning Bolt"); plain-English
+   chapter names/flavor ("Deep Cuts"→"Rare Words", "The Gauntlet"→"The Final
+   Test"); de-idiomed coach/end-card strings ("Phew—just made it", "Go get
+   'em", "trust your gut"). Titles that teach their idiom via a category
+   (e.g. "Bank On It") were kept as wordplay payoff. The daily pool was
+   written to the plain-English house style from the start.
 10. **Save-data resilience in iframes** — localStorage can be partitioned or
     blocked in embeds; mirror progress through the CrazyGames data module when
     present.
 11. ✅ **Tab-blur pause** — visibilitychange now suspends the AudioContext and
     calls gameplayStop(); on return it resumes audio and re-opens the gameplay
     session if a level is active.
-12. **First-5-levels curve** — the opening levels are near-identical difficulty;
-    tighten so level 5 already feels like a step up.
+12. ✅ **First-5-levels curve** — the opening chapter is now hand-ordered as a
+    real ramp instead of the flat heuristic: STAR tutorial → trunk (all
+    concrete nouns) → ring (one verb group) → bug (mixed) → bank (mostly
+    abstract verb groups) → the scramble boss. Level 5 is a felt step up.
 13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set
     (tile tap, group pop, win sting) would lift perceived quality a lot.
 14. **Interstitial pacing guard** — never show one within 60s of the last, per

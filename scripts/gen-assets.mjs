@@ -1,38 +1,55 @@
-// One-off generator for the social/share image and PWA icons. Renders branded
-// HTML with headless Chrome and writes PNGs into public/ (which Vite copies to
-// docs/ on build). Run once with: node scripts/gen-assets.mjs
-import puppeteer from "puppeteer";
+// Generator for the social/share image and PWA icons, in the "Puzzle Press"
+// identity (cream paper, ink type, stamp-red accents — matching src/index.css).
+// Renders branded HTML with headless Chrome and writes PNGs into public/
+// (which Vite copies to docs/ on build). Run with: node scripts/gen-assets.mjs
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { launchBrowser } from "./browser.mjs";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
-const BG = "radial-gradient(60% 60% at 18% 12%,rgba(99,102,241,.5),transparent 60%),radial-gradient(55% 55% at 85% 25%,rgba(236,72,153,.45),transparent 60%),radial-gradient(60% 60% at 50% 100%,rgba(34,211,238,.35),transparent 60%),linear-gradient(160deg,#0b0a1f,#140f2e 55%,#0b0a1f)";
+// Theme tokens, kept in sync with src/index.css.
+const T = {
+  paper: "#faf5ea",
+  cream: "#efe7d3",
+  ink: "#26221a",
+  inkSoft: "#6f6757",
+  press: "#d9482b",
+  gold: "#eda820",
+  serif: "Georgia,'Times New Roman',serif",
+  sans: "system-ui,-apple-system,sans-serif",
+};
+
+// The faintest paper vignette, same recipe as the app's backdrop.
+const PAPER_BG = `radial-gradient(90% 70% at 50% 0%,rgba(217,72,43,.05),transparent 60%),radial-gradient(100% 80% at 50% 110%,rgba(38,34,26,.07),transparent 55%),${T.paper}`;
 
 const logo = (size) =>
-  `<div style="width:${size}px;height:${size}px;border-radius:${size * 0.26}px;display:grid;place-items:center;background:linear-gradient(135deg,#818cf8,#e879f9);box-shadow:0 ${size * 0.06}px ${size * 0.18}px rgba(217,70,239,.45);color:#fff;font-size:${size * 0.5}px;line-height:1;">◆</div>`;
+  `<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.24)}px;display:grid;place-items:center;background:${T.press};box-shadow:${Math.round(size * 0.05)}px ${Math.round(size * 0.05)}px 0 rgba(38,34,26,.85);color:${T.paper};font-size:${Math.round(size * 0.5)}px;line-height:1;">◆</div>`;
 
-const tile = (t) =>
-  `<div style="padding:14px 20px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-weight:800;letter-spacing:.06em;color:#eef;font-size:30px;">${t}</div>`;
+const tile = (t, fs = 30) =>
+  `<div style="padding:${fs * 0.45}px ${fs * 0.7}px;border-radius:${fs * 0.55}px;background:#fff;border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.25);font-weight:800;letter-spacing:.06em;color:${T.ink};font-size:${fs}px;font-family:${T.sans};">${t}</div>`;
+
+const secretTile = (fs = 30) =>
+  `<div style="padding:${fs * 0.45}px ${fs * 0.75}px;border-radius:${fs * 0.55}px;background:${T.press};border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.45);font-weight:800;font-size:${fs}px;color:${T.paper};font-family:${T.sans};">◆ ? ? ?</div>`;
 
 const ogHtml = `<!doctype html><html><body style="margin:0">
-<div style="width:1200px;height:630px;background:${BG};color:#fff;font-family:Georgia,'Times New Roman',serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;">
-  ${logo(120)}
-  <div style="font-size:104px;font-weight:700;letter-spacing:-.02em;">WordGrid</div>
-  <div style="font-family:system-ui,sans-serif;font-size:34px;color:#c7d2fe;max-width:840px;text-align:center;line-height:1.35;">Four hidden groups. One <b style="color:#fff">secret word</b> links them all. Can you find it?</div>
-  <div style="display:flex;gap:16px;margin-top:14px;font-family:system-ui,sans-serif;">
+<div style="width:1200px;height:630px;background:${PAPER_BG};color:${T.ink};font-family:${T.serif};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+  ${logo(110)}
+  <div style="font-size:100px;font-weight:700;letter-spacing:-.02em;">WordGrid</div>
+  <div style="font-family:${T.sans};font-size:33px;color:${T.inkSoft};max-width:840px;text-align:center;line-height:1.35;">Four hidden groups. One <b style="color:${T.press}">secret word</b> links them all. Can you find it?</div>
+  <div style="display:flex;gap:16px;margin-top:12px;align-items:center;">
     ${tile("ICON")}${tile("MOON")}
-    <div style="padding:14px 22px;border-radius:16px;background:linear-gradient(110deg,rgba(129,140,248,.4),rgba(232,121,249,.4));border:1px solid rgba(240,171,252,.7);font-weight:800;font-size:30px;color:#fff;">◆ ? ? ?</div>
+    ${secretTile()}
     ${tile("JELLY")}${tile("HEART")}
   </div>
 </div></body></html>`;
 
 const iconHtml = (size) => `<!doctype html><html><body style="margin:0">
-<div style="width:${size}px;height:${size}px;display:grid;place-items:center;background:${BG};">
+<div style="width:${size}px;height:${size}px;display:grid;place-items:center;background:${PAPER_BG};">
   ${logo(size * 0.62)}
 </div></body></html>`;
 
-const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
+const browser = await launchBrowser();
 const page = await browser.newPage();
 
 async function render(html, w, h, out) {

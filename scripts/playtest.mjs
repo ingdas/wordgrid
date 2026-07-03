@@ -5,7 +5,7 @@
 //   npm run build && npm run preview        # serve on :4173
 //   npm i -D puppeteer                       # one-time (kept out of deps)
 //   BASE=http://localhost:4173/ node scripts/playtest.mjs
-import puppeteer from "puppeteer";
+import { launchBrowser } from "./browser.mjs";
 
 const SHOT = process.env.SHOT || ".";
 const BASE = process.env.BASE || "http://localhost:4173/";
@@ -22,7 +22,7 @@ const GROUPS = [
   ["HEART", "ARROW", "CROSS"],
 ];
 
-const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+const b = await launchBrowser();
 const p = await b.newPage();
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 2 });
 const errors = [];

@@ -4,9 +4,10 @@
 //   2. very short words (<= 3 letters), which tend to carry many senses.
 // Run with:  npm run audit
 import { PUZZLES } from "../src/puzzles.ts";
+import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 const owners = new Map<string, string[]>();
-for (const p of PUZZLES) {
+for (const p of [...PUZZLES, ...DAILY_PUZZLES]) {
   for (const c of p.categories) {
     for (const w of c.words) {
       const list = owners.get(w) ?? [];

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, bossTwist } from "./puzzles";
+import { LEVELS, bossTwist, type RawPuzzle } from "./puzzles";
+import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
   saveProgress,
   totalStars,
   clearedCount,
   recordDaily,
-  dailyIndex,
+  dailyPuzzle,
   pushHistory,
   playerRank,
   MAX_STARS,
@@ -73,6 +74,9 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
+  // Today's puzzle from the dedicated daily pool, captured when Play is hit so
+  // a session that crosses midnight finishes the puzzle it started.
+  const [dailyRaw, setDailyRaw] = useState<RawPuzzle | null>(null);
   const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string; header?: string } | null>(null);
 
   useEffect(() => {
@@ -183,7 +187,7 @@ export default function App() {
     initAudio();
     startMusic();
     setPlayingDaily(true);
-    setLevelIndex(dailyIndex());
+    setDailyRaw(dailyPuzzle());
     setScreen("game");
     gameplayStart();
   }, []);
@@ -192,21 +196,25 @@ export default function App() {
     (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => {
       happytime();
       setProgress((prev) => {
-        const lvl = LEVELS[levelIndex];
-        const id = lvl.id;
-        const bestStars = Math.max(prev.stars[id] ?? 0, result.stars);
+        // The daily plays from its own pool: it feeds streaks/score/history but
+        // never writes campaign stars or best times (its ids aren't levels).
+        const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
         const streak = prev.streak + 1;
         const prevBestTime = prev.best[id];
         let next: Progress = {
           ...prev,
-          stars: { ...prev.stars, [id]: bestStars },
+          stars: playingDaily
+            ? prev.stars
+            : { ...prev.stars, [id]: Math.max(prev.stars[id] ?? 0, result.stars) },
           streak,
           bestStreak: Math.max(prev.bestStreak, streak),
           linksGuessed: prev.linksGuessed + (result.linkCorrect ? 1 : 0),
-          best: {
-            ...prev.best,
-            [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
-          },
+          best: playingDaily
+            ? prev.best
+            : {
+                ...prev.best,
+                [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
+              },
           hints: prev.hints + 1, // earn a hint for clearing a level
           score: prev.score + result.score, // lifetime points
         };
@@ -236,7 +244,7 @@ export default function App() {
         next = pushHistory(next, {
           at: Date.now(),
           id,
-          level: levelIndex + 1,
+          level: playingDaily ? 0 : levelIndex + 1,
           title: result.title,
           won: true,
           stars: result.stars,
@@ -249,7 +257,7 @@ export default function App() {
         return next;
       });
     },
-    [levelIndex, playingDaily]
+    [levelIndex, playingDaily, dailyRaw]
   );
 
   const useHintToken = useCallback(() => {
@@ -276,12 +284,11 @@ export default function App() {
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
       setProgress((prev) => {
-        const lvl = LEVELS[levelIndex];
         let next = { ...prev, streak: 0 };
         next = pushHistory(next, {
           at: Date.now(),
-          id: lvl.id,
-          level: levelIndex + 1,
+          id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
+          level: playingDaily ? 0 : levelIndex + 1,
           title: result.title,
           won: false,
           stars: 0,
@@ -294,7 +301,7 @@ export default function App() {
         return next;
       });
     },
-    [levelIndex, playingDaily]
+    [levelIndex, playingDaily, dailyRaw]
   );
 
   const nextLevel = useCallback(() => {
@@ -314,6 +321,9 @@ export default function App() {
   }, []);
 
   // --- Endless / Zen mode ------------------------------------------------
+  // Endless draws from the campaign AND the daily pool, so it's roughly twice
+  // as deep as the level map and keeps serving fresh boards for a long run.
+  const ENDLESS_POOL = useRef<RawPuzzle[]>([...LEVELS, ...DAILY_PUZZLES]).current;
   const [endless, setEndless] = useState(false);
   const endlessQueue = useRef<number[]>([]);
   const [endlessPos, setEndlessPos] = useState(0);
@@ -321,7 +331,7 @@ export default function App() {
   const [endlessScore, setEndlessScore] = useState(0);
 
   const shuffleQueue = () => {
-    const q = [...Array(LEVELS.length).keys()];
+    const q = [...Array(ENDLESS_POOL.length).keys()];
     for (let i = q.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [q[i], q[j]] = [q[j], q[i]];
@@ -338,7 +348,6 @@ export default function App() {
     setEndlessScore(0);
     setPlayingDaily(false);
     setEndless(true);
-    setLevelIndex(endlessQueue.current[0]);
     setScreen("game");
     gameplayStart();
   }, []);
@@ -369,7 +378,6 @@ export default function App() {
         endlessQueue.current = shuffleQueue();
         np = 0;
       }
-      setLevelIndex(endlessQueue.current[np]);
       return np;
     });
     gameplayStart();
@@ -431,16 +439,23 @@ export default function App() {
         {screen === "game" && (
           <ScreenWrap key="game">
             <Game
-              key={endless ? `e${endlessPos}` : levelIndex}
+              key={endless ? `e${endlessPos}` : playingDaily ? `d-${dailyRaw?.id}` : levelIndex}
               puzzleIndex={levelIndex}
+              overrideRaw={
+                endless
+                  ? ENDLESS_POOL[endlessQueue.current[endlessPos] ?? 0]
+                  : playingDaily
+                    ? dailyRaw ?? undefined
+                    : undefined
+              }
               reduce={reduce}
               streak={progress.streak}
-              tutorial={!endless && tutorialPending && levelIndex === 0}
+              tutorial={!endless && !playingDaily && tutorialPending && levelIndex === 0}
               daily={playingDaily}
               endless={endless}
               endlessInfo={endless ? { solved: endlessSolved, score: endlessScore, best: progress.endlessBest } : undefined}
               twist={endless || playingDaily ? null : bossTwist(levelIndex)}
-              bestMs={endless ? undefined : progress.best[LEVELS[levelIndex].id]}
+              bestMs={endless || playingDaily ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               onUseHint={useHintToken}
               onRefillHints={refillHints}

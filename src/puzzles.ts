@@ -72,7 +72,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bolt",
-    title: "Bolt Upright",
+    title: "Bolt Away",
     pivot: "BOLT",
     categories: [
       { name: "Hardware bits", words: ["SCREW", "NUT", "WASHER"] },
@@ -138,7 +138,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bark",
-    title: "Worse Than Bite",
+    title: "Bark and Bite",
     pivot: "BARK",
     categories: [
       { name: "Dog sounds", words: ["WOOF", "GROWL", "YAP"] },
@@ -204,7 +204,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "sheet",
-    title: "Clean Sheet",
+    title: "A Blank Sheet",
     pivot: "SHEET",
     categories: [
       { name: "Bedding", words: ["PILLOW", "DUVET", "QUILT"] },
@@ -259,7 +259,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "pound",
-    title: "Pound for Pound",
+    title: "One Pound",
     pivot: "POUND",
     categories: [
       { name: "Units of weight", words: ["OUNCE", "GRAM", "TON"] },
@@ -347,7 +347,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "plot",
-    title: "Lose the Plot",
+    title: "Plot Twist",
     pivot: "PLOT",
     categories: [
       { name: "Story elements", words: ["THEME", "CHARACTER", "TWIST"] },
@@ -402,7 +402,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "bat",
-    title: "Off the Bat",
+    title: "Swing the Bat",
     pivot: "BAT",
     categories: [
       { name: "Creatures of the night", words: ["OWL", "MOTH", "RACCOON"] },
@@ -413,7 +413,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "deck",
-    title: "Deck the Halls",
+    title: "Top Deck",
     pivot: "DECK",
     categories: [
       { name: "Parts of a ship", words: ["HULL", "MAST", "BOW"] },
@@ -490,7 +490,7 @@ export const PUZZLES: RawPuzzle[] = [
   },
   {
     id: "fry",
-    title: "Small Fry",
+    title: "Fry Day",
     pivot: "FRY",
     categories: [
       { name: "Cooking methods", words: ["GRILL", "ROAST", "SAUTE"] },
@@ -717,7 +717,7 @@ export const PUZZLES: RawPuzzle[] = [
 
 export const EMOJI_BOSS: RawPuzzle = {
   id: "emoji-bolt",
-  title: "Bolt from the Blue",
+  title: "The Lightning Bolt",
   pivot: "BOLT",
   categories: [
     { name: "Quick on their feet", words: ["SPRINTER", "CHEETAH", "HORSE"] },
@@ -757,7 +757,7 @@ export interface Puzzle {
 }
 
 // A deterministic shuffle so a given puzzle id + seed always lays out the same.
-function seededShuffle<T>(input: T[], seed: number): T[] {
+export function seededShuffle<T>(input: T[], seed: number): T[] {
   const arr = [...input];
   let s = seed % 2147483647;
   if (s <= 0) s += 2147483646;
@@ -817,11 +817,18 @@ function difficultyScore(raw: RawPuzzle): number {
   return avgLen + longCount * 0.6 + obscureCount * 1.6;
 }
 
-const orderedRaw = PUZZLES.slice().sort((a, b) => {
-  if (a.id === "star") return -1; // pin the tutorial level first
-  if (b.id === "star") return 1;
-  return difficultyScore(a) - difficultyScore(b);
-});
+// The heuristic alone made levels 1–5 feel identical, so the opening chapter is
+// hand-ordered as a real ramp: STAR tutorial → all-concrete nouns (trunk) →
+// one verb group (ring) → mixed concrete/abstract (bug) → mostly abstract verb
+// groups (bank) → the first boss. Level 5 should already feel like a step up.
+const OPENING = ["star", "trunk", "ring", "bug", "bank"];
+
+const orderedRaw = [
+  ...OPENING.map((id) => PUZZLES.find((p) => p.id === id)!),
+  ...PUZZLES.filter((p) => !OPENING.includes(p.id)).sort(
+    (a, b) => difficultyScore(a) - difficultyScore(b),
+  ),
+];
 
 export const LEVELS: Level[] = orderedRaw.map((raw, i) => ({
   ...raw,
@@ -843,14 +850,14 @@ export interface Chapter {
 }
 
 const CHAPTER_META = [
-  { name: "First Light", flavor: "Find your footing." },
-  { name: "Warming Up", flavor: "The links get sneakier." },
+  { name: "First Light", flavor: "Learn the basics." },
+  { name: "Warming Up", flavor: "The links get trickier." },
   { name: "Crossed Wires", flavor: "Words with double lives." },
   { name: "Double Meanings", flavor: "One word, many masks." },
   { name: "Twists & Turns", flavor: "Expect the unexpected." },
-  { name: "Deep Cuts", flavor: "For the seasoned solver." },
-  { name: "Mind Benders", flavor: "Only the sharp survive." },
-  { name: "The Gauntlet", flavor: "Everything you've learned." },
+  { name: "Rare Words", flavor: "For expert solvers." },
+  { name: "Mind Benders", flavor: "For the sharpest minds." },
+  { name: "The Final Test", flavor: "Everything you've learned." },
 ];
 
 // Front-loaded chapter sizes: the first chapter is short so a player meets a

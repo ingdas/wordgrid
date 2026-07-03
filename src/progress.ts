@@ -1,4 +1,5 @@
-import { LEVELS } from "./puzzles";
+import { LEVELS, seededShuffle, type RawPuzzle } from "./puzzles";
+import { DAILY_PUZZLES } from "./dailyPuzzles";
 
 // Meta-progression: per-level star ratings (best of), a win streak, and a few
 // lifetime stats. This is the "collect the stars / keep the streak alive" hook
@@ -176,11 +177,22 @@ export function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-/** A deterministic level index for a given day. */
-export function dailyIndex(key = todayKey()): number {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return h % LEVELS.length;
+// The day number in local time, so everyone gets a fresh daily at their own
+// midnight (same convention as todayKey).
+function dayNumber(key = todayKey()): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return Math.floor(new Date(y, m - 1, d).getTime() / 86_400_000);
+}
+
+// A fixed shuffled tour of the dedicated daily pool: every puzzle appears
+// exactly once per cycle, so the daily never repeats a puzzle within
+// DAILY_PUZZLES.length days — and never overlaps the campaign at all.
+const DAILY_ORDER = seededShuffle([...DAILY_PUZZLES.keys()], 20260702);
+
+/** The shared daily puzzle for a given day (same for every player). */
+export function dailyPuzzle(key = todayKey()): RawPuzzle {
+  const n = dayNumber(key) % DAILY_ORDER.length;
+  return DAILY_PUZZLES[DAILY_ORDER[(n + DAILY_ORDER.length) % DAILY_ORDER.length]];
 }
 
 export function dailyDoneToday(p: Progress, key = todayKey()): boolean {
