@@ -23,7 +23,8 @@ const POOL: RawPuzzle[] = [...LEVELS, ...DAILY_PUZZLES];
 
 const randomRaw = () => POOL[Math.floor(Math.random() * POOL.length)];
 
-type Phase = "matching" | "quad" | "spell" | "done";
+// matching → couple the 4 leftovers into their groups → spell the link → done.
+type Phase = "matching" | "coupling" | "spell" | "done";
 
 interface PairsProps {
   reduce: boolean;
@@ -51,6 +52,11 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
   const [phase, setPhase] = useState<Phase>("matching");
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<Map<string, number>>(new Map());
+  // Coupling phase: the leftover the player has picked up, plus a transient
+  // "just corrected" marker for the red flash, and a count of first-try hits.
+  const [selectedLeftover, setSelectedLeftover] = useState<string | null>(null);
+  const [wrongCouple, setWrongCouple] = useState<string | null>(null);
+  const [coupleHits, setCoupleHits] = useState(0);
   const [moves, setMoves] = useState(0);
   const [score, setScore] = useState(0);
   const [linkSpelled, setLinkSpelled] = useState(false);
@@ -79,6 +85,9 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
     setPhase("matching");
     setFlipped([]);
     setMatched(new Map());
+    setSelectedLeftover(null);
+    setWrongCouple(null);
+    setCoupleHits(0);
     setMoves(0);
     setScore(0);
     setLinkSpelled(false);
@@ -110,11 +119,10 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
             const next = new Map(prev);
             next.set(a, cat);
             next.set(b, cat);
-            // Four pairs down → the quad holds the secret link.
+            // Four pairs down → the 4 leftovers (one per theme) flip face up and
+            // the player must couple each into its group (the coupling phase).
             if (next.size === 8) {
-              setPhase("quad");
-              setTimeout(() => playStar(1), 500);
-              setTimeout(() => setPhase("spell"), 1600);
+              setTimeout(() => { playStar(1); setPhase("coupling"); }, 450);
             }
             return next;
           });
@@ -125,6 +133,60 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       }, hit ? 500 : 950);
     },
     [phase, order, matched, flipped, catOf, puzzle]
+  );
+
+  // Coupling: tap a leftover to pick it up, then tap any card from the group
+  // you think it joins. A right guess slots it in; a wrong one flashes red and
+  // is corrected to its true group (no-fail — the board always completes).
+  const coupleCard = useCallback(
+    (index: number) => {
+      if (phase !== "coupling") return;
+      const word = order[index];
+      const placedCat = matched.get(word);
+      if (placedCat == null) {
+        // an unplaced leftover → pick it up (or drop it if tapped again)
+        playSelect();
+        setSelectedLeftover((s) => (s === word ? null : word));
+        return;
+      }
+      // a placed card → couple the held leftover to this card's group
+      if (selectedLeftover == null) return;
+      const leftover = selectedLeftover;
+      const trueCat = catOf.get(leftover)!;
+      const correct = placedCat === trueCat;
+      setSelectedLeftover(null);
+      setMoves((m) => m + 1);
+      if (correct) {
+        playCorrect(trueCat);
+        setToast(`✓ ${puzzle.categories[trueCat].name}`);
+        setScore((s) => s + 100);
+        setCoupleHits((h) => h + 1);
+      } else {
+        playWrong();
+        setToast(`✕ It belongs to “${puzzle.categories[trueCat].name}”.`);
+        setWrongCouple(leftover);
+        setTimeout(() => setWrongCouple(null), 700);
+      }
+      // Place it in its TRUE group either way, so the board always completes.
+      setMatched((prev) => {
+        const next = new Map(prev);
+        next.set(leftover, trueCat);
+        if (next.size === 12) {
+          setTimeout(() => { playStar(2); setPhase("spell"); }, correct ? 500 : 850);
+        }
+        return next;
+      });
+    },
+    [phase, order, matched, selectedLeftover, catOf, puzzle]
+  );
+
+  // A single tap dispatcher: flip during matching, couple during coupling.
+  const onCardTap = useCallback(
+    (index: number) => {
+      if (phase === "matching") flip(index);
+      else if (phase === "coupling") coupleCard(index);
+    },
+    [phase, flip, coupleCard]
   );
 
   // Report each cleared board up exactly once (score → lifetime XP, best moves).
@@ -175,8 +237,10 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       <p className="mt-3 text-center text-sm text-ink-soft">
         {phase === "matching"
           ? "Flip two cards — they match when they share a theme."
-          : phase === "quad"
-            ? "Four cards left — they all share one secret word!"
+          : phase === "coupling"
+            ? selectedLeftover
+              ? "Now tap a card from the group it joins."
+              : "Four left! Tap one, then tap a card from its group."
             : phase === "spell"
               ? "Spell the word that links the last four."
               : ""}
@@ -186,16 +250,19 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {order.map((word, i) => {
             const cat = matched.get(word);
-            const isQuad = phase !== "matching" && cat == null;
+            const isLeftover = phase === "coupling" && cat == null;
+            const tappable = phase === "matching" ? cat == null : phase === "coupling";
             return (
               <PairCard
                 key={word}
                 word={word}
-                faceUp={flipped.includes(i) || cat != null || isQuad}
+                faceUp={flipped.includes(i) || cat != null || isLeftover}
                 matchedTheme={cat != null ? CATEGORY_THEMES[cat % CATEGORY_THEMES.length] : undefined}
-                quad={isQuad}
-                disabled={phase !== "matching"}
-                onClick={() => flip(i)}
+                leftover={isLeftover}
+                selected={selectedLeftover === word}
+                wrong={wrongCouple === word}
+                disabled={!tappable}
+                onClick={() => onCardTap(i)}
               />
             );
           })}
@@ -226,6 +293,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold">
                 <span className="rounded-full bg-cream px-3 py-1 text-ink">{moves} moves</span>
+                <span className="rounded-full bg-cream px-3 py-1 text-ink">🔗 {coupleHits}/4 coupled</span>
                 <span className="rounded-full bg-gold/15 px-3 py-1 font-extrabold text-gold-deep">
                   ✦ {score.toLocaleString()}
                 </span>
@@ -283,23 +351,36 @@ function PairCard({
   word,
   faceUp,
   matchedTheme,
-  quad,
+  leftover,
+  selected,
+  wrong,
   disabled,
   onClick,
 }: {
   word: string;
   faceUp: boolean;
   matchedTheme?: (typeof CATEGORY_THEMES)[number];
-  quad: boolean;
+  leftover: boolean;
+  selected: boolean;
+  wrong: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
   const sizeClass =
     word.length >= 10 ? "text-[0.6rem]" : word.length >= 8 ? "text-[0.7rem]" : word.length >= 7 ? "text-xs" : "text-sm";
+  // A face-up card is still tappable during coupling (as a couple target or to
+  // pick up a leftover), so tappability is driven purely by `disabled`.
+  const face = matchedTheme
+    ? `border-transparent bg-gradient-to-r ${matchedTheme.grad}`
+    : selected
+      ? "border-ink bg-cream text-ink ring-2 ring-ink"
+      : leftover
+        ? "border-dashed border-press bg-white text-ink"
+        : "border-ink bg-white text-ink";
   return (
     <button
       onClick={onClick}
-      disabled={disabled || faceUp}
+      disabled={disabled}
       // Never leak the word while face down (screen readers included).
       aria-label={faceUp ? word : "Face-down card"}
       className="aspect-[1.55/1] select-none disabled:cursor-default"
@@ -318,14 +399,12 @@ function PairCard({
         >
           <span aria-hidden>◆</span>
         </div>
-        {/* Front: the word — inked in its theme colour once matched */}
-        <div
-          className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${
-            matchedTheme
-              ? `border-transparent bg-gradient-to-r ${matchedTheme.grad}`
-              : quad
-                ? "border-press bg-white text-ink ring-2 ring-press/50"
-                : "border-ink bg-white text-ink"
+        {/* Front: the word — inked in its theme colour once matched/coupled */}
+        <motion.div
+          animate={wrong ? { x: [0, -6, 6, -4, 4, 0] } : {}}
+          transition={{ duration: 0.4 }}
+          className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${face} ${
+            wrong ? "ring-2 ring-press" : ""
           }`}
           style={{
             backfaceVisibility: "hidden",
@@ -342,7 +421,7 @@ function PairCard({
             )}
             {word}
           </span>
-        </div>
+        </motion.div>
       </motion.div>
     </button>
   );

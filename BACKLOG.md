@@ -68,12 +68,14 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   no-fail, endlessBest), Pairs routing (handlePairsFinish → score+pairsBest),
   settings modal (sound/music/calm/reset), stats/history modals,
   visibilitychange pause, rewarded refillHints (+3).
-- `Pairs.tsx` — 🃏 memory mode on the same boards: 12 face-down cards, flip
-  two, they match when they share a theme (match reveals the theme in its
-  colour). After 4 pairs the remaining quad (one card per category) shares the
-  secret link → tap-to-spell finale (+300). No timer/fail; fewest moves =
-  pairsBest; cleared boards feed lifetime score. Face-down cards never leak
-  their word (aria-label "Face-down card").
+- `Pairs.tsx` — 🃏 memory mode on the same boards. Phases: **matching** (12
+  face-down cards, flip two, they match when they share a theme) → **coupling**
+  (the 4 leftovers — one per category — flip face up unplaced; the player picks
+  one up and taps a card from the group it joins; right slots it in, wrong
+  flashes red and is corrected to its true group, no-fail) → **spell** the link
+  (tap-to-spell, +300) → done. Each pair/couple is +100; end card shows
+  `coupleHits/4`. Fewest moves = pairsBest; cleared boards feed lifetime score.
+  Face-down cards never leak their word (aria-label "Face-down card").
 - `StartScreen.tsx` — Daily hero card (7-day streak strip, countdown,
   Solve CTA), full-width Continue·L{n}, Endless + Pairs row (with bests),
   rank/XP bar (playerRank).
