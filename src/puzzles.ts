@@ -708,6 +708,17 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "To graze lightly", words: ["GRAZE", "SKIM", "GLANCE"] },
     ],
   },
+  {
+    id: "crane",
+    title: "Crane Your Neck",
+    pivot: "CRANE",
+    categories: [
+      { name: "Long-legged birds", words: ["HERON", "STORK", "FLAMINGO"] },
+      { name: "Construction machines", words: ["FORKLIFT", "EXCAVATOR", "BULLDOZER"] },
+      { name: "To stretch out", words: ["STRETCH", "EXTEND", "REACH"] },
+      { name: "Folded from paper", words: ["BOAT", "FROG", "FAN"] },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------

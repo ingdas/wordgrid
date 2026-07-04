@@ -144,16 +144,16 @@ if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`)
 log("link-guess acknowledged:", /guessed it/i.test(winText));
 await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
-// 8. Back to map: 62 nodes, window extends after a clear, stars banked (62*3 = 186)
+// 8. Back to map: 63 nodes, window extends after a clear, stars banked (63*3 = 189)
 await clickText("button", "Levels");
 await sleep(500);
 const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
 log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
-if (nodes.length !== 62) note(`Expected 62 level nodes, found ${nodes.length}.`);
+if (nodes.length !== 63) note(`Expected 63 level nodes, found ${nodes.length}.`);
 if (nodes[0]) note("Level 1 should be unlocked after clearing it.");
 if (nodes[3]) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
 if (!nodes[4]) note("Level 5 should still be locked after clearing only level 1.");
-if (!/⭐\s*3\/186/.test(await bodyText())) note("Star total not updated to 3/186.");
+if (!/⭐\s*3\/189/.test(await bodyText())) note("Star total not updated to 3/189.");
 await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
 
 // 9. Play history records the finished game
