@@ -84,6 +84,9 @@ function DeductionBoard({
     return cat.map((_, i) => neighbors[i].reduce((n, j) => n + (cat[j] === cat[i] ? 1 : 0), 0));
   }, [level, neighbors]);
 
+  // Only these tiles reveal their number; the rest are blank (the difficulty).
+  const givenSet = useMemo(() => new Set(level.given), [level]);
+
   const [colors, setColors] = useState<number[]>(() => new Array(N).fill(-1));
   const [brush, setBrush] = useState(0); // 0-3 theme, -1 eraser
   const [solved, setSolved] = useState(false);
@@ -201,9 +204,15 @@ function DeductionBoard({
         >
           ‹
         </button>
-        <span className="min-w-[6.5rem] text-center text-sm font-bold text-ink">
+        <span className="flex min-w-[6.5rem] items-center justify-center gap-1.5 text-center text-sm font-bold text-ink">
           Puzzle {index + 1} / {total}
-          {alreadySolved && <span className="ml-1 text-leaf">✓</span>}
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[0.6rem] font-extrabold uppercase"
+            style={{ background: `${TIER_COLOR[level.tier]}22`, color: TIER_COLOR[level.tier] }}
+          >
+            {TIER_NAME[level.tier]}
+          </span>
+          {alreadySolved && <span className="text-leaf">✓</span>}
         </span>
         <button
           onClick={() => onPick((index + 1) % total)}
@@ -215,8 +224,9 @@ function DeductionBoard({
       </div>
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
-        Four hidden groups of 3, each a connected patch. A tile's number is how many
-        of its neighbours share its group. Colour every tile.
+        Four hidden groups of 3, each a connected patch. A number is how many of that
+        tile's neighbours share its group — but most tiles are blank. Deduce and
+        colour all 12.
       </p>
 
       <main className="relative mt-4">
@@ -230,7 +240,7 @@ function DeductionBoard({
           {colors.map((col, i) => (
             <GridTile
               key={i}
-              clue={clue[i]}
+              clue={givenSet.has(i) ? clue[i] : undefined}
               theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
               word={solved ? level.cells[i].word : undefined}
               solvedCat={solved ? level.cells[i].cat : undefined}
@@ -339,6 +349,9 @@ function DeductionBoard({
   );
 }
 
+const TIER_NAME: Record<number, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
+const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9482b" };
+
 function GridTile({
   clue,
   theme,
@@ -346,7 +359,7 @@ function GridTile({
   solvedCat,
   onClick,
 }: {
-  clue: number;
+  clue?: number; // undefined = a blank tile (no clue shown)
   theme?: (typeof CATEGORY_THEMES)[number];
   word?: string;
   solvedCat?: number;
@@ -354,11 +367,12 @@ function GridTile({
 }) {
   const revealTheme = solvedCat != null ? CATEGORY_THEMES[solvedCat] : theme;
   const sizeClass = word && word.length >= 8 ? "text-[0.6rem]" : word && word.length >= 6 ? "text-[0.7rem]" : "text-sm";
+  const label = word ?? `Tile, ${clue != null ? `clue ${clue}` : "no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
   return (
     <button
       onClick={onClick}
       disabled={word != null}
-      aria-label={word ?? `Tile, clue ${clue}${theme ? `, ${theme.shape}` : ", uncoloured"}`}
+      aria-label={label}
       className={`relative grid aspect-square place-items-center overflow-hidden rounded-2xl border-2 font-extrabold uppercase leading-none transition-colors ${
         revealTheme ? "border-transparent" : "border-ink bg-white text-ink"
       }`}
@@ -371,14 +385,19 @@ function GridTile({
               {word}
             </span>
           ) : (
-            <span className="text-lg" style={{ color: revealTheme.ink }}>
-              <span aria-hidden className="mr-0.5 text-xs opacity-70">{revealTheme.shape}</span>
-              {clue}
+            <span className="flex items-center text-lg" style={{ color: revealTheme.ink }}>
+              <span aria-hidden className={clue != null ? "mr-0.5 text-xs opacity-70" : "text-base opacity-90"}>
+                {revealTheme.shape}
+              </span>
+              {clue != null && clue}
             </span>
           )}
         </div>
-      ) : (
+      ) : clue != null ? (
         <span className="text-xl text-ink">{clue}</span>
+      ) : (
+        // Blank tile — a faint dot signals "still to colour" without giving a clue.
+        <span aria-hidden className="text-lg text-ink/20">·</span>
       )}
     </button>
   );
