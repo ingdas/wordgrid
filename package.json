@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "validate": "node --experimental-strip-types scripts/validate.mts",
     "audit": "node --experimental-strip-types scripts/audit.mts",
+    "gen:deduction": "node scripts/gen-deduction.mjs",
     "test": "node --experimental-strip-types scripts/engine.test.mts"
   },
   "dependencies": {

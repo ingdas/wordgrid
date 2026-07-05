@@ -36,8 +36,9 @@ import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
 import Pairs from "./Pairs";
+import Deduction from "./Deduction";
 
-type Screen = "home" | "levels" | "game" | "pairs";
+type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
 
 const noop = () => {};
 
@@ -398,6 +399,41 @@ export default function App() {
     setScreen("home");
   }, []);
 
+  // --- Deduction Grid mode -------------------------------------------------
+  const playDeduction = useCallback(() => {
+    initAudio();
+    startMusic();
+    setPlayingDaily(false);
+    setScreen("deduction");
+    gameplayStart();
+  }, []);
+
+  const exitDeduction = useCallback(() => {
+    gameplayStop();
+    setScreen("home");
+  }, []);
+
+  const handleDeductionSolve = useCallback((id: string) => {
+    happytime();
+    setProgress((prev) => {
+      if (prev.deductionSolved.includes(id)) return prev;
+      const next = {
+        ...prev,
+        deductionSolved: [...prev.deductionSolved, id],
+        score: prev.score + 500, // a solved logic grid is worth a chunk of XP
+      };
+      const afterRank = playerRank(next.score);
+      if (afterRank.level > playerRank(prev.score).level) {
+        setTimeout(
+          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
+          2100
+        );
+      }
+      saveProgress(next);
+      return next;
+    });
+  }, []);
+
   // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
   const handlePairsFinish = useCallback((result: { moves: number; score: number }) => {
     happytime();
@@ -445,6 +481,7 @@ export default function App() {
               onDaily={playDaily}
               onEndless={playEndless}
               onPairs={playPairs}
+              onDeduction={playDeduction}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -480,6 +517,17 @@ export default function App() {
               best={progress.pairsBest}
               onFinish={handlePairsFinish}
               onExit={exitPairs}
+            />
+          </ScreenWrap>
+        )}
+
+        {screen === "deduction" && (
+          <ScreenWrap key="deduction">
+            <Deduction
+              reduce={reduce}
+              solvedIds={progress.deductionSolved}
+              onSolve={handleDeductionSolve}
+              onExit={exitDeduction}
             />
           </ScreenWrap>
         )}

@@ -25,6 +25,7 @@ export default function StartScreen({
   onDaily,
   onEndless,
   onPairs,
+  onDeduction,
   onHelp,
   onStats,
   onHistory,
@@ -39,6 +40,7 @@ export default function StartScreen({
   onDaily: () => void;
   onEndless: () => void;
   onPairs: () => void;
+  onDeduction: () => void;
   onHelp: () => void;
   onStats: () => void;
   onHistory: () => void;
@@ -195,20 +197,29 @@ export default function StartScreen({
         >
           {returning ? `Continue · L${nextLevel}` : t("btn.play")}
         </button>
-        <div className="grid w-full grid-cols-2 gap-3">
+        <div className="grid w-full grid-cols-3 gap-2">
           <button
             onClick={onEndless}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
           >
             🧘 Endless
             {progress.endlessBest > 0 && <span className="text-leaf">{progress.endlessBest}</span>}
           </button>
           <button
             onClick={onPairs}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
           >
             🃏 Pairs
             {progress.pairsBest > 0 && <span className="text-leaf">{progress.pairsBest}</span>}
+          </button>
+          <button
+            onClick={onDeduction}
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+          >
+            🧩 Logic
+            {progress.deductionSolved.length > 0 && (
+              <span className="text-leaf">{progress.deductionSolved.length}</span>
+            )}
           </button>
         </div>
 

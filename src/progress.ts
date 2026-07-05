@@ -18,6 +18,7 @@ export interface Progress {
   score: number; // lifetime points (groups + combos + links)
   endlessBest: number; // most puzzles cleared in one Endless run
   pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
+  deductionSolved: string[]; // ids of solved Deduction Grid levels
 }
 
 export const STARTING_HINTS = 3;
@@ -61,6 +62,7 @@ export function loadProgress(): Progress {
         score: p.score ?? 0,
         endlessBest: p.endlessBest ?? 0,
         pairsBest: p.pairsBest ?? 0,
+        deductionSolved: p.deductionSolved ?? [],
       };
     }
   } catch {
@@ -79,6 +81,7 @@ export function loadProgress(): Progress {
     score: 0,
     endlessBest: 0,
     pairsBest: 0,
+    deductionSolved: [],
   };
 }
 
