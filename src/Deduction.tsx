@@ -181,7 +181,7 @@ function DeductionBoard({
             <span aria-hidden>🧩</span> Logic Grid
           </div>
           <div className="mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-ink-soft">
-            Puzzle {index + 1} / {total}
+            {solvedIds.length}/{total} solved
           </div>
         </div>
         <button
@@ -192,19 +192,26 @@ function DeductionBoard({
         </button>
       </div>
 
-      {/* Level picker chips */}
-      <div className="mt-3 flex justify-center gap-2">
-        {DEDUCTION_LEVELS.map((l, i) => (
-          <button
-            key={l.id}
-            onClick={() => onPick(i)}
-            className={`grid h-8 w-8 place-items-center rounded-lg border-2 text-sm font-bold transition ${
-              i === index ? "border-ink bg-ink text-paper" : "border-ink/30 bg-white text-ink hover:bg-cream"
-            }`}
-          >
-            {solvedIds.includes(l.id) && i !== index ? "✓" : i + 1}
-          </button>
-        ))}
+      {/* Puzzle stepper (20 levels — a prev/next pager, not a chip wall) */}
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <button
+          onClick={() => onPick((index - 1 + total) % total)}
+          aria-label="Previous puzzle"
+          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
+        >
+          ‹
+        </button>
+        <span className="min-w-[6.5rem] text-center text-sm font-bold text-ink">
+          Puzzle {index + 1} / {total}
+          {alreadySolved && <span className="ml-1 text-leaf">✓</span>}
+        </span>
+        <button
+          onClick={() => onPick((index + 1) % total)}
+          aria-label="Next puzzle"
+          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
+        >
+          ›
+        </button>
       </div>
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
