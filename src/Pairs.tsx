@@ -53,10 +53,9 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<Map<string, number>>(new Map());
   // Coupling phase: the leftover the player has picked up, plus a transient
-  // "just corrected" marker for the red flash, and a count of first-try hits.
+  // "wrong group" marker for the red flash on a mis-couple.
   const [selectedLeftover, setSelectedLeftover] = useState<string | null>(null);
   const [wrongCouple, setWrongCouple] = useState<string | null>(null);
-  const [coupleHits, setCoupleHits] = useState(0);
   const [moves, setMoves] = useState(0);
   const [score, setScore] = useState(0);
   const [linkSpelled, setLinkSpelled] = useState(false);
@@ -87,7 +86,6 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
     setMatched(new Map());
     setSelectedLeftover(null);
     setWrongCouple(null);
-    setCoupleHits(0);
     setMoves(0);
     setScore(0);
     setLinkSpelled(false);
@@ -137,7 +135,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
 
   // Coupling: tap a leftover to pick it up, then tap any card from the group
   // you think it joins. A right guess slots it in; a wrong one flashes red and
-  // is corrected to its true group (no-fail — the board always completes).
+  // you keep the card in hand to try again (a wrong try still costs a move).
   const coupleCard = useCallback(
     (index: number) => {
       if (phase !== "coupling") return;
@@ -153,26 +151,24 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       if (selectedLeftover == null) return;
       const leftover = selectedLeftover;
       const trueCat = catOf.get(leftover)!;
-      const correct = placedCat === trueCat;
-      setSelectedLeftover(null);
       setMoves((m) => m + 1);
-      if (correct) {
-        playCorrect(trueCat);
-        setToast(`✓ ${puzzle.categories[trueCat].name}`);
-        setScore((s) => s + 100);
-        setCoupleHits((h) => h + 1);
-      } else {
+      if (placedCat !== trueCat) {
+        // Wrong group — flash red and keep it in hand for another try.
         playWrong();
-        setToast(`✕ It belongs to “${puzzle.categories[trueCat].name}”.`);
+        setToast("Not that group — try again.");
         setWrongCouple(leftover);
         setTimeout(() => setWrongCouple(null), 700);
+        return;
       }
-      // Place it in its TRUE group either way, so the board always completes.
+      playCorrect(trueCat);
+      setToast(`✓ ${puzzle.categories[trueCat].name}`);
+      setScore((s) => s + 100);
+      setSelectedLeftover(null);
       setMatched((prev) => {
         const next = new Map(prev);
         next.set(leftover, trueCat);
         if (next.size === 12) {
-          setTimeout(() => { playStar(2); setPhase("spell"); }, correct ? 500 : 850);
+          setTimeout(() => { playStar(2); setPhase("spell"); }, 500);
         }
         return next;
       });
@@ -293,7 +289,6 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold">
                 <span className="rounded-full bg-cream px-3 py-1 text-ink">{moves} moves</span>
-                <span className="rounded-full bg-cream px-3 py-1 text-ink">🔗 {coupleHits}/4 coupled</span>
                 <span className="rounded-full bg-gold/15 px-3 py-1 font-extrabold text-gold-deep">
                   ✦ {score.toLocaleString()}
                 </span>
@@ -370,13 +365,15 @@ function PairCard({
     word.length >= 10 ? "text-[0.6rem]" : word.length >= 8 ? "text-[0.7rem]" : word.length >= 7 ? "text-xs" : "text-sm";
   // A face-up card is still tappable during coupling (as a couple target or to
   // pick up a leftover), so tappability is driven purely by `disabled`.
-  const face = matchedTheme
-    ? `border-transparent bg-gradient-to-r ${matchedTheme.grad}`
-    : selected
-      ? "border-ink bg-cream text-ink ring-2 ring-ink"
-      : leftover
-        ? "border-dashed border-press bg-white text-ink"
-        : "border-ink bg-white text-ink";
+  const face = wrong
+    ? "border-press bg-press/10 text-ink ring-2 ring-press"
+    : matchedTheme
+      ? `border-transparent bg-gradient-to-r ${matchedTheme.grad}`
+      : selected
+        ? "border-ink bg-cream text-ink ring-2 ring-ink"
+        : leftover
+          ? "border-dashed border-press bg-white text-ink"
+          : "border-ink bg-white text-ink";
   return (
     <button
       onClick={onClick}
@@ -403,9 +400,7 @@ function PairCard({
         <motion.div
           animate={wrong ? { x: [0, -6, 6, -4, 4, 0] } : {}}
           transition={{ duration: 0.4 }}
-          className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${face} ${
-            wrong ? "ring-2 ring-press" : ""
-          }`}
+          className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${face}`}
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
