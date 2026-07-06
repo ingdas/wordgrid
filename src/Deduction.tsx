@@ -104,26 +104,45 @@ function DeductionBoard({
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Live status of every clue: "pending" until the tile and everything it
+  // talks about are painted, then ok/bad with the count actually found. This
+  // is the feedback backbone — each clue tile wears a ✓/✕ badge the moment it
+  // can be judged, so a wrong line of reasoning surfaces where it happened.
+  type ClueStatus = { state: "pending" | "ok" | "bad"; found: number };
+  const clueStatus = useMemo(() => {
+    const m = new Map<number, ClueStatus>();
+    for (const cl of level.clues) {
+      if (cl.kind === "deg") {
+        if (colors[cl.cell] < 0 || neighbors[cl.cell].some((j) => colors[j] < 0)) {
+          m.set(cl.cell, { state: "pending", found: 0 });
+          continue;
+        }
+        const found = neighbors[cl.cell].reduce((n, j) => n + (colors[j] === colors[cl.cell] ? 1 : 0), 0);
+        m.set(cl.cell, { state: found === cl.n ? "ok" : "bad", found });
+      } else {
+        const t = dirTarget(cl.cell, cl.dir);
+        if (colors[cl.cell] < 0 || colors[t] < 0) {
+          m.set(cl.cell, { state: "pending", found: 0 });
+          continue;
+        }
+        const same = colors[t] === colors[cl.cell];
+        m.set(cl.cell, { state: same === cl.same ? "ok" : "bad", found: same ? 1 : 0 });
+      }
+    }
+    return m;
+  }, [colors, level.clues, neighbors, dirTarget]);
+
   // Evaluate the current painting (label-agnostic): every tile painted, each
   // colour used exactly 3×, and every shown clue satisfied. The generator
   // guarantees exactly one partition satisfies the clues, so a full pass IS
   // the solution.
   const evalNow = useMemo(() => {
     const full = colors.every((c) => c >= 0);
-    const violated: number[] = [];
     let sizesOk = true;
-    if (full) {
-      for (let k = 0; k < 4; k++) if (colors.filter((c) => c === k).length !== 3) sizesOk = false;
-      for (const cl of level.clues) {
-        const ok =
-          cl.kind === "deg"
-            ? neighbors[cl.cell].reduce((n, j) => n + (colors[j] === colors[cl.cell] ? 1 : 0), 0) === cl.n
-            : (colors[dirTarget(cl.cell, cl.dir)] === colors[cl.cell]) === cl.same;
-        if (!ok) violated.push(cl.cell);
-      }
-    }
+    if (full) for (let k = 0; k < 4; k++) if (colors.filter((c) => c === k).length !== 3) sizesOk = false;
+    const violated = full ? level.clues.filter((cl) => clueStatus.get(cl.cell)?.state === "bad") : [];
     return { full, violated, sizesOk, solved: full && sizesOk && violated.length === 0 };
-  }, [colors, level.clues, neighbors, dirTarget]);
+  }, [colors, level.clues, clueStatus]);
 
   useEffect(() => {
     if (evalNow.solved && !solved) {
@@ -155,6 +174,7 @@ function DeductionBoard({
   }, [N]);
 
   // Nudge only once the board is full but wrong (never mid-solve → stays chill).
+  // The details live in the problem panel below the grid — the toast just points.
   const checkFull = useCallback(() => {
     if (!evalNow.full || evalNow.solved) return;
     playWrong();
@@ -162,7 +182,7 @@ function DeductionBoard({
     setToast(
       !evalNow.sizesOk
         ? "Each group needs exactly 3 tiles."
-        : `${evalNow.violated.length} clue${evalNow.violated.length === 1 ? " isn't" : "s aren't"} satisfied yet.`
+        : "Not solved yet — check the ✕ clues below."
     );
   }, [evalNow]);
 
@@ -246,11 +266,38 @@ function DeductionBoard({
               theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
               word={solved ? level.cells[i].word : undefined}
               solvedCat={solved ? level.cells[i].cat : undefined}
-              violated={evalNow.full && !evalNow.solved && evalNow.violated.includes(i)}
+              status={solved ? undefined : clueStatus.get(i)?.state}
               onClick={() => paint(i)}
             />
           ))}
         </motion.div>
+
+        {/* Why-it's-wrong panel: every violated clue explained in plain words. */}
+        <AnimatePresence>
+          {evalNow.full && !evalNow.solved && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="mx-auto mt-4 max-w-sm rounded-2xl border-2 border-press/50 bg-press/5 p-3"
+            >
+              {!evalNow.sizesOk ? (
+                <p className="text-sm font-semibold text-press">
+                  Each colour must be used on exactly 3 tiles.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {evalNow.violated.map((cl) => (
+                    <li key={cl.cell} className="flex gap-1.5 text-[0.8rem] font-semibold leading-snug text-press">
+                      <span aria-hidden>✕</span>
+                      <span>{violationText(cl, clueStatus.get(cl.cell)!.found, cols)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Brush palette */}
         {!solved && (
@@ -358,6 +405,16 @@ const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9
 const DIR_ARROW = { up: "↑", down: "↓", left: "←", right: "→" } as const;
 const DIR_WORD = { up: "above", down: "below", left: "left of", right: "right of" } as const;
 
+// Plain-words explanation of a violated clue, locating the tile by row/column.
+function violationText(cl: DeductionClue, found: number, cols: number): string {
+  const where = `Row ${Math.floor(cl.cell / cols) + 1}, column ${(cl.cell % cols) + 1}`;
+  if (cl.kind === "deg") {
+    const want = cl.n === 0 ? "no neighbours" : cl.n === 1 ? "exactly one neighbour" : "two neighbours";
+    return `${where} needs ${want} in its group — your colouring gives it ${found}.`;
+  }
+  return `${where} says the tile ${DIR_WORD[cl.dir]} it is ${cl.same ? "" : "not "}in its group — in your colouring it ${cl.same ? "isn't" : "is"}.`;
+}
+
 // The short text painted on a clue tile, and the full sentence for a11y.
 function clueText(cl: DeductionClue): { short: string; full: string } {
   if (cl.kind === "deg") {
@@ -380,32 +437,51 @@ function GridTile({
   theme,
   word,
   solvedCat,
-  violated,
+  status,
   onClick,
 }: {
   clue?: DeductionClue; // undefined = a blank tile (no clue shown)
   theme?: (typeof CATEGORY_THEMES)[number];
   word?: string;
   solvedCat?: number;
-  violated: boolean;
+  /** Live clue check: ok/bad once judgeable, pending (no badge) before that. */
+  status?: "pending" | "ok" | "bad";
   onClick: () => void;
 }) {
   const revealTheme = solvedCat != null ? CATEGORY_THEMES[solvedCat] : theme;
   const sizeClass = word && word.length >= 8 ? "text-[0.6rem]" : word && word.length >= 6 ? "text-[0.7rem]" : "text-sm";
   const text = clue ? clueText(clue) : null;
-  const label = word ?? `Tile${text ? `, clue: ${text.full}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
+  const statusWord = status === "ok" ? ", satisfied" : status === "bad" ? ", NOT satisfied" : "";
+  const label = word ?? `Tile${text ? `, clue: ${text.full}${statusWord}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
+  // NOTE: the red outline must live in the inline boxShadow — Tailwind's ring
+  // is also a box-shadow, and the inline style would silently override it.
+  const shadow =
+    status === "bad"
+      ? "0 0 0 3px rgba(217,72,43,0.95), 2px 2px 0 rgba(38,34,26,0.25)"
+      : "2px 2px 0 rgba(38,34,26,0.25)";
   return (
     <button
       onClick={onClick}
       disabled={word != null}
       aria-label={label}
-      className={`relative grid aspect-square place-items-center overflow-hidden rounded-2xl border-2 leading-none transition-colors ${
+      className={`relative grid aspect-square place-items-center rounded-2xl border-2 leading-none transition-colors ${
         revealTheme ? "border-transparent" : "border-ink bg-white text-ink"
-      } ${violated ? "ring-2 ring-press" : ""}`}
-      style={{ boxShadow: "2px 2px 0 rgba(38,34,26,0.25)" }}
+      }`}
+      style={{ boxShadow: shadow }}
     >
+      {/* Live ✓/✕ badge once the clue's neighbourhood is fully painted */}
+      {(status === "ok" || status === "bad") && (
+        <span
+          aria-hidden
+          className={`absolute -right-1 -top-1 z-10 grid h-4 w-4 place-items-center rounded-full text-[0.6rem] font-extrabold text-white ${
+            status === "ok" ? "bg-leaf" : "bg-press"
+          }`}
+        >
+          {status === "ok" ? "✓" : "✕"}
+        </span>
+      )}
       {revealTheme ? (
-        <div className={`absolute inset-0 grid place-items-center bg-gradient-to-br ${revealTheme.grad}`}>
+        <div className={`absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br ${revealTheme.grad}`}>
           {word ? (
             <span className={`px-1 text-center font-extrabold uppercase ${sizeClass}`} style={{ color: revealTheme.ink }}>
               {word}
