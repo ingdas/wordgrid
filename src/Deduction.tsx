@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DEDUCTION_LEVELS, type DeductionLevel } from "./deductionLevels";
+import { DEDUCTION_LEVELS, type DeductionClue, type DeductionLevel } from "./deductionLevels";
 import { CATEGORY_THEMES } from "./Game";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
@@ -8,12 +8,12 @@ import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio"
 // ---------------------------------------------------------------------------
 // Deduction Grid — a pure-logic mode on the same boards.
 //
-// The 12 words are hidden; each tile shows only a NUMBER = how many of its
-// orthogonal neighbours share its (hidden) theme. There are 4 themes of 3
-// tiles each, and every theme is a connected region. The clue grid has a
-// unique solution, so you can always reach it by reasoning — no guessing, no
-// vocabulary, no timer. Colour every tile into its group; solving flips the
-// tiles to reveal the words and the hidden link.
+// The 12 words are hidden, split into 4 hidden groups of 3 tiles. Groups can
+// be ANY shapes — they don't have to touch. Some tiles carry a plain-text
+// clue about their neighbours ("None of my neighbours are in my group", "The
+// tile below me is in my group"). Every level is solvable by pure reasoning
+// from the shown clues — no guessing, no vocabulary, no timer. Colour every
+// tile; solving flips the grid to reveal the words and the hidden link.
 // ---------------------------------------------------------------------------
 
 interface DeductionProps {
@@ -78,14 +78,19 @@ function DeductionBoard({
     return ns;
   }, [N, rows, cols]);
 
-  // The clue shown on each tile — same-theme neighbour count in the solution.
-  const clue = useMemo(() => {
-    const cat = level.cells.map((c) => c.cat);
-    return cat.map((_, i) => neighbors[i].reduce((n, j) => n + (cat[j] === cat[i] ? 1 : 0), 0));
-  }, [level, neighbors]);
+  // One clue max per tile; the rest are blank (that's the difficulty).
+  const clueOf = useMemo(() => {
+    const m = new Map<number, DeductionClue>();
+    for (const cl of level.clues) m.set(cl.cell, cl);
+    return m;
+  }, [level]);
 
-  // Only these tiles reveal their number; the rest are blank (the difficulty).
-  const givenSet = useMemo(() => new Set(level.given), [level]);
+  // Where a directional clue points, so we can evaluate it against a painting.
+  const dirTarget = useCallback(
+    (cell: number, dir: "up" | "down" | "left" | "right") =>
+      dir === "up" ? cell - cols : dir === "down" ? cell + cols : dir === "left" ? cell - 1 : cell + 1,
+    [cols]
+  );
 
   const [colors, setColors] = useState<number[]>(() => new Array(N).fill(-1));
   const [brush, setBrush] = useState(0); // 0-3 theme, -1 eraser
@@ -99,32 +104,26 @@ function DeductionBoard({
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Evaluate the current painting against the rules (label-agnostic): every
-  // tile painted, each colour used exactly 3× and connected, and every clue
-  // matched. The generator guarantees a unique solution, so a full match IS it.
+  // Evaluate the current painting (label-agnostic): every tile painted, each
+  // colour used exactly 3×, and every shown clue satisfied. The generator
+  // guarantees exactly one partition satisfies the clues, so a full pass IS
+  // the solution.
   const evalNow = useMemo(() => {
     const full = colors.every((c) => c >= 0);
-    let mismatches = 0;
-    let structureOk = true;
+    const violated: number[] = [];
+    let sizesOk = true;
     if (full) {
-      for (let i = 0; i < N; i++) {
-        const cnt = neighbors[i].reduce((n, j) => n + (colors[j] === colors[i] ? 1 : 0), 0);
-        if (cnt !== clue[i]) mismatches++;
-      }
-      for (let k = 0; k < 4; k++) {
-        const cells = [...Array(N).keys()].filter((i) => colors[i] === k);
-        if (cells.length !== 3) { structureOk = false; break; }
-        const seen = new Set([cells[0]]);
-        const st = [cells[0]];
-        while (st.length) {
-          const x = st.pop()!;
-          for (const nb of neighbors[x]) if (colors[nb] === k && !seen.has(nb)) { seen.add(nb); st.push(nb); }
-        }
-        if (seen.size !== 3) { structureOk = false; break; }
+      for (let k = 0; k < 4; k++) if (colors.filter((c) => c === k).length !== 3) sizesOk = false;
+      for (const cl of level.clues) {
+        const ok =
+          cl.kind === "deg"
+            ? neighbors[cl.cell].reduce((n, j) => n + (colors[j] === colors[cl.cell] ? 1 : 0), 0) === cl.n
+            : (colors[dirTarget(cl.cell, cl.dir)] === colors[cl.cell]) === cl.same;
+        if (!ok) violated.push(cl.cell);
       }
     }
-    return { full, mismatches, solved: full && mismatches === 0 && structureOk };
-  }, [colors, clue, neighbors, N]);
+    return { full, violated, sizesOk, solved: full && sizesOk && violated.length === 0 };
+  }, [colors, level.clues, neighbors, dirTarget]);
 
   useEffect(() => {
     if (evalNow.solved && !solved) {
@@ -160,7 +159,11 @@ function DeductionBoard({
     if (!evalNow.full || evalNow.solved) return;
     playWrong();
     setBadKey((k) => k + 1);
-    setToast(`${evalNow.mismatches || "Some"} tiles don't fit their number yet.`);
+    setToast(
+      !evalNow.sizesOk
+        ? "Each group needs exactly 3 tiles."
+        : `${evalNow.violated.length} clue${evalNow.violated.length === 1 ? " isn't" : "s aren't"} satisfied yet.`
+    );
   }, [evalNow]);
 
   useEffect(() => {
@@ -224,9 +227,8 @@ function DeductionBoard({
       </div>
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
-        Four hidden groups of 3, each a connected patch. A number is how many of that
-        tile's neighbours share its group — but most tiles are blank. Deduce and
-        colour all 12.
+        Four hidden groups of 3 tiles — any shapes, they don't have to touch. Some
+        tiles tell you about their neighbours. Deduce and colour all 12.
       </p>
 
       <main className="relative mt-4">
@@ -240,10 +242,11 @@ function DeductionBoard({
           {colors.map((col, i) => (
             <GridTile
               key={i}
-              clue={givenSet.has(i) ? clue[i] : undefined}
+              clue={clueOf.get(i)}
               theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
               word={solved ? level.cells[i].word : undefined}
               solvedCat={solved ? level.cells[i].cat : undefined}
+              violated={evalNow.full && !evalNow.solved && evalNow.violated.includes(i)}
               onClick={() => paint(i)}
             />
           ))}
@@ -352,49 +355,78 @@ function DeductionBoard({
 const TIER_NAME: Record<number, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
 const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9482b" };
 
+const DIR_ARROW = { up: "↑", down: "↓", left: "←", right: "→" } as const;
+const DIR_WORD = { up: "above", down: "below", left: "left of", right: "right of" } as const;
+
+// The short text painted on a clue tile, and the full sentence for a11y.
+function clueText(cl: DeductionClue): { short: string; full: string } {
+  if (cl.kind === "deg") {
+    const short =
+      cl.n === 0
+        ? "No neighbour is in my group"
+        : cl.n === 1
+          ? "One neighbour is in my group"
+          : "Two neighbours are in my group";
+    return { short, full: short };
+  }
+  return {
+    short: `The tile ${DIR_ARROW[cl.dir]} is ${cl.same ? "" : "NOT "}in my group`,
+    full: `The tile ${DIR_WORD[cl.dir]} me is ${cl.same ? "" : "not "}in my group`,
+  };
+}
+
 function GridTile({
   clue,
   theme,
   word,
   solvedCat,
+  violated,
   onClick,
 }: {
-  clue?: number; // undefined = a blank tile (no clue shown)
+  clue?: DeductionClue; // undefined = a blank tile (no clue shown)
   theme?: (typeof CATEGORY_THEMES)[number];
   word?: string;
   solvedCat?: number;
+  violated: boolean;
   onClick: () => void;
 }) {
   const revealTheme = solvedCat != null ? CATEGORY_THEMES[solvedCat] : theme;
   const sizeClass = word && word.length >= 8 ? "text-[0.6rem]" : word && word.length >= 6 ? "text-[0.7rem]" : "text-sm";
-  const label = word ?? `Tile, ${clue != null ? `clue ${clue}` : "no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
+  const text = clue ? clueText(clue) : null;
+  const label = word ?? `Tile${text ? `, clue: ${text.full}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
   return (
     <button
       onClick={onClick}
       disabled={word != null}
       aria-label={label}
-      className={`relative grid aspect-square place-items-center overflow-hidden rounded-2xl border-2 font-extrabold uppercase leading-none transition-colors ${
+      className={`relative grid aspect-square place-items-center overflow-hidden rounded-2xl border-2 leading-none transition-colors ${
         revealTheme ? "border-transparent" : "border-ink bg-white text-ink"
-      }`}
+      } ${violated ? "ring-2 ring-press" : ""}`}
       style={{ boxShadow: "2px 2px 0 rgba(38,34,26,0.25)" }}
     >
       {revealTheme ? (
         <div className={`absolute inset-0 grid place-items-center bg-gradient-to-br ${revealTheme.grad}`}>
           {word ? (
-            <span className={`px-1 text-center ${sizeClass}`} style={{ color: revealTheme.ink }}>
+            <span className={`px-1 text-center font-extrabold uppercase ${sizeClass}`} style={{ color: revealTheme.ink }}>
               {word}
             </span>
+          ) : text ? (
+            <span
+              className="px-1 text-center text-[0.55rem] font-bold leading-tight"
+              style={{ color: revealTheme.ink }}
+            >
+              {text.short}
+            </span>
           ) : (
-            <span className="flex items-center text-lg" style={{ color: revealTheme.ink }}>
-              <span aria-hidden className={clue != null ? "mr-0.5 text-xs opacity-70" : "text-base opacity-90"}>
-                {revealTheme.shape}
-              </span>
-              {clue != null && clue}
+            <span className="text-base opacity-90" style={{ color: revealTheme.ink }} aria-hidden>
+              {revealTheme.shape}
             </span>
           )}
         </div>
-      ) : clue != null ? (
-        <span className="text-xl text-ink">{clue}</span>
+      ) : text ? (
+        <span className="px-1 text-center text-[0.55rem] font-bold leading-tight text-ink">
+          {text.short}
+        </span>
       ) : (
         // Blank tile — a faint dot signals "still to colour" without giving a clue.
         <span aria-hidden className="text-lg text-ink/20">·</span>

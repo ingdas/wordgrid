@@ -1,150 +1,165 @@
-// Generator for Deduction Grid levels (a logic mode on the same boards).
+// Generator for Deduction Grid levels (the pure-logic mode).
 //
-// A level places a board's 12 words into a grid so each of the 4 themes forms
-// a connected 3-cell region. In play the words are hidden and each tile shows
-// only a NUMBER = how many orthogonal neighbours share its theme; the player
-// recovers the regions by logic. A level is only fair if it is solvable by
-// pure deduction (no guessing) — which also guarantees a unique solution.
+// A level hides a board's 12 words in a grid, split into 4 hidden groups of 3
+// cells. Groups are ANY shapes — they do not have to be connected — so the
+// space of layouts is large (12 cells → 15,400 partitions). Some tiles carry a
+// plain-text clue about their neighbours:
 //
-// The geometry is word-agnostic, so we enumerate every partition of a few grid
-// shapes, keep the "templates" a constraint-propagation solver can crack with
-// zero guesses, then drape a board's words over them. Writes
-// src/deductionLevels.ts.  Run:  node scripts/gen-deduction.mjs
+//   deg n : "None / One / Two of my neighbours are in my group"
+//   dir   : "The tile above/below/left/right of me is (not) in my group"
+//
+// A level is fair only if a human-style reasoner — tracking same/different
+// relations between cells with counting + transitivity, zero guessing — can
+// solve it from the shown clues alone. That also implies a unique solution,
+// which we additionally verify by brute-force enumeration.
+//
+// Run:  node scripts/gen-deduction.mjs   (writes src/deductionLevels.ts)
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// ---- geometry helpers, parameterised by grid shape -------------------------
-function grid(rows, cols) {
-  const N = rows * cols;
-  const neighbors = [];
-  for (let i = 0; i < N; i++) {
-    const r = (i / cols) | 0, c = i % cols, ns = [];
-    if (r > 0) ns.push(i - cols);
-    if (r < rows - 1) ns.push(i + cols);
-    if (c > 0) ns.push(i - 1);
-    if (c < cols - 1) ns.push(i + 1);
-    neighbors.push(ns);
-  }
-  // undirected edges + per-cell incident edge list
-  const edges = [], cellEdges = Array.from({ length: N }, () => []);
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++) {
-      const i = r * cols + c;
-      if (c + 1 < cols) { const e = edges.length; edges.push([i, i + 1]); cellEdges[i].push(e); cellEdges[i + 1].push(e); }
-      if (r + 1 < rows) { const e = edges.length; edges.push([i, i + cols]); cellEdges[i].push(e); cellEdges[i + cols].push(e); }
-    }
-  return { N, neighbors, edges, cellEdges };
+// Deterministic RNG so the generated file is reproducible.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-const triominoes = (start, color, neighbors) => {
-  const av = (i) => color[i] < 0, out = [], seen = new Set();
-  for (const a of neighbors[start].filter(av)) {
-    const cand = new Set([...neighbors[start], ...neighbors[a]].filter((x) => av(x) && x !== start && x !== a));
-    for (const b of cand) {
-      const key = [start, a, b].sort((x, y) => x - y).join(",");
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push([start, a, b]);
-    }
+// ---- geometry ---------------------------------------------------------------
+function grid(rows, cols) {
+  const N = rows * cols;
+  const neighbors = [], dirNbr = [];
+  for (let i = 0; i < N; i++) {
+    const r = (i / cols) | 0, c = i % cols, ns = [], d = {};
+    if (r > 0) { ns.push(i - cols); d.up = i - cols; }
+    if (r < rows - 1) { ns.push(i + cols); d.down = i + cols; }
+    if (c > 0) { ns.push(i - 1); d.left = i - 1; }
+    if (c < cols - 1) { ns.push(i + 1); d.right = i + 1; }
+    neighbors.push(ns);
+    dirNbr.push(d);
   }
-  return out;
-};
+  return { N, neighbors, dirNbr };
+}
 
-function partitions(rows, cols) {
-  const { N, neighbors } = grid(rows, cols);
-  const color = new Array(N).fill(-1), out = [];
-  const firstFree = () => { for (let i = 0; i < N; i++) if (color[i] < 0) return i; return -1; };
-  const rec = (rid) => {
-    const s = firstFree();
-    if (s < 0) { out.push(color.slice()); return; }
-    if (rid > 3) return;
-    for (const tri of triominoes(s, color, neighbors)) {
-      for (const i of tri) color[i] = rid;
-      rec(rid + 1);
-      for (const i of tri) color[i] = -1;
-    }
+// All partitions of N cells into 4 unlabeled groups of 3 (15,400 for N=12),
+// as colour arrays with canonical labels (group id by first occurrence).
+function allPartitions(N) {
+  const out = [];
+  const color = new Array(N).fill(-1);
+  const rec = (gid) => {
+    let first = -1;
+    for (let i = 0; i < N; i++) if (color[i] < 0) { first = i; break; }
+    if (first < 0) { out.push(color.slice()); return; }
+    const rest = [];
+    for (let i = first + 1; i < N; i++) if (color[i] < 0) rest.push(i);
+    for (let a = 0; a < rest.length; a++)
+      for (let b = a + 1; b < rest.length; b++) {
+        color[first] = color[rest[a]] = color[rest[b]] = gid;
+        rec(gid + 1);
+        color[first] = color[rest[a]] = color[rest[b]] = -1;
+      }
   };
   rec(0);
   return out;
 }
 
-const clues = (color, neighbors) =>
-  color.map((_, i) => neighbors[i].reduce((n, j) => n + (color[j] === color[i] ? 1 : 0), 0));
+// ---- clues ------------------------------------------------------------------
+// { cell, kind: "deg", n }                      — n neighbours share my group
+// { cell, kind: "dir", dir, same }              — that neighbour is (not) mine
+const degOf = (c, color, neighbors) =>
+  neighbors[c].reduce((n, j) => n + (color[j] === color[c] ? 1 : 0), 0);
 
-// ---- constraint-propagation solver -----------------------------------------
-// Decide each grid edge link/cut from clue degrees + "regions are 3 connected
-// cells" (so: no cycles, no region > 3, a full region seals its border). If it
-// reaches an all-decided, consistent state it solved WITHOUT guessing → fair.
-function logicSolve(clue, rows, cols, mask) {
-  const { N, edges, cellEdges } = grid(rows, cols);
-  // `mask` (optional): only these cells impose their clue (sparse givens).
-  const shown = mask ?? new Array(N).fill(true);
-  const st = new Array(edges.length).fill(0); // 0 unknown, 1 link, 2 cut
-  const parent = new Array(N), size = new Array(N);
-  const rebuild = () => {
-    for (let i = 0; i < N; i++) { parent[i] = i; size[i] = 1; }
-    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
-    for (let e = 0; e < edges.length; e++) if (st[e] === 1) {
-      const [a, b] = edges[e], ra = find(a), rb = find(b);
-      if (ra !== rb) { parent[ra] = rb; size[rb] += size[ra]; }
-    }
-    return find;
+const clueHolds = (clue, color, geo) =>
+  clue.kind === "deg"
+    ? degOf(clue.cell, color, geo.neighbors) === clue.n
+    : (color[geo.dirNbr[clue.cell][clue.dir]] === color[clue.cell]) === clue.same;
+
+// ---- human-style relation solver ---------------------------------------------
+// Tracks same/different for every cell pair; propagates counting (each cell has
+// exactly 2 group-mates), transitivity, and the neighbour-count clues (which
+// also bound group-mates among NON-neighbours to 2−n). No guessing: if it
+// reaches a fully-decided consistent state, the level is human-solvable.
+function relationSolve(clues, rows, cols) {
+  const { N, neighbors, dirNbr } = grid(rows, cols);
+  const U = 0, S = 1, D = 2;
+  const rel = new Int8Array(N * N); // symmetric, diag unused
+  const get = (i, j) => rel[i * N + j];
+  let bad = false, changed = true;
+  const set = (i, j, v) => {
+    const cur = get(i, j);
+    if (cur === v) return;
+    if (cur !== U) { bad = true; return; }
+    rel[i * N + j] = rel[j * N + i] = v;
+    changed = true;
   };
-  let changed = true, bad = false;
+  for (const cl of clues)
+    if (cl.kind === "dir") set(cl.cell, dirNbr[cl.cell][cl.dir], cl.same ? S : D);
+
+  const countRule = (i, cells, target) => {
+    let s = 0, unk = [];
+    for (const j of cells) {
+      const v = get(i, j);
+      if (v === S) s++;
+      else if (v === U) unk.push(j);
+    }
+    if (s > target || s + unk.length < target) { bad = true; return; }
+    if (s === target) for (const j of unk) set(i, j, D);
+    else if (s + unk.length === target) for (const j of unk) set(i, j, S);
+  };
+
   while (changed && !bad) {
     changed = false;
+    // every cell has exactly 2 group-mates overall
     for (let i = 0; i < N && !bad; i++) {
-      if (!shown[i]) continue;
-      let links = 0, unk = [];
-      for (const e of cellEdges[i]) { if (st[e] === 1) links++; else if (st[e] === 0) unk.push(e); }
-      if (links > clue[i] || links + unk.length < clue[i]) { bad = true; break; }
-      if (links === clue[i] && unk.length) { unk.forEach((e) => (st[e] = 2)); changed = true; }
-      else if (links + unk.length === clue[i] && unk.length) { unk.forEach((e) => (st[e] = 1)); changed = true; }
+      const others = [];
+      for (let j = 0; j < N; j++) if (j !== i) others.push(j);
+      countRule(i, others, 2);
     }
-    if (bad) break;
-    let find = rebuild();
-    for (let e = 0; e < edges.length; e++) {
-      if (st[e] !== 0) continue;
-      const [a, b] = edges[e], ra = find(a), rb = find(b);
-      if (ra === rb) { st[e] = 2; changed = true; }             // link would make a cycle
-      else if (size[ra] + size[rb] > 3) { st[e] = 2; changed = true; } // would exceed 3
+    // neighbour-count clues (and their non-neighbour complement)
+    for (const cl of clues) {
+      if (bad) break;
+      if (cl.kind !== "deg") continue;
+      const i = cl.cell;
+      countRule(i, neighbors[i], cl.n);
+      const far = [];
+      for (let j = 0; j < N; j++) if (j !== i && !neighbors[i].includes(j)) far.push(j);
+      countRule(i, far, 2 - cl.n);
     }
-    find = rebuild();
-    for (let e = 0; e < edges.length; e++) {
-      if (st[e] !== 0) continue;
-      const [a, b] = edges[e];
-      if (size[find(a)] === 3 || size[find(b)] === 3) { st[e] = 2; changed = true; } // sealed region
-    }
+    // transitivity
+    for (let i = 0; i < N && !bad; i++)
+      for (let j = 0; j < N && !bad; j++) {
+        if (j === i || get(i, j) !== S) continue;
+        for (let k = 0; k < N; k++) {
+          if (k === i || k === j) continue;
+          const vjk = get(j, k);
+          if (vjk !== U) set(i, k, vjk);
+          if (bad) break;
+        }
+      }
   }
-  if (bad || st.some((s) => s === 0)) return null; // contradiction or stuck (needs a guess)
-  const find = rebuild();
-  const comps = new Map();
-  for (let i = 0; i < N; i++) { const r = find(i); (comps.get(r) ?? comps.set(r, []).get(r)).push(i); }
-  if (comps.size !== 4 || [...comps.values()].some((c) => c.length !== 3)) return null;
-  return true;
+  if (bad) return null;
+  for (let i = 0; i < N; i++)
+    for (let j = i + 1; j < N; j++) if (get(i, j) === U) return null; // stuck
+  // extract the partition
+  const color = new Array(N).fill(-1);
+  let gid = 0;
+  for (let i = 0; i < N; i++) {
+    if (color[i] >= 0) continue;
+    color[i] = gid;
+    for (let j = 0; j < N; j++) if (j !== i && get(i, j) === S) color[j] = gid;
+    gid++;
+  }
+  if (gid !== 4 || color.some((c) => c < 0)) return null;
+  return color;
 }
 
-// ---- vet templates across a couple of grid shapes --------------------------
-const SHAPES = [[3, 4], [4, 3]];
-const vetted = [];
-const seen = new Set();
-for (const [rows, cols] of SHAPES) {
-  const { neighbors } = grid(rows, cols);
-  for (const p of partitions(rows, cols)) {
-    const cl = clues(p, neighbors);
-    const key = `${rows}x${cols}:${cl.join("")}`;
-    if (seen.has(key)) continue;
-    if (!logicSolve(cl, rows, cols)) continue; // keep only no-guess-solvable
-    seen.add(key);
-    vetted.push({ rows, cols, color: p });
-  }
-}
-console.log(`vetted no-guess templates: ${vetted.length} (${SHAPES.map(([r, c]) => `${r}x${c}`).join(", ")})`);
-
-// ---- pick 20 boards and drape them over the templates ----------------------
+// ---- board words (raw text parse of src/puzzles.ts) --------------------------
 const src = readFileSync(join(ROOT, "src/puzzles.ts"), "utf8");
 function board(id) {
   const re = new RegExp(`id: "${id}",\\s*\\n\\s*title: "([^"]+)",\\s*\\n\\s*pivot: "([^"]+)",\\s*\\n\\s*categories: \\[([\\s\\S]*?)\\n {4}\\],`);
@@ -162,35 +177,66 @@ const BOARDS = [
   "check", "bug", "table", "drop", "seal", "bat", "deck", "note", "park", "wave",
 ];
 
-// The smallest set of clue tiles that keeps a template no-guess-solvable. The
-// fewer numbers shown, the longer the deduction chain — this is the difficulty
-// knob (a full 12-clue grid basically reads off its own answer).
-function minimalGivens(cl, rows, cols) {
-  const N = rows * cols;
-  let best = new Array(N).fill(true);
-  for (let trial = 0; trial < 60; trial++) {
-    const m = new Array(N).fill(true);
-    const order = [...Array(N).keys()].sort(() => Math.random() - 0.5);
-    for (const i of order) { m[i] = false; if (!logicSolve(cl, rows, cols, m)) m[i] = true; }
-    if (m.filter(Boolean).length < best.filter(Boolean).length) best = m;
-  }
-  return best;
-}
-
-// Difficulty tiers by how many numbers we reveal: Hard = the minimal set,
-// Easy/Medium pad it with extra clues so the chain is shorter. Levels ramp
-// Easy → Medium → Hard across the 20.
-const TIER_OF = (k) => (k < 7 ? 1 : k < 14 ? 2 : 3); // 1 Easy, 2 Medium, 3 Hard
+// Difficulty = how many clue tiles are shown. Hard is the minimal set the
+// relation solver still cracks; Easy/Medium pad it with extra clues.
+const TIER_OF = (k) => (k < 7 ? 1 : k < 14 ? 2 : 3);
 const EXTRA = { 1: 4, 2: 2, 3: 0 };
 
-const levels = BOARDS.map((id, k) => {
-  const b = board(id);
-  const tpl = vetted[k % vetted.length]; // cycle the vetted templates
-  const { rows, cols, color } = tpl;
-  const N = rows * cols;
-  const { neighbors } = grid(rows, cols);
-  const cl = clues(color, neighbors);
+const SHAPES = [[3, 4], [4, 3]];
+const levels = [];
 
+for (let k = 0; k < BOARDS.length; k++) {
+  const rng = mulberry32(0xc0ffee + k * 7919);
+  const [rows, cols] = SHAPES[k % SHAPES.length];
+  const geo = grid(rows, cols);
+  const { N } = geo;
+  const parts = allPartitions(N);
+
+  // Sample solution partitions until the full deg-clue set is relation-solvable.
+  let color = null, fullClues = null;
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const cand = parts[Math.floor(rng() * parts.length)];
+    const cl = [...Array(N).keys()].map((c) => ({ cell: c, kind: "deg", n: degOf(c, cand, geo.neighbors) }));
+    if (relationSolve(cl, rows, cols)) { color = cand; fullClues = cl; break; }
+  }
+  if (!color) throw new Error(`no solvable partition found for level ${k}`);
+
+  // Greedy-minimise the clue set (several random orders, keep the smallest).
+  let best = fullClues;
+  for (let trial = 0; trial < 30; trial++) {
+    let cur = [...fullClues];
+    const order = [...cur].sort(() => rng() - 0.5);
+    for (const cl of order) {
+      const without = cur.filter((x) => x !== cl);
+      if (relationSolve(without, rows, cols)) cur = without;
+    }
+    if (cur.length < best.length) best = cur;
+  }
+
+  // Pad easier tiers with extra clues (cells not already shown).
+  const tier = TIER_OF(k);
+  let clues = [...best];
+  const shownCells = new Set(clues.map((c) => c.cell));
+  let extra = EXTRA[tier];
+  for (const cl of fullClues) {
+    if (extra <= 0) break;
+    if (shownCells.has(cl.cell)) continue;
+    clues.push(cl); shownCells.add(cl.cell); extra--;
+  }
+
+  // Flavour pass: swap some degree clues for directional ones where the level
+  // stays solvable — text variety ("the tile below me is in my group").
+  for (const cl of [...clues]) {
+    if (cl.kind !== "deg" || rng() < 0.5) continue;
+    const dirs = Object.keys(geo.dirNbr[cl.cell]);
+    const dir = dirs[Math.floor(rng() * dirs.length)];
+    const swap = { cell: cl.cell, kind: "dir", dir, same: color[geo.dirNbr[cl.cell][dir]] === color[cl.cell] };
+    const next = clues.map((x) => (x === cl ? swap : x));
+    if (relationSolve(next, rows, cols)) clues = next;
+  }
+
+  // Drape the board's words over the partition (category k ↔ group k).
+  const b = board(BOARDS[k]);
   const regionCells = [[], [], [], []];
   color.forEach((rid, i) => regionCells[rid].push(i));
   const cells = new Array(N);
@@ -200,40 +246,38 @@ const levels = BOARDS.map((id, k) => {
     });
   });
 
-  // Start from the minimal clue set, then pad with extra clues per tier.
-  const tier = TIER_OF(k);
-  const mask = minimalGivens(cl, rows, cols);
-  let extra = EXTRA[tier];
-  for (let i = 0; i < N && extra > 0; i++) if (!mask[i]) { mask[i] = true; extra--; }
-  const given = mask.map((b2, i) => (b2 ? i : -1)).filter((i) => i >= 0);
-
-  return { id, pivot: b.pivot, rows, cols, tier, given, categories: b.categories.map((c) => c.name), cells };
-});
-
-// Sanity: every emitted level must be no-guess-solvable from its shown clues,
-// and uniquely solvable given only those clues.
-for (const lv of levels) {
-  const { neighbors } = grid(lv.rows, lv.cols);
-  const cl = clues(lv.cells.map((c) => c.cat), neighbors);
-  const mask = new Array(lv.rows * lv.cols).fill(false);
-  lv.given.forEach((i) => (mask[i] = true));
-  if (!logicSolve(cl, lv.rows, lv.cols, mask)) throw new Error(`level ${lv.id} not no-guess from its clues`);
-  let count = 0;
-  for (const p of partitions(lv.rows, lv.cols)) {
-    const pc = clues(p, neighbors);
-    if (lv.given.every((i) => pc[i] === cl[i])) count++;
-  }
-  if (count !== 1) throw new Error(`level ${lv.id} has ${count} solutions from its clues`);
+  levels.push({ id: b.id, pivot: b.pivot, rows, cols, tier, clues, categories: b.categories.map((c) => c.name), cells });
 }
-console.log(`givens per level: ${levels.map((l) => l.given.length).join(",")}`);
+
+// ---- hard verification -------------------------------------------------------
+for (const lv of levels) {
+  const geo = grid(lv.rows, lv.cols);
+  const color = lv.cells.map((c) => c.cat);
+  // every shown clue must actually hold in the solution
+  for (const cl of lv.clues) if (!clueHolds(cl, color, geo)) throw new Error(`${lv.id}: clue lies`);
+  // human relation solver cracks it with zero guessing
+  const solved = relationSolve(lv.clues, lv.rows, lv.cols);
+  if (!solved) throw new Error(`${lv.id}: not human-solvable from shown clues`);
+  // and brute-force: exactly ONE of all partitions satisfies the clues
+  let count = 0;
+  for (const p of allPartitions(lv.rows * lv.cols)) if (lv.clues.every((cl) => clueHolds(cl, p, geo))) count++;
+  if (count !== 1) throw new Error(`${lv.id}: ${count} solutions from shown clues`);
+}
+console.log(`clues per level: ${levels.map((l) => l.clues.length).join(",")}`);
+console.log(`dir clues per level: ${levels.map((l) => l.clues.filter((c) => c.kind === "dir").length).join(",")}`);
 
 const out = `// AUTO-GENERATED by scripts/gen-deduction.mjs — do not edit by hand.
-// Deduction Grid levels: 12 words in a small grid, each theme a connected
-// 3-cell region. In play the words are hidden and only the tiles listed in
-// \`given\` show a clue number (how many orthogonal neighbours share its theme);
-// the rest are blank. Every level is solvable by pure deduction from its shown
-// clues alone — no guessing — and therefore has one solution. Fewer givens =
-// harder (tier 1 Easy … 3 Hard). cells[] is row-major (cols per row).
+// Deduction Grid levels: 12 words hidden in a small grid, split into 4 hidden
+// groups of 3 cells. Groups can be ANY shapes (they do not have to touch).
+// Some tiles carry a plain-text clue about their neighbours ("None of my
+// neighbours are in my group", "The tile below me is in my group", …). Every
+// level is solvable by pure reasoning from its shown clues alone — verified to
+// have exactly one solution. Fewer clues = harder (tier 1 Easy … 3 Hard).
+// cells[] is row-major (cols per row).
+
+export type DeductionClue =
+  | { cell: number; kind: "deg"; n: number }
+  | { cell: number; kind: "dir"; dir: "up" | "down" | "left" | "right"; same: boolean };
 
 export interface DeductionCell {
   word: string;
@@ -248,8 +292,7 @@ export interface DeductionLevel {
   cols: number;
   /** 1 Easy, 2 Medium, 3 Hard — fewer shown clues as the tier rises. */
   tier: number;
-  /** Cell indices (row-major) that display their clue number; others are blank. */
-  given: number[];
+  clues: DeductionClue[];
   categories: string[];
   cells: DeductionCell[];
 }
