@@ -8,12 +8,12 @@ import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio"
 // ---------------------------------------------------------------------------
 // Deduction Grid — a pure-logic mode on the same boards.
 //
-// The 12 words are hidden, split into 4 hidden groups of 3 tiles. Groups can
+// An abstract grid of 12 tiles, split into 4 hidden groups of 3. Groups can
 // be ANY shapes — they don't have to touch. Some tiles carry a plain-text
 // clue about their neighbours ("None of my neighbours are in my group", "The
 // tile below me is in my group"). Every level is solvable by pure reasoning
-// from the shown clues — no guessing, no vocabulary, no timer. Colour every
-// tile; solving flips the grid to reveal the words and the hidden link.
+// from the shown clues — no guessing, no vocabulary, no timer. Deliberately
+// NOT tied to the word boards: the logic chain is the whole reward.
 // ---------------------------------------------------------------------------
 
 interface DeductionProps {
@@ -264,8 +264,7 @@ function DeductionBoard({
               key={i}
               clue={clueOf.get(i)}
               theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
-              word={solved ? level.cells[i].word : undefined}
-              solvedCat={solved ? level.cells[i].cat : undefined}
+              solved={solved}
               status={solved ? undefined : clueStatus.get(i)?.state}
               onClick={() => paint(i)}
             />
@@ -341,24 +340,9 @@ function DeductionBoard({
               <div className="text-4xl" aria-hidden>🧠</div>
               <h3 className="mt-2 font-display text-2xl font-bold text-ink">Deduced!</h3>
               <p className="mt-2 text-sm text-ink-soft">
-                Every group placed by logic. The hidden link was{" "}
-                <span className="font-bold text-ink underline decoration-press/70 decoration-2 underline-offset-4">
-                  {level.pivot}
-                </span>
-                .
+                All four groups placed by pure logic — every clue checks out, and no
+                other colouring fits.
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-1.5 text-left">
-                {level.categories.map((name, k) => (
-                  <div
-                    key={name}
-                    className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-[0.7rem] font-bold"
-                    style={{ background: `${CATEGORY_THEMES[k].tint}1f`, color: CATEGORY_THEMES[k].tint }}
-                  >
-                    <span aria-hidden>{CATEGORY_THEMES[k].shape}</span>
-                    <span className="leading-tight">{name}</span>
-                  </div>
-                ))}
-              </div>
               <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <button
                   onClick={onExit}
@@ -435,24 +419,20 @@ function clueText(cl: DeductionClue): { short: string; full: string } {
 function GridTile({
   clue,
   theme,
-  word,
-  solvedCat,
+  solved,
   status,
   onClick,
 }: {
   clue?: DeductionClue; // undefined = a blank tile (no clue shown)
   theme?: (typeof CATEGORY_THEMES)[number];
-  word?: string;
-  solvedCat?: number;
+  solved: boolean;
   /** Live clue check: ok/bad once judgeable, pending (no badge) before that. */
   status?: "pending" | "ok" | "bad";
   onClick: () => void;
 }) {
-  const revealTheme = solvedCat != null ? CATEGORY_THEMES[solvedCat] : theme;
-  const sizeClass = word && word.length >= 8 ? "text-[0.6rem]" : word && word.length >= 6 ? "text-[0.7rem]" : "text-sm";
   const text = clue ? clueText(clue) : null;
   const statusWord = status === "ok" ? ", satisfied" : status === "bad" ? ", NOT satisfied" : "";
-  const label = word ?? `Tile${text ? `, clue: ${text.full}${statusWord}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
+  const label = `Tile${text ? `, clue: ${text.full}${statusWord}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
   // NOTE: the red outline must live in the inline boxShadow — Tailwind's ring
   // is also a box-shadow, and the inline style would silently override it.
   const shadow =
@@ -462,10 +442,10 @@ function GridTile({
   return (
     <button
       onClick={onClick}
-      disabled={word != null}
+      disabled={solved}
       aria-label={label}
       className={`relative grid aspect-square place-items-center rounded-2xl border-2 leading-none transition-colors ${
-        revealTheme ? "border-transparent" : "border-ink bg-white text-ink"
+        theme ? "border-transparent" : "border-ink bg-white text-ink"
       }`}
       style={{ boxShadow: shadow }}
     >
@@ -480,22 +460,18 @@ function GridTile({
           {status === "ok" ? "✓" : "✕"}
         </span>
       )}
-      {revealTheme ? (
-        <div className={`absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br ${revealTheme.grad}`}>
-          {word ? (
-            <span className={`px-1 text-center font-extrabold uppercase ${sizeClass}`} style={{ color: revealTheme.ink }}>
-              {word}
-            </span>
-          ) : text ? (
+      {theme ? (
+        <div className={`absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br ${theme.grad}`}>
+          {text ? (
             <span
               className="px-1 text-center text-[0.55rem] font-bold leading-tight"
-              style={{ color: revealTheme.ink }}
+              style={{ color: theme.ink }}
             >
               {text.short}
             </span>
           ) : (
-            <span className="text-base opacity-90" style={{ color: revealTheme.ink }} aria-hidden>
-              {revealTheme.shape}
+            <span className="text-base opacity-90" style={{ color: theme.ink }} aria-hidden>
+              {theme.shape}
             </span>
           )}
         </div>

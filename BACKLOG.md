@@ -78,14 +78,16 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   lifetime score. Face-down cards never leak their word (aria-label "Face-down
   card").
 - `Deduction.tsx` + `deductionLevels.ts` — 🧩 Logic Grid: a pure-logic mode,
-  **20 levels across Easy/Medium/Hard tiers**. 12 words hidden in a 3×4 or 4×3
-  grid, split into 4 hidden groups of 3 — **groups can be ANY shapes (no
-  connectivity requirement)**, so the layout space is 15,400 partitions. Some
-  tiles carry a **plain-text clue** about their neighbours: "None/One/Two of my
-  neighbours are in my group" or directional "The tile ←/→/↑/↓ is (NOT) in my
-  group"; the rest are blank. Fewer clues = harder (Easy ~8-11, Medium ~6-9,
-  Hard ~4-7 of 12). Every level is solvable by pure reasoning from its shown
-  clues alone — no vocabulary/memory/timer — and has exactly one solution.
+  **20 abstract levels across Easy/Medium/Hard tiers** (ids logic-1…20).
+  **Deliberately NOT tied to the word boards** (owner call: the word reveal
+  added nothing) — a level is just a 3×4/4×3 grid split into 4 hidden groups
+  of 3; **groups can be ANY shapes (no connectivity requirement)**, so the
+  layout space is 15,400 partitions. Some tiles carry a **plain-text clue**
+  about their neighbours: "None/One/Two of my neighbours are in my group" or
+  directional "The tile ←/→/↑/↓ is (NOT) in my group"; the rest are blank.
+  Fewer clues = harder (Easy ~8-11, Medium ~6-9, Hard ~4-7 of 12). Every level
+  is solvable by pure reasoning from its shown clues alone and has exactly one
+  solution; the win card celebrates the deduction itself.
   Paint with a 4-colour brush. Feedback: every clue tile wears a **live ✓/✕
   badge** the moment its neighbourhood is fully painted; a violated clue gets a
   thick red outline (drawn in the inline boxShadow — Tailwind's ring is also a
