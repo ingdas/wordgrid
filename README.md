@@ -13,9 +13,11 @@ word, then build all four groups of three around it.
 1. A board shows **12 words** plus a **masked "secret link"** (`◆ ? ? ?`).
 2. Tap **three words that share a theme**, then **Submit** — the hidden link
    joins them into a group of four. Its word stays concealed the whole game.
-3. Find all **four groups** (you get **4 mistakes**), then **guess the secret
+3. Find all **four groups** (you get **4 mistakes**), then **spell the secret
    word** that links them all. The reveal is the climax, not a giveaway.
-4. Fewer mistakes earn more **stars** (3 max per level).
+4. Worked it out early? **Call the link** with groups still open — one shot per
+   level, and it pays a bonus for every group you hadn't found yet.
+5. Fewer mistakes earn more **stars** (3 max per level).
 
 There are **62 levels** on a hypercasual level map — clear one to unlock the
 next, and chase the ⭐ total and your 🔥 streak.

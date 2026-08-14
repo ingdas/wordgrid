@@ -148,6 +148,12 @@ export default function Game({
   const [combo, setCombo] = useState(0);
   const [pops, setPops] = useState<{ id: number; text: string }[]>([]);
   const popId = useRef(0);
+  // Early call: name the link before the last group is found. Worth a big
+  // bonus and reveals the word (which makes the rest easier — that's the
+  // reward), but you get exactly one shot per level, spent the moment you
+  // open it so the letter count can't be peeked at for free.
+  const [earlyCall, setEarlyCall] = useState(false);
+  const [earlyCallSpent, setEarlyCallSpent] = useState(false);
   // Second chance: on the first time you run out of guesses, offer a rewarded
   // continue (+2 tries) before the run actually ends.
   const [offering, setOffering] = useState(false);
@@ -259,8 +265,10 @@ export default function Game({
       const t = setTimeout(() => solveCategory(last, solved.length), 600);
       return () => clearTimeout(t);
     }
-    if (solved.length === puzzle.categories.length) setStatus(twist === "oracle" ? "won" : "guessing");
-  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, twist]);
+    // A link already named (the Oracle, or a successful early call) means the
+    // finale has nothing left to ask — the last group solved is the win.
+    if (solved.length === puzzle.categories.length) setStatus(linkGuess != null ? "won" : "guessing");
+  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, linkGuess]);
 
   // Advance the coach once the player lands their first pair, and record that
   // the tutorial has been completed so it never re-triggers.
@@ -443,6 +451,8 @@ export default function Game({
     setPops([]);
     setOffering(false);
     setSecondChanceUsed(false);
+    setEarlyCall(false);
+    setEarlyCallSpent(false);
     coachMisses.current = 0;
     finaleHinted.current = false;
     setOrder(shuffle(spokeTiles));
@@ -465,17 +475,44 @@ export default function Game({
     (text: string): boolean => {
       if (!linkMatches(text, puzzle.pivot, puzzle.accept)) return false;
       setLinkGuess(text);
-      setScore((s) => s + 250);
-      pushPop("+250  🔑");
+      // Naming the link early is the hard way to do it — every group still
+      // unsolved is one less clue you had — so it pays proportionally.
+      const early = unsolvedCategories.length;
+      const pts = 250 * (1 + early);
+      setScore((s) => s + pts);
+      pushPop(early > 0 ? `+${pts}  🔑 early!` : "+250  🔑");
       playStar(2);
       buzz(40);
-      // The Oracle names the link first, then drops into grouping; everyone
-      // else has already grouped, so a correct link wins.
-      setTimeout(() => setStatus(twist === "oracle" ? "playing" : "won"), 800);
+      // Link named with groups still open (the Oracle, or an early call) →
+      // back to the board, now knowing the word. Otherwise it's the win.
+      setTimeout(() => {
+        setEarlyCall(false);
+        setStatus(early > 0 ? "playing" : "won");
+      }, 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz, twist, pushPop]
+    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length]
   );
+
+  // One call per level, spent on opening: no free look at the letter count.
+  const canCallEarly =
+    status === "playing" && !offering && !earlyCallSpent && coach < 0 && twist !== "oracle" &&
+    solved.length >= 1 && unsolvedCategories.length >= 2;
+  const startEarlyCall = useCallback(() => {
+    setEarlyCallSpent(true);
+    setEarlyCall(true);
+    setSelected([]);
+    setStatus("guessing");
+    playSelect();
+  }, []);
+  // A missed early call costs no mistake and no star — just the shot itself.
+  const missEarlyCall = useCallback(() => {
+    playWrong();
+    buzz(30);
+    setEarlyCall(false);
+    setStatus("playing");
+    setToast("Not the link — back to the board. That was your one call.");
+  }, [buzz]);
 
   // Give up: reveal the word (counts as a miss → costs a star). For the Oracle
   // this still hands you the link and moves you into the grouping phase.
@@ -488,9 +525,12 @@ export default function Game({
   // The Oracle's "name the link first" phase: shown all words + themes, link
   // still hidden, before any grouping.
   const oraclePending = twist === "oracle" && status === "guessing" && linkGuess == null;
+  // Both "name it before you've grouped" states keep the tiles on screen —
+  // they're what you're reasoning from.
+  const linkPending = oraclePending || (earlyCall && linkGuess == null);
   // A win reveals the link; a loss keeps it secret for the replay. The Oracle
   // also reveals it the moment you've named it (you've earned the sight).
-  const revealLink = status === "won" || (twist === "oracle" && linkGuess != null);
+  const revealLink = status === "won" || linkGuess != null;
   const stars = finalStars;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
   const maskSolved = twist === "blackout" && !revealLink;
@@ -628,7 +668,7 @@ export default function Game({
           </div>
         )}
 
-        {(status === "playing" || status === "lost" || oraclePending) && (
+        {(status === "playing" || status === "lost" || linkPending) && (
           <motion.div
             key={shake}
             animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
@@ -673,6 +713,17 @@ export default function Game({
           </div>
         )}
 
+        {canCallEarly && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={startEarlyCall}
+              className="rounded-full border-2 border-dashed border-press/70 px-4 py-2 text-xs font-bold text-press transition hover:bg-press/5 active:scale-95"
+            >
+              🔑 Spotted the link? Call it — one shot, big bonus
+            </button>
+          </div>
+        )}
+
         {status === "playing" && !offering && (
           <Controls
             mistakes={mistakes}
@@ -697,6 +748,8 @@ export default function Game({
         {status === "guessing" && (
           <LinkGuess
             oracle={twist === "oracle"}
+            early={earlyCall}
+            onMiss={missEarlyCall}
             resolved={linkGuess != null}
             pivot={puzzle.pivot}
             revealedLetters={revealedLetters}
@@ -1161,6 +1214,8 @@ export function buildLetterBank(pivot: string): string[] {
 
 function LinkGuess({
   oracle,
+  early = false,
+  onMiss,
   resolved,
   pivot,
   revealedLetters,
@@ -1172,6 +1227,9 @@ function LinkGuess({
   onReveal,
 }: {
   oracle: boolean;
+  /** An early call: one attempt, and a miss hands the board back. */
+  early?: boolean;
+  onMiss?: () => void;
   resolved: boolean;
   pivot: string;
   revealedLetters: number;
@@ -1222,10 +1280,12 @@ function LinkGuess({
         setWrong(true);
         setShakeKey((k) => k + 1);
         setTaps([]);
+        // An early call gets one attempt; the finale lets you keep trying.
+        if (early) setTimeout(() => onMiss?.(), 700);
       }
     }, 280);
     return () => { clearTimeout(t); submitting.current = false; };
-  }, [full, built, resolved, onSubmit]);
+  }, [full, built, resolved, onSubmit, early, onMiss]);
 
   const tap = (i: number) => {
     if (resolved || used.has(i) || full) return;
@@ -1262,12 +1322,14 @@ function LinkGuess({
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
-        {oracle ? "🔮 Name the hidden link" : "All four groups found!"}
+        {oracle ? "🔮 Name the hidden link" : early ? "🔑 Call it early" : "All four groups found!"}
       </h3>
       <p className="mt-1 text-sm text-ink-soft">
         {oracle
           ? "Read the words and themes above — tap letters to spell the word that joins them."
-          : "Tap the letters to spell the secret word that links them all."}
+          : early
+            ? "One attempt. Get it and the word is yours — plus a bonus for every group you haven't found yet."
+            : "Tap the letters to spell the secret word that links them all."}
       </p>
 
       {/* The answer so far. Tapped letters pop into the slots; a wrong word
@@ -1370,13 +1432,23 @@ function LinkGuess({
             </span>
           </button>
         )}
-        <button
-          onClick={onReveal}
-          disabled={resolved}
-          className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
-        >
-          Give up (costs a star)
-        </button>
+        {early ? (
+          <button
+            onClick={onMiss}
+            disabled={resolved}
+            className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
+          >
+            Back to the board
+          </button>
+        ) : (
+          <button
+            onClick={onReveal}
+            disabled={resolved}
+            className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
+          >
+            Give up (costs a star)
+          </button>
+        )}
       </div>
     </motion.div>
   );

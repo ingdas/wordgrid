@@ -990,7 +990,7 @@ const STEPS = [
     icon: "⭐",
     grad: "from-[#f2b544] to-[#eda820]",
     title: "Guess the link, earn stars",
-    body: "Find all four groups (four mistakes allowed), then guess the secret word that links them all.",
+    body: "Find all four groups (four mistakes allowed), then spell the secret word that links them all. Spot it early? Call it for a bonus — one shot per level.",
   },
 ];
 
