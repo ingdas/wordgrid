@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
+// The Puzzle Press palette — the theme's four group colours plus the stamp red
+// and gold. (The neon pink/sky/violet mix here predated the retheme and read as
+// a different game landing on the paper.)
 const COLORS = [
-  "#fbbf24",
-  "#f472b6",
-  "#38bdf8",
-  "#a78bfa",
-  "#34d399",
-  "#fb7185",
+  "#eda820", // gold
+  "#d9482b", // stamp red
+  "#5eb0e0", // group blue
+  "#b48fd9", // group purple
+  "#6cc793", // group green
+  "#1c7a4d", // leaf
 ];
 
 /** A short, celebratory burst of confetti pieces. */
