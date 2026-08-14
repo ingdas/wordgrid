@@ -1,9 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 19 (two parallel sessions merged: daily pool now 80
-puzzles, submission assets shipped, Pairs mode added). This file is the single
-source of truth — a fresh session should be able to continue from here without
-any prior chat context._
+_Last updated: iteration 20 (full review pass: code quality, UX + graphics via
+puppeteer, level content). This file is the single source of truth — a fresh
+session should be able to continue from here without any prior chat context._
 
 ## What this is
 
@@ -134,6 +133,140 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
 
 ---
 
+## Review pass (iteration 20) — code, UX, graphics, content
+
+A full read of `src/`, a puppeteer sweep (390×844, 320×568, 1280×720 embed)
+across Home / map / game / finale / Pairs / Logic / modals, and a content audit
+of all 144 boards. `npm test`, `npm run validate` and `scripts/playtest.mjs`
+were green before and after.
+
+### Fixed this iteration (shipped)
+
+- **Hint spoilers (fairness bug).** Five category names spelled out their own
+  puzzle's pivot — `light`, `palm`, `bank`, `date`, `fall` — so one 💡 hint on
+  those boards handed over the finale. Two more named a tile from a *different*
+  group on the same board (`seal` → MARINE, `fair` → JUST), which misdirects.
+  All seven rewritten; **`npm run validate` now fails on either case**, so it
+  can't come back.
+- **Stale daily streak.** Home read `daily.streak` straight from storage, but
+  that field is only rewritten on the next clear — a streak broken weeks ago
+  still displayed "🔥 6-day streak" until `recordDaily` silently reset it to 1.
+  New `liveDailyStreak()` only counts a run cleared today or yesterday.
+- **Logic Grid never defined "neighbour"** — the single fact every deduction
+  rests on. The rules now say orthogonal, never diagonal. It also always opened
+  on puzzle 1; it now opens on the first unsolved one.
+- **Level map didn't scroll to you.** A player at L34 landed at L1 and scrolled
+  ~900px. The next-playable node now scrolls itself into view.
+- **Finale was tap-only** — no keyboard on desktop or in the embed. Typing a
+  letter now places it, Backspace undoes.
+- Escape closes the modals; interstitials keep a 60s minimum gap and skip the
+  first minute of a session (CrazyGames policy, was backlog #14); the hero
+  scales down below `sm` so the Daily card + CTA clear the fold on a 320×568
+  phone; Confetti re-themed off the pre-retheme neon palette; dropped
+  `WordTile`'s never-true `hinted` prop.
+
+### Backlog — content (highest value)
+
+1. **[content, high] 71 category names give away one of their own tiles.**
+   `npm run audit` now lists them. The tic is a category whose name is the
+   definition *and* one of its three words: "To pester: PESTER/ANNOY/NAG",
+   "To verify: VERIFY/INSPECT/CONFIRM", "To push: PUSH/SHOVE/THRUST",
+   "To flutter: FLUTTER/BLINK/WINK", "To flee fast: DASH/FLEE/SCRAM". Effects:
+   the 💡 hint is far stronger on those boards than on others (inconsistent
+   pricing for the same token), and the solved banner reads redundantly. Worth
+   a copy pass — rename the group, don't swap the word.
+2. **[content, high] Within-board semantic overlap** — the unfairness the
+   existing caveat predicted, now with concrete cases. `bark` (L6): SNARL sits
+   in "To shout harshly" but is a textbook dog sound, and GROWL is in "Dog
+   sounds" but is a harsh shout — the two groups are interchangeable at the
+   edges. `block` (L9): BRICK ("Children's toys") is also a solid chunk, and
+   BAR ("To obstruct") is a solid chunk too. Fixing these two is a morning's
+   work; finding the rest needs the LLM-judge pass over all 248 groups that
+   caveat #1 already asks for.
+3. **[content, medium] Duplicate categories across levels.** `stick` (L7) has
+   "Swung in sport: BAT/CLUB/RACKET" and `bat` (L26) has "Swung at a ball:
+   RACKET/CLUB/PADDLE" — near-identical groups ~19 levels apart. A cross-board
+   category-similarity check (shared-word ratio between any two groups) would
+   catch these at authoring time.
+
+### Backlog — gameplay
+
+4. **[gameplay] The link mask is always `◆ ? ? ?`** regardless of the pivot's
+   length. Showing one `?` per letter would turn the link card into a live
+   clue — you could start narrowing the word while grouping, instead of
+   meeting its length for the first time in the finale. Cheap to build; it is
+   a real difficulty change, so it wants an owner call (and a README update).
+5. **[gameplay] The hint token has one shape only** (reveal a theme, then
+   reveal a letter). A second option — "remove one tile that is NOT in the
+   group you're staring at" — would let a stuck player spend without being
+   handed a whole theme, and rewards the players who ask for less.
+6. **[gameplay] Nothing rewards deducing the link early.** The link is worth a
+   flat +250 whenever you spell it. An early-guess bonus (spell it with two
+   groups still unsolved for double points, at the risk of a wrong try) would
+   give the pivot mechanic — the thing that makes this not-Connections — a
+   reason to be played *forward* instead of last. This is the single biggest
+   gameplay idea from this pass.
+7. **[gameplay] Session quests** (was launch backlog #6) — still open, still
+   the best lever on the session-length metric CrazyGames ranks by.
+8. **[gameplay] Pairs has no board-level goal feedback** — no "2 / 4 pairs
+   found", no restart-this-board, no explanation of what a move costs. The
+   fewest-moves score is invisible until the end card.
+9. **[gameplay] Logic Grid can't be painted by dragging** — 12 taps per attempt
+   with a brush switch between them. Drag-to-paint is the expected verb.
+
+### Backlog — UX & graphics
+
+10. **[ux, high] Home doesn't fit a 1280×720 embed** (902px of content). The
+    game screen got its two-column landscape layout in iteration 17; Home
+    still scrolls, so the rank bar and stats strip are below the fold on the
+    most common CrazyGames desktop embed. Same treatment needed.
+11. **[ux] Phones in landscape are blocked entirely** by the `.rotate-hint`
+    overlay (`max-height: 500px`), which fires *before* the `lg` two-column
+    layout can help. That's a plausible submission-review flag on a platform
+    whose players are often sideways. Consider a compact landscape layout
+    instead of a wall.
+12. **[ux] Large dead zones on phones.** Pairs uses the top half of a 390×844
+    screen and leaves the rest empty; Logic Grid the same; the game board sits
+    high with ~300px below the hint button. Vertically centring the play area
+    (or growing the tiles) would make all three feel finished.
+13. **[graphics] Logic Grid clue tiles are walls of repeated prose** — "No
+    neighbour is in my group" three times over. A compact glyph per clue
+    (`◻0`, `◻2`, `→✓`, `←✗`) with a legend would let the board be *read* at a
+    glance, which is the whole activity.
+14. **[ux] "Continue · L6" opens the level map, not L6.** The map is the only
+    way in, so the label over-promises. Either jump straight into the level
+    (and put the map behind its own button) or rename the CTA.
+15. **[ux] The mode row's numbers are unlabelled and mean three different
+    things** — "Endless 6" (boards cleared), "Pairs 14" (fewest *moves* —
+    lower is better), "Logic 1" (puzzles solved). Same visual weight, opposite
+    directions.
+16. **[a11y] `user-scalable=no` in index.html blocks pinch-zoom**, and the
+    modals have no focus trap or restore (Escape now closes them, which was
+    the bigger gap). Still never run against a real screen reader.
+
+### Backlog — code quality
+
+17. **[code] `setProgress` updaters do side effects** — `saveProgress`,
+    `evaluateUnlocks` and `setTimeout(setUnlockedAch)` all run *inside* the
+    reducer in `App.tsx`. React 19 StrictMode double-invokes updaters in dev,
+    so toasts and writes fire twice there. Production is unaffected, which is
+    why it has survived; the fix is to compute `next` in the handler and let
+    the updater be pure.
+18. **[code] The rank-up block is copy-pasted four times** (`handleWin`,
+    `handleEndlessWin`, `handlePairsFinish`, `handleDeductionSolve`) — same
+    nine lines, same 2100ms delay. One `awardScore(prev, points)` helper.
+19. **[code] `Game.tsx` is 1,700 lines** holding the board, scoring, tutorial
+    coach, finale, second-chance offer, end card and share. The finale
+    (`LinkGuess` + `buildLetterBank`) and `EndCard` are self-contained and
+    already imported elsewhere — splitting them out would halve the file.
+20. **[code] The tutorial coach hard-codes level 1's content** — "which three
+    words mean a famous person?" and "find the famous folk" live in
+    `Game.tsx`, so re-pinning `OPENING[0]` silently breaks the tutorial. The
+    copy belongs on the puzzle.
+21. **[code] i18n is a stub.** `src/i18n.ts` covers 12 strings; everything
+    else is inline. Unchanged from the last pass — noting it so the scaffold
+    doesn't read as coverage.
+
 ## SHIPPED — owner priorities #4, #8, #9, #12 + Pairs (iterations 18–19)
 
 Two sessions worked these in parallel; the merge kept one implementation and
@@ -214,8 +347,8 @@ impact on the platform:
 12. ✅ **First-5-levels curve** — shipped (see SHIPPED above).
 13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set
     (tile tap, group pop, win sting) would lift perceived quality a lot.
-14. **Interstitial pacing guard** — never show one within 60s of the last, per
-    CrazyGames policy.
+14. ✅ **Interstitial pacing guard** — `showInterstitial()` now enforces a 60s
+    minimum gap and skips the first minute of a session (iteration 20).
 
 ## Animation & visual-polish review (iteration 14)
 
@@ -538,7 +671,8 @@ Focused on the levers that actually drive a casual web game's reach & retention:
 1. **[content, high] Ambiguity is hand-reviewed, not solver-proven.** With
    groups of four the risk is real; a word that fits two themes will feel unfair.
    `npm run audit` only flags generic/short spokes, not semantic overlap. Wants a
-   real playtest or an LLM-judge pass over all 248 groups.
+   real playtest or an LLM-judge pass over all 248 groups. Iteration 20 found
+   concrete cases by hand (`bark`, `block`) — see review-pass item 2.
 2. **[depth] The link finale is still 1-of-4 multiple choice.** Decoys are
    smarter but a typed-entry mode (with fuzzy match) would be a bigger challenge.
 3. **[balance] Difficulty is a length heuristic**, not true semantic difficulty;
