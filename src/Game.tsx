@@ -643,7 +643,6 @@ export default function Game({
                   display={displayOf(word)}
                   emoji={twist === "emoji"}
                   selected={selected.includes(word)}
-                  hinted={false}
                   disabled={status !== "playing" || offering}
                   onClick={() => toggleSelect(word)}
                 />
@@ -893,7 +892,6 @@ function WordTile({
   display,
   emoji,
   selected,
-  hinted,
   disabled,
   onClick,
 }: {
@@ -901,7 +899,6 @@ function WordTile({
   display?: string;
   emoji?: boolean;
   selected: boolean;
-  hinted: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -919,9 +916,6 @@ function WordTile({
   if (selected) {
     look = "bg-ink text-paper";
     style = { boxShadow: "2px 2px 0 rgba(38,34,26,0.5)" };
-  } else if (hinted) {
-    look = "border-press text-ink";
-    style = { boxShadow: "0 0 0 2px rgba(217,72,43,0.8)" };
   }
 
   return (
@@ -1246,6 +1240,25 @@ function LinkGuess({
     setTaps((prev) => prev.slice(0, -1));
   };
 
+  // Desktop players reach for the keyboard here: typing a letter places the
+  // first unused tile bearing it, Backspace undoes. Tapping still works.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (resolved || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        backspace();
+        return;
+      }
+      if (!/^[a-zA-Z]$/.test(e.key)) return;
+      const ch = e.key.toUpperCase();
+      const i = bank.findIndex((b, idx) => b === ch && !used.has(idx));
+      if (i >= 0) tap(i);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }); // no dep array: the handler closes over the current taps/used set
+
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
@@ -1304,7 +1317,7 @@ function LinkGuess({
       {wrong ? (
         <p className="mt-2 text-sm font-semibold text-press">Not the word — try again.</p>
       ) : (
-        <p className="mt-2 text-xs text-ink-soft">Tap a tile to place it; each letter is used once.</p>
+        <p className="mt-2 text-xs text-ink-soft">Tap a tile — or just type — to place it; each letter is used once.</p>
       )}
 
       {/* The letter bank */}

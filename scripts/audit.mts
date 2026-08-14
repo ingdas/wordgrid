@@ -21,6 +21,21 @@ const shared = [...owners.entries()].filter(([, ids]) => ids.length >= 3).sort((
 console.log(`Spokes reused across 3+ puzzles (${shared.length}):`);
 for (const [w, ids] of shared) console.log(`  ${w.padEnd(12)} ${ids.length}×  (${ids.join(", ")})`);
 
+// A category name that repeats one of its own three words makes the 💡 hint
+// far stronger on that board than on others (it gives a tile away for free)
+// and reads redundantly on the solved banner. Not fatal — validate.mts already
+// fails the two dangerous cases (naming the pivot, or naming another group's
+// tile) — but worth rewriting when the copy allows.
+const selfNaming: string[] = [];
+for (const p of [...PUZZLES, ...DAILY_PUZZLES]) {
+  for (const c of p.categories) {
+    const nameWords = new Set(c.name.toUpperCase().replace(/[^A-Z ]/g, " ").split(/\s+/));
+    for (const w of c.words) if (nameWords.has(w.toUpperCase())) selfNaming.push(`  ${p.id.padEnd(12)} "${c.name}" contains its own tile ${w}`);
+  }
+}
+console.log(`\nCategory names that give away one of their own tiles (${selfNaming.length}):`);
+console.log(selfNaming.join("\n") || "  none");
+
 const shortWords = [...owners.keys()].filter((w) => w.length <= 3).sort();
 console.log(`\nShort spokes (<=3 letters) to double-check (${shortWords.length}):`);
 console.log("  " + shortWords.join(", "));

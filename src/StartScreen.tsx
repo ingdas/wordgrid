@@ -6,6 +6,7 @@ import {
   totalStars,
   dailyDoneToday,
   dailyWeek,
+  liveDailyStreak,
   msUntilNextDaily,
   furthestCleared,
   playerRank,
@@ -62,11 +63,13 @@ export default function StartScreen({
   const nextLevel = Math.min(furthestCleared(progress) + 2, LEVELS.length);
   const rank = playerRank(progress.score);
   const week = dailyWeek(progress, now);
+  // A streak only counts while it's still alive (cleared today or yesterday).
+  const streakNow = liveDailyStreak(progress, now);
   const countdown = fmtCountdown(msUntilNextDaily(now));
   const dateLabel = now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
   return (
-    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-14 text-center sm:pt-20">
+    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-12 text-center sm:pt-20">
       <button
         onClick={onSettings}
         aria-label="Settings"
@@ -109,7 +112,7 @@ export default function StartScreen({
             rotate: { type: "spring", stiffness: 200, damping: 14 },
             y: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
           }}
-          className="relative grid h-20 w-20 place-items-center rounded-3xl bg-press text-4xl text-paper shadow-[4px_4px_0_rgba(38,34,26,0.85)]"
+          className="relative grid h-14 w-14 place-items-center rounded-3xl bg-press text-3xl text-paper shadow-[4px_4px_0_rgba(38,34,26,0.85)] sm:h-20 sm:w-20 sm:text-4xl"
         >
           <span aria-hidden>◆</span>
         </motion.div>
@@ -119,7 +122,7 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mt-6 font-display text-6xl font-bold tracking-tight text-ink"
+        className="mt-4 font-display text-5xl font-bold tracking-tight text-ink sm:mt-6 sm:text-6xl"
       >
         WordGrid
       </motion.h1>
@@ -128,7 +131,7 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-3 max-w-xs text-balance text-lg leading-relaxed text-ink-soft"
+        className="mt-2 max-w-xs text-balance text-base leading-relaxed text-ink-soft sm:mt-3 sm:text-lg"
       >
         Four hidden groups. <span className="font-semibold text-press">One secret word</span> they all
         share. Can you find it?
@@ -138,7 +141,7 @@ export default function StartScreen({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.32, type: "spring", stiffness: 260, damping: 20 }}
-        className="mt-8 flex w-full max-w-sm flex-col items-center gap-3"
+        className="mt-6 flex w-full max-w-sm flex-col items-center gap-3 sm:mt-8"
       >
         {/* Daily Challenge — the hero. A shared puzzle each day with a streak. */}
         <motion.button
@@ -176,14 +179,14 @@ export default function StartScreen({
             {dailyDone ? (
               <>
                 <span className="text-sm font-bold text-leaf">
-                  ✓ Solved! {progress.daily.streak > 0 && `🔥 ${progress.daily.streak}`}
+                  ✓ Solved! {streakNow > 0 && `🔥 ${streakNow}`}
                 </span>
                 <span className="text-xs font-semibold text-ink-soft">Next in {countdown}</span>
               </>
             ) : (
               <>
                 <span className="text-sm font-semibold text-ink">
-                  {progress.daily.streak > 0 ? `🔥 ${progress.daily.streak}-day streak` : "Start your streak"}
+                  {streakNow > 0 ? `🔥 ${streakNow}-day streak` : "Start your streak"}
                 </span>
                 <span className="rounded-full bg-press px-4 py-1.5 text-sm font-bold text-paper">Solve →</span>
               </>

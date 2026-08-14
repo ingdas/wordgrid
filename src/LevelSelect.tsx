@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { LEVELS, CHAPTERS, TIER_LABELS, type Tier } from "./puzzles";
 import { isUnlocked, isDebug, MAX_STARS, totalStars, type Progress } from "./progress";
@@ -25,6 +26,15 @@ export default function LevelSelect({
 }) {
   const stars = totalStars(progress);
   const nextIndex = LEVELS.findIndex((p, i) => isUnlocked(progress, i) && !(progress.stars[p.id] > 0));
+
+  // The map is ~2300px tall by the last chapter, so a returning player would
+  // land at level 1 and have to scroll to find where they are. Bring the
+  // next-playable node into view instead (instantly — no distracting glide).
+  const nextRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    nextRef.current?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5">
@@ -116,6 +126,7 @@ export default function LevelSelect({
                       unlocked={isUnlocked(progress, i)}
                       earned={progress.stars[p.id] ?? 0}
                       highlight={i === nextIndex}
+                      nodeRef={i === nextIndex ? nextRef : undefined}
                       boss={i === chap.boss}
                       onClick={() => isUnlocked(progress, i) && onPick(i)}
                     />
@@ -136,6 +147,7 @@ function LevelNode({
   unlocked,
   earned,
   highlight,
+  nodeRef,
   boss,
   onClick,
 }: {
@@ -144,6 +156,7 @@ function LevelNode({
   unlocked: boolean;
   earned: number;
   highlight: boolean;
+  nodeRef?: React.Ref<HTMLButtonElement>;
   boss: boolean;
   onClick: () => void;
 }) {
@@ -156,6 +169,7 @@ function LevelNode({
 
   return (
     <motion.button
+      ref={nodeRef}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: Math.min(index * 0.01, 0.3), type: "spring", stiffness: 320, damping: 24 }}

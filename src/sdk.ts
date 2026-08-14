@@ -87,7 +87,17 @@ export function happytime() {
   }
 }
 
+// CrazyGames policy: never show two midgame ads back to back. Levels are short
+// (and Endless/Pairs shorter still), so gate the break on a minimum gap rather
+// than firing one after every single board.
+const MIN_AD_GAP_MS = 60_000;
+// Seeded at load so the first minute of a session is also ad-free.
+let lastInterstitial = Date.now();
+
 export function showInterstitial() {
+  const now = Date.now();
+  if (now - lastInterstitial < MIN_AD_GAP_MS) return;
+  lastInterstitial = now;
   try {
     sdk()?.ad?.requestAd?.("midgame");
   } catch {

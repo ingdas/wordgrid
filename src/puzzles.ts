@@ -64,7 +64,7 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Light Work",
     pivot: "LIGHT",
     categories: [
-      { name: "Gives off light", words: ["LAMP", "TORCH", "CANDLE"] },
+      { name: "Things that glow", words: ["LAMP", "TORCH", "CANDLE"] },
       { name: "Not heavy", words: ["AIRY", "SLIGHT", "FLUFFY"] },
       { name: "___ + HOUSE", words: ["GREEN", "WARE", "POWER"] },
       { name: "To set ablaze", words: ["IGNITE", "KINDLE", "SPARK"] },
@@ -122,7 +122,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Parts of the hand", words: ["WRIST", "KNUCKLE", "THUMB"] },
       { name: "Kinds of tree", words: ["MAPLE", "BIRCH", "OAK"] },
       { name: "To conceal in hand", words: ["HIDE", "STASH", "POCKET"] },
-      { name: "Palm ___", words: ["SPRINGS", "BEACH", "SUNDAY"] },
+      { name: "Comes after the link", words: ["SPRINGS", "BEACH", "SUNDAY"] },
     ],
   },
   {
@@ -185,7 +185,7 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Bank On It",
     pivot: "BANK",
     categories: [
-      { name: "Found in a bank", words: ["VAULT", "ATM", "TELLER"] },
+      { name: "Seen inside a branch", words: ["VAULT", "ATM", "TELLER"] },
       { name: "Edge of a river", words: ["SHORE", "LEVEE", "EDGE"] },
       { name: "To rely on", words: ["COUNT", "DEPEND", "RELY"] },
       { name: "To tilt while turning", words: ["TILT", "ROLL", "LEAN"] },
@@ -394,7 +394,7 @@ export const PUZZLES: RawPuzzle[] = [
     title: "Sealed Tight",
     pivot: "SEAL",
     categories: [
-      { name: "Marine animals", words: ["WALRUS", "NARWHAL", "ORCA"] },
+      { name: "Sea mammals", words: ["WALRUS", "NARWHAL", "ORCA"] },
       { name: "To close up", words: ["SHUT", "CLOSE", "FASTEN"] },
       { name: "Official marks", words: ["STAMP", "CREST", "EMBLEM"] },
       { name: "Elite soldiers", words: ["RANGER", "MARINE", "COMMANDO"] },
@@ -639,7 +639,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Calendar units", words: ["DAY", "MONTH", "YEAR"] },
       { name: "Dried fruits", words: ["FIG", "RAISIN", "PRUNE"] },
       { name: "A romantic outing", words: ["FLING", "ROMANCE", "AFFAIR"] },
-      { name: "To mark with a date", words: ["MARK", "STAMP", "LABEL"] },
+      { name: "To identify with a tag", words: ["MARK", "STAMP", "LABEL"] },
     ],
   },
   {

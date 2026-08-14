@@ -205,6 +205,20 @@ export function dailyDoneToday(p: Progress, key = todayKey()): boolean {
   return p.daily.lastDate === key;
 }
 
+/**
+ * The streak as it stands right now. `daily.streak` is only rewritten when the
+ * next daily is cleared, so a stored 6 can outlive the run by weeks — showing
+ * it would promise a streak that recordDaily() is about to reset to 1. A run
+ * is still alive only if the last clear was today or yesterday.
+ */
+export function liveDailyStreak(p: Progress, now = new Date()): number {
+  if (!p.daily.lastDate || p.daily.streak <= 0) return 0;
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  const alive = p.daily.lastDate === todayKey(now) || p.daily.lastDate === todayKey(y);
+  return alive ? p.daily.streak : 0;
+}
+
 /** Update the daily streak after clearing today's challenge. */
 export function recordDaily(p: Progress, key = todayKey()): Progress {
   if (p.daily.lastDate === key) return p; // already counted today

@@ -42,6 +42,17 @@ type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
 
 const noop = () => {};
 
+/** Close a modal with Escape — keyboard players expect it, and it costs a line. */
+function useEscape(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+}
+
 const CALM_KEY = "wordgrid:calm";
 const readCalm = () => {
   try {
@@ -630,6 +641,7 @@ function StatsModal({
   onClose: () => void;
   onHistory: () => void;
 }) {
+  useEscape(onClose);
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
     ["Total score", `✦ ${progress.score.toLocaleString()}`],
@@ -754,6 +766,7 @@ function relativeTime(at: number): string {
 }
 
 function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+  useEscape(onClose);
   const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
   return (
     <motion.div
@@ -874,6 +887,7 @@ function SettingsModal({
   onClose: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
+  useEscape(onClose);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -981,6 +995,7 @@ const STEPS = [
 ];
 
 function HelpModal({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   return (
     <motion.div
       initial={{ opacity: 0 }}

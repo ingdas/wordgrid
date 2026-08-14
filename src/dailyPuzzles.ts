@@ -199,7 +199,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Right and equal", words: ["JUST", "EQUAL", "HONEST"] },
       { name: "Fun events with tents", words: ["CARNIVAL", "CIRCUS", "RODEO"] },
       { name: "Light in color", words: ["PALE", "BLOND", "GOLDEN"] },
-      { name: "Just okay", words: ["AVERAGE", "DECENT", "PASSABLE"] },
+      { name: "Not bad, not great", words: ["AVERAGE", "DECENT", "PASSABLE"] },
     ],
   },
   {
@@ -208,7 +208,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "FALL",
     categories: [
       { name: "Seasons", words: ["SPRING", "SUMMER", "WINTER"] },
-      { name: "To fall over", words: ["TOPPLE", "STUMBLE", "COLLAPSE"] },
+      { name: "To tumble down", words: ["TOPPLE", "STUMBLE", "COLLAPSE"] },
       { name: "To go down in number", words: ["DECLINE", "DECREASE", "DIP"] },
       { name: "A sad ending", words: ["DEFEAT", "RUIN", "DOOM"] },
     ],

@@ -24,7 +24,12 @@ interface DeductionProps {
 }
 
 export default function Deduction({ reduce, solvedIds, onSolve, onExit }: DeductionProps) {
-  const [levelIdx, setLevelIdx] = useState(0);
+  // Open on the first puzzle you haven't cracked yet, so coming back doesn't
+  // mean paging past everything already solved. (All solved → back to #1.)
+  const [levelIdx, setLevelIdx] = useState(() => {
+    const next = DEDUCTION_LEVELS.findIndex((l) => !solvedIds.includes(l.id));
+    return next < 0 ? 0 : next;
+  });
   const level = DEDUCTION_LEVELS[levelIdx];
   return (
     <DeductionBoard
@@ -249,6 +254,10 @@ function DeductionBoard({
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
         Four hidden groups of 3 tiles — any shapes, they don't have to touch. Some
         tiles tell you about their neighbours. Deduce and colour all 12.
+        <br />
+        <span className="text-[0.72rem] font-semibold text-ink">
+          A tile's neighbours are the tiles directly above, below, left and right — never diagonal.
+        </span>
       </p>
 
       <main className="relative mt-4">

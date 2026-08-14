@@ -5,6 +5,7 @@ import { PUZZLES, EMOJI_BOSS, buildPuzzle } from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
+const normalize = (s: string) => s.toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
 let bad = 0;
 const seenIds = new Set<string>();
 
@@ -33,6 +34,18 @@ for (const raw of ALL) {
   for (const c of p.categories) {
     if (c.members.length !== 4) problems.push(`"${c.name}" has ${c.members.length} members`);
     if (!c.members.includes(p.pivot)) problems.push(`pivot missing from "${c.name}"`);
+
+    // A category name is shown by the 💡 hint and on the solved banner, so it
+    // must never spell out the secret link (that hands over the finale) nor
+    // name a tile that belongs to a DIFFERENT group (that misdirects unfairly).
+    const nameWords = new Set(normalize(c.name).split(" ").filter(Boolean));
+    if (nameWords.has(normalize(p.pivot))) problems.push(`"${c.name}" spells the pivot ${p.pivot}`);
+    for (const other of p.categories) {
+      if (other === c) continue;
+      for (const w of other.spokes) {
+        if (nameWords.has(normalize(w))) problems.push(`"${c.name}" names ${w}, a tile from "${other.name}"`);
+      }
+    }
   }
   if (p.words.filter((w) => w === p.pivot).length !== 1) problems.push("pivot is not exactly one tile");
 
