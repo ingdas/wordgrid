@@ -89,7 +89,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "A line of light", words: ["RAY", "GLEAM", "GLOW"] },
       { name: "Holds up a roof", words: ["COLUMN", "PILLAR", "SUPPORT"] },
       { name: "Gymnastics events", words: ["VAULT", "FLOOR", "BARS"] },
-      { name: "To send a signal", words: ["BROADCAST", "TRANSMIT", "SEND"] },
+      { name: "To put out a signal", words: ["BROADCAST", "TRANSMIT", "SEND"] },
     ],
   },
   {
@@ -144,7 +144,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Winter clothing", words: ["PARKA", "JACKET", "SCARF"] },
       { name: "Layers of paint", words: ["PRIMER", "GLOSS", "VARNISH"] },
       { name: "An animal's covering", words: ["FUR", "PELT", "FLEECE"] },
-      { name: "To cover thinly", words: ["COVER", "GLAZE", "DUST"] },
+      { name: "To put a thin layer on", words: ["COVER", "GLAZE", "DUST"] },
     ],
   },
   {
@@ -175,7 +175,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "DRILL",
     categories: [
       { name: "In a toolbox", words: ["WRENCH", "PLIERS", "SCREWDRIVER"] },
-      { name: "A practice routine", words: ["EXERCISE", "ROUTINE", "WORKOUT"] },
+      { name: "Repeated practice", words: ["EXERCISE", "ROUTINE", "WORKOUT"] },
       { name: "To make a hole", words: ["BORE", "PIERCE", "PUNCTURE"] },
       { name: "Army words", words: ["SERGEANT", "BARRACKS", "REGIMENT"] },
     ],
@@ -196,7 +196,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Fair Play",
     pivot: "FAIR",
     categories: [
-      { name: "Right and equal", words: ["JUST", "EQUAL", "HONEST"] },
+      { name: "Playing by the rules", words: ["JUST", "EQUAL", "HONEST"] },
       { name: "Fun events with tents", words: ["CARNIVAL", "CIRCUS", "RODEO"] },
       { name: "Light in color", words: ["PALE", "BLOND", "GOLDEN"] },
       { name: "Not bad, not great", words: ["AVERAGE", "DECENT", "PASSABLE"] },
@@ -229,7 +229,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "The Flat",
     pivot: "FLAT",
     categories: [
-      { name: "Totally level", words: ["LEVEL", "EVEN", "SMOOTH"] },
+      { name: "No bumps at all", words: ["LEVEL", "EVEN", "SMOOTH"] },
       { name: "City homes", words: ["APARTMENT", "STUDIO", "LOFT"] },
       { name: "Tire problems", words: ["PUNCTURE", "BLOWOUT", "LEAK"] },
       { name: "Musical note words", words: ["SHARP", "MINOR", "NATURAL"] },
@@ -251,7 +251,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Fold It In",
     pivot: "FOLD",
     categories: [
-      { name: "To bend paper", words: ["CREASE", "BEND", "TUCK"] },
+      { name: "What origami needs", words: ["CREASE", "BEND", "TUCK"] },
       { name: "On a sheep farm", words: ["PASTURE", "PEN", "BARN"] },
       { name: "To give up a game", words: ["QUIT", "WITHDRAW", "CONCEDE"] },
       { name: "Mixing in the kitchen", words: ["STIR", "BLEND", "WHISK"] },
@@ -275,7 +275,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Card-game actions", words: ["DEAL", "BLUFF", "SHUFFLE"] },
       { name: "On a clock", words: ["DIAL", "FACE", "NUMERAL"] },
-      { name: "To give over", words: ["PASS", "GIVE", "DELIVER"] },
+      { name: "To put in someone's grasp", words: ["PASS", "GIVE", "DELIVER"] },
       { name: "Someone who does the work", words: ["LABORER", "WORKER", "HELPER"] },
     ],
   },
@@ -297,7 +297,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Playing cards", words: ["KING", "QUEEN", "JOKER"] },
       { name: "Lifts heavy things", words: ["LEVER", "HOIST", "CRANE"] },
-      { name: "Where things plug in", words: ["PLUG", "OUTLET", "ADAPTER"] },
+      { name: "Where a cable goes", words: ["PLUG", "OUTLET", "ADAPTER"] },
       { name: "___ + POT", words: ["TEA", "FLOWER", "HONEY"] },
     ],
   },
@@ -330,7 +330,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Cut from trees", words: ["TIMBER", "STUMP", "PLANK"] },
       { name: "Books of records", words: ["DIARY", "JOURNAL", "LEDGER"] },
-      { name: "Online account words", words: ["BROWSER", "ACCOUNT", "PROFILE"] },
+      { name: "Words from signing in", words: ["BROWSER", "ACCOUNT", "PROFILE"] },
       { name: "Math class words", words: ["SINE", "PI", "ALGEBRA"] },
     ],
   },
@@ -504,7 +504,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Take the Shot",
     pivot: "SHOT",
     categories: [
-      { name: "One try", words: ["ATTEMPT", "TRY", "CHANCE"] },
+      { name: "A single go", words: ["ATTEMPT", "TRY", "CHANCE"] },
       { name: "At the doctor's office", words: ["VACCINE", "INJECTION", "BOOSTER"] },
       { name: "Pictures you take", words: ["PHOTO", "SELFIE", "PORTRAIT"] },
       { name: "Fired from a gun", words: ["BULLET", "PELLET", "ROUND"] },
@@ -517,7 +517,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Seen along a road", words: ["BILLBOARD", "MILESTONE", "POSTER"] },
       { name: "To write your name", words: ["AUTOGRAPH", "INITIAL", "ENDORSE"] },
-      { name: "A hint of the future", words: ["OMEN", "HINT", "CLUE"] },
+      { name: "What foretells something", words: ["OMEN", "HINT", "CLUE"] },
       { name: "Astrology words", words: ["ZODIAC", "HOROSCOPE", "TAURUS"] },
     ],
   },
@@ -526,8 +526,8 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Don't Slip",
     pivot: "SLIP",
     categories: [
-      { name: "A small mistake", words: ["BLUNDER", "LAPSE", "MISTAKE"] },
-      { name: "To slide by accident", words: ["SLIDE", "SKID", "GLIDE"] },
+      { name: "A minor error", words: ["BLUNDER", "LAPSE", "MISTAKE"] },
+      { name: "To lose your footing", words: ["SLIDE", "SKID", "GLIDE"] },
       { name: "Small pieces of paper", words: ["RECEIPT", "TICKET", "VOUCHER"] },
       { name: "To move quietly", words: ["SNEAK", "CREEP", "STEAL"] },
     ],
@@ -549,7 +549,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "STAGE",
     categories: [
       { name: "Places to perform", words: ["THEATER", "PLATFORM", "PODIUM"] },
-      { name: "A step in a process", words: ["PHASE", "STEP", "PART"] },
+      { name: "Where you are in a process", words: ["PHASE", "STEP", "PART"] },
       { name: "To put on an event", words: ["HOST", "ORGANIZE", "ARRANGE"] },
       { name: "Rocket words", words: ["LAUNCHPAD", "THRUSTER", "CAPSULE"] },
     ],
@@ -582,7 +582,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "STRIKE",
     categories: [
       { name: "Worker protests", words: ["WALKOUT", "PICKET", "BOYCOTT"] },
-      { name: "To hit", words: ["HIT", "SMACK", "WHACK"] },
+      { name: "To land a blow", words: ["HIT", "SMACK", "WHACK"] },
       { name: "Bowling scores", words: ["SPARE", "SPLIT", "TURKEY"] },
       { name: "Umpire's calls", words: ["BALL", "OUT", "FOUL"] },
     ],
@@ -616,7 +616,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Extra money for service", words: ["GRATUITY", "BONUS", "REWARD"] },
       { name: "Helpful words", words: ["ADVICE", "POINTER", "HINT"] },
-      { name: "The very end", words: ["POINT", "END", "APEX"] },
+      { name: "The furthest bit", words: ["POINT", "END", "APEX"] },
       { name: "To knock over", words: ["TOPPLE", "OVERTURN", "UPSET"] },
     ],
   },
@@ -627,7 +627,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Breakfast foods", words: ["CEREAL", "PANCAKE", "WAFFLE"] },
       { name: "Said to honor someone", words: ["SPEECH", "CHEERS", "TRIBUTE"] },
-      { name: "To cook until brown", words: ["BROWN", "CHAR", "SCORCH"] },
+      { name: "To cook a bit too long", words: ["BROWN", "CHAR", "SCORCH"] },
       { name: "In big trouble (slang)", words: ["DOOMED", "FINISHED", "RUINED"] },
     ],
   },
@@ -648,7 +648,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "STORY",
     categories: [
       { name: "Told at bedtime", words: ["TALE", "FABLE", "YARN"] },
-      { name: "Levels of a building", words: ["LEVEL", "BASEMENT", "ATTIC"] },
+      { name: "Floors of a building", words: ["LEVEL", "BASEMENT", "ATTIC"] },
       { name: "In a newspaper", words: ["REPORT", "ARTICLE", "SCOOP"] },
       { name: "Not quite the truth", words: ["FIB", "LIE", "EXCUSE"] },
     ],
@@ -760,7 +760,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "RACE",
     categories: [
       { name: "Running events", words: ["MARATHON", "SPRINT", "RELAY"] },
-      { name: "To hurry", words: ["RUSH", "HURRY", "HUSTLE"] },
+      { name: "To move fast", words: ["RUSH", "HURRY", "HUSTLE"] },
       { name: "Horse-track words", words: ["JOCKEY", "SADDLE", "STABLE"] },
       { name: "A scared heart does this", words: ["THUMP", "POUND", "FLUTTER"] },
     ],
@@ -772,7 +772,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Holds up trousers", words: ["BUCKLE", "SUSPENDERS", "WAISTBAND"] },
       { name: "To sing very loudly", words: ["BELLOW", "HOLLER", "ROAR"] },
-      { name: "Zones and regions", words: ["ZONE", "REGION", "AREA"] },
+      { name: "A stretch of country", words: ["ZONE", "REGION", "AREA"] },
       { name: "Car safety features", words: ["AIRBAG", "BRAKE", "MIRROR"] },
     ],
   },
@@ -781,8 +781,8 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Dress Code",
     pivot: "DRESS",
     categories: [
-      { name: "Clothes", words: ["TUXEDO", "BLOUSE", "SKIRT"] },
-      { name: "To put clothes on", words: ["WEAR", "CLOTHE", "STYLE"] },
+      { name: "Garments", words: ["TUXEDO", "BLOUSE", "SKIRT"] },
+      { name: "To get someone ready", words: ["WEAR", "CLOTHE", "STYLE"] },
       { name: "Salad preparation", words: ["TOSS", "MIX", "GARNISH"] },
       { name: "First-aid actions", words: ["BANDAGE", "TREAT", "WRAP"] },
     ],
@@ -804,7 +804,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "POINT",
     categories: [
       { name: "Ways to score", words: ["GOAL", "TOUCHDOWN", "TALLY"] },
-      { name: "To aim a finger", words: ["AIM", "GESTURE", "INDICATE"] },
+      { name: "To show where", words: ["AIM", "GESTURE", "INDICATE"] },
       { name: "On a compass", words: ["NORTH", "EAST", "WEST"] },
       { name: "The main idea", words: ["GIST", "MESSAGE", "MEANING"] },
     ],
@@ -817,7 +817,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Party drinks", words: ["LEMONADE", "CIDER", "SODA"] },
       { name: "Boxing words", words: ["UPPERCUT", "CROSS", "KNOCKOUT"] },
       { name: "Strong flavours", words: ["ZESTY", "TANGY", "BOLD"] },
-      { name: "To press a button", words: ["CLICK", "PRESS", "PUSH"] },
+      { name: "What you do to a button", words: ["CLICK", "PRESS", "PUSH"] },
     ],
   },
   {
@@ -837,7 +837,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "SPACE",
     categories: [
       { name: "Out among the stars", words: ["ASTRONAUT", "GALAXY", "ROCKET"] },
-      { name: "Room to move", words: ["ROOM", "GAP", "OPENING"] },
+      { name: "An empty stretch", words: ["ROOM", "GAP", "OPENING"] },
       { name: "Parking words", words: ["LOT", "GARAGE", "VALET"] },
       { name: "Page-layout words", words: ["MARGIN", "INDENT", "TAB"] },
     ],
@@ -893,7 +893,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Flies a plane", words: ["CAPTAIN", "AVIATOR", "NAVIGATOR"] },
       { name: "TV words", words: ["SITCOM", "NETWORK", "RERUN"] },
-      { name: "A trial run", words: ["TRIAL", "TEST", "EXPERIMENT"] },
+      { name: "An early version to check", words: ["TRIAL", "TEST", "EXPERIMENT"] },
       { name: "Steering things", words: ["WHEEL", "JOYSTICK", "HANDLEBARS"] },
     ],
   },
