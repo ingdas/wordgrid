@@ -353,7 +353,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Story elements", words: ["THEME", "CHARACTER", "TWIST"] },
       { name: "Pieces of land", words: ["LOT", "PARCEL", "TRACT"] },
       { name: "To hatch something sneaky", words: ["SCHEME", "CONSPIRE", "PLAN"] },
-      { name: "To draw data", words: ["GRAPH", "MAP", "CHART"] },
+      { name: "To draw data", words: ["GRAPH", "MAP", "SKETCH"] },
     ],
   },
   {
@@ -364,7 +364,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Collisions", words: ["WRECK", "SMASH", "PILEUP"] },
       { name: "Computer failures", words: ["FREEZE", "HANG", "GLITCH"] },
       { name: "To turn up uninvited", words: ["INTRUDE", "BARGE", "INVADE"] },
-      { name: "A market drop", words: ["SLUMP", "PLUNGE", "DIVE"] },
+      { name: "A market drop", words: ["SLUMP", "SLIDE", "TUMBLE"] },
     ],
   },
   {
@@ -406,7 +406,7 @@ export const PUZZLES: RawPuzzle[] = [
     pivot: "BAT",
     categories: [
       { name: "Creatures of the night", words: ["OWL", "MOTH", "RACCOON"] },
-      { name: "Swung at a ball", words: ["RACKET", "CLUB", "PADDLE"] },
+      { name: "Swung at a ball", words: ["PADDLE", "MALLET", "STICK"] },
       { name: "What eyelids do", words: ["FLUTTER", "BLINK", "WINK"] },
       { name: "Cricket terms", words: ["WICKET", "BOWLER", "CREASE"] },
     ],

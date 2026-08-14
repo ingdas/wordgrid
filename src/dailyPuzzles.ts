@@ -45,7 +45,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Worn on the head", words: ["HELMET", "TIARA", "TURBAN"] },
       { name: "At the dentist", words: ["ENAMEL", "FILLING", "CAVITY"] },
       { name: "The very top", words: ["PEAK", "SUMMIT", "CREST"] },
-      { name: "A king's things", words: ["THRONE", "SCEPTER", "ROBE"] },
+      { name: "A king's things", words: ["THRONE", "ROBE", "ORB"] },
     ],
   },
   {
@@ -87,7 +87,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "BEAM",
     categories: [
       { name: "A line of light", words: ["RAY", "GLEAM", "GLOW"] },
-      { name: "Holds up a roof", words: ["COLUMN", "PILLAR", "SUPPORT"] },
+      { name: "Holds up a roof", words: ["RAFTER", "JOIST", "TRUSS"] },
       { name: "Gymnastics events", words: ["VAULT", "FLOOR", "BARS"] },
       { name: "To put out a signal", words: ["BROADCAST", "TRANSMIT", "SEND"] },
     ],
