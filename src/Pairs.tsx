@@ -210,7 +210,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
   const newBest = phase === "done" && (prevBest.current === 0 || moves < prevBest.current);
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4">
+    <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-8 pt-4">
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -242,7 +242,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
               : ""}
       </p>
 
-      <main className="relative mt-4">
+      <main className="relative mt-4 flex flex-1 flex-col justify-center">
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {order.map((word, i) => {
             const cat = matched.get(word);
@@ -380,7 +380,7 @@ function PairCard({
       disabled={disabled}
       // Never leak the word while face down (screen readers included).
       aria-label={faceUp ? word : "Face-down card"}
-      className="aspect-[1.55/1] select-none disabled:cursor-default"
+      className="aspect-[1.15/1] select-none disabled:cursor-default sm:aspect-[1.55/1]"
       style={{ perspective: 600 }}
     >
       <motion.div

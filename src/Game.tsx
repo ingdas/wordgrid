@@ -538,7 +538,7 @@ export default function Game({
   const bannerCats: Category[] = solved;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4 lg:max-w-5xl">
+    <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-8 pt-4 lg:max-w-5xl">
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -586,7 +586,7 @@ export default function Game({
         </button>
       </div>
 
-      <main className="relative mt-4">
+      <main className="relative mt-4 flex flex-1 flex-col justify-center lg:block">
         {/* Floating reward popups ("+200 ×2") rising near the link card */}
         <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex flex-col items-center gap-1">
           <AnimatePresence>

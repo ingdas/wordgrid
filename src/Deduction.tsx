@@ -199,7 +199,7 @@ function DeductionBoard({
   const used = (k: number) => colors.filter((c) => c === k).length;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-8 pt-4">
+    <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-8 pt-4">
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
@@ -252,20 +252,17 @@ function DeductionBoard({
       </div>
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
-        Four hidden groups of 3 tiles — any shapes, they don't have to touch. Some
-        tiles tell you about their neighbours. Deduce and colour all 12.
-        <br />
-        <span className="text-[0.72rem] font-semibold text-ink">
-          A tile's neighbours are the tiles directly above, below, left and right — never diagonal.
-        </span>
+        Four hidden groups of 3 tiles — any shapes, they don't have to touch.
+        Deduce and colour all 12. A tile's <b className="font-semibold text-ink">neighbours</b> are
+        the tiles directly above, below, left and right — never diagonal.
       </p>
 
-      <main className="relative mt-4">
+      <main className="relative mt-4 flex flex-1 flex-col justify-center">
         <motion.div
           key={badKey}
           animate={badKey && !reduce ? { x: [0, -8, 8, -6, 6, 0] } : {}}
           transition={{ duration: 0.4 }}
-          className="mx-auto grid max-w-sm gap-2"
+          className="mx-auto grid w-full max-w-sm gap-2"
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
           {colors.map((col, i) => (
@@ -287,7 +284,7 @@ function DeductionBoard({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="mx-auto mt-4 max-w-sm rounded-2xl border-2 border-press/50 bg-press/5 p-3"
+              className="mx-auto mt-4 w-full max-w-sm rounded-2xl border-2 border-press/50 bg-press/5 p-3"
             >
               {!evalNow.sizesOk ? (
                 <p className="text-sm font-semibold text-press">
@@ -306,6 +303,15 @@ function DeductionBoard({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* What the glyphs mean. Sits under the grid so it reads as a key. */}
+        {!solved && (
+          <div className="mx-auto mt-3 flex w-full max-w-sm flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[0.68rem] text-ink-soft">
+            <span><b className="font-display text-sm text-ink">0</b>/<b className="font-display text-sm text-ink">1</b>/<b className="font-display text-sm text-ink">2</b> = neighbours sharing my colour</span>
+            <span><b className="font-display text-sm text-ink">→=</b> that tile is mine</span>
+            <span><b className="font-display text-sm text-ink">→≠</b> it isn't</span>
+          </div>
+        )}
 
         {/* Brush palette */}
         {!solved && (
@@ -408,19 +414,24 @@ function violationText(cl: DeductionClue, found: number, cols: number): string {
   return `${where} says the tile ${DIR_WORD[cl.dir]} it is ${cl.same ? "" : "not "}in its group — in your colouring it ${cl.same ? "isn't" : "is"}.`;
 }
 
-// The short text painted on a clue tile, and the full sentence for a11y.
-function clueText(cl: DeductionClue): { short: string; full: string } {
+// A clue tile is read at a glance, not word by word: three tiles all saying
+// "No neighbour is in my group" is a wall of prose you have to parse. The glyph
+// is the board's alphabet (legend under the grid); the sentence is kept whole
+// for screen readers and for the problem panel.
+function clueText(cl: DeductionClue): { glyph: string; full: string } {
   if (cl.kind === "deg") {
-    const short =
-      cl.n === 0
-        ? "No neighbour is in my group"
-        : cl.n === 1
-          ? "One neighbour is in my group"
-          : "Two neighbours are in my group";
-    return { short, full: short };
+    return {
+      glyph: String(cl.n),
+      full:
+        cl.n === 0
+          ? "No neighbour is in my group"
+          : cl.n === 1
+            ? "One neighbour is in my group"
+            : "Two neighbours are in my group",
+    };
   }
   return {
-    short: `The tile ${DIR_ARROW[cl.dir]} is ${cl.same ? "" : "NOT "}in my group`,
+    glyph: `${DIR_ARROW[cl.dir]}${cl.same ? "=" : "≠"}`,
     full: `The tile ${DIR_WORD[cl.dir]} me is ${cl.same ? "" : "not "}in my group`,
   };
 }
@@ -472,11 +483,8 @@ function GridTile({
       {theme ? (
         <div className={`absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br ${theme.grad}`}>
           {text ? (
-            <span
-              className="px-1 text-center text-[0.55rem] font-bold leading-tight"
-              style={{ color: theme.ink }}
-            >
-              {text.short}
+            <span className="font-display text-2xl font-bold leading-none" style={{ color: theme.ink }}>
+              {text.glyph}
             </span>
           ) : (
             <span className="text-base opacity-90" style={{ color: theme.ink }} aria-hidden>
@@ -485,9 +493,7 @@ function GridTile({
           )}
         </div>
       ) : text ? (
-        <span className="px-1 text-center text-[0.55rem] font-bold leading-tight text-ink">
-          {text.short}
-        </span>
+        <span className="font-display text-2xl font-bold leading-none text-ink">{text.glyph}</span>
       ) : (
         // Blank tile — a faint dot signals "still to colour" without giving a clue.
         <span aria-hidden className="text-lg text-ink/20">·</span>
