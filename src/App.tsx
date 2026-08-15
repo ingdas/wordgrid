@@ -135,6 +135,45 @@ export default function App() {
     return () => window.removeEventListener("pointerdown", unlock);
   }, [startedInGame]);
 
+  // Every progress write goes through here. The updater passed to useState
+  // must stay pure — React 19 StrictMode double-invokes it in development, so
+  // saving, awarding achievements and firing toasts from inside it ran them
+  // twice. A ref holds the live value so the new state can be computed (and
+  // its side effects run) in the handler, exactly once, and consecutive calls
+  // in one tick still see each other's result.
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const applyProgress = useCallback((mutate: (prev: Progress) => Progress) => {
+    const prev = progressRef.current;
+    const next = mutate(prev);
+    if (next === prev) return { prev, next };
+    progressRef.current = next;
+    saveProgress(next);
+    setProgress(next);
+    return { prev, next };
+  }, []);
+
+  // The lifetime-score ladder ticking over is worth a toast wherever points
+  // come from — a level, an Endless board, a Pairs clear, a logic grid.
+  const celebrateRank = useCallback((before: number, after: number) => {
+    const rank = playerRank(after);
+    if (rank.level > playerRank(before).level) {
+      setTimeout(
+        () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${rank.level} · ${rank.title}` }),
+        2100
+      );
+    }
+  }, []);
+
+  /** Points earned outside the campaign: score + rank-up, nothing else. */
+  const awardScore = useCallback(
+    (points: number) => {
+      const { prev, next } = applyProgress((p) => ({ ...p, score: p.score + points }));
+      celebrateRank(prev.score, next.score);
+    },
+    [applyProgress, celebrateRank]
+  );
+
   const finishTutorial = useCallback(() => {
     setTutorialPending(false);
     try {
@@ -179,7 +218,9 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    setProgress(loadProgress());
+    const fresh = loadProgress();
+    progressRef.current = fresh; // keep the write path's view in sync
+    setProgress(fresh);
     setShowSettings(false);
     setScreen("home");
   }, []);
@@ -222,53 +263,33 @@ export default function App() {
   const handleWin = useCallback(
     (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => {
       happytime();
-      setProgress((prev) => {
-        // The daily plays from its own pool: it feeds streaks/score/history but
-        // never writes campaign stars or best times (its ids aren't levels).
-        const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
-        const streak = prev.streak + 1;
-        const prevBestTime = prev.best[id];
-        let next: Progress = {
-          ...prev,
-          stars: playingDaily
-            ? prev.stars
-            : { ...prev.stars, [id]: Math.max(prev.stars[id] ?? 0, result.stars) },
+      // The daily plays from its own pool: it feeds streaks/score/history but
+      // never writes campaign stars or best times (its ids aren't levels).
+      const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
+      let unlocked: ReturnType<typeof evaluateUnlocks>["unlocked"] = [];
+      const { prev, next } = applyProgress((p) => {
+        const streak = p.streak + 1;
+        const prevBestTime = p.best[id];
+        let acc: Progress = {
+          ...p,
+          stars: playingDaily ? p.stars : { ...p.stars, [id]: Math.max(p.stars[id] ?? 0, result.stars) },
           streak,
-          bestStreak: Math.max(prev.bestStreak, streak),
-          linksGuessed: prev.linksGuessed + (result.linkCorrect ? 1 : 0),
+          bestStreak: Math.max(p.bestStreak, streak),
+          linksGuessed: p.linksGuessed + (result.linkCorrect ? 1 : 0),
           best: playingDaily
-            ? prev.best
-            : {
-                ...prev.best,
-                [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs,
-              },
-          hints: prev.hints + 1, // earn a hint for clearing a level
-          score: prev.score + result.score, // lifetime points
+            ? p.best
+            : { ...p.best, [id]: prevBestTime ? Math.min(prevBestTime, result.timeMs) : result.timeMs },
+          hints: p.hints + 1, // earn a hint for clearing a level
+          score: p.score + result.score, // lifetime points
         };
-        if (playingDaily) next = recordDaily(next);
-        // Rank-up celebration when the lifetime-score ladder ticks over.
-        const afterRank = playerRank(next.score);
-        if (afterRank.level > playerRank(prev.score).level) {
-          setTimeout(
-            () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
-            2100
-          );
-        }
+        if (playingDaily) acc = recordDaily(acc);
         // Tiered achievements: award newly-reached tiers + their hint rewards.
-        const { unlocked, reward, keys } = evaluateUnlocks(next);
-        if (unlocked.length) {
-          next = {
-            ...next,
-            achievements: [...next.achievements, ...keys],
-            hints: next.hints + reward,
-          };
-          const top = unlocked[unlocked.length - 1];
-          setTimeout(
-            () => setUnlockedAch({ icon: top.def.icon, label: `${TIER_NAMES[top.tier]} · ${top.def.title}` }),
-            1800
-          );
+        const earned = evaluateUnlocks(acc);
+        unlocked = earned.unlocked;
+        if (earned.unlocked.length) {
+          acc = { ...acc, achievements: [...acc.achievements, ...earned.keys], hints: acc.hints + earned.reward };
         }
-        next = pushHistory(next, {
+        return pushHistory(acc, {
           at: Date.now(),
           id,
           level: playingDaily ? 0 : levelIndex + 1,
@@ -280,39 +301,32 @@ export default function App() {
           linkCorrect: result.linkCorrect,
           daily: playingDaily,
         });
-        saveProgress(next);
-        return next;
       });
+      celebrateRank(prev.score, next.score);
+      if (unlocked.length) {
+        const top = unlocked[unlocked.length - 1];
+        setTimeout(() => setUnlockedAch({ icon: top.def.icon, label: `${TIER_NAMES[top.tier]} · ${top.def.title}` }), 1800);
+      }
     },
-    [levelIndex, playingDaily, dailyRaw]
+    [levelIndex, playingDaily, dailyRaw, applyProgress, celebrateRank]
   );
 
   const useHintToken = useCallback(() => {
-    setProgress((prev) => {
-      if (prev.hints <= 0) return prev;
-      const next = { ...prev, hints: prev.hints - 1 };
-      saveProgress(next);
-      return next;
-    });
-  }, []);
+    applyProgress((p) => (p.hints <= 0 ? p : { ...p, hints: p.hints - 1 }));
+  }, [applyProgress]);
 
   // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
   const refillHints = useCallback(async (): Promise<boolean> => {
     const ok = await requestRewarded();
     if (!ok) return false;
-    setProgress((prev) => {
-      const next = { ...prev, hints: prev.hints + 3 };
-      saveProgress(next);
-      return next;
-    });
+    applyProgress((p) => ({ ...p, hints: p.hints + 3 }));
     return true;
-  }, []);
+  }, [applyProgress]);
 
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
-      setProgress((prev) => {
-        let next = { ...prev, streak: 0 };
-        next = pushHistory(next, {
+      applyProgress((p) =>
+        pushHistory({ ...p, streak: 0 }, {
           at: Date.now(),
           id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
           level: playingDaily ? 0 : levelIndex + 1,
@@ -323,12 +337,10 @@ export default function App() {
           timeMs: result.timeMs,
           linkCorrect: false,
           daily: playingDaily,
-        });
-        saveProgress(next);
-        return next;
-      });
+        })
+      );
     },
-    [levelIndex, playingDaily, dailyRaw]
+    [levelIndex, playingDaily, dailyRaw, applyProgress]
   );
 
   const nextLevel = useCallback(() => {
@@ -379,23 +391,15 @@ export default function App() {
     gameplayStart();
   }, []);
 
-  const handleEndlessWin = useCallback((result: { score: number }) => {
-    happytime();
-    setEndlessSolved((n) => n + 1);
-    setEndlessScore((s) => s + result.score);
-    setProgress((prev) => {
-      const next = { ...prev, score: prev.score + result.score };
-      const afterRank = playerRank(next.score);
-      if (afterRank.level > playerRank(prev.score).level) {
-        setTimeout(
-          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
-          2100
-        );
-      }
-      saveProgress(next);
-      return next;
-    });
-  }, []);
+  const handleEndlessWin = useCallback(
+    (result: { score: number }) => {
+      happytime();
+      setEndlessSolved((n) => n + 1);
+      setEndlessScore((s) => s + result.score);
+      awardScore(result.score);
+    },
+    [awardScore]
+  );
 
   const nextEndless = useCallback(() => {
     showInterstitial();
@@ -438,59 +442,43 @@ export default function App() {
     setScreen("home");
   }, []);
 
-  const handleDeductionSolve = useCallback((id: string) => {
-    happytime();
-    setProgress((prev) => {
-      if (prev.deductionSolved.includes(id)) return prev;
-      const next = {
-        ...prev,
-        deductionSolved: [...prev.deductionSolved, id],
-        score: prev.score + 500, // a solved logic grid is worth a chunk of XP
-      };
-      const afterRank = playerRank(next.score);
-      if (afterRank.level > playerRank(prev.score).level) {
-        setTimeout(
-          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
-          2100
-        );
-      }
-      saveProgress(next);
-      return next;
-    });
-  }, []);
+  const handleDeductionSolve = useCallback(
+    (id: string) => {
+      happytime();
+      const { prev, next } = applyProgress((p) =>
+        p.deductionSolved.includes(id)
+          ? p
+          : {
+              ...p,
+              deductionSolved: [...p.deductionSolved, id],
+              score: p.score + 500, // a solved logic grid is worth a chunk of XP
+            }
+      );
+      celebrateRank(prev.score, next.score);
+    },
+    [applyProgress, celebrateRank]
+  );
 
   // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
-  const handlePairsFinish = useCallback((result: { moves: number; score: number }) => {
-    happytime();
-    setProgress((prev) => {
-      const next = {
-        ...prev,
-        score: prev.score + result.score,
-        pairsBest: prev.pairsBest === 0 ? result.moves : Math.min(prev.pairsBest, result.moves),
-      };
-      const afterRank = playerRank(next.score);
-      if (afterRank.level > playerRank(prev.score).level) {
-        setTimeout(
-          () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${afterRank.level} · ${afterRank.title}` }),
-          2100
-        );
-      }
-      saveProgress(next);
-      return next;
-    });
-  }, []);
+  const handlePairsFinish = useCallback(
+    (result: { moves: number; score: number }) => {
+      happytime();
+      const { prev, next } = applyProgress((p) => ({
+        ...p,
+        score: p.score + result.score,
+        pairsBest: p.pairsBest === 0 ? result.moves : Math.min(p.pairsBest, result.moves),
+      }));
+      celebrateRank(prev.score, next.score);
+    },
+    [applyProgress, celebrateRank]
+  );
 
   const exitEndless = useCallback(() => {
     gameplayStop();
-    setProgress((prev) => {
-      if (endlessSolved <= prev.endlessBest) return prev;
-      const next = { ...prev, endlessBest: endlessSolved };
-      saveProgress(next);
-      return next;
-    });
+    applyProgress((p) => (endlessSolved <= p.endlessBest ? p : { ...p, endlessBest: endlessSolved }));
     setEndless(false);
     setScreen("home");
-  }, [endlessSolved]);
+  }, [endlessSolved, applyProgress]);
 
   return (
     <>
