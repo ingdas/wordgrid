@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DEDUCTION_LEVELS, type DeductionClue, type DeductionLevel } from "./deductionLevels";
-import { CATEGORY_THEMES } from "./Game";
+import { CATEGORY_THEMES } from "./theme";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
 
