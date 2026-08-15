@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DEDUCTION_LEVELS, type DeductionClue, type DeductionLevel } from "./deductionLevels";
 import { CATEGORY_THEMES } from "./theme";
@@ -172,6 +172,43 @@ function DeductionBoard({
     [brush, solved]
   );
 
+  // Drag to paint: 12 taps per attempt (with a brush switch between) is a lot
+  // of pecking for what is one gesture. Touch pointers stay captured by the
+  // tile they started on, so the run is tracked from the grid with
+  // elementFromPoint rather than per-tile enter events.
+  const dragging = useRef(false);
+  useEffect(() => {
+    const stop = () => (dragging.current = false);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    return () => {
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+  }, []);
+  const paintAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = document.elementFromPoint(clientX, clientY)?.closest("[data-cell]");
+      if (el) paint(Number(el.getAttribute("data-cell")));
+    },
+    [paint]
+  );
+  const onGridPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (solved) return;
+      dragging.current = true;
+      paintAt(e.clientX, e.clientY);
+    },
+    [paintAt, solved]
+  );
+  const onGridPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragging.current || solved) return;
+      paintAt(e.clientX, e.clientY);
+    },
+    [paintAt, solved]
+  );
+
   const reset = useCallback(() => {
     setColors(new Array(N).fill(-1));
     setSolved(false);
@@ -262,12 +299,16 @@ function DeductionBoard({
           key={badKey}
           animate={badKey && !reduce ? { x: [0, -8, 8, -6, 6, 0] } : {}}
           transition={{ duration: 0.4 }}
+          onPointerDown={onGridPointerDown}
+          onPointerMove={onGridPointerMove}
           className="mx-auto grid w-full max-w-sm gap-2"
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+          // touch-action:none so a paint drag doesn't scroll the page with it.
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, touchAction: "none" }}
         >
           {colors.map((col, i) => (
             <GridTile
               key={i}
+              cell={i}
               clue={clueOf.get(i)}
               theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
               solved={solved}
@@ -437,12 +478,14 @@ function clueText(cl: DeductionClue): { glyph: string; full: string } {
 }
 
 function GridTile({
+  cell,
   clue,
   theme,
   solved,
   status,
   onClick,
 }: {
+  cell: number; // exposed as data-cell so a drag can find it by point
   clue?: DeductionClue; // undefined = a blank tile (no clue shown)
   theme?: (typeof CATEGORY_THEMES)[number];
   solved: boolean;
@@ -461,6 +504,7 @@ function GridTile({
       : "2px 2px 0 rgba(38,34,26,0.25)";
   return (
     <button
+      data-cell={cell}
       onClick={onClick}
       disabled={solved}
       aria-label={label}

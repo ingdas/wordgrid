@@ -210,6 +210,15 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
 
   const newBest = phase === "done" && (prevBest.current === 0 || moves < prevBest.current);
 
+  // How many of each group's three cards are placed. The board gave no sense
+  // of progress before — you couldn't tell a good run from a bad one until the
+  // end card, which is also the only place the move count meant anything.
+  const placedPerCat = useMemo(() => {
+    const n = [0, 0, 0, 0];
+    matched.forEach((cat) => (n[cat] += 1));
+    return n;
+  }, [matched]);
+
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-8 pt-4">
       <div className="flex items-center justify-between">
@@ -225,10 +234,15 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
           </div>
           <div className="mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-ink-soft">
             {moves} {moves === 1 ? "move" : "moves"}
-            {best > 0 && ` · best ${best}`}
+            {best > 0 ? ` · best ${best}` : " · fewest wins"}
           </div>
         </div>
-        <div className="w-[4.5rem]" aria-hidden />
+        <button
+          onClick={newBoard}
+          className="rounded-full border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-ink transition hover:bg-cream active:scale-95"
+        >
+          🔀 New
+        </button>
       </div>
 
       <p className="mt-3 text-center text-sm text-ink-soft">
@@ -242,6 +256,23 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
               ? "Spell the word that links the last four."
               : ""}
       </p>
+
+      {phase !== "done" && (
+        <div className="mt-2 flex items-center justify-center gap-2" aria-label="Groups completed">
+          {CATEGORY_THEMES.map((th, k) => (
+            <span
+              key={k}
+              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-bold transition-colors ${
+                placedPerCat[k] === 3 ? "border-transparent text-ink" : "border-ink/20 text-ink-soft"
+              }`}
+              style={placedPerCat[k] === 3 ? { background: `${th.tint}26`, color: th.tint } : undefined}
+            >
+              <span aria-hidden>{th.shape}</span>
+              {placedPerCat[k]}/3
+            </span>
+          ))}
+        </div>
+      )}
 
       <main className="relative mt-4 flex flex-1 flex-col justify-center">
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
