@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LEVELS } from "./puzzles";
+import { DEDUCTION_LEVELS } from "./deductionLevels";
 import {
   MAX_STARS,
   totalStars,
@@ -14,6 +15,8 @@ import {
 } from "./progress";
 import { t } from "./i18n";
 
+const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
+
 function fmtCountdown(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
@@ -23,6 +26,7 @@ function fmtCountdown(ms: number): string {
 export default function StartScreen({
   progress,
   onPlay,
+  onLevels,
   onDaily,
   onEndless,
   onPairs,
@@ -38,6 +42,7 @@ export default function StartScreen({
 }: {
   progress: Progress;
   onPlay: () => void;
+  onLevels: () => void;
   onDaily: () => void;
   onEndless: () => void;
   onPairs: () => void;
@@ -68,8 +73,13 @@ export default function StartScreen({
   const countdown = fmtCountdown(msUntilNextDaily(now));
   const dateLabel = now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
+  // Portrait keeps a single centred column. On a landscape embed (the 1280×720
+  // iframe CrazyGames serves most desktop players) it splits: the masthead and
+  // progress on the left, everything you can press on the right, so nothing
+  // falls below the fold. DOM order stays mobile-correct; the columns are
+  // placed explicitly.
   return (
-    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-12 text-center sm:pt-20">
+    <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-12 text-center sm:pt-20 lg:grid lg:min-h-screen lg:max-w-4xl lg:grid-cols-2 lg:content-center lg:items-center lg:gap-x-12 lg:pt-12">
       <button
         onClick={onSettings}
         aria-label="Settings"
@@ -96,6 +106,7 @@ export default function StartScreen({
         </button>
       </div>
 
+      <div className="flex flex-col items-center lg:col-start-1 lg:row-start-1">
       <div className="relative grid place-items-center">
         {/* Soft pulsing aura behind the mark */}
         <motion.div
@@ -136,12 +147,13 @@ export default function StartScreen({
         Four hidden groups. <span className="font-semibold text-press">One secret word</span> they all
         share. Can you find it?
       </motion.p>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.32, type: "spring", stiffness: 260, damping: 20 }}
-        className="mt-6 flex w-full max-w-sm flex-col items-center gap-3 sm:mt-8"
+        className="mt-6 flex w-full max-w-sm flex-col items-center gap-3 sm:mt-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0"
       >
         {/* Daily Challenge — the hero. A shared puzzle each day with a streak. */}
         <motion.button
@@ -200,30 +212,29 @@ export default function StartScreen({
         >
           {returning ? `Continue · L${nextLevel}` : t("btn.play")}
         </button>
+        <button
+          onClick={onLevels}
+          className="-mt-1 text-xs font-semibold text-ink-soft underline-offset-4 transition hover:text-ink hover:underline"
+        >
+          🗺 Browse all {LEVELS.length} levels
+        </button>
         <div className="grid w-full grid-cols-3 gap-2">
-          <button
-            onClick={onEndless}
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
-          >
-            🧘 Endless
-            {progress.endlessBest > 0 && <span className="text-leaf">{progress.endlessBest}</span>}
-          </button>
-          <button
-            onClick={onPairs}
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
-          >
-            🃏 Pairs
-            {progress.pairsBest > 0 && <span className="text-leaf">{progress.pairsBest}</span>}
-          </button>
-          <button
-            onClick={onDeduction}
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-ink/30 bg-white py-3.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
-          >
-            🧩 Logic
-            {progress.deductionSolved.length > 0 && (
-              <span className="text-leaf">{progress.deductionSolved.length}</span>
-            )}
-          </button>
+          {[
+            { icon: "🧘", label: "Endless", stat: progress.endlessBest > 0 ? `best ${progress.endlessBest}` : "no fail", onClick: onEndless },
+            { icon: "🃏", label: "Pairs", stat: progress.pairsBest > 0 ? `${progress.pairsBest} moves` : "memory", onClick: onPairs },
+            { icon: "🧩", label: "Logic", stat: `${progress.deductionSolved.length}/${DEDUCTION_COUNT} solved`, onClick: onDeduction },
+          ].map((m) => (
+            <button
+              key={m.label}
+              onClick={m.onClick}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-ink/30 bg-white py-2.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+            >
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden>{m.icon}</span> {m.label}
+              </span>
+              <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-ink-soft">{m.stat}</span>
+            </button>
+          ))}
         </div>
 
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
@@ -244,11 +255,12 @@ export default function StartScreen({
         </div>
       </motion.div>
 
+      <div className="flex w-full flex-col items-center lg:col-start-1 lg:row-start-2">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.46 }}
-        className="mt-8 w-full max-w-xs rounded-2xl border border-ink/20 bg-white px-4 py-3"
+        className="mt-8 w-full max-w-xs rounded-2xl border border-ink/20 bg-white px-4 py-3 lg:mt-6"
       >
         <div className="flex items-baseline justify-between">
           <span className="font-display text-sm font-bold text-ink">
@@ -278,6 +290,7 @@ export default function StartScreen({
         <span className="font-semibold">💡 {progress.hints}</span>
         {progress.bestStreak > 0 && <span className="font-semibold">🔥 best {progress.bestStreak}</span>}
       </motion.div>
+      </div>
     </div>
   );
 }

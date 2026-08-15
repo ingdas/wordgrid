@@ -11,6 +11,7 @@ import {
   dailyPuzzle,
   pushHistory,
   playerRank,
+  furthestCleared,
   MAX_STARS,
   type Progress,
 } from "./progress";
@@ -183,9 +184,22 @@ export default function App() {
     setScreen("home");
   }, []);
 
+  // Home's primary CTA promised a level ("Continue · L6") and delivered the
+  // map, so playing cost two taps. It now drops straight into that level; the
+  // map is a link of its own underneath.
   const play = useCallback(() => {
     initAudio(); // unlock the AudioContext from this user gesture
     startMusic(); // no-op unless music is enabled
+    setPlayingDaily(false);
+    setEndless(false);
+    setLevelIndex(Math.min(furthestCleared(progress) + 1, LEVELS.length - 1));
+    setScreen("game");
+    gameplayStart();
+  }, [progress]);
+
+  const openLevels = useCallback(() => {
+    initAudio();
+    startMusic();
     setScreen("levels");
   }, []);
 
@@ -489,6 +503,7 @@ export default function App() {
             <StartScreen
               progress={progress}
               onPlay={play}
+              onLevels={openLevels}
               onDaily={playDaily}
               onEndless={playEndless}
               onPairs={playPairs}

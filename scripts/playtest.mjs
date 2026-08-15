@@ -175,7 +175,7 @@ await p.evaluate(() => {
 });
 await p.goto(BASE, { waitUntil: "networkidle0" });
 await sleep(400);
-(await clickText("button", "Continue")) || (await clickText("button", "Play"));
+await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(500);
 const bossNode = await p.$("button[aria-label*=', boss,']");
 if (!bossNode) note("No boss node found for the boss test.");
@@ -195,7 +195,7 @@ await p.evaluate(() => {
 });
 await p.goto(BASE, { waitUntil: "networkidle0" });
 await sleep(400);
-(await clickText("button", "Continue")) || (await clickText("button", "Play"));
+await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(400);
 await (await p.$("button[aria-label^='Level 1,']")).click();
 await sleep(500);
