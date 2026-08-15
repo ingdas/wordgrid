@@ -333,14 +333,14 @@ export default function Game({
     // never handing over the whole group).
     if (coach >= 0) {
       const n = coachMisses.current++;
-      const firstWord = puzzle.categories[0].spokes[0];
+      const teach = puzzle.categories[0];
       const msg = result.oneAway
         ? "🎯 So close — two of those belong together. Swap the odd one out!"
         : n === 0
-          ? "Not a group — which three words mean a famous person? 🤔"
+          ? `Not a group — which three words fit “${teach.name}”? 🤔`
           : n === 1
-            ? "Keep looking — three words here all describe a superstar."
-            : `Tip: “${firstWord}” is one of the three. Find its two friends.`;
+            ? `Keep looking — three of these words fit “${teach.name}”.`
+            : `Tip: “${teach.spokes[0]}” is one of the three. Find its two friends.`;
       setToast(msg);
       return;
     }
@@ -810,6 +810,7 @@ export default function Game({
           {coach >= 1 && coach <= 2 && status === "playing" && (
             <Coach
               step={coach}
+              theme={puzzle.categories[0].name}
               onNext={() => setCoach((c) => c + 1)}
               onDone={() => { setCoach(-1); onTutorialDone(); }}
               onSkip={() => { setCoach(-1); onTutorialDone(); }}
@@ -1188,19 +1189,24 @@ function Controls({
 
 
 
-const COACH = [
+// Step 1 teaches with the tutorial board's own first theme rather than words
+// baked in here, so re-pinning the opening level can't leave the coach
+// describing a puzzle the player isn't looking at.
+const COACH: readonly (null | { title: (theme: string) => string; body: (theme: string) => string; cta: string | null })[] = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
   {
-    title: "Your move: find the famous folk",
-    body: "Three of these words all mean a famous person. Tap the three you think fit, then Submit — I won't point them out. You can do this.",
+    title: () => "Your move: find the first group",
+    body: (theme) =>
+      `Three of these words fit “${theme}”. Tap the three you think belong, then Submit — I won't point them out. You can do this.`,
     cta: null, // advances when the player solves any group
   },
   {
-    title: "That's a group! 🎉",
-    body: "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Good luck!",
+    title: () => "That's a group! 🎉",
+    body: () =>
+      "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Good luck!",
     cta: "Got it",
   },
-] as const;
+];
 
 const WELCOME_RULES = [
   { icon: "🔗", text: "One hidden word links all four groups." },
@@ -1274,11 +1280,14 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
 
 function Coach({
   step,
+  theme,
   onNext,
   onDone,
   onSkip,
 }: {
   step: number;
+  /** The tutorial board's first category, so the copy matches the tiles. */
+  theme: string;
   onNext: () => void;
   onDone: () => void;
   onSkip: () => void;
@@ -1299,7 +1308,7 @@ function Coach({
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">
           💡
         </span>
-        <span className="font-bold text-ink">{c.title}</span>
+        <span className="font-bold text-ink">{c.title(theme)}</span>
         <button
           onClick={onSkip}
           className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-cream hover:text-ink"
@@ -1307,7 +1316,7 @@ function Coach({
           Skip
         </button>
       </div>
-      <p className="mt-2 text-sm leading-snug text-ink-soft">{c.body}</p>
+      <p className="mt-2 text-sm leading-snug text-ink-soft">{c.body(theme)}</p>
       {c.cta && (
         <button
           onClick={step === COACH.length - 1 ? onDone : onNext}

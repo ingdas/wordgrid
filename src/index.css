@@ -64,6 +64,13 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Pinch-zoom stays available (the viewport tag no longer blocks it); this
+   keeps the double-tap-to-zoom delay off the controls, which is what
+   user-scalable=no was really buying. */
+button {
+  touch-action: manipulation;
+}
+
 /* Keep the focus ring tasteful (ink on paper) */
 button:focus-visible {
   outline: 2px solid rgba(38, 34, 26, 0.7);

@@ -84,8 +84,21 @@ if (/star power/i.test(midText)) note("Level title leaks the link during play.")
 if (!/\?\s*\?\s*\?/.test(midText)) note("Secret-link card is not showing a masked placeholder.");
 
 // 3. The tutorial guides by THEME (no tile is highlighted) so the player thinks.
-log("tutorial prompts a theme, not exact words:", /famous person/i.test(midText));
-if (!/famous person/i.test(midText)) note("Tutorial step-1 theme prompt missing.");
+//    The copy is derived from the board's own first category, so it names that
+//    theme and never the three tiles under it.
+//    (scoped to the coach card — the tiles themselves are of course on screen)
+const coachText = await p.evaluate(() => {
+  // Ancestors match too, so take the tightest node that still holds the body.
+  const cards = [...document.querySelectorAll("div")]
+    .map((d) => d.innerText || "")
+    .filter((t) => /Your move/.test(t) && /Submit/.test(t));
+  return cards.sort((a, b) => a.length - b.length)[0] || "";
+});
+const namesTheme = /words for a celebrity/i.test(coachText);
+const namesTiles = /\bICON\b|\bLEGEND\b|\bIDOL\b/.test(coachText);
+log("tutorial prompts a theme, not exact words:", namesTheme && !namesTiles);
+if (!namesTheme) note("Tutorial step-1 does not name the board's first theme.");
+if (namesTiles) note("Tutorial step-1 gave away the three tiles.");
 
 // 3b. Hint: reveal a category description (token-based, no solve, no star cost)
 if (!/reveal a group's theme/i.test(midText)) note("Prominent hint button not found.");
