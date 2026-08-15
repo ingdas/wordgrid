@@ -125,9 +125,28 @@ button:focus-visible {
     font-size: 0.9rem;
     color: #6f6757;
   }
+  .rotate-hint__dismiss {
+    margin-top: 0.4rem;
+    border: 2px solid #26221a;
+    border-radius: 9999px;
+    background: #fff;
+    padding: 0.5rem 1.25rem;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #26221a;
+    cursor: pointer;
+  }
   /* Keep the app from peeking through / being interacted with behind it. */
   #root {
     pointer-events: none;
+  }
+  /* "Play anyway" hands the game back for the rest of the session. */
+  :root[data-rotate="dismissed"] .rotate-hint {
+    display: none;
+  }
+  :root[data-rotate="dismissed"] #root {
+    pointer-events: auto;
   }
 }
 

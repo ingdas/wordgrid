@@ -42,8 +42,13 @@ await sleep(500);
 
 async function clickText(sel, text) {
   for (const h of await p.$$(sel)) {
-    const t = (await h.evaluate((e) => e.textContent)) || "";
-    if (t.includes(text)) { await h.click(); return true; }
+    // Skip anything not actually on screen — the rotate-to-portrait hint keeps
+    // a hidden "Play anyway" button in the DOM at every viewport.
+    const ok = await h.evaluate((e, want) => {
+      const r = e.getBoundingClientRect();
+      return (e.textContent || "").includes(want) && r.width > 0 && r.height > 0;
+    }, text);
+    if (ok) { await h.click(); return true; }
   }
   return false;
 }

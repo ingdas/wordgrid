@@ -45,11 +45,16 @@
   <body>
     <div id="root"></div>
     <!-- Shown only on short landscape viewports (phones turned sideways). A
-         portrait word puzzle plays best upright; tablets/desktop never see it. -->
+         portrait word puzzle plays best upright — but this is a recommendation,
+         not a wall: some players can't rotate (locked orientation, a mount, a
+         short desktop window), so it can be dismissed for the session. -->
     <div class="rotate-hint" role="alert">
       <div class="rotate-hint__icon" aria-hidden="true">📲</div>
       <div class="rotate-hint__title">Rotate to portrait</div>
       <p class="rotate-hint__body">WordGrid plays best with your phone upright.</p>
+      <button type="button" class="rotate-hint__dismiss" onclick="document.documentElement.setAttribute('data-rotate','dismissed')">
+        Play anyway
+      </button>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
