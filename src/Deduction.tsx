@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DEDUCTION_LEVELS, type DeductionClue, type DeductionLevel } from "./deductionLevels";
+import {
+  DEDUCTION_LEVELS,
+  type DeductionAxis,
+  type DeductionClue,
+  type DeductionLevel,
+  type DeductionLineClue,
+} from "./deductionLevels";
 import { CATEGORY_THEMES } from "./theme";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
@@ -9,11 +15,15 @@ import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio"
 // Deduction Grid — a pure-logic mode on the same boards.
 //
 // An abstract grid of 12 tiles, split into 4 hidden groups of 3. Groups can
-// be ANY shapes — they don't have to touch. Some tiles carry a plain-text
-// clue about their neighbours ("None of my neighbours are in my group", "The
-// tile below me is in my group"). Every level is solvable by pure reasoning
-// from the shown clues — no guessing, no vocabulary, no timer. Deliberately
-// NOT tied to the word boards: the logic chain is the whole reward.
+// be ANY shapes — they don't have to touch.
+//
+// Tiles carry clues about their own group: how many neighbours share it,
+// whether a named neighbour or diagonal does, how many group-mates share the
+// tile's row or column, whether its line holds an odd number of them, how many
+// sit in a corner. Row and column headers carry clues about a whole line — all
+// different, or exactly one matching pair. Every level is solvable by pure
+// forced reasoning from the shown clues — no guessing, no vocabulary, no
+// timer. Deliberately NOT tied to the word boards: the chain is the reward.
 // ---------------------------------------------------------------------------
 
 interface DeductionProps {
@@ -83,6 +93,48 @@ function DeductionBoard({
     return ns;
   }, [N, rows, cols]);
 
+  // The cells of a row/column, and the four corners — the scopes the newer
+  // clue kinds count over. Same definitions the generator verifies against.
+  const lineCells = useCallback(
+    (axis: DeductionAxis, index: number) => {
+      const out: number[] = [];
+      if (axis === "row") for (let c = 0; c < cols; c++) out.push(index * cols + c);
+      else for (let r = 0; r < rows; r++) out.push(r * cols + index);
+      return out;
+    },
+    [rows, cols]
+  );
+  const lineOf = useCallback(
+    (axis: DeductionAxis, cell: number) => (axis === "row" ? Math.floor(cell / cols) : cell % cols),
+    [cols]
+  );
+  const corners = useMemo(() => [0, cols - 1, (rows - 1) * cols, rows * cols - 1], [rows, cols]);
+
+  /** The cells a counting clue counts over (never itself) + the counts it allows. */
+  const scopeOf = useCallback(
+    (cl: DeductionClue): { cells: number[]; targets: number[] } | null => {
+      switch (cl.kind) {
+        case "deg":
+          return { cells: neighbors[cl.cell], targets: [cl.n] };
+        case "line":
+          return { cells: lineCells(cl.axis, lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [cl.n] };
+        case "parity":
+          // odd counting me → 0 or 2 group-mates alongside me on the line
+          return { cells: lineCells(cl.axis, lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [0, 2] };
+        case "corners":
+          return { cells: corners.filter((j) => j !== cl.cell), targets: [cl.n] };
+        default:
+          return null; // dir / diag name a single tile instead of counting
+      }
+    },
+    [neighbors, lineCells, lineOf, corners]
+  );
+
+  const lineOfHeader = useCallback(
+    (axis: DeductionAxis, index: number) => level.lines.find((l) => l.axis === axis && l.index === index),
+    [level.lines]
+  );
+
   // One clue max per tile; the rest are blank (that's the difficulty).
   const clueOf = useMemo(() => {
     const m = new Map<number, DeductionClue>();
@@ -90,10 +142,13 @@ function DeductionBoard({
     return m;
   }, [level]);
 
-  // Where a directional clue points, so we can evaluate it against a painting.
+  // Where a directional or diagonal clue points, so it can be checked.
   const dirTarget = useCallback(
-    (cell: number, dir: "up" | "down" | "left" | "right") =>
-      dir === "up" ? cell - cols : dir === "down" ? cell + cols : dir === "left" ? cell - 1 : cell + 1,
+    (cell: number, dir: string) => {
+      const r = Math.floor(cell / cols), c = cell % cols;
+      const [dr, dc] = DIR_STEP[dir];
+      return (r + dr) * cols + (c + dc);
+    },
     [cols]
   );
 
@@ -117,14 +172,7 @@ function DeductionBoard({
   const clueStatus = useMemo(() => {
     const m = new Map<number, ClueStatus>();
     for (const cl of level.clues) {
-      if (cl.kind === "deg") {
-        if (colors[cl.cell] < 0 || neighbors[cl.cell].some((j) => colors[j] < 0)) {
-          m.set(cl.cell, { state: "pending", found: 0 });
-          continue;
-        }
-        const found = neighbors[cl.cell].reduce((n, j) => n + (colors[j] === colors[cl.cell] ? 1 : 0), 0);
-        m.set(cl.cell, { state: found === cl.n ? "ok" : "bad", found });
-      } else {
+      if (cl.kind === "dir" || cl.kind === "diag") {
         const t = dirTarget(cl.cell, cl.dir);
         if (colors[cl.cell] < 0 || colors[t] < 0) {
           m.set(cl.cell, { state: "pending", found: 0 });
@@ -132,10 +180,38 @@ function DeductionBoard({
         }
         const same = colors[t] === colors[cl.cell];
         m.set(cl.cell, { state: same === cl.same ? "ok" : "bad", found: same ? 1 : 0 });
+        continue;
       }
+      const scope = scopeOf(cl);
+      if (!scope) continue;
+      if (colors[cl.cell] < 0 || scope.cells.some((j) => colors[j] < 0)) {
+        m.set(cl.cell, { state: "pending", found: 0 });
+        continue;
+      }
+      const found = scope.cells.reduce((n, j) => n + (colors[j] === colors[cl.cell] ? 1 : 0), 0);
+      m.set(cl.cell, { state: scope.targets.includes(found) ? "ok" : "bad", found });
     }
     return m;
-  }, [colors, level.clues, neighbors, dirTarget]);
+  }, [colors, level.clues, dirTarget, scopeOf]);
+
+  // Row/column header clues judge themselves the same way, keyed by axis+index.
+  const lineStatus = useMemo(() => {
+    const m = new Map<string, ClueStatus>();
+    for (const ln of level.lines) {
+      const cells = lineCells(ln.axis, ln.index);
+      const key = `${ln.axis}${ln.index}`;
+      if (cells.some((j) => colors[j] < 0)) {
+        m.set(key, { state: "pending", found: 0 });
+        continue;
+      }
+      let same = 0;
+      for (let a = 0; a < cells.length; a++)
+        for (let b = a + 1; b < cells.length; b++) if (colors[cells[a]] === colors[cells[b]]) same++;
+      const want = ln.kind === "rainbow" ? 0 : 1;
+      m.set(key, { state: same === want ? "ok" : "bad", found: same });
+    }
+    return m;
+  }, [colors, level.lines, lineCells]);
 
   // Evaluate the current painting (label-agnostic): every tile painted, each
   // colour used exactly 3×, and every shown clue satisfied. The generator
@@ -146,8 +222,17 @@ function DeductionBoard({
     let sizesOk = true;
     if (full) for (let k = 0; k < 4; k++) if (colors.filter((c) => c === k).length !== 3) sizesOk = false;
     const violated = full ? level.clues.filter((cl) => clueStatus.get(cl.cell)?.state === "bad") : [];
-    return { full, violated, sizesOk, solved: full && sizesOk && violated.length === 0 };
-  }, [colors, level.clues, clueStatus]);
+    const violatedLines = full
+      ? level.lines.filter((ln) => lineStatus.get(`${ln.axis}${ln.index}`)?.state === "bad")
+      : [];
+    return {
+      full,
+      violated,
+      violatedLines,
+      sizesOk,
+      solved: full && sizesOk && violated.length === 0 && violatedLines.length === 0,
+    };
+  }, [colors, level.clues, level.lines, clueStatus, lineStatus]);
 
   useEffect(() => {
     if (evalNow.solved && !solved) {
@@ -260,7 +345,7 @@ function DeductionBoard({
         </button>
       </div>
 
-      {/* Puzzle stepper (20 levels — a prev/next pager, not a chip wall) */}
+      {/* Puzzle stepper (a prev/next pager, not a chip wall) */}
       <div className="mt-3 flex items-center justify-center gap-3">
         <button
           onClick={() => onPick((index - 1 + total) % total)}
@@ -290,8 +375,7 @@ function DeductionBoard({
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
         Four hidden groups of 3 tiles — any shapes, they don't have to touch.
-        Deduce and colour all 12. A tile's <b className="font-semibold text-ink">neighbours</b> are
-        the tiles directly above, below, left and right — never diagonal.
+        Every clue talks about its own tile's group. Deduce and colour all 12.
       </p>
 
       <main className="relative mt-4 flex flex-1 flex-col justify-center">
@@ -302,19 +386,40 @@ function DeductionBoard({
           onPointerDown={onGridPointerDown}
           onPointerMove={onGridPointerMove}
           className="mx-auto grid w-full max-w-sm gap-2"
+          // A 1.6rem gutter on the top and left carries the line clues, so a
+          // row/column header sits with the line it talks about.
           // touch-action:none so a paint drag doesn't scroll the page with it.
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, touchAction: "none" }}
+          style={{ gridTemplateColumns: `1.6rem repeat(${cols}, minmax(0, 1fr))`, touchAction: "none" }}
         >
-          {colors.map((col, i) => (
-            <GridTile
-              key={i}
-              cell={i}
-              clue={clueOf.get(i)}
-              theme={col >= 0 ? CATEGORY_THEMES[col] : undefined}
-              solved={solved}
-              status={solved ? undefined : clueStatus.get(i)?.state}
-              onClick={() => paint(i)}
+          <span aria-hidden />
+          {Array.from({ length: cols }, (_, c) => (
+            <LineHeader
+              key={`col${c}`}
+              clue={lineOfHeader("col", c)}
+              status={solved ? undefined : lineStatus.get(`col${c}`)?.state}
             />
+          ))}
+          {Array.from({ length: rows }, (_, r) => (
+            <Fragment key={`r${r}`}>
+              <LineHeader
+                clue={lineOfHeader("row", r)}
+                status={solved ? undefined : lineStatus.get(`row${r}`)?.state}
+              />
+              {Array.from({ length: cols }, (_, c) => {
+                const i = r * cols + c;
+                return (
+                  <GridTile
+                    key={i}
+                    cell={i}
+                    clue={clueOf.get(i)}
+                    theme={colors[i] >= 0 ? CATEGORY_THEMES[colors[i]] : undefined}
+                    solved={solved}
+                    status={solved ? undefined : clueStatus.get(i)?.state}
+                    onClick={() => paint(i)}
+                  />
+                );
+              })}
+            </Fragment>
           ))}
         </motion.div>
 
@@ -339,18 +444,40 @@ function DeductionBoard({
                       <span>{violationText(cl, clueStatus.get(cl.cell)!.found, cols)}</span>
                     </li>
                   ))}
+                  {evalNow.violatedLines.map((ln) => (
+                    <li
+                      key={`${ln.axis}${ln.index}`}
+                      className="flex gap-1.5 text-[0.8rem] font-semibold leading-snug text-press"
+                    >
+                      <span aria-hidden>✕</span>
+                      <span>{lineViolationText(ln, lineStatus.get(`${ln.axis}${ln.index}`)!.found)}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* What the glyphs mean. Sits under the grid so it reads as a key. */}
+        {/* The key. Only the icons on THIS board, so it stays short as the
+            clue vocabulary grows. */}
         {!solved && (
-          <div className="mx-auto mt-3 flex w-full max-w-sm flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[0.68rem] text-ink-soft">
-            <span><b className="font-display text-sm text-ink">0</b>/<b className="font-display text-sm text-ink">1</b>/<b className="font-display text-sm text-ink">2</b> = neighbours sharing my colour</span>
-            <span><b className="font-display text-sm text-ink">→=</b> that tile is mine</span>
-            <span><b className="font-display text-sm text-ink">→≠</b> it isn't</span>
+          <div className="mx-auto mt-3 grid w-full max-w-sm grid-cols-2 gap-x-3 gap-y-0.5 text-[0.62rem] leading-tight text-ink-soft">
+            {LEGEND.filter((e) => level.clues.some(e.match)).map((e) => (
+              <span key={e.icon} className="flex items-baseline gap-1">
+                <b className="shrink-0 font-display text-xs text-ink">{e.icon}</b> {e.text}
+              </span>
+            ))}
+            {level.lines.some((l) => l.kind === "rainbow") && (
+              <span className="flex items-baseline gap-1">
+                <b className="shrink-0 font-display text-xs text-ink">≠</b> that whole line is all different groups
+              </span>
+            )}
+            {level.lines.some((l) => l.kind === "onepair") && (
+              <span className="flex items-baseline gap-1">
+                <b className="shrink-0 font-display text-xs text-ink">1=</b> that line holds exactly one matching pair
+              </span>
+            )}
           </div>
         )}
 
@@ -442,40 +569,113 @@ function DeductionBoard({
 const TIER_NAME: Record<number, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
 const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9482b" };
 
-const DIR_ARROW = { up: "↑", down: "↓", left: "←", right: "→" } as const;
-const DIR_WORD = { up: "above", down: "below", left: "left of", right: "right of" } as const;
+const DIR_ARROW: Record<string, string> = {
+  up: "↑", down: "↓", left: "←", right: "→",
+  upLeft: "↖", upRight: "↗", downLeft: "↙", downRight: "↘",
+};
+const DIR_WORD: Record<string, string> = {
+  up: "above", down: "below", left: "left of", right: "right of",
+  upLeft: "up-left of", upRight: "up-right of", downLeft: "down-left of", downRight: "down-right of",
+};
+/** Row/column step per direction name — shared by the clue targets. */
+const DIR_STEP: Record<string, [number, number]> = {
+  up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1],
+  upLeft: [-1, -1], upRight: [-1, 1], downLeft: [1, -1], downRight: [1, 1],
+};
+
+const AXIS_WORD: Record<DeductionAxis, string> = { row: "row", col: "column" };
+const MATES = ["Neither of my group-mates", "One of my group-mates", "Both of my group-mates"];
+
+const where = (cell: number, cols: number) => `Row ${Math.floor(cell / cols) + 1}, column ${(cell % cols) + 1}`;
 
 // Plain-words explanation of a violated clue, locating the tile by row/column.
 function violationText(cl: DeductionClue, found: number, cols: number): string {
-  const where = `Row ${Math.floor(cl.cell / cols) + 1}, column ${(cl.cell % cols) + 1}`;
-  if (cl.kind === "deg") {
-    const want = cl.n === 0 ? "no neighbours" : cl.n === 1 ? "exactly one neighbour" : "two neighbours";
-    return `${where} needs ${want} in its group — your colouring gives it ${found}.`;
+  const at = where(cl.cell, cols);
+  switch (cl.kind) {
+    case "deg": {
+      const want = cl.n === 0 ? "no neighbours" : cl.n === 1 ? "exactly one neighbour" : "two neighbours";
+      return `${at} needs ${want} in its group — your colouring gives it ${found}.`;
+    }
+    case "dir":
+    case "diag":
+      return `${at} says the tile ${DIR_WORD[cl.dir]} it is ${cl.same ? "" : "not "}in its group — in your colouring it ${cl.same ? "isn't" : "is"}.`;
+    case "line":
+      return `${at} needs ${cl.n} of its group in the rest of its ${AXIS_WORD[cl.axis]} — your colouring puts ${found} there.`;
+    case "parity":
+      return `${at} needs an odd number of its ${AXIS_WORD[cl.axis]} in its group, counting itself — your colouring makes it ${found + 1}.`;
+    case "corners":
+      return `${at} needs ${cl.n} of its group in the grid's corners — your colouring puts ${found} there.`;
   }
-  return `${where} says the tile ${DIR_WORD[cl.dir]} it is ${cl.same ? "" : "not "}in its group — in your colouring it ${cl.same ? "isn't" : "is"}.`;
 }
 
-// A clue tile is read at a glance, not word by word: three tiles all saying
-// "No neighbour is in my group" is a wall of prose you have to parse. The glyph
-// is the board's alphabet (legend under the grid); the sentence is kept whole
-// for screen readers and for the problem panel.
-function clueText(cl: DeductionClue): { glyph: string; full: string } {
-  if (cl.kind === "deg") {
-    return {
-      glyph: String(cl.n),
-      full:
-        cl.n === 0
-          ? "No neighbour is in my group"
-          : cl.n === 1
-            ? "One neighbour is in my group"
-            : "Two neighbours are in my group",
-    };
-  }
-  return {
-    glyph: `${DIR_ARROW[cl.dir]}${cl.same ? "=" : "≠"}`,
-    full: `The tile ${DIR_WORD[cl.dir]} me is ${cl.same ? "" : "not "}in my group`,
-  };
+function lineViolationText(ln: DeductionLineClue, found: number): string {
+  const at = `${ln.axis === "row" ? "Row" : "Column"} ${ln.index + 1}`;
+  return ln.kind === "rainbow"
+    ? `${at} must have four different groups — your colouring repeats ${found === 1 ? "one pair" : `${found} pairs`}.`
+    : `${at} must hold exactly one matching pair — your colouring has ${found}.`;
 }
+
+// A clue tile is read at a glance, not word by word. Each clue draws as an
+// icon (what it's about) plus a value (0/1/2, = / ≠, or ODD); the legend under
+// the grid explains only the icons this level actually uses. The full sentence
+// survives in the aria-label and in the problem panel, where prose helps.
+function clueText(cl: DeductionClue): { icon: string; value: string; full: string } {
+  switch (cl.kind) {
+    case "deg":
+      return {
+        icon: "✛",
+        value: String(cl.n),
+        full:
+          cl.n === 0
+            ? "No neighbour is in my group"
+            : cl.n === 1
+              ? "One neighbour is in my group"
+              : "Two neighbours are in my group",
+      };
+    case "dir":
+    case "diag":
+      return {
+        icon: DIR_ARROW[cl.dir],
+        value: cl.same ? "=" : "≠",
+        full: `The tile ${DIR_WORD[cl.dir]} me is ${cl.same ? "" : "not "}in my group`,
+      };
+    case "line":
+      return {
+        icon: cl.axis === "row" ? "↔" : "↕",
+        value: String(cl.n),
+        full: `${MATES[cl.n]} ${cl.n === 1 ? "is" : "are"} in my ${AXIS_WORD[cl.axis]}`,
+      };
+    case "parity":
+      return {
+        icon: cl.axis === "row" ? "↔" : "↕",
+        value: "ODD",
+        full: `Counting me, an odd number of my ${AXIS_WORD[cl.axis]} is in my group`,
+      };
+    case "corners":
+      return {
+        icon: "◱",
+        value: String(cl.n),
+        full: `${MATES[cl.n]} ${cl.n === 1 ? "is" : "are"} in a corner of the grid`,
+      };
+  }
+}
+
+function lineClueText(ln: DeductionLineClue): { glyph: string; full: string } {
+  return ln.kind === "rainbow"
+    ? { glyph: "≠", full: `No two tiles in this ${AXIS_WORD[ln.axis]} share a group` }
+    : { glyph: "1=", full: `Exactly one pair in this ${AXIS_WORD[ln.axis]} shares a group` };
+}
+
+// One legend line per icon actually on this board.
+const LEGEND: { match: (cl: DeductionClue) => boolean; icon: string; text: string }[] = [
+  { match: (c) => c.kind === "deg", icon: "✛n", text: "n of my 4 neighbours share my group (never diagonal)" },
+  { match: (c) => c.kind === "dir", icon: "→=", text: "that tile is mine (≠ it isn't)" },
+  { match: (c) => c.kind === "diag", icon: "↘=", text: "that diagonal is mine (≠ it isn't)" },
+  { match: (c) => c.kind === "line" && c.axis === "row", icon: "↔n", text: "n group-mates in my row" },
+  { match: (c) => c.kind === "line" && c.axis === "col", icon: "↕n", text: "n group-mates in my column" },
+  { match: (c) => c.kind === "parity", icon: "↕ODD", text: "odd count in that line, me included" },
+  { match: (c) => c.kind === "corners", icon: "◱n", text: "n group-mates in a corner" },
+];
 
 function GridTile({
   cell,
@@ -527,9 +727,7 @@ function GridTile({
       {theme ? (
         <div className={`absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br ${theme.grad}`}>
           {text ? (
-            <span className="font-display text-2xl font-bold leading-none" style={{ color: theme.ink }}>
-              {text.glyph}
-            </span>
+            <ClueFace icon={text.icon} value={text.value} color={theme.ink} />
           ) : (
             <span className="text-base opacity-90" style={{ color: theme.ink }} aria-hidden>
               {theme.shape}
@@ -537,11 +735,53 @@ function GridTile({
           )}
         </div>
       ) : text ? (
-        <span className="font-display text-2xl font-bold leading-none text-ink">{text.glyph}</span>
+        <ClueFace icon={text.icon} value={text.value} />
       ) : (
         // Blank tile — a faint dot signals "still to colour" without giving a clue.
         <span aria-hidden className="text-lg text-ink/20">·</span>
       )}
     </button>
+  );
+}
+
+/** The icon-plus-value face every clue tile wears. ODD gets its own size. */
+function ClueFace({ icon, value, color }: { icon: string; value: string; color?: string }) {
+  const wide = value.length > 1;
+  return (
+    <span className="flex flex-col items-center leading-none" style={color ? { color } : undefined}>
+      <span className="font-display text-xl font-bold leading-none">{icon}</span>
+      <span className={`font-display font-bold leading-none ${wide ? "text-[0.6rem] tracking-wide" : "text-base"}`}>
+        {value}
+      </span>
+    </span>
+  );
+}
+
+/** A row/column header clue: a small badge outside the grid proper. */
+function LineHeader({
+  clue,
+  status,
+}: {
+  clue?: DeductionLineClue;
+  status?: "pending" | "ok" | "bad";
+}) {
+  if (!clue) return <span aria-hidden />;
+  const text = lineClueText(clue);
+  return (
+    <span
+      role="note"
+      aria-label={`${clue.axis === "row" ? "Row" : "Column"} ${clue.index + 1} clue: ${text.full}${
+        status === "ok" ? ", satisfied" : status === "bad" ? ", NOT satisfied" : ""
+      }`}
+      className={`relative grid h-6 w-full place-items-center self-center justify-self-center rounded-lg border-2 font-display text-xs font-bold leading-none ${
+        status === "bad"
+          ? "border-press bg-press/10 text-press"
+          : status === "ok"
+            ? "border-leaf bg-leaf/10 text-leaf"
+            : "border-ink/40 bg-white text-ink"
+      }`}
+    >
+      {text.glyph}
+    </span>
   );
 }
