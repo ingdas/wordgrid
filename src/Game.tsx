@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
+import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
-import { CATEGORY_THEMES } from "./theme";
+import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
@@ -47,6 +47,8 @@ interface GameProps {
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
+  /** Teaser for the next level's button, when it isn't just "the next one". */
+  nextLabel?: string;
   onHelp: () => void;
   onTutorialDone: () => void;
 }
@@ -70,6 +72,7 @@ export default function Game({
   onLoss,
   onExit,
   onNext,
+  nextLabel,
   onHelp,
   onTutorialDone,
 }: GameProps) {
@@ -568,6 +571,13 @@ export default function Game({
             className={`mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest ${
               boss && !revealLink ? "text-press" : "text-ink-soft"
             }`}
+            // A campaign level wears its chapter's ink here, so the screen
+            // itself tells you which stretch of the game you're in.
+            style={
+              !endless && !daily && !boss && !revealLink
+                ? { color: chapterInk(chapterOfLevel(puzzleIndex)).deep }
+                : undefined
+            }
           >
             {endless
               ? t("game.endless.progress", { n: endlessInfo?.solved ?? 0, score: (endlessInfo?.score ?? 0).toLocaleString() })
@@ -578,7 +588,7 @@ export default function Game({
                   : twist
                     ? twistLabel(twist)
                     : tier
-                      ? t(TIER_KEY[tier])
+                      ? `${t(CHAPTERS[chapterOfLevel(puzzleIndex)].nameKey)} · ${t(TIER_KEY[tier])}`
                       : ""}
           </div>
         </div>
@@ -816,6 +826,7 @@ export default function Game({
               onExit={onExit}
               onRestart={restart}
               onNext={onNext}
+              nextLabel={nextLabel}
             />
           )}
         </AnimatePresence>

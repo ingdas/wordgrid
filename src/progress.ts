@@ -1,5 +1,5 @@
-import { LEVELS, seededShuffle, type RawPuzzle } from "./puzzles";
-import { DAILY_PUZZLES } from "./dailyPuzzles";
+import { CHAPTERS, LEVELS, chapterKey, keyLevels, seededShuffle, type RawPuzzle } from "./puzzles.ts";
+import { DAILY_PUZZLES } from "./dailyPuzzles.ts";
 
 // Meta-progression: per-level star ratings (best of), a win streak, and a few
 // lifetime stats. This is the "collect the stars / keep the streak alive" hook
@@ -19,6 +19,8 @@ export interface Progress {
   endlessBest: number; // most puzzles cleared in one Endless run
   pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
   deductionSolved: string[]; // ids of solved Deduction Grid levels
+  seen: string[]; // level ids already watched opening on the map (see newlyUnlocked)
+  keys: number[]; // chapter indices whose key has been spelled (opens that boss)
 }
 
 export const STARTING_HINTS = 3;
@@ -49,7 +51,7 @@ export function loadProgress(): Progress {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<Progress>;
-      return {
+      const loaded: Progress = {
         stars: p.stars ?? {},
         streak: p.streak ?? 0,
         bestStreak: p.bestStreak ?? 0,
@@ -63,7 +65,14 @@ export function loadProgress(): Progress {
         endlessBest: p.endlessBest ?? 0,
         pairsBest: p.pairsBest ?? 0,
         deductionSolved: p.deductionSolved ?? [],
+        seen: p.seen ?? [],
+        keys: p.keys ?? [],
       };
+      // A returning player shouldn't be met by a dozen "just unlocked!" reveals
+      // for levels they opened months ago — the first time this field appears,
+      // everything already open counts as seen.
+      if (p.seen === undefined) loaded.seen = unlockedIds(loaded);
+      return loaded;
     }
   } catch {
     /* ignore */
@@ -82,6 +91,10 @@ export function loadProgress(): Progress {
     endlessBest: 0,
     pairsBest: 0,
     deductionSolved: [],
+    // The levels a brand-new player starts with were never locked to them, so
+    // they don't get an unlock reveal on the first visit to the map.
+    seen: LEVELS.slice(0, LOOKAHEAD).map((l) => l.id),
+    keys: [],
   };
 }
 
@@ -173,7 +186,96 @@ export function furthestCleared(p: Progress): number {
 /** Looser gating: the first few levels plus a window ahead of your progress. */
 export function isUnlocked(p: Progress, index: number): boolean {
   if (isDebug()) return true; // debug: everything open
-  return index <= furthestCleared(p) + LOOKAHEAD;
+  if (index > furthestCleared(p) + LOOKAHEAD) return false;
+  return !keyLockedBoss(p, index);
+}
+
+// --- Chapter keys ---------------------------------------------------------
+// Every non-boss level in a chapter banks one letter of that chapter's hidden
+// keyword. Bank them all, spell the word, and the boss door opens — so a boss
+// is something the chapter earns rather than the next number along.
+//
+// Banked letters are DERIVED from cleared levels, never stored: no migration,
+// and a save edited elsewhere can't desync from what the player has done.
+
+/** How many of chapter `ci`'s key letters the player has banked. */
+export function bankedLetters(p: Progress, ci: number): number {
+  return keyLevels(ci).filter((i) => (p.stars[LEVELS[i].id] ?? 0) > 0).length;
+}
+
+/** Every letter banked — the key can be attempted. */
+export function keyReady(p: Progress, ci: number): boolean {
+  return bankedLetters(p, ci) >= chapterKey(ci).length;
+}
+
+export function keySolved(p: Progress, ci: number): boolean {
+  return p.keys.includes(ci);
+}
+
+export function solveKey(p: Progress, ci: number): Progress {
+  return p.keys.includes(ci) ? p : { ...p, keys: [...p.keys, ci] };
+}
+
+/**
+ * Is the key the ONLY thing holding this boss shut? A boss further ahead than
+ * the progress window is locked anyway, and telling that player to go spell a
+ * key they can't finish yet is noise — they need "not yet", not "do this".
+ */
+export function bossAwaitingKey(p: Progress, index: number): boolean {
+  return keyLockedBoss(p, index) && index <= furthestCleared(p) + LOOKAHEAD;
+}
+
+/**
+ * Is this level a boss still shut behind its chapter key? A boss you've already
+ * beaten stays open forever — the key gates the first clear, not replays, so
+ * nobody loses access to something they've finished.
+ */
+export function keyLockedBoss(p: Progress, index: number): boolean {
+  if (isDebug()) return false;
+  const ci = CHAPTERS.findIndex((c) => c.boss === index);
+  if (ci < 0) return false;
+  if ((p.stars[LEVELS[index].id] ?? 0) > 0) return false;
+  return !keySolved(p, ci);
+}
+
+// --- What's new since you last looked at the map ---------------------------
+// Clearing a level opens the next one silently: you came back to the map and a
+// square had quietly changed colour, which made 62 unlocks feel like one event
+// repeated. The map now *shows* the lock coming off — but only once per level,
+// which is what `seen` is for.
+
+/**
+ * Ids of every currently-open level. Deliberately ignores the debug switch:
+ * flipping `?debug` on shouldn't count as unlocking 62 levels, nor should
+ * flipping it off take them away again.
+ */
+export function unlockedIds(p: Progress): string[] {
+  const limit = furthestCleared(p) + LOOKAHEAD;
+  return LEVELS.slice(0, limit + 1)
+    .filter((_, i) => !keyLockedBoss(p, i))
+    .map((l) => l.id);
+}
+
+/**
+ * Levels that opened since the player last saw the map, oldest first. A level
+ * they've already cleared is never "new" to them, however the save got there.
+ */
+export function newlyUnlocked(p: Progress): string[] {
+  const seen = new Set(p.seen);
+  return unlockedIds(p).filter((id) => !seen.has(id) && !((p.stars[id] ?? 0) > 0));
+}
+
+/**
+ * Record every open level as seen, so its unlock plays exactly once. Additive:
+ * `seen` only ever grows, so it can't be a prefix comparison — a key-locked
+ * boss is skipped by unlockedIds and joins the list later, out of order.
+ */
+export function markSeen(p: Progress): Progress {
+  const ids = unlockedIds(p);
+  const seen = new Set(p.seen);
+  if (ids.every((id) => seen.has(id))) return p;
+  ids.forEach((id) => seen.add(id));
+  return { ...p, seen: [...seen] };
 }
 
 // --- Daily challenge -------------------------------------------------------

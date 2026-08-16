@@ -33,7 +33,7 @@ export const en: Record<string, string> = {
   "home.daily.solve": "Solve →",
   "home.play": "Play",
   "home.continue": "Continue · L{n}",
-  "home.browseLevels": "🗺 Browse all {n} levels",
+  "home.browseLevels": "🗂 Browse all {n} levels",
   "home.mode.endless": "Endless",
   "home.mode.endless.best": "best {n}",
   "home.mode.endless.empty": "no fail",
@@ -54,15 +54,49 @@ export const en: Record<string, string> = {
   "a11y.unmute": "Unmute sound effects",
 
   // --- level map ----------------------------------------------------------
-  "levels.title": "Your journey",
+  "levels.title": "Your collection",
   "levels.debug": "🛠 Debug · all levels unlocked",
   "levels.locked": "Locked",
-  "levels.lockedHint": "Clear the previous chapter to unlock.",
   "levels.a11y.stats": "Stats and achievements",
   "levels.a11y.node": "Level {n}",
   "levels.a11y.boss": ", boss",
   "levels.a11y.stars": ", {n} of 3 stars",
   "levels.a11y.lockedNode": ", locked",
+  "levels.a11y.freshNode": ", just unlocked",
+  "levels.a11y.chapter": "Chapter {n}, {name}",
+  "levels.a11y.solved": "Level {n}, {title}",
+  "levels.summary": "{solved} of {total} solved · {perfect} perfect",
+  "levels.chapter.done": "Complete",
+  "levels.chapter.locked": "Opens after level {n}",
+  "levels.upNext": "Up next",
+  "levels.upNext.blurb": "12 words · 4 hidden groups · 1 secret link",
+  "levels.play": "Play →",
+  "levels.bossIn.one": "👑 One more level to the next boss",
+  "levels.bossIn.other": "👑 {n} levels to the next boss",
+  "levels.done.title": "Collection complete",
+  "levels.done.body": "Every level cleared. Replay any of them to chase a perfect ⭐⭐⭐.",
+  "levels.boss.teaser": "👑 A boss closes this chapter",
+  "levels.boss.twist": "👑 Boss · {what}",
+  // The unlock banner. One line per kind of thing that just opened, so
+  // clearing forty levels doesn't read as the same sentence forty times.
+  "levels.unlock.chapter": "New chapter — {name}",
+  "levels.unlock.boss": "A boss is open — {what}",
+  "levels.unlock.flavor.0": "Level {n} just came off the press.",
+  "levels.unlock.flavor.1": "Fresh board: level {n} is open.",
+  "levels.unlock.flavor.2": "Level {n} unlocked — new words, new link.",
+  "levels.unlock.flavor.3": "The lock's off level {n}.",
+  "levels.unlock.flavor.4": "Level {n} is yours to try.",
+  "levels.unlock.more": "+{n} more",
+
+  // --- chapter keys -------------------------------------------------------
+  "key.open": "🔑 Open the key",
+  "key.progress": "Key {done}/{total}",
+  "key.chapter": "Chapter {n} · {name}",
+  "key.title": "🔑 The chapter key",
+  "key.body": "Every level here gave up one letter. Put them back in order to open the boss door.",
+  "key.bossLocked": "🔑 Spell the chapter key to open this boss",
+  "key.a11y.locked": ", locked until the chapter key is spelled",
+  "key.unlocked": "🔑 Key found — the boss door is open!",
 
   // --- in game ------------------------------------------------------------
   "game.level": "Level {n}",
@@ -148,6 +182,10 @@ export const en: Record<string, string> = {
   "end.lost.title": "Out of guesses",
   "end.lost.body": "The secret link stays hidden — replay the level and you can still crack it.",
   "end.next": "Next level →",
+  // Replaces the plain "Next level" when what you just earned isn't a plain
+  // level, so a run of wins doesn't end on the same button every time.
+  "end.next.chapter": "Next chapter: {name} →",
+  "end.next.boss": "👑 Boss next · {what} →",
   "end.nextPuzzle": "Next puzzle →",
   "end.allDone": "All done 🎉",
   "end.seeYouTomorrow": "See you tomorrow 👋",
@@ -360,6 +398,13 @@ export const en: Record<string, string> = {
   "twist.oracle.label": "Boss · the oracle",
   "twist.decoy.label": "Boss · impostors",
   "twist.blackout.label": "Boss · blackout",
+  // The same five twists as a bare noun phrase, for sentences that already say
+  // "boss" (the level map's chapter footer and its unlock banner).
+  "twist.scramble.short": "scrambled tiles",
+  "twist.emoji.short": "emoji only",
+  "twist.oracle.short": "the oracle",
+  "twist.decoy.short": "impostors",
+  "twist.blackout.short": "blackout",
   "twist.scramble.intro": "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
   "twist.emoji.intro": "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
   "twist.oracle.intro":

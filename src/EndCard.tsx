@@ -43,6 +43,7 @@ export function EndCard({
   endless,
   endlessInfo,
   daily,
+  nextLabel,
   onShareToast,
   onExit,
   onRestart,
@@ -63,6 +64,8 @@ export function EndCard({
   endless?: boolean;
   endlessInfo?: { solved: number; score: number; best: number };
   daily?: boolean;
+  /** Overrides "Next level →" when the next one is a boss or a new chapter. */
+  nextLabel?: string;
   onShareToast: (msg: string) => void;
   onExit: () => void;
   onRestart: () => void;
@@ -184,7 +187,7 @@ export function EndCard({
               onClick={onNext}
               className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
             >
-              {t(endless ? "end.nextPuzzle" : "end.next")}
+              {nextLabel ?? t(endless ? "end.nextPuzzle" : "end.next")}
             </button>
           ) : (
             <button
