@@ -24,12 +24,13 @@ import {
 //
 // So the two halves are now drawn differently, because they *are* different:
 //
-//   solved  → a word. The board's title, which the win card and the history
-//             already show once you've cracked it, on a chip in the chapter's
-//             ink. Titles are different lengths, so the rows set like a page of
-//             type and every player's index is shaped by what they've beaten.
-//   unsolved→ a bare number, small and quiet. Anonymity is the product here:
-//             a level you haven't played should give away nothing.
+//   solved  → an index LINE: numeral, the board's title (which the win card and
+//             the history already show once you've cracked it), a dotted
+//             leader, the stars. Numerals align in one column and stars in
+//             another, so the titles' different lengths are absorbed by the
+//             leader instead of ragging out — the whole point of a leader.
+//   unsolved→ a fixed-size square in an even strip. It carries no information
+//             on purpose, so it has nothing to size itself by.
 //
 // And the thing you actually came to do — play the next level — is a card at the
 // top, not a node to hunt for in a grid.
@@ -196,6 +197,15 @@ export default function LevelSelect({
             );
           }
 
+          // Two registers, so each can be laid out by its own rules.
+          const indices = slice.map((_, j) => chap.start + j);
+          const solved = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) > 0);
+          const ahead = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) === 0);
+          const bossTwistOpen =
+            isUnlocked(progress, chap.boss) && (progress.stars[LEVELS[chap.boss].id] ?? 0) === 0
+              ? bossTwist(chap.boss)
+              : null;
+
           return (
             <section key={ci}>
               {/* A contents-page rule: numeral, name, hairline, star count. */}
@@ -216,26 +226,55 @@ export default function LevelSelect({
               </div>
               <p className="mt-0.5 text-xs text-ink-soft">{t(chap.flavorKey)}</p>
 
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {slice.map((p, j) => {
-                  const i = chap.start + j;
-                  const revealAt = freshOrder.get(p.id);
-                  return (
-                    <LevelChip
-                      key={p.id}
+              {/* Solved levels are index lines: a colour-coded numeral, the
+                  board's name, a leader, the stars. Both edges align, so the
+                  different title lengths read as typesetting instead of as a
+                  ragged row of pills. */}
+              {solved.length > 0 && (
+                <div className="mt-2">
+                  {solved.map((i) => (
+                    <LevelRow
+                      key={LEVELS[i].id}
                       index={i}
                       ink={ink}
-                      reduce={reduce}
-                      unlocked={isUnlocked(progress, i)}
-                      earned={progress.stars[p.id] ?? 0}
-                      isNext={i === nextIndex}
-                      chipRef={p.id === lastFresh ? freshRef : undefined}
-                      revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
-                      onClick={() => isUnlocked(progress, i) && onPick(i)}
+                      earned={progress.stars[LEVELS[i].id] ?? 0}
+                      onClick={() => onPick(i)}
                     />
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Everything still ahead is a strip of identical squares. They
+                  hold no information to size themselves by — that's the point
+                  — so they're uniform and they line up. */}
+              {ahead.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-2 px-1">
+                  {ahead.map((i) => {
+                    const revealAt = freshOrder.get(LEVELS[i].id);
+                    return (
+                      <LevelTile
+                        key={LEVELS[i].id}
+                        index={i}
+                        ink={ink}
+                        reduce={reduce}
+                        unlocked={isUnlocked(progress, i)}
+                        isNext={i === nextIndex}
+                        tileRef={LEVELS[i].id === lastFresh ? freshRef : undefined}
+                        revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
+                        onClick={() => isUnlocked(progress, i) && onPick(i)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* The boss's twist can't ride on a fixed-size square, so it gets
+                  a caption once that boss is reachable and still unbeaten. */}
+              {bossTwistOpen && (
+                <p className="mt-2 px-1 text-[0.65rem] font-semibold capitalize" style={{ color: ink.deep }}>
+                  {t("levels.boss.twist", { what: t(`twist.${bossTwistOpen}.short`) })}
+                </p>
+              )}
             </section>
           );
         })}
@@ -360,14 +399,74 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
  * One entry in the index. Solved levels wear their title; everything else is a
  * bare number or a lock. All three are the same height so the rows set cleanly.
  */
-function LevelChip({
+/**
+ * A solved level, as a line in a contents page: a colour-coded numeral, the
+ * board's name, a leader, the stars. The numerals form one aligned column and
+ * the stars another, so titles of different lengths sit between fixed edges
+ * instead of ragging out into the gutter.
+ */
+function LevelRow({
+  index,
+  ink,
+  earned,
+  onClick,
+}: {
+  index: number;
+  ink: ChapterInk;
+  earned: number;
+  onClick: () => void;
+}) {
+  const boss = isBossLevel(index);
+  return (
+    <button
+      onClick={onClick}
+      aria-label={
+        t("levels.a11y.solved", { n: index + 1, title: levelTitle(index) }) +
+        (boss ? t("levels.a11y.boss") : "") +
+        `, ${t(TIER_KEY[LEVELS[index].tier])}` +
+        t("levels.a11y.stars", { n: earned })
+      }
+      className="flex w-full items-center gap-2.5 rounded-lg px-1 py-[3px] text-left transition hover:bg-cream"
+    >
+      <span
+        aria-hidden
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-ink/25 font-display text-[0.7rem] font-bold tabular-nums text-ink"
+        style={{ background: ink.fill }}
+      >
+        {index + 1}
+      </span>
+      {/* The crown trails the title rather than leading it, so every row's
+          title starts at the same x. */}
+      <span className="shrink-0 font-display text-sm font-bold text-ink">{levelTitle(index)}</span>
+      {boss && <span aria-hidden className="-ml-1 text-[0.7rem] leading-none">👑</span>}
+      <span aria-hidden className="h-0 flex-1 self-end border-b border-dotted border-ink/30 pb-[7px]" />
+      {/* A fixed three-cell grid: ☆ is narrower than ⭐, so letting the pips
+          size themselves would leave every leader ending somewhere different. */}
+      <span aria-hidden className="grid w-[2.6rem] shrink-0 grid-cols-3 justify-items-center text-[0.6rem] leading-none">
+        {[0, 1, 2].map((s) => (
+          <span key={s} className={s < earned ? "" : "opacity-25"}>
+            {s < earned ? "⭐" : "☆"}
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * A level still ahead of you. It carries no information — deliberately, since a
+ * board you haven't played should give nothing away — so every one of these is
+ * the same size and they tile into an even strip. A freshly unlocked tile
+ * starts on its locked face and opens on a timer, so the player *watches* it
+ * happen instead of finding it already changed.
+ */
+function LevelTile({
   index,
   ink,
   reduce,
   unlocked,
-  earned,
   isNext,
-  chipRef,
+  tileRef,
   revealDelay,
   onClick,
 }: {
@@ -375,15 +474,12 @@ function LevelChip({
   ink: ChapterInk;
   reduce: boolean;
   unlocked: boolean;
-  earned: number;
   isNext: boolean;
-  chipRef?: React.Ref<HTMLButtonElement>;
+  tileRef?: React.Ref<HTMLButtonElement>;
   /** ms to wait before popping the lock off, or null for "already open". */
   revealDelay: number | null;
   onClick: () => void;
 }) {
-  // A freshly unlocked entry starts on its locked face and opens on a timer, so
-  // the player *watches* it happen instead of finding it already changed.
   const [opened, setOpened] = useState(revealDelay == null);
   useEffect(() => {
     if (revealDelay == null) return;
@@ -395,55 +491,32 @@ function LevelChip({
   }, [revealDelay, reduce, index]);
 
   const showOpen = unlocked && opened;
-  const solved = earned > 0;
   const boss = isBossLevel(index);
-  const twist = bossTwist(index);
-
-  const base =
-    "relative flex h-9 items-center justify-center gap-1 rounded-xl border-2 font-display transition-colors disabled:cursor-default";
   const style: React.CSSProperties = {};
-  let cls: string;
-
-  if (solved) {
-    // Flat, no offset shadow: a level you've finished is a record, not a
-    // control. Only the things you can act on now — the Up next card and the
-    // open numbered entries — sit raised off the page.
-    cls = `${base} border-ink/20 px-2 text-ink`;
-    style.background = ink.fill;
-    // A flawless clear keeps a gold rule inside the chip, so the index records
-    // how well you did and not only that you passed.
-    if (earned >= 3) style.boxShadow = "inset 0 0 0 2px #f7dd9a";
-  } else if (showOpen && boss) {
-    cls = `${base} bg-white px-2 shadow-[2px_2px_0_rgba(38,34,26,0.3)]`;
-    style.borderColor = ink.deep;
+  let face = "border-dashed border-ink/25 bg-cream/60";
+  if (showOpen) {
+    face = "border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]";
     style.color = ink.deep;
-  } else if (showOpen) {
-    cls = `${base} w-9 border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]`;
-    style.color = ink.deep;
-  } else {
-    cls = `${base} w-9 border-dashed border-ink/25 bg-cream/60`;
+    if (boss) style.borderColor = ink.deep;
   }
-
-  const label =
-    (solved
-      ? t("levels.a11y.solved", { n: index + 1, title: levelTitle(index) })
-      : t("levels.a11y.node", { n: index + 1 })) +
-    (boss ? t("levels.a11y.boss") : "") +
-    `, ${t(TIER_KEY[LEVELS[index].tier])}` +
-    (solved ? t("levels.a11y.stars", { n: earned }) : showOpen ? "" : t("levels.a11y.lockedNode")) +
-    (revealDelay != null ? t("levels.a11y.freshNode") : "");
 
   return (
     <motion.button
-      ref={chipRef}
+      ref={tileRef}
       initial={reduce ? false : { opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: reduce ? 0 : Math.min(index * 0.008, 0.25), type: "spring", stiffness: 340, damping: 24 }}
       whileTap={showOpen ? { scale: 0.94 } : undefined}
       onClick={onClick}
       disabled={!showOpen}
-      aria-label={label}
-      className={cls}
+      aria-label={
+        t("levels.a11y.node", { n: index + 1 }) +
+        (boss ? t("levels.a11y.boss") : "") +
+        `, ${t(TIER_KEY[LEVELS[index].tier])}` +
+        (showOpen ? "" : t("levels.a11y.lockedNode")) +
+        (revealDelay != null ? t("levels.a11y.freshNode") : "")
+      }
+      className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 font-display transition-colors disabled:cursor-default ${face}`}
       style={style}
     >
       {isNext && showOpen && (
@@ -454,45 +527,31 @@ function LevelChip({
           transition={reduce ? undefined : { duration: 1.6, repeat: Infinity }}
         />
       )}
+      {boss && (
+        <span aria-hidden className="absolute -top-2 left-1/2 -translate-x-1/2 text-sm drop-shadow">
+          👑
+        </span>
+      )}
 
       <AnimatePresence mode="wait" initial={false}>
         {showOpen ? (
           <motion.span
             key="open"
-            className="flex items-center gap-1"
+            className="text-base font-bold leading-none"
             initial={reduce || revealDelay == null ? false : { scale: 0.4, rotate: -12 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 15 }}
           >
-            {boss && <span aria-hidden className="text-[0.65rem] leading-none">👑</span>}
-            {solved ? (
-              <>
-                <span className="text-xs font-bold leading-none">{levelTitle(index)}</span>
-                <span aria-hidden className="flex gap-px text-[0.45rem] leading-none">
-                  {[0, 1, 2].map((s) => (
-                    <span key={s} className={s < earned ? "" : "opacity-30"}>
-                      {s < earned ? "⭐" : "☆"}
-                    </span>
-                  ))}
-                </span>
-              </>
-            ) : boss && twist ? (
-              // An open boss announces its twist: the last entry of a chapter is
-              // the one worth walking towards, and "63" doesn't say that.
-              <span className="text-xs font-bold capitalize leading-none">{t(`twist.${twist}.short`)}</span>
-            ) : (
-              <span className="text-sm font-bold leading-none">{index + 1}</span>
-            )}
+            {index + 1}
           </motion.span>
         ) : (
           <motion.span
             key="locked"
             aria-hidden
-            className="flex items-center gap-1 text-sm opacity-55"
+            className="text-sm opacity-55"
             exit={reduce ? { opacity: 0 } : { scale: 1.6, opacity: 0, rotate: 25 }}
             transition={{ duration: 0.28 }}
           >
-            {boss && <span className="text-xs leading-none">👑</span>}
             🔒
           </motion.span>
         )}

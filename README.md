@@ -22,9 +22,10 @@ word, then build all four groups of three around it.
 There are **63 levels** across eight chapters, each closing on a **boss** that
 plays by its own rule. They're browsed from an **index** rather than a level
 grid, and the two halves of it read differently on purpose: a level you've
-solved is listed by the name of the board you beat ("Bank On It ⭐⭐⭐"), while
-one you haven't is a bare number — a title hints at the link, so an unplayed
-level never gets one. Whatever you play next is a card at the top of the page.
+solved gets an index line naming the board you beat (`Bank On It ··· ⭐⭐⭐`),
+while the ones ahead are a strip of plain numbered tiles — a title hints at the
+link, so an unplayed level never gets one. Whatever you play next is a card at
+the top of the page.
 Clearing a level opens another: the index **shows** the lock come off it, once,
 and says what it is — a plain level, a boss and its twist, or a new chapter.
 Chase the ⭐ total and your 🔥 streak.

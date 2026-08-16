@@ -140,13 +140,13 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   1280×720 embed above the fold.
 - `LevelSelect.tsx` — the level **index** (not a map/grid — see iteration 24).
   An **Up next** card on top, then eight chapter sections in their own
-  `CHAPTER_INKS` colour. Entries are chips in a `flex-wrap` run: a solved one
-  wears `levelTitle(i)` + stars and lies flat, an open one is a raised number,
-  an open boss names its twist, a locked one is a dashed lock, and an unreached
-  chapter collapses to a single named teaser line. **A solved level's title is
-  shown; an unsolved level's never is** — a title hints at the link. A freshly
-  unlocked chip starts locked and pops open on a timer (see `newlyUnlocked`
-  below) under a fixed banner naming what opened.
+  `CHAPTER_INKS` colour, each split into two registers: `LevelRow` (solved —
+  numeral, `levelTitle(i)`, dotted leader, stars, all in aligned columns) and
+  `LevelTile` (unsolved — a uniform 44px square, dashed when locked), plus a
+  boss caption and, for unreached chapters, a single named teaser line.
+  **A solved level's title is shown; an unsolved level's never is** — a title
+  hints at the link. A freshly unlocked tile starts locked and pops open on a
+  timer (see `newlyUnlocked` below) under a fixed banner naming what opened.
 - `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
   best, daily{lastDate,streak}, achievements, hints, history, score,
   endlessBest, pairsBest, seen), loadProgress/save, isUnlocked (lookahead 3 +
@@ -234,23 +234,33 @@ away and the screen rebuilt around one idea.
 **The two halves of the list are not the same thing, so they aren't drawn the
 same way.**
 
-- **Behind you: words.** A solved level wears the **title of the board you beat**
-  ("Bank On It ⭐⭐⭐") on a chip in its chapter's ink. Titles are already public
-  once you've solved a level — the win card and the history both show them — so
-  this leaks nothing, and it turns a wall of gold squares into a record of what
-  you actually cracked. Titles vary in length, so the rows set like a page of
-  type and no two players' collections look alike.
-- **Ahead of you: numbers.** An unplayed level is a small, quiet numbered chip
-  and a locked one is a dashed lock. Anonymity is the *product* here — a title
-  is a strong hint at the link ("Star Power" → STAR), so an unsolved level must
-  never be named. `scripts/playtest.mjs` asserts exactly that.
+- **Behind you: index lines.** A solved level is a row — a colour-coded
+  numeral, the **title of the board you beat**, a dotted leader, the stars:
+  `[21] Pen Pal ········· ⭐⭐⭐`. Titles are already public once you've solved a
+  level (the win card and the history both show them), so this leaks nothing,
+  and it turns a wall of gold squares into a record of what you cracked.
+  **The leader is what makes it work**: numerals align in one column and stars
+  in another (a fixed 3-cell grid — `☆` is narrower than `⭐`, so free-sizing
+  the pips leaves every leader ending somewhere different), and the varying
+  title lengths are absorbed in between. The crown on a boss row *trails* the
+  title so every title still starts at the same x.
+- **Ahead of you: a strip of identical squares.** An unplayed level is a 44px
+  tile, locked ones dashed. They carry no information on purpose — a title is a
+  strong hint at the link ("Star Power" → STAR), so an unsolved level must never
+  be named, and `scripts/playtest.mjs` asserts exactly that — which means they
+  have nothing to size themselves by and can simply tile evenly.
+- **An earlier take on this used variable-width title *chips* in a `flex-wrap`
+  run and it looked like clutter** — every row ragged out at a different point.
+  Same content, but "a page of type" only works if something holds the columns.
+  If you're tempted to reach for wrapped pills here again, that's the reason not
+  to.
 - **The thing you came to do is a card, not a node to hunt for.** An **Up next**
   card sits at the top with the chapter, the level number, its difficulty tier
   (which used to live only in an aria-label), a boss's twist when there is one,
   and a big Play. Clear everything and it becomes a "Collection complete" card.
-- **Flat past, raised present.** Solved chips have no offset shadow; only the
-  Up next card and the open numbered chips sit raised off the page, so the one
-  thing to press is obvious.
+- **Flat past, raised present.** Solved rows are flat; only the Up next card
+  and the open numbered tiles sit raised off the page, so the one thing to
+  press is obvious.
 - **One flat print ink per chapter** (`CHAPTER_INKS` in `theme.ts`, eight spot
   colours on cream), with a contents-page rule — numeral, name, hairline, star
   count — and a rotated **COMPLETE** stamp. Perfect clears keep a gold rule
@@ -259,8 +269,9 @@ same way.**
   ("Mind Benders · Opens after level 42 · 👑 A boss closes this chapter").
   Chapter names are flavour, never puzzle content. This retires backlog item 20
   ("de-intimidate progress") and replaces a wall of ~40 padlocks.
-- **An open boss chip names its twist** ("👑 Blackout") instead of a number, so
-  the last entry of a chapter is visibly the one worth walking towards.
+- **A reachable boss gets a caption** under the strip ("👑 Boss · Blackout") —
+  its twist can't ride on a fixed-size square without breaking the strip's
+  uniformity, and it's what makes the end of a chapter worth walking towards.
 
 **Deliberate reversal — read before "fixing" it:** iteration 11 logged
 "*Level map didn't scroll to you — a player at L34 landed at L1*" and added a
@@ -291,8 +302,11 @@ may as well not run.
 
 Notes for the next session:
 
-- The chips are a `flex-wrap` run, so the layout reflows with width for free —
-  2–3 per row on a phone, 5–7 in the 1280×720 embed. No breakpoint juggling.
+- Rows are full-width and tiles are a uniform `flex-wrap` strip, so both reflow
+  with width for free — no breakpoint juggling. A fully-solved index is ~2500px;
+  that's fine, because the thing you came to press is the card at the top.
+- Only tiles need the unlock reveal: a freshly unlocked level is unsolved by
+  definition, so it's always in the strip. `LevelRow` has no reveal logic.
 - `levelTitle(index)` in `puzzles.ts`, not `LEVELS[index].title`: the emoji boss
   substitutes its own board (`EMOJI_BOSS`), so the index has to name the board
   the player actually saw. Getting this wrong would print a title for a puzzle
