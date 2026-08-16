@@ -28,6 +28,8 @@ link, so an unplayed level never gets one. Whatever you play next is a card at
 the top of the page.
 Clearing a level opens another: the index **shows** the lock come off it, once,
 and says what it is — a plain level, a boss and its twist, or a new chapter.
+Each chapter also hides a **key**: every level in it gives up one letter, and
+spelling the word those letters make is what opens that chapter's boss door.
 Chase the ⭐ total and your 🔥 streak.
 
 ## Languages

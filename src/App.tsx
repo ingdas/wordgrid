@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, CHAPTERS, bossTwist, type RawPuzzle } from "./puzzles";
+import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
@@ -13,6 +13,7 @@ import {
   playerRank,
   furthestCleared,
   markSeen,
+  solveKey,
   MAX_STARS,
   type Progress,
 } from "./progress";
@@ -28,6 +29,7 @@ import {
   requestRewarded,
 } from "./sdk";
 import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
+import { chapterPage } from "./theme";
 import { LOCALES, getLocale, setLocale, t, type Locale } from "./i18n";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
@@ -274,6 +276,22 @@ export default function App() {
     applyProgress(markSeen);
   }, [applyProgress]);
 
+  // A chapter key was spelled: its boss door opens, and the effort pays out in
+  // points (which feed the rank ladder) plus a couple of hints.
+  const solveChapterKey = useCallback(
+    (chapter: number) => {
+      const { prev, next } = applyProgress((p) =>
+        p.keys.includes(chapter) ? p : { ...solveKey(p, chapter), score: p.score + 500, hints: p.hints + 2 }
+      );
+      if (next === prev) return;
+      happytime();
+      celebrateRank(prev.score, next.score);
+      // The keyword itself is the trophy — it is content, not a catalogue key.
+      setUnlockedAch({ icon: "🔑", header: t("key.unlocked"), label: chapterKey(chapter) });
+    },
+    [applyProgress, celebrateRank]
+  );
+
   const pickLevel = useCallback((index: number) => {
     setPlayingDaily(false);
     setLevelIndex(index);
@@ -513,9 +531,23 @@ export default function App() {
     setScreen("home");
   }, [endlessSolved, applyProgress]);
 
+  // Playing a campaign level stains the page with that chapter's paper stock,
+  // so chapter 6 doesn't look like chapter 1. The daily, Endless, Pairs and
+  // every menu keep the plain cream — the stain means "you are in chapter N",
+  // and it would say nothing if it were everywhere.
+  const page =
+    screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
+
   return (
     <div key={locale} className="contents">
-      <div className="aurora" />
+      <div
+        className="aurora"
+        style={
+          page
+            ? ({ "--page-paper": page.paper, "--page-glow": page.glow } as React.CSSProperties)
+            : undefined
+        }
+      />
       <div className="grain" />
 
       <AnimatePresence mode="wait">
@@ -548,6 +580,10 @@ export default function App() {
               reduce={reduce}
               onPick={pickLevel}
               onSeen={markLevelsSeen}
+              onSolveKey={solveChapterKey}
+              hints={progress.hints}
+              onUseHint={useHintToken}
+              onRefillHints={refillHints}
               onHome={() => setScreen("home")}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}

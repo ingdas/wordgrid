@@ -884,6 +884,12 @@ export const CHAPTERS: Chapter[] = (() => {
 
 const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
 
+/** Which chapter a level belongs to (index into CHAPTERS). */
+export function chapterOfLevel(index: number): number {
+  const ci = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
+  return ci < 0 ? 0 : ci;
+}
+
 /** Is this level (index into LEVELS) the boss of its chapter? */
 export function isBossLevel(index: number): boolean {
   return BOSS_SET.has(index);
@@ -924,6 +930,39 @@ export function bossTwist(index: number): BossTwist | null {
   const chapter = CHAPTERS.findIndex((c) => c.boss === index);
   if (chapter === -1) return null;
   return CHAPTER_TWISTS[chapter % CHAPTER_TWISTS.length];
+}
+
+// ---------------------------------------------------------------------------
+// Chapter keys. Each chapter hides a keyword, and every non-boss level in that
+// chapter banks one of its letters when you clear it. Bank them all and the
+// keyword can be spelled — which is what opens the chapter's boss door.
+//
+// The keyword's length must equal the chapter's non-boss level count, so one
+// level buys exactly one letter. `npm run validate` enforces that, because a
+// mismatch would either strand letters or leave a slot nothing can fill.
+
+export const CHAPTER_KEYS = [
+  "SPARK", // 1 First Light
+  "EMBERS", // 2 Warming Up
+  "TANGLE", // 3 Crossed Wires
+  "MIRRORS", // 4 Double Meanings
+  "SPIRALS", // 5 Twists & Turns
+  "LEXICON", // 6 Rare Words
+  "RIDDLES", // 7 Mind Benders
+  "MASTERMIND", // 8 The Final Test
+];
+
+/** The keyword guarding a chapter's boss. */
+export function chapterKey(chapter: number): string {
+  return CHAPTER_KEYS[chapter % CHAPTER_KEYS.length];
+}
+
+/** Levels in a chapter that bank a key letter — everything but the boss. */
+export function keyLevels(chapter: number): number[] {
+  const c = CHAPTERS[chapter];
+  const out: number[] = [];
+  for (let i = c.start; i < c.end; i++) if (i !== c.boss) out.push(i);
+  return out;
 }
 
 /**

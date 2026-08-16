@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 24 (the level map became an index: solved levels
-wear their titles, unsolved ones stay anonymous, unlocks are watchable). This file is the single source of truth — a fresh session should
+_Last updated: iteration 25 (chapter keys gate the bosses; each chapter
+stains the page it's played on). This file is the single source of truth — a fresh session should
 be able to continue from here without any prior chat context._
 
 ## What this is
@@ -18,7 +18,8 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   to `docs/` (GitHub Pages). Always run `npm run build` before committing so
   `docs/` stays in sync.
 - Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
-  structure), `npm run audit` (ambiguity helper), `npm test` (engine tests),
+  structure + chapter-key lengths), `npm run audit` (ambiguity helper),
+  `npm test` (engine, deduction, **progress/key gating**, i18n),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
@@ -41,7 +42,9 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   star,trunk,ring,bug,bank (concrete → abstract ramp); CHAPTERS
   (sizes [6,7,7,8,8,8,8,10], boss = last of chapter), BossTwist type +
   CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
-  owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles.
+  owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles;
+  CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
+  see iteration 25; `npm run validate` checks their lengths).
   **Category-name rules enforced by `npm run validate`** (it exits non-zero):
   a name may not spell the pivot, name one of its own tiles, or name a tile
   from another group on the board — singular or plural — and no tile may
@@ -54,12 +57,15 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   the campaign; plain global-English category names). Also feeds Endless and
   Pairs.
 - `theme.ts` / `letters.ts` / `format.ts` — CATEGORY_THEMES (the four group
-  colours), CHAPTER_INKS (one flat print ink per chapter, for the level map),
-  buildLetterBank, fmtTime. Split out of Game.tsx so Pairs and the
+  colours), CHAPTER_INKS (one flat print ink per chapter) + CHAPTER_PAGES (the
+  per-chapter page stain), buildLetterBank + shuffledLetters (the chapter key's
+  exact-letters bank), fmtTime. Split out of Game.tsx so Pairs and the
   Logic Grid don't import the game screen to get at a constant.
-- `LinkGuess.tsx` — the spell-the-link panel, serving three callers: the
-  normal finale, the Oracle boss, and the **early call** (`early` + `onMiss`:
-  one attempt, a miss hands the board back).
+- `LinkGuess.tsx` — the spell-the-link panel, serving four callers: the normal
+  finale, the Oracle boss, the **early call** (`early` + `onMiss`: one attempt,
+  a miss hands the board back), and the **chapter key** (`bank` for an
+  exact-letters bank, `titleKey`/`bodyKey` for its copy, `dismissKey` for a
+  panel with no "give up" to offer).
 - `EndCard.tsx` — win/loss card, StarRow, RATINGS, share (canvas + Web Share).
 - `Game.tsx` — the in-game screen. Key props: puzzleIndex,
   overrideRaw (play a non-campaign RawPuzzle — daily pool / Endless), twist,
@@ -149,8 +155,11 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   timer (see `newlyUnlocked` below) under a fixed banner naming what opened.
 - `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
   best, daily{lastDate,streak}, achievements, hints, history, score,
-  endlessBest, pairsBest, seen), loadProgress/save, isUnlocked (lookahead 3 +
-  isDebug), unlockedIds/newlyUnlocked/markSeen (what the map still owes the
+  endlessBest, pairsBest, seen, keys), loadProgress/save, isUnlocked (lookahead
+  3 + isDebug + the chapter-key boss gate), the key helpers
+  (bankedLetters/keyReady/keySolved/solveKey/keyLockedBoss/bossAwaitingKey —
+  rules pinned in `scripts/progress.test.mts`),
+  unlockedIds/newlyUnlocked/markSeen (what the map still owes the
   player an unlock reveal for — debug-blind, and migrated so old saves and
   fresh ones both start with nothing pending), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
   shared, no repeat within an 80-day cycle), dailyWeek/msUntilNextDaily,
@@ -222,6 +231,64 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## Chapter keys + per-chapter paper (iteration 25)
+
+Two changes that make a chapter feel like a unit rather than eight arbitrary
+levels in a row.
+
+### The chapter key — a boss is now earned, not reached
+
+Every chapter hides a **keyword**, and every non-boss level in it banks one of
+that keyword's letters when you clear it. Bank them all and the key panel
+opens: the letters come back **jumbled, with no decoys**, and spelling the word
+opens the boss door. The keywords are themed to their chapters —
+SPARK · EMBERS · TANGLE · MIRRORS · SPIRALS · LEXICON · RIDDLES · MASTERMIND —
+so the chapter's own name is the clue.
+
+It reuses what the game already teaches: `LinkGuess` is the finale's panel, and
+this is its fourth caller (finale / Oracle / early call / chapter key). It took
+three new optional props — `bank`, copy overrides, and a `dismissKey` for a
+panel that has no "give up" to offer.
+
+Rules worth knowing before touching this (all pinned in
+`scripts/progress.test.mts`, which is new and wired into `npm test`):
+
+- **Banked letters are derived, never stored** — they're just the count of
+  cleared non-boss levels in the chapter. No migration, and a hand-edited save
+  can't desync from what the player actually did.
+- **A boss you have already beaten never re-locks.** Saves from before keys
+  existed keep every boss they earned; the key gates the first clear only.
+- **An unsolved key cannot deadlock the campaign.** The gate is on the boss
+  alone — the lookahead window still opens levels past it, so a player who
+  can't crack a keyword is never stuck, just held back from that one fight.
+- **Only a boss you can actually reach advertises its key** (`bossAwaitingKey`
+  vs `keyLockedBoss`). A boss five chapters ahead is locked by distance, and
+  telling that player to "spell the key" would be nonsense advice.
+- **`unlockedIds` hides a key-locked boss**, so opening one with the key makes
+  it read as newly unlocked — it gets the index's lock-pop reveal and its own
+  banner, which is the payoff moment.
+- **`npm run validate` fails the build if a keyword's length ≠ its chapter's
+  non-boss level count.** Too short strands levels that buy nothing; too long
+  leaves a slot nothing can ever fill and the boss door could never open.
+
+Rewards: opening a key pays 500 points (which feeds the rank ladder) and +2
+hints, on top of the door itself.
+
+### Per-chapter paper
+
+`CHAPTER_PAGES` in `theme.ts` derives a page stain from each chapter's ink —
+the cream pulled halfway to that chapter's wash, plus a low-alpha top glow.
+`App` sets `--page-paper` / `--page-glow` on the `.aurora` backdrop **only while
+a campaign level is open**, so the stain means "you are in chapter N"; the
+daily, Endless, Pairs and every menu keep the plain cream, because a signal
+that's everywhere says nothing. The in-game header names the chapter in its own
+ink under the level number ("CROSSED WIRES · EASY").
+
+Deliberately faint, and it never touches `CATEGORY_THEMES`: the four group
+colours are load-bearing for gameplay, and the playtest asserts the pivot is
+never distinguishable by colour mid-game. If it wants to be stronger, the
+number to turn is the glow alpha in `CHAPTER_PAGES`.
 
 ## The level map became an index (iteration 24)
 

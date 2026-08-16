@@ -47,10 +47,14 @@ body {
   position: fixed;
   inset: 0;
   z-index: -2;
+  /* The chapter you're playing stains the page: App sets these two variables
+     while a campaign level is open and clears them everywhere else. Kept faint
+     on purpose — it should read as a different paper stock, not a new theme. */
   background:
-    radial-gradient(90% 70% at 50% 0%, rgba(217, 72, 43, 0.05), transparent 60%),
+    radial-gradient(90% 70% at 50% 0%, var(--page-glow, rgba(217, 72, 43, 0.05)), transparent 60%),
     radial-gradient(100% 80% at 50% 110%, rgba(38, 34, 26, 0.07), transparent 55%),
-    #faf5ea;
+    var(--page-paper, #faf5ea);
+  transition: background-color 600ms ease;
 }
 
 /* Newsprint grain — multiply so it darkens the paper like real pulp stock. */

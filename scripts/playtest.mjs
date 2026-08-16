@@ -295,6 +295,68 @@ if (/star power/i.test(lostText)) note("Level title was revealed on a loss (spoi
 if (!/replay/i.test(lostText)) note("Loss card should invite the player to replay.");
 await p.screenshot({ path: `${SHOT}/r10-loss.png` });
 
+// 11b. Chapter keys: the boss door. Seeded rather than played — clearing five
+//      levels for real would take longer than the rest of this script.
+{
+  const CH1 = ["star", "trunk", "ring", "bug", "bank"]; // chapter 1's non-boss levels
+  await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 1 });
+  await p.goto(BASE, { waitUntil: "networkidle0" });
+  await p.evaluate((ids) => {
+    localStorage.clear();
+    localStorage.setItem("wordgrid:tutorial", "1");
+    const stars = {};
+    ids.forEach((id) => (stars[id] = 3));
+    localStorage.setItem("wordgrid:progress", JSON.stringify({
+      stars, streak: 5, bestStreak: 5, linksGuessed: 5, best: {}, daily: { lastDate: "", streak: 0 },
+      achievements: [], hints: 3, history: [], score: 2000, endlessBest: 0, pairsBest: 0,
+      deductionSolved: [], seen: ids, keys: [],
+    }));
+  }, CH1);
+  await p.reload({ waitUntil: "networkidle0" });
+  await sleep(600);
+  await clickText("button", "Browse all");
+  await sleep(1000);
+
+  const shut = await p.$$eval("button[aria-label^='Level 6']", (els) => els.map((e) => e.disabled));
+  const before = await bodyText();
+  log("boss shut behind its key:", shut[0] === true);
+  if (shut[0] !== true) note("Chapter 1's boss should be locked until its key is spelled.");
+  if (!/Open the key/i.test(before)) note("Key is ready but the index offers no way to open it.");
+  // The keyword must not be sitting on the page before it's solved.
+  if (/\bSPARK\b/.test(before)) note("The index leaks the chapter keyword before it's spelled.");
+
+  await clickText("button", "Open the key");
+  await sleep(600);
+  const panel = await bodyText();
+  if (!/chapter key/i.test(panel)) note("Chapter key panel did not open.");
+  if (/\bSPARK\b/.test(panel)) note("The key panel gives the answer away.");
+  // The bank must be exactly the banked letters — no decoy padding, or the
+  // "one letter per level" promise is a lie.
+  const tiles = await p.$$eval("button[aria-label^='Letter ']", (els) => els.map((e) => e.textContent.trim()));
+  log("key bank tiles:", tiles.join(""));
+  if (tiles.length !== 5) note(`Key bank should hold exactly the 5 banked letters, got ${tiles.length}.`);
+  if ([...tiles].sort().join("") !== "AKPRS") note(`Key bank letters are not SPARK's: ${tiles.join("")}`);
+  await p.screenshot({ path: `${SHOT}/r11-key.png` });
+
+  for (const ch of "SPARK") {
+    const ok = await p.evaluate((c) => {
+      const btn = [...document.querySelectorAll("button[aria-label^='Letter ']")]
+        .find((e) => !e.disabled && e.textContent.trim() === c);
+      if (btn) { btn.click(); return true; }
+      return false;
+    }, ch);
+    if (!ok) note(`Could not tap key letter ${ch}.`);
+    await sleep(160);
+  }
+  await sleep(2600);
+  const opened = await p.$$eval("button[aria-label^='Level 6']", (els) => els.map((e) => e.disabled));
+  log("boss opens once the key is spelled:", opened[0] === false);
+  if (opened[0] !== false) note("Spelling the chapter key did not open the boss.");
+  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("wordgrid:progress")).keys);
+  if (!saved.includes(0)) note("Solved chapter key was not persisted.");
+  await p.screenshot({ path: `${SHOT}/r11-key-open.png` });
+}
+
 // 12. The 1280x720 landscape iframe — CrazyGames' most common desktop embed.
 //     The index has to sit above the fold there like the game screen does: the
 //     collection scrolls inside its own pane, the page itself never scrolls.

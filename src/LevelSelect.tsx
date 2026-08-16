@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, isBossLevel, levelTitle } from "./puzzles";
+import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, chapterKey, isBossLevel, levelTitle } from "./puzzles";
 import { chapterInk, type ChapterInk } from "./theme";
-import { playStar } from "./audio";
+import { playStar, playWin } from "./audio";
 import { plural, t } from "./i18n";
+import { LinkGuess } from "./LinkGuess";
+import { shuffledLetters } from "./letters";
 import {
   isUnlocked,
   isDebug,
@@ -11,6 +13,10 @@ import {
   totalStars,
   newlyUnlocked,
   furthestCleared,
+  bankedLetters,
+  keyReady,
+  keySolved,
+  bossAwaitingKey,
   type Progress,
 } from "./progress";
 
@@ -46,6 +52,10 @@ export default function LevelSelect({
   reduce,
   onPick,
   onSeen,
+  onSolveKey,
+  hints,
+  onUseHint,
+  onRefillHints,
   onHome,
   onHelp,
   onStats,
@@ -59,6 +69,11 @@ export default function LevelSelect({
   onPick: (index: number) => void;
   /** Called once the page has shown what's new, so each unlock plays only once. */
   onSeen: () => void;
+  /** A chapter's keyword was spelled — its boss door opens. */
+  onSolveKey: (chapter: number) => void;
+  hints: number;
+  onUseHint: () => void;
+  onRefillHints: () => Promise<boolean>;
   onHome: () => void;
   onHelp: () => void;
   onStats: () => void;
@@ -94,6 +109,9 @@ export default function LevelSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const lastFresh = fresh[fresh.length - 1];
+
+  // Which chapter's key panel is open, if any.
+  const [keyPanel, setKeyPanel] = useState<number | null>(null);
 
   // A concrete thing to walk towards. Bosses are the most distinctive content
   // in the game, so "3 to the boss" is a better carrot than "level 26".
@@ -224,10 +242,9 @@ export default function LevelSelect({
           const indices = slice.map((_, j) => chap.start + j);
           const solved = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) > 0);
           const ahead = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) === 0);
-          const bossTwistOpen =
-            isUnlocked(progress, chap.boss) && (progress.stars[LEVELS[chap.boss].id] ?? 0) === 0
-              ? bossTwist(chap.boss)
-              : null;
+          const bossUnbeaten = (progress.stars[LEVELS[chap.boss].id] ?? 0) === 0;
+          const bossTwistOpen = bossUnbeaten && isUnlocked(progress, chap.boss) ? bossTwist(chap.boss) : null;
+          const bossNeedsKey = bossUnbeaten && bossAwaitingKey(progress, chap.boss);
 
           return (
             <section key={ci}>
@@ -248,6 +265,15 @@ export default function LevelSelect({
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-ink-soft">{t(chap.flavorKey)}</p>
+
+              <ChapterKeyBar
+                chapter={ci}
+                ink={ink}
+                banked={bankedLetters(progress, ci)}
+                ready={keyReady(progress, ci)}
+                solved={keySolved(progress, ci)}
+                onOpen={() => setKeyPanel(ci)}
+              />
 
               {/* Solved levels are index lines: a colour-coded numeral, the
                   board's name, a leader, the stars. Both edges align, so the
@@ -281,6 +307,7 @@ export default function LevelSelect({
                         ink={ink}
                         reduce={reduce}
                         unlocked={isUnlocked(progress, i)}
+                        keyLocked={bossAwaitingKey(progress, i)}
                         isNext={i === nextIndex}
                         tileRef={LEVELS[i].id === lastFresh ? freshRef : undefined}
                         revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
@@ -298,12 +325,176 @@ export default function LevelSelect({
                   {t("levels.boss.twist", { what: t(`twist.${bossTwistOpen}.short`) })}
                 </p>
               )}
+              {bossNeedsKey && (
+                <p className="mt-2 px-1 text-[0.65rem] font-semibold" style={{ color: ink.deep }}>
+                  {t("key.bossLocked")}
+                </p>
+              )}
             </section>
           );
         })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {keyPanel != null && (
+          <ChapterKeyPanel
+            chapter={keyPanel}
+            hints={hints}
+            onUseHint={onUseHint}
+            onRefillHints={onRefillHints}
+            onSolved={() => onSolveKey(keyPanel)}
+            onClose={() => setKeyPanel(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * A chapter's key, on its header: one slot per level that banks a letter, a
+ * button once they're all in, and the word itself as a trophy once solved.
+ * Filled slots stay blank — showing the letters here would hand over the
+ * anagram before the player ever opens the panel.
+ */
+function ChapterKeyBar({
+  chapter,
+  ink,
+  banked,
+  ready,
+  solved,
+  onOpen,
+}: {
+  chapter: number;
+  ink: ChapterInk;
+  banked: number;
+  ready: boolean;
+  solved: boolean;
+  onOpen: () => void;
+}) {
+  const word = chapterKey(chapter);
+  if (solved) {
+    return (
+      <p className="mt-1.5 px-1 text-[0.7rem] font-bold tracking-[0.2em]" style={{ color: ink.deep }}>
+        🔑 {word}
+      </p>
+    );
+  }
+  return (
+    <div className="mt-1.5 flex items-center gap-2 px-1">
+      <span aria-hidden className="flex gap-1">
+        {word.split("").map((_, i) => (
+          <span
+            key={i}
+            className="h-2.5 w-2.5 rounded-[3px] border"
+            style={{
+              borderColor: ink.deep,
+              background: i < banked ? ink.fill : "transparent",
+              opacity: i < banked ? 1 : 0.4,
+            }}
+          />
+        ))}
+      </span>
+      {ready ? (
+        <motion.button
+          onClick={onOpen}
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+          className="rounded-full border-2 border-ink bg-gold px-2.5 py-0.5 text-[0.65rem] font-extrabold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.4)] transition hover:brightness-105 active:scale-95"
+        >
+          {t("key.open")}
+        </motion.button>
+      ) : (
+        <span className="text-[0.65rem] font-semibold text-ink-soft">
+          {t("key.progress", { done: banked, total: word.length })}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Spell the chapter's keyword from the letters its levels banked. The bank is
+ * exactly those letters, jumbled — so this is a pure anagram, and the chapter's
+ * own name is the clue. Reuses the finale's panel, which is the verb the whole
+ * game has already taught.
+ */
+function ChapterKeyPanel({
+  chapter,
+  hints,
+  onUseHint,
+  onRefillHints,
+  onSolved,
+  onClose,
+}: {
+  chapter: number;
+  hints: number;
+  onUseHint: () => void;
+  onRefillHints: () => Promise<boolean>;
+  onSolved: () => void;
+  onClose: () => void;
+}) {
+  const word = chapterKey(chapter);
+  const ink = chapterInk(chapter);
+  const bank = useMemo(() => shuffledLetters(word), [word]);
+  const [revealed, setRevealed] = useState(0);
+  const [resolved, setResolved] = useState(false);
+
+  const submit = (text: string) => {
+    if (text.toUpperCase() !== word) return false;
+    setResolved(true);
+    playWin();
+    onSolved();
+    setTimeout(onClose, 1900);
+    return true;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-ink/45 px-4 py-8"
+    >
+      <motion.div
+        initial={{ scale: 0.94, y: 12 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+        className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper px-5 pb-5 pt-4 shadow-[4px_4px_0_rgba(38,34,26,0.5)]"
+      >
+        <div className="text-center">
+          <span
+            className="text-[0.6rem] font-extrabold uppercase tracking-[0.2em]"
+            style={{ color: ink.deep }}
+          >
+            {t("key.chapter", { n: chapter + 1, name: t(CHAPTERS[chapter].nameKey) })}
+          </span>
+        </div>
+        <LinkGuess
+          oracle={false}
+          bank={bank}
+          titleKey="key.title"
+          bodyKey="key.body"
+          dismissKey={resolved ? "common.done" : "common.close"}
+          onMiss={onClose}
+          resolved={resolved}
+          pivot={word}
+          revealedLetters={revealed}
+          hintBank={hints}
+          canRevealLetter={hints > 0 && revealed < word.length - 1}
+          onRevealLetter={() => {
+            if (hints <= 0) return;
+            onUseHint();
+            setRevealed((r) => r + 1);
+          }}
+          onRefill={() => void onRefillHints()}
+          onSubmit={submit}
+          onReveal={onClose}
+        />
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -493,6 +684,7 @@ function LevelTile({
   ink,
   reduce,
   unlocked,
+  keyLocked,
   isNext,
   tileRef,
   revealDelay,
@@ -502,6 +694,8 @@ function LevelTile({
   ink: ChapterInk;
   reduce: boolean;
   unlocked: boolean;
+  /** Shut by its chapter key rather than by the progress window. */
+  keyLocked: boolean;
   isNext: boolean;
   tileRef?: React.Ref<HTMLButtonElement>;
   /** ms to wait before popping the lock off, or null for "already open". */
@@ -521,7 +715,9 @@ function LevelTile({
   const showOpen = unlocked && opened;
   const boss = isBossLevel(index);
   const style: React.CSSProperties = {};
+  if (keyLocked) style.borderColor = ink.deep;
   let face = "border-dashed border-ink/25 bg-cream/60";
+  if (!showOpen && keyLocked) face = "border-dashed bg-gold/15";
   if (showOpen) {
     face = "border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]";
     style.color = ink.deep;
@@ -541,7 +737,7 @@ function LevelTile({
         t("levels.a11y.node", { n: index + 1 }) +
         (boss ? t("levels.a11y.boss") : "") +
         `, ${t(TIER_KEY[LEVELS[index].tier])}` +
-        (showOpen ? "" : t("levels.a11y.lockedNode")) +
+        (showOpen ? "" : t(keyLocked ? "key.a11y.locked" : "levels.a11y.lockedNode")) +
         (revealDelay != null ? t("levels.a11y.freshNode") : "")
       }
       className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 font-display transition-colors disabled:cursor-default ${face}`}
@@ -580,7 +776,7 @@ function LevelTile({
             exit={reduce ? { opacity: 0 } : { scale: 1.6, opacity: 0, rotate: 25 }}
             transition={{ duration: 0.28 }}
           >
-            🔒
+            {keyLocked ? "🔑" : "🔒"}
           </motion.span>
         )}
       </AnimatePresence>

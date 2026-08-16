@@ -32,6 +32,30 @@ export const CHAPTER_INKS = [
   { fill: "#e2705a", deep: "#a93318", wash: "#fadcd5" }, // clay — the finale
 ];
 
+/**
+ * Each chapter also stains the page it's played on. `paper` is the cream
+ * background pulled a few percent toward the chapter's wash, and `glow` is the
+ * ink at low alpha for the backdrop's top light. Derived rather than authored
+ * so a new chapter colour can't forget to bring them, and kept deliberately
+ * faint — the identity is still warm newsprint, not eight different skins.
+ */
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a: string, b: string, amount: number) => {
+  const [ar, ag, ab] = hex(a);
+  const [br, bg, bb] = hex(b);
+  const ch = (x: number, y: number) => Math.round(x * amount + y * (1 - amount));
+  return `#${[ch(ar, br), ch(ag, bg), ch(ab, bb)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+};
+const PAPER = "#faf5ea";
+
+export const CHAPTER_PAGES = CHAPTER_INKS.map((c) => {
+  const [r, g, b] = hex(c.fill);
+  return { paper: mix(c.wash, PAPER, 0.5), glow: `rgba(${r}, ${g}, ${b}, 0.16)` };
+});
+
+/** The page stain for a chapter: background colour plus its top-light glow. */
+export const chapterPage = (i: number) => CHAPTER_PAGES[i % CHAPTER_PAGES.length];
+
 export type ChapterInk = (typeof CHAPTER_INKS)[number];
 
 export const chapterInk = (i: number): ChapterInk => CHAPTER_INKS[i % CHAPTER_INKS.length];

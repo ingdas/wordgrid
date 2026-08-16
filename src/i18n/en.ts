@@ -88,6 +88,16 @@ export const en: Record<string, string> = {
   "levels.unlock.flavor.4": "Level {n} is yours to try.",
   "levels.unlock.more": "+{n} more",
 
+  // --- chapter keys -------------------------------------------------------
+  "key.open": "🔑 Open the key",
+  "key.progress": "Key {done}/{total}",
+  "key.chapter": "Chapter {n} · {name}",
+  "key.title": "🔑 The chapter key",
+  "key.body": "Every level here gave up one letter. Put them back in order to open the boss door.",
+  "key.bossLocked": "🔑 Spell the chapter key to open this boss",
+  "key.a11y.locked": ", locked until the chapter key is spelled",
+  "key.unlocked": "🔑 Key found — the boss door is open!",
+
   // --- in game ------------------------------------------------------------
   "game.level": "Level {n}",
   "game.daily": "Daily",

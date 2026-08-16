@@ -11,7 +11,7 @@
     "validate": "node --experimental-strip-types scripts/validate.mts",
     "audit": "node --experimental-strip-types scripts/audit.mts",
     "gen:deduction": "node --experimental-strip-types scripts/gen-deduction.mts",
-    "test": "node --experimental-strip-types scripts/engine.test.mts && node --experimental-strip-types scripts/deduction.test.mts && node --experimental-strip-types scripts/i18n.test.mts"
+    "test": "node --experimental-strip-types scripts/engine.test.mts && node --experimental-strip-types scripts/deduction.test.mts && node --experimental-strip-types scripts/progress.test.mts && node --experimental-strip-types scripts/i18n.test.mts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.2.9",

@@ -11,6 +11,10 @@ import { t } from "./i18n";
 export function LinkGuess({
   oracle,
   early = false,
+  bank: providedBank,
+  titleKey,
+  bodyKey,
+  dismissKey,
   onMiss,
   resolved,
   pivot,
@@ -25,6 +29,14 @@ export function LinkGuess({
   oracle: boolean;
   /** An early call: one attempt, and a miss hands the board back. */
   early?: boolean;
+  /** Use these tiles instead of a generated bank (the chapter keys pass the
+   *  exact letters the player banked, with no decoys). */
+  bank?: string[];
+  /** Copy overrides, for callers that aren't the finale. */
+  titleKey?: string;
+  bodyKey?: string;
+  /** Show a plain dismiss button with this label instead of "give up". */
+  dismissKey?: string;
   onMiss?: () => void;
   resolved: boolean;
   pivot: string;
@@ -36,7 +48,7 @@ export function LinkGuess({
   onSubmit: (text: string) => boolean;
   onReveal: () => void;
 }) {
-  const bank = useMemo(() => buildLetterBank(pivot), [pivot]);
+  const bank = useMemo(() => providedBank ?? buildLetterBank(pivot), [providedBank, pivot]);
   // Indices of bank tiles the player has tapped, in order (the suffix after the
   // free/ revealed prefix). Cleared whenever the revealed prefix grows.
   const [taps, setTaps] = useState<number[]>([]);
@@ -118,10 +130,10 @@ export function LinkGuess({
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
-        {t(oracle ? "finale.oracle.title" : early ? "game.early.title" : "finale.title")}
+        {t(titleKey ?? (oracle ? "finale.oracle.title" : early ? "game.early.title" : "finale.title"))}
       </h3>
       <p className="mt-1 text-sm text-ink-soft">
-        {t(oracle ? "finale.oracle.body" : early ? "game.early.body" : "finale.body")}
+        {t(bodyKey ?? (oracle ? "finale.oracle.body" : early ? "game.early.body" : "finale.body"))}
       </p>
 
       {/* The answer so far. Tapped letters pop into the slots; a wrong word
@@ -224,7 +236,14 @@ export function LinkGuess({
             </span>
           </button>
         )}
-        {early ? (
+        {dismissKey ? (
+          <button
+            onClick={onMiss}
+            className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition hover:text-ink hover:underline"
+          >
+            {t(dismissKey)}
+          </button>
+        ) : early ? (
           <button
             onClick={onMiss}
             disabled={resolved}

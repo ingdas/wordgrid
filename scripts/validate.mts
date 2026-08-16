@@ -1,7 +1,7 @@
 // Structural validation for every puzzle: the campaign, the emoji boss and
 // the dedicated daily pool.
 // Run with:  npm run validate
-import { PUZZLES, EMOJI_BOSS, buildPuzzle } from "../src/puzzles.ts";
+import { PUZZLES, EMOJI_BOSS, CHAPTERS, CHAPTER_KEYS, buildPuzzle, chapterKey, keyLevels } from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
@@ -72,7 +72,28 @@ for (const raw of ALL) {
   }
 }
 
+// Chapter keys: one letter per non-boss level, so a chapter's levels bank
+// exactly the letters its keyword needs. Too short strands levels that buy
+// nothing; too long leaves a slot no level can ever fill, and the boss door
+// could never open.
+if (CHAPTER_KEYS.length !== CHAPTERS.length) {
+  bad++;
+  console.log(`✗ chapter keys: ${CHAPTER_KEYS.length} keywords for ${CHAPTERS.length} chapters`);
+}
+CHAPTERS.forEach((_, ci) => {
+  const key = chapterKey(ci);
+  const banks = keyLevels(ci).length;
+  if (!/^[A-Z]+$/.test(key)) {
+    bad++;
+    console.log(`✗ chapter ${ci + 1} key "${key}": letters A–Z only (it becomes a letter bank)`);
+  }
+  if (key.length !== banks) {
+    bad++;
+    console.log(`✗ chapter ${ci + 1} key "${key}": ${key.length} letters but ${banks} levels bank one each`);
+  }
+});
+
 console.log(
-  `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,
+  `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) + ${CHAPTER_KEYS.length} chapter keys — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,
 );
 process.exit(bad ? 1 : 0);

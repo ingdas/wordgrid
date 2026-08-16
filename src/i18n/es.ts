@@ -87,6 +87,16 @@ export const es: Record<string, string> = {
   "levels.unlock.flavor.4": "El nivel {n} ya es tuyo.",
   "levels.unlock.more": "+{n} más",
 
+  // --- chapter keys -------------------------------------------------------
+  "key.open": "🔑 Abrir la clave",
+  "key.progress": "Clave {done}/{total}",
+  "key.chapter": "Capítulo {n} · {name}",
+  "key.title": "🔑 La clave del capítulo",
+  "key.body": "Cada nivel de aquí soltó una letra. Ordénalas para abrir la puerta del jefe.",
+  "key.bossLocked": "🔑 Escribe la clave del capítulo para abrir a este jefe",
+  "key.a11y.locked": ", bloqueado hasta escribir la clave del capítulo",
+  "key.unlocked": "🔑 ¡Clave encontrada! La puerta del jefe está abierta.",
+
   // --- in game ------------------------------------------------------------
   "game.level": "Nivel {n}",
   "game.daily": "Diario",
