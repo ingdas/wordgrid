@@ -24,7 +24,9 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
   `npx vite preview --port <fresh port>` (previews die between turns — always a
   NEW port, never `pkill`), then
-  `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`.
+  `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`, and
+  `BASE=http://localhost:<port>/ node scripts/pairs.test.mjs` (Pairs mode:
+  a full run, plus the two iteration-24 timer/stale-state repros).
 - Debug: append `?debug` to the URL → unlocks all levels (persists in
   localStorage; `?debug=0` turns it off).
 - Commit style: imperative summary + short body; end with
@@ -293,6 +295,39 @@ Code quality:
   longer import the game screen for a constant.
 - **Tutorial copy derives from the board** (20) — re-pinning `OPENING[0]` can
   no longer leave the coach describing a puzzle that isn't there.
+
+## Timers and live state (iteration 24)
+
+Two Pairs bugs, both from state a handler could not see yet, and the same two
+patterns swept out of `Game.tsx` and `Deduction.tsx`.
+
+- **A stray timer landed on the next board.** Every deferred beat of a Pairs
+  round (the flip resolve, the two phase openings, the red flash, the end card)
+  was a bare `setTimeout`; only the flip resolve was cancellable. Hitting
+  **🔀 New** inside the 450ms after the fourth pair dealt a fresh board and
+  then opened the *coupling* phase on it — 12 cards face up, nothing placed to
+  couple onto, the board unwinnable. Now every one goes through a `later()`
+  that records its id, and `newBoard`/unmount clear the lot.
+- **Tap guards read stale state.** `flip` checked `flipped`/`matched` from the
+  closure, so taps landing before React re-rendered all saw an empty hand: a
+  burst billed a move per tap, left cards stranded face up, and a card tapped
+  twice paired with *itself* (same word → trivially a match). Moves are the
+  only thing Pairs scores, so that is a scoring bug. `phase`, `flipped` and
+  `matched` now have refs written the moment a tap is accepted; a 12-tap burst
+  costs exactly one move and flips exactly two cards.
+- **Side effects inside state updaters** — the pattern item 17 purged from
+  `App.tsx`, still living in three places. `Game.tsx` raised the combo points
+  and the "+N" popup inside a `setCombo` updater, and decided the *loss* inside
+  a `setMistakes` updater; `Deduction.tsx` played the brush click inside
+  `setColors`. An updater can run more than once for one call (StrictMode does
+  it on every dev render), so each was a double-pay/double-blip waiting to
+  happen. All three now compute from a ref and act in the handler.
+- **`Game.tsx` deferred `setStatus`** (the early call landing at 800ms, the
+  give-up reveal at 700ms) is cancellable too, so nothing from a finished run
+  can drop a restarted board into "won".
+
+Regression cover: `scripts/pairs.test.mjs` (headless) replays both repros plus
+a clean run through matching → a wrong couple → coupling → the finale.
 
 ### Still open
 

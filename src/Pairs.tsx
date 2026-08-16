@@ -66,9 +66,45 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
   // Captured before this board reports, so the end card compares against the
   // best as it stood when the round was played (onFinish updates the prop).
   const prevBest = useRef(best);
-  const resolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => { if (resolveTimer.current) clearTimeout(resolveTimer.current); }, []);
+  // --- live board state -----------------------------------------------------
+  // The tap handlers guard on phase/flipped/matched, and two taps can land
+  // before React has re-rendered with the first one's result. Reading those
+  // three from refs (written the moment a tap is accepted) keeps the guards
+  // honest: without it a fast double-tap on ONE card saw `flipped` still empty,
+  // paired the card with itself — same word, so trivially "a match" — and
+  // billed a move for it, which is the only thing Pairs scores.
+  const phaseRef = useRef<Phase>("matching");
+  const flippedRef = useRef<number[]>([]);
+  const matchedRef = useRef<Map<string, number>>(new Map());
+  const goPhase = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
+  const setFlips = useCallback((next: number[]) => {
+    flippedRef.current = next;
+    setFlipped(next);
+  }, []);
+
+  // Every deferred beat of a round — the flip resolve, the two phase openings,
+  // the red flash, the end card — goes through `later` so "🔀 New" and unmount
+  // can cancel all of them. A stray phase timer used to land on the NEXT board
+  // and open coupling with nothing placed, which is unwinnable.
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timers.current = timers.current.filter((t) => t !== id);
+      fn();
+    }, ms);
+    timers.current.push(id);
+    return id;
+  }, []);
+  const clearTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   useEffect(() => {
     if (!toast) return;
@@ -78,13 +114,14 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
 
   const newBoard = useCallback(() => {
     showInterstitial(); // between-board ad break (no-op without the SDK)
-    if (resolveTimer.current) clearTimeout(resolveTimer.current);
+    clearTimers();
     const next = randomRaw();
     const p = buildPuzzle(next, 7);
     setRaw(next);
     setOrder(shuffleSpokes(p));
-    setPhase("matching");
-    setFlipped([]);
+    goPhase("matching");
+    setFlips([]);
+    matchedRef.current = new Map();
     setMatched(new Map());
     setSelectedLeftover(null);
     setWrongCouple(null);
@@ -94,45 +131,43 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
     setToast(null);
     reported.current = false;
     prevBest.current = bestRef.current;
-  }, []);
+  }, [clearTimers, goPhase, setFlips]);
 
   const flip = useCallback(
     (index: number) => {
-      if (phase !== "matching") return;
+      if (phaseRef.current !== "matching") return;
       const word = order[index];
-      if (matched.has(word) || flipped.includes(index) || flipped.length >= 2) return;
+      const held = flippedRef.current;
+      if (matchedRef.current.has(word) || held.includes(index) || held.length >= 2) return;
       playSelect();
-      const pair = [...flipped, index];
-      setFlipped(pair);
+      const pair = [...held, index];
+      setFlips(pair);
       if (pair.length < 2) return;
 
       setMoves((m) => m + 1);
       const [a, b] = pair.map((i) => order[i]);
       const hit = catOf.get(a) === catOf.get(b);
-      resolveTimer.current = setTimeout(() => {
+      later(() => {
         if (hit) {
           const cat = catOf.get(a)!;
           playCorrect(cat);
           setToast(`✓ ${puzzle.categories[cat].name}`);
           setScore((s) => s + 100);
-          setMatched((prev) => {
-            const next = new Map(prev);
-            next.set(a, cat);
-            next.set(b, cat);
-            // Four pairs down → the 4 leftovers (one per theme) flip face up and
-            // the player must couple each into its group (the coupling phase).
-            if (next.size === 8) {
-              setTimeout(() => { playStar(1); setPhase("coupling"); }, 450);
-            }
-            return next;
-          });
+          const next = new Map(matchedRef.current);
+          next.set(a, cat);
+          next.set(b, cat);
+          matchedRef.current = next;
+          setMatched(next);
+          // Four pairs down → the 4 leftovers (one per theme) flip face up and
+          // the player must couple each into its group (the coupling phase).
+          if (next.size === 8) later(() => { playStar(1); goPhase("coupling"); }, 450);
         } else {
           playDeselect();
         }
-        setFlipped([]);
+        setFlips([]);
       }, hit ? 500 : 950);
     },
-    [phase, order, matched, flipped, catOf, puzzle]
+    [order, catOf, puzzle, later, goPhase, setFlips]
   );
 
   // Coupling: tap a leftover to pick it up, then tap any card from the group
@@ -140,9 +175,9 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
   // you keep the card in hand to try again (a wrong try still costs a move).
   const coupleCard = useCallback(
     (index: number) => {
-      if (phase !== "coupling") return;
+      if (phaseRef.current !== "coupling") return;
       const word = order[index];
-      const placedCat = matched.get(word);
+      const placedCat = matchedRef.current.get(word);
       if (placedCat == null) {
         // an unplaced leftover → pick it up (or drop it if tapped again)
         playSelect();
@@ -159,32 +194,29 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
         playWrong();
         setToast(t("pairs.wrongCouple"));
         setWrongCouple(leftover);
-        setTimeout(() => setWrongCouple(null), 700);
+        later(() => setWrongCouple(null), 700);
         return;
       }
       playCorrect(trueCat);
       setToast(`✓ ${puzzle.categories[trueCat].name}`);
       setScore((s) => s + 100);
       setSelectedLeftover(null);
-      setMatched((prev) => {
-        const next = new Map(prev);
-        next.set(leftover, trueCat);
-        if (next.size === 12) {
-          setTimeout(() => { playStar(2); setPhase("spell"); }, 500);
-        }
-        return next;
-      });
+      const next = new Map(matchedRef.current);
+      next.set(leftover, trueCat);
+      matchedRef.current = next;
+      setMatched(next);
+      if (next.size === 12) later(() => { playStar(2); goPhase("spell"); }, 500);
     },
-    [phase, order, matched, selectedLeftover, catOf, puzzle]
+    [order, selectedLeftover, catOf, puzzle, later, goPhase]
   );
 
   // A single tap dispatcher: flip during matching, couple during coupling.
   const onCardTap = useCallback(
     (index: number) => {
-      if (phase === "matching") flip(index);
-      else if (phase === "coupling") coupleCard(index);
+      if (phaseRef.current === "matching") flip(index);
+      else if (phaseRef.current === "coupling") coupleCard(index);
     },
-    [phase, flip, coupleCard]
+    [flip, coupleCard]
   );
 
   // Report each cleared board up exactly once (score → lifetime XP, best moves).
@@ -204,9 +236,9 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       } else {
         playWrong();
       }
-      setTimeout(() => setPhase("done"), 700);
+      later(() => goPhase("done"), 700);
     },
-    []
+    [later, goPhase]
   );
 
   const newBest = phase === "done" && (prevBest.current === 0 || moves < prevBest.current);

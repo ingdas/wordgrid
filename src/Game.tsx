@@ -106,6 +106,7 @@ export default function Game({
   const [selected, setSelected] = useState<string[]>([]);
   const [solved, setSolved] = useState<Category[]>([]);
   const [mistakes, setMistakes] = useState(0);
+  const mistakesRef = useRef(0);
   // The Oracle boss flips the flow: name the link first (a "guessing" phase up
   // front), then group. Every other mode starts straight into grouping.
   const [status, setStatus] = useState<Status>(twist === "oracle" ? "guessing" : "playing");
@@ -123,6 +124,7 @@ export default function Game({
   // consecutive-solve multiplier, and floating "+N" popups.
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
+  const comboRef = useRef(0);
   const [pops, setPops] = useState<{ id: number; text: string }[]>([]);
   const popId = useRef(0);
   // Early call: name the link before the last group is found. Worth a big
@@ -168,6 +170,23 @@ export default function Game({
       setToast(t("finale.firstTime"));
     }
   }, [isTutorialRun, status]);
+
+  // Deferred beats that change `status` (the early call landing, the give-up
+  // reveal) go through `later` so a restart or an exit cancels them: an
+  // 800ms-old timer must not drop a fresh board straight into "won".
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timers.current = timers.current.filter((t) => t !== id);
+      fn();
+    }, ms);
+    timers.current.push(id);
+  }, []);
+  const clearTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   const buzz = useCallback(
     (pattern: number | number[]) => {
@@ -221,14 +240,16 @@ export default function Game({
       setAnnounce(t("game.groupFound", { theme: cat.name, n: index + 1 }));
       setSolved((prev) => [...prev, cat]);
       setSelected([]);
-      // A consecutive-solve combo multiplies the 100-point base.
-      setCombo((c) => {
-        const nc = c + 1;
-        const pts = 100 * nc;
-        setScore((s) => s + pts);
-        pushPop(nc > 1 ? `+${pts}  ×${nc}` : `+${pts}`);
-        return nc;
-      });
+      // A consecutive-solve combo multiplies the 100-point base. The combo runs
+      // off a ref so the points and the popup are raised HERE, in the handler —
+      // a state updater can be invoked more than once for one call (StrictMode
+      // does it on every dev render), which would pay the group twice.
+      const nc = comboRef.current + 1;
+      comboRef.current = nc;
+      setCombo(nc);
+      const pts = 100 * nc;
+      setScore((s) => s + pts);
+      pushPop(nc > 1 ? `+${pts}  ×${nc}` : `+${pts}`);
     },
     [buzz, pushPop]
   );
@@ -335,17 +356,20 @@ export default function Game({
     setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
     setToast(t(result.oneAway ? "game.oneAway" : "game.wrong"));
     setCombo(0); // a wrong guess breaks the combo
+    comboRef.current = 0;
     if (combo >= 2) pushPop(t("game.comboLost"));
-    setMistakes((m) => {
-      const next = m + 1;
-      if (next >= maxMistakes) {
-        setSelected([]);
-        // Offer a one-time rewarded continue before ending the run.
-        if (!secondChanceUsed) setOffering(true);
-        else setStatus("lost");
-      }
-      return next;
-    });
+    // Count the mistake off a ref and decide the run's fate here, not inside
+    // the updater: ending a run is a side effect, and an updater is not a safe
+    // place to have one (it can run twice for a single wrong guess).
+    const next = mistakesRef.current + 1;
+    mistakesRef.current = next;
+    setMistakes(next);
+    if (next >= maxMistakes) {
+      setSelected([]);
+      // Offer a one-time rewarded continue before ending the run.
+      if (!secondChanceUsed) setOffering(true);
+      else setStatus("lost");
+    }
   }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes]);
 
   const clearSelection = useCallback(() => {
@@ -359,7 +383,8 @@ export default function Game({
     if (!ok) return; // ad failed/declined — leave the offer up
     setSecondChanceUsed(true);
     setOffering(false);
-    setMistakes((m) => Math.max(0, m - 2));
+    mistakesRef.current = Math.max(0, mistakesRef.current - 2);
+    setMistakes(mistakesRef.current);
     setToast(t("game.continue.taken"));
   }, []);
   const declineSecondChance = useCallback(() => {
@@ -408,11 +433,13 @@ export default function Game({
   }, [onRefillHints]);
 
   const restart = useCallback(() => {
+    clearTimers(); // nothing from the finished run may land on the fresh one
     reported.current = false;
     startedAt.current = Date.now();
     setNow(Date.now());
     setSolved([]);
     setSelected([]);
+    mistakesRef.current = 0;
     setMistakes(0);
     setStatus(twist === "oracle" ? "guessing" : "playing");
     setShake(0);
@@ -424,6 +451,7 @@ export default function Game({
     setRevealedLetters(0);
     setMoves(0);
     setScore(0);
+    comboRef.current = 0;
     setCombo(0);
     setPops([]);
     setOffering(false);
@@ -433,7 +461,7 @@ export default function Game({
     coachMisses.current = 0;
     finaleHinted.current = false;
     setOrder(shuffle(spokeTiles));
-  }, [spokeTiles, twist]);
+  }, [spokeTiles, twist, clearTimers]);
 
   // Keyboard shortcuts: Enter submits, Escape clears.
   useEffect(() => {
@@ -462,13 +490,13 @@ export default function Game({
       buzz(40);
       // Link named with groups still open (the Oracle, or an early call) →
       // back to the board, now knowing the word. Otherwise it's the win.
-      setTimeout(() => {
+      later(() => {
         setEarlyCall(false);
         setStatus(early > 0 ? "playing" : "won");
       }, 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length]
+    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length, later]
   );
 
   // One call per level, spent on opening: no free look at the letter count.
@@ -496,8 +524,8 @@ export default function Game({
   const revealLinkWord = useCallback(() => {
     setLinkGuess(" "); // a value that never matches
     playWrong();
-    setTimeout(() => setStatus(twist === "oracle" ? "playing" : "won"), 700);
-  }, [twist]);
+    later(() => setStatus(twist === "oracle" ? "playing" : "won"), 700);
+  }, [twist, later]);
 
   // The Oracle's "name the link first" phase: shown all words + themes, link
   // still hidden, before any grouping.

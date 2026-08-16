@@ -100,6 +100,11 @@ function DeductionBoard({
   }, [level]);
 
   const [colors, setColors] = useState<number[]>(() => new Array(N).fill(-1));
+  // Mirrors `colors` for the paint handler, which has to read the grid mid-drag
+  // before React has re-rendered. Re-synced on every render, so a reset or a
+  // level change lands here too.
+  const colorsRef = useRef(colors);
+  colorsRef.current = colors;
   const [brush, setBrush] = useState(0); // 0-3 theme, -1 eraser
   const [solved, setSolved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -189,13 +194,15 @@ function DeductionBoard({
   const paint = useCallback(
     (i: number) => {
       if (solved) return;
-      setColors((prev) => {
-        if (prev[i] === brush) return prev; // no-op
-        if (brush >= 0) playSelect(); else playDeselect();
-        const next = [...prev];
-        next[i] = brush;
-        return next;
-      });
+      // The tile's current colour is read from a ref, so the no-op check and
+      // the click sound stay out of the updater — dragging across a tile can
+      // otherwise re-run it and blip twice for one stroke.
+      if (colorsRef.current[i] === brush) return;
+      if (brush >= 0) playSelect(); else playDeselect();
+      const next = [...colorsRef.current];
+      next[i] = brush;
+      colorsRef.current = next;
+      setColors(next);
     },
     [brush, solved]
   );
