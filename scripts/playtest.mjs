@@ -164,7 +164,13 @@ await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
 // 8. Back to map: 63 nodes, window extends after a clear, stars banked (63*3 = 189)
 await clickText("button", "Levels");
-await sleep(500);
+// A level that just opened plays its unlock reveal before it can be tapped —
+// wait it out, or every fresh node reads as still locked.
+await sleep(2500);
+// Chapters with nothing to play in them start collapsed, so only the current
+// chapter's nodes are in the DOM. Open them all before counting.
+await p.$$eval("section button[aria-expanded='false']", (els) => els.forEach((e) => e.click()));
+await sleep(700);
 const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
 log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
 if (nodes.length !== 63) note(`Expected 63 level nodes, found ${nodes.length}.`);

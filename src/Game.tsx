@@ -47,6 +47,8 @@ interface GameProps {
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
+  /** Teaser for the next level's button, when it isn't just "the next one". */
+  nextLabel?: string;
   onHelp: () => void;
   onTutorialDone: () => void;
 }
@@ -70,6 +72,7 @@ export default function Game({
   onLoss,
   onExit,
   onNext,
+  nextLabel,
   onHelp,
   onTutorialDone,
 }: GameProps) {
@@ -788,6 +791,7 @@ export default function Game({
               onExit={onExit}
               onRestart={restart}
               onNext={onNext}
+              nextLabel={nextLabel}
             />
           )}
         </AnimatePresence>

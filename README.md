@@ -19,8 +19,12 @@ word, then build all four groups of three around it.
    level, and it pays a bonus for every group you hadn't found yet.
 5. Fewer mistakes earn more **stars** (3 max per level).
 
-There are **62 levels** on a hypercasual level map — clear one to unlock the
-next, and chase the ⭐ total and your 🔥 streak.
+There are **63 levels** on a level map of eight coloured chapters, each closing
+on a **boss** that plays by its own rule. Chapters you've finished fold away and
+ones you haven't reached are named but shut, so the map stays a page you can
+read. Clearing a level opens the next: the map **shows** the lock come off the
+new one, once, and says what it is — a plain level, a boss and its twist, or a
+whole new chapter. Chase the ⭐ total and your 🔥 streak.
 
 ## Languages
 

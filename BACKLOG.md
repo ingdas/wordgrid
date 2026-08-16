@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 23 (shared Logic rules + tests, the full ambiguity
-pass, i18n). This file is the single source of truth — a fresh session should
+_Last updated: iteration 24 (level-map chapter identity + a visible, varied
+unlock). This file is the single source of truth — a fresh session should
 be able to continue from here without any prior chat context._
 
 ## What this is
@@ -36,7 +36,7 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
 
 ## Architecture map (src/)
 
-- `puzzles.ts` — 62 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
+- `puzzles.ts` — 63 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
   seededShuffle, difficulty sort with hand-pinned OPENING =
   star,trunk,ring,bug,bank (concrete → abstract ramp); CHAPTERS
   (sizes [6,7,7,8,8,8,8,10], boss = last of chapter), BossTwist type +
@@ -54,7 +54,8 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   the campaign; plain global-English category names). Also feeds Endless and
   Pairs.
 - `theme.ts` / `letters.ts` / `format.ts` — CATEGORY_THEMES (the four group
-  colours), buildLetterBank, fmtTime. Split out of Game.tsx so Pairs and the
+  colours), CHAPTER_INKS (one flat print ink per chapter, for the level map),
+  buildLetterBank, fmtTime. Split out of Game.tsx so Pairs and the
   Logic Grid don't import the game screen to get at a constant.
 - `LinkGuess.tsx` — the spell-the-link panel, serving three callers: the
   normal finale, the Oracle boss, and the **early call** (`early` + `onMiss`:
@@ -137,11 +138,18 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   levels" link under it), an Endless · Pairs · Logic mode row (each stat
   carries its unit), rank/XP bar. Two-column grid at `lg` so it fits a
   1280×720 embed above the fold.
-- `LevelSelect.tsx` — chapters map; gold done / red boss / dashed locked nodes.
+- `LevelSelect.tsx` — the chapter map. Eight collapsible chapter cards, one
+  `CHAPTER_INKS` colour each; a chapter expands only when it holds something to
+  play, so done/locked ones fold to a row. Nodes are locked / open / cleared /
+  perfect (gold inner rule) / boss, and a **freshly unlocked node starts locked
+  and pops open on a timer** (see `newlyUnlocked` below) under a fixed banner
+  that names what opened.
 - `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
   best, daily{lastDate,streak}, achievements, hints, history, score,
-  endlessBest, pairsBest), loadProgress/save, isUnlocked (lookahead 3 +
-  isDebug), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
+  endlessBest, pairsBest, seen), loadProgress/save, isUnlocked (lookahead 3 +
+  isDebug), unlockedIds/newlyUnlocked/markSeen (what the map still owes the
+  player an unlock reveal for — debug-blind, and migrated so old saves and
+  fresh ones both start with nothing pending), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
   shared, no repeat within an 80-day cycle), dailyWeek/msUntilNextDaily,
   playerRank ladder.
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -211,6 +219,58 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## Level map: chapter identity + a visible unlock (iteration 24)
+
+The map was a wall of ~63 identical gold squares in flat sections, and every
+unlock was invisible: you cleared a level, came back, and one square had quietly
+changed colour. Sixty-three unlocks read as one event repeated. Two fixes, one
+for the look and one for the moment.
+
+**The list is now a contents page, not a padlock wall.**
+
+- **One flat print ink per chapter** (`CHAPTER_INKS` in `theme.ts`, eight spot
+  colours on cream). Cleared nodes take the chapter's fill, open-but-unplayed
+  nodes take its border, so the map is navigable by colour and finishing a
+  chapter visibly changes the page.
+- **Chapters are cards** — numbered badge, name, flavour, a cleared/total bar,
+  the star count, and a rotated **COMPLETE** stamp when done.
+- **They collapse.** A chapter expands only if it holds something to play; done
+  chapters fold to a one-line trophy row, and locked ones to a teaser. The map
+  went from ~2300px to ~1300px — the whole journey is now about two screens
+  instead of eight, which retires backlog item 20 ("de-intimidate progress").
+- **Locked chapters show their name** ("Mind Benders · Opens after level 42").
+  Chapter names are flavour, never puzzle content, so this spoils nothing and
+  replaces five identical rows reading "Locked" with five things to want.
+- **Perfect clears keep a gold rule inside the tile**, so the map records how
+  well you did, not just that you passed.
+- **Each chapter's foot names its boss twist** once that boss is open
+  ("👑 Boss · the oracle"), teased as "👑 A boss closes this chapter" before.
+
+**Unlocking is now something you watch, once.**
+
+- `Progress.seen` records which levels the player has already seen open.
+  `newlyUnlocked()` / `markSeen()` in `progress.ts` drive it; both ignore the
+  debug switch, so `?debug` never counts as unlocking 63 levels. Existing saves
+  are migrated with everything already-open marked seen, and a fresh save starts
+  with its opening levels seen — nobody gets a backlog of stale reveals.
+- On the map, a freshly opened node **starts on its locked face** and pops open
+  on a timer (lock flies off, number springs in, a shockwave ring, a rising
+  blip), staggered so two unlocks never blur into one. Revisits are static.
+- A **fixed banner** names what opened, and varies by *kind*: a new chapter
+  wins over a boss, which wins over a plain level; plain levels rotate through
+  five lines. It's fixed to the viewport because the map scrolls itself to
+  where you left off — a banner in flow announced the news off-screen.
+- Most players never open the map between levels, so the **win card's Next
+  button** teases the same thing: "👑 Boss next · scrambled tiles →" or
+  "Next chapter: Warming Up →". Plain levels keep the plain label — the teaser
+  only means anything if it isn't on every card.
+
+Notes for the next session: the map at `sm` and up lays nodes out 6-wide
+(4 on phones) and widens to `max-w-2xl` at `lg`, which fills the 1280×720
+embed better. `scripts/playtest.mjs` now opens every collapsed chapter before
+counting nodes, and waits out the unlock reveal — a node that is mid-reveal is
+deliberately still `disabled`.
 
 ## Review pass (iteration 20) + backlog burn-down (iteration 21)
 
@@ -614,8 +674,9 @@ D2. ✅ **Daily-first (success rework, part 2)** — the Daily is now the Home
     landing screen isn't static.
 19. ✅ **Resume CTA** — the home button reads "Continue · Level N" for returning
     players, pointing at their next level.
-20. **De-intimidate progress** — focus the current chapter, collapse far ones,
-    show "Chapter ⭐ x/24" rather than the scary 186.
+20. ✅ **De-intimidate progress** — the map focuses the current chapter and
+    collapses done/locked ones to a row, each with its own "Chapter ⭐ x/24"
+    (iteration 24).
 21. ◐ **Achievement nudges** — stats now flag "🔥 N to Silver!" when you're close
     to the next tier (a post-win nudge toast is still to come).
 22. **Daily streak calendar** + milestone rewards.

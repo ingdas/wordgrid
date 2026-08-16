@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, bossTwist, type RawPuzzle } from "./puzzles";
+import { LEVELS, CHAPTERS, bossTwist, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
@@ -12,6 +12,7 @@ import {
   pushHistory,
   playerRank,
   furthestCleared,
+  markSeen,
   MAX_STARS,
   type Progress,
 } from "./progress";
@@ -35,6 +36,22 @@ import Pairs from "./Pairs";
 import Deduction from "./Deduction";
 
 type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
+
+/**
+ * What the win card's "Next" button should say. Most players never open the
+ * map between levels, so without this the reward for clearing a boss or
+ * finishing a chapter is the same grey "Next level →" as every other win.
+ * Plain levels keep the plain label — the teaser only means something if it
+ * isn't on every card.
+ */
+function nextLevelTeaser(index: number): string | undefined {
+  if (index >= LEVELS.length) return undefined;
+  const chapter = CHAPTERS.findIndex((c) => c.start === index);
+  if (chapter >= 0) return t("end.next.chapter", { name: t(CHAPTERS[chapter].nameKey) });
+  const twist = bossTwist(index);
+  if (twist) return t("end.next.boss", { what: t(`twist.${twist}.short`) });
+  return undefined;
+}
 
 const noop = () => {};
 
@@ -250,6 +267,12 @@ export default function App() {
     startMusic();
     setScreen("levels");
   }, []);
+
+  // The map has finished showing which levels just opened; don't replay those
+  // unlocks on the next visit.
+  const markLevelsSeen = useCallback(() => {
+    applyProgress(markSeen);
+  }, [applyProgress]);
 
   const pickLevel = useCallback((index: number) => {
     setPlayingDaily(false);
@@ -522,7 +545,9 @@ export default function App() {
           <ScreenWrap key="levels">
             <LevelSelect
               progress={progress}
+              reduce={reduce}
               onPick={pickLevel}
+              onSeen={markLevelsSeen}
               onHome={() => setScreen("home")}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
@@ -585,6 +610,7 @@ export default function App() {
               onNext={
                 endless ? nextEndless : playingDaily ? undefined : levelIndex < LEVELS.length - 1 ? nextLevel : undefined
               }
+              nextLabel={endless || playingDaily ? undefined : nextLevelTeaser(levelIndex + 1)}
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}
             />

@@ -19,6 +19,7 @@ export interface Progress {
   endlessBest: number; // most puzzles cleared in one Endless run
   pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
   deductionSolved: string[]; // ids of solved Deduction Grid levels
+  seen: string[]; // level ids already watched opening on the map (see newlyUnlocked)
 }
 
 export const STARTING_HINTS = 3;
@@ -49,7 +50,7 @@ export function loadProgress(): Progress {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<Progress>;
-      return {
+      const loaded: Progress = {
         stars: p.stars ?? {},
         streak: p.streak ?? 0,
         bestStreak: p.bestStreak ?? 0,
@@ -63,7 +64,13 @@ export function loadProgress(): Progress {
         endlessBest: p.endlessBest ?? 0,
         pairsBest: p.pairsBest ?? 0,
         deductionSolved: p.deductionSolved ?? [],
+        seen: p.seen ?? [],
       };
+      // A returning player shouldn't be met by a dozen "just unlocked!" reveals
+      // for levels they opened months ago — the first time this field appears,
+      // everything already open counts as seen.
+      if (p.seen === undefined) loaded.seen = unlockedIds(loaded);
+      return loaded;
     }
   } catch {
     /* ignore */
@@ -82,6 +89,9 @@ export function loadProgress(): Progress {
     endlessBest: 0,
     pairsBest: 0,
     deductionSolved: [],
+    // The levels a brand-new player starts with were never locked to them, so
+    // they don't get an unlock reveal on the first visit to the map.
+    seen: LEVELS.slice(0, LOOKAHEAD).map((l) => l.id),
   };
 }
 
@@ -174,6 +184,37 @@ export function furthestCleared(p: Progress): number {
 export function isUnlocked(p: Progress, index: number): boolean {
   if (isDebug()) return true; // debug: everything open
   return index <= furthestCleared(p) + LOOKAHEAD;
+}
+
+// --- What's new since you last looked at the map ---------------------------
+// Clearing a level opens the next one silently: you came back to the map and a
+// square had quietly changed colour, which made 62 unlocks feel like one event
+// repeated. The map now *shows* the lock coming off — but only once per level,
+// which is what `seen` is for.
+
+/**
+ * Ids of every currently-open level. Deliberately ignores the debug switch:
+ * flipping `?debug` on shouldn't count as unlocking 62 levels, nor should
+ * flipping it off take them away again.
+ */
+export function unlockedIds(p: Progress): string[] {
+  const limit = furthestCleared(p) + LOOKAHEAD;
+  return LEVELS.slice(0, limit + 1).map((l) => l.id);
+}
+
+/**
+ * Levels that opened since the player last saw the map, oldest first. A level
+ * they've already cleared is never "new" to them, however the save got there.
+ */
+export function newlyUnlocked(p: Progress): string[] {
+  const seen = new Set(p.seen);
+  return unlockedIds(p).filter((id) => !seen.has(id) && !((p.stars[id] ?? 0) > 0));
+}
+
+/** Record every open level as seen, so its unlock plays exactly once. */
+export function markSeen(p: Progress): Progress {
+  const ids = unlockedIds(p);
+  return ids.length === p.seen.length ? p : { ...p, seen: ids };
 }
 
 // --- Daily challenge -------------------------------------------------------
