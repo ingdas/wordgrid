@@ -22,12 +22,24 @@
 // A level is fair only if a human-style reasoner — tracking same/different
 // relations between cells with counting + transitivity, zero guessing — can
 // solve it from the shown clues alone. That also implies a unique solution,
-// which we additionally verify by brute-force enumeration.
+// which we additionally verify by brute-force enumeration. Both checks use the
+// shared rules in src/deductionRules.ts, which is also what the board runs.
 //
-// Run:  node scripts/gen-deduction.mjs   (writes src/deductionLevels.ts)
+// Run:  npm run gen:deduction   (writes src/deductionLevels.ts)
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+// The rules themselves live with the game (src/deductionRules.ts) so the
+// generator, the board component and the tests can't drift apart.
+import {
+  allPartitions,
+  clueHolds,
+  countSolutions,
+  grid,
+  lineClueHolds,
+  pairsOf,
+  relationSolve,
+} from "../src/deductionRules.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -40,207 +52,6 @@ function mulberry32(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-// ---- geometry ---------------------------------------------------------------
-const DIAGS = { upLeft: [-1, -1], upRight: [-1, 1], downLeft: [1, -1], downRight: [1, 1] };
-
-function grid(rows, cols) {
-  const N = rows * cols;
-  const neighbors = [], dirNbr = [], diagNbr = [];
-  const rowCells = Array.from({ length: rows }, () => []);
-  const colCells = Array.from({ length: cols }, () => []);
-  for (let i = 0; i < N; i++) {
-    const r = (i / cols) | 0, c = i % cols, ns = [], d = {}, dg = {};
-    if (r > 0) { ns.push(i - cols); d.up = i - cols; }
-    if (r < rows - 1) { ns.push(i + cols); d.down = i + cols; }
-    if (c > 0) { ns.push(i - 1); d.left = i - 1; }
-    if (c < cols - 1) { ns.push(i + 1); d.right = i + 1; }
-    for (const [name, [dr, dc]] of Object.entries(DIAGS)) {
-      const rr = r + dr, cc = c + dc;
-      if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) dg[name] = rr * cols + cc;
-    }
-    neighbors.push(ns); dirNbr.push(d); diagNbr.push(dg);
-    rowCells[r].push(i); colCells[c].push(i);
-  }
-  const corners = [0, cols - 1, (rows - 1) * cols, rows * cols - 1];
-  const lineCells = (axis, index) => (axis === "row" ? rowCells[index] : colCells[index]);
-  const lineOf = (axis, i) => (axis === "row" ? (i / cols) | 0 : i % cols);
-  return { N, rows, cols, neighbors, dirNbr, diagNbr, rowCells, colCells, corners, lineCells, lineOf };
-}
-
-// All partitions of N cells into 4 unlabeled groups of 3 (15,400 for N=12),
-// as colour arrays with canonical labels (group id by first occurrence).
-function allPartitions(N) {
-  const out = [];
-  const color = new Array(N).fill(-1);
-  const rec = (gid) => {
-    let first = -1;
-    for (let i = 0; i < N; i++) if (color[i] < 0) { first = i; break; }
-    if (first < 0) { out.push(color.slice()); return; }
-    const rest = [];
-    for (let i = first + 1; i < N; i++) if (color[i] < 0) rest.push(i);
-    for (let a = 0; a < rest.length; a++)
-      for (let b = a + 1; b < rest.length; b++) {
-        color[first] = color[rest[a]] = color[rest[b]] = gid;
-        rec(gid + 1);
-        color[first] = color[rest[a]] = color[rest[b]] = -1;
-      }
-  };
-  rec(0);
-  return out;
-}
-
-const pairsOf = (cells) => {
-  const out = [];
-  for (let a = 0; a < cells.length; a++)
-    for (let b = a + 1; b < cells.length; b++) out.push([cells[a], cells[b]]);
-  return out;
-};
-
-// ---- what each clue claims ---------------------------------------------------
-// The set of cells a counting clue counts over (never including the cell itself)
-// and the group-mate counts it allows.
-function countScope(cl, geo) {
-  switch (cl.kind) {
-    case "deg": return { cells: geo.neighbors[cl.cell], targets: [cl.n] };
-    case "line": return { cells: geo.lineCells(cl.axis, geo.lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [cl.n] };
-    // "counting me, an odd number of this line is in my group": with me in it,
-    // 1 or 3 → 0 or 2 group-mates alongside.
-    case "parity": return { cells: geo.lineCells(cl.axis, geo.lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [0, 2] };
-    case "corners": return { cells: geo.corners.filter((j) => j !== cl.cell), targets: [cl.n] };
-    default: return null;
-  }
-}
-
-function clueHolds(cl, color, geo) {
-  if (cl.kind === "dir" || cl.kind === "diag") {
-    const t = cl.kind === "dir" ? geo.dirNbr[cl.cell][cl.dir] : geo.diagNbr[cl.cell][cl.dir];
-    return t != null && (color[t] === color[cl.cell]) === cl.same;
-  }
-  const scope = countScope(cl, geo);
-  if (!scope) throw new Error(`unknown clue kind ${cl.kind}`);
-  const n = scope.cells.reduce((acc, j) => acc + (color[j] === color[cl.cell] ? 1 : 0), 0);
-  return scope.targets.includes(n);
-}
-
-function lineClueHolds(ln, color, geo) {
-  const same = pairsOf(geo.lineCells(ln.axis, ln.index)).filter(([a, b]) => color[a] === color[b]).length;
-  return ln.kind === "rainbow" ? same === 0 : same === 1;
-}
-
-// ---- human-style relation solver ---------------------------------------------
-// Tracks same/different for every cell pair and propagates only FORCED
-// conclusions: counting over a scope (each cell has exactly 2 group-mates
-// overall, plus whatever each clue claims), the pair-count of a "one pair"
-// line, and transitivity. No guessing — if it reaches a fully-decided
-// consistent state, a human can get there too.
-function relationSolve(clues, lines, rows, cols) {
-  const geo = grid(rows, cols);
-  const { N } = geo;
-  const U = 0, S = 1, D = 2;
-  const rel = new Int8Array(N * N); // symmetric, diag unused
-  const get = (i, j) => rel[i * N + j];
-  let bad = false, changed = true, rounds = 0;
-  const set = (i, j, v) => {
-    const cur = get(i, j);
-    if (cur === v) return;
-    if (cur !== U) { bad = true; return; }
-    rel[i * N + j] = rel[j * N + i] = v;
-    changed = true;
-  };
-
-  // Clues that name a single other tile are facts, not deductions.
-  for (const cl of clues) {
-    if (cl.kind === "dir") set(cl.cell, geo.dirNbr[cl.cell][cl.dir], cl.same ? S : D);
-    if (cl.kind === "diag") set(cl.cell, geo.diagNbr[cl.cell][cl.dir], cl.same ? S : D);
-  }
-  for (const ln of lines)
-    if (ln.kind === "rainbow") for (const [a, b] of pairsOf(geo.lineCells(ln.axis, ln.index))) set(a, b, D);
-
-  // "Exactly `targets` of `cells` share i's group" — forced moves only.
-  const countRule = (i, cells, targets) => {
-    let s = 0; const unk = [];
-    for (const j of cells) {
-      const v = get(i, j);
-      if (v === S) s++;
-      else if (v === U) unk.push(j);
-    }
-    const feasible = targets.filter((t) => t >= s && t <= s + unk.length);
-    if (!feasible.length) { bad = true; return; }
-    if (Math.max(...feasible) === s) for (const j of unk) set(i, j, D);
-    else if (Math.min(...feasible) === s + unk.length) for (const j of unk) set(i, j, S);
-  };
-
-  // "Exactly one pair among these cells shares a group."
-  const onePairRule = (cells) => {
-    let s = 0; const unk = [];
-    for (const [a, b] of pairsOf(cells)) {
-      const v = get(a, b);
-      if (v === S) s++;
-      else if (v === U) unk.push([a, b]);
-    }
-    if (s > 1) { bad = true; return; }
-    if (s === 1) for (const [a, b] of unk) set(a, b, D);
-    else if (unk.length === 1) set(unk[0][0], unk[0][1], S);
-    else if (unk.length === 0) bad = true;
-  };
-
-  const complementOf = (i, cells, targets) => {
-    const inScope = new Set(cells);
-    const rest = [];
-    for (let j = 0; j < N; j++) if (j !== i && !inScope.has(j)) rest.push(j);
-    return { rest, targets: targets.map((t) => 2 - t) };
-  };
-
-  while (changed && !bad) {
-    changed = false;
-    rounds++;
-    // every cell has exactly 2 group-mates overall
-    for (let i = 0; i < N && !bad; i++) {
-      const others = [];
-      for (let j = 0; j < N; j++) if (j !== i) others.push(j);
-      countRule(i, others, [2]);
-    }
-    // counting clues, each with its complement over everything else
-    for (const cl of clues) {
-      if (bad) break;
-      const scope = countScope(cl, geo);
-      if (!scope) continue;
-      countRule(cl.cell, scope.cells, scope.targets);
-      const comp = complementOf(cl.cell, scope.cells, scope.targets);
-      countRule(cl.cell, comp.rest, comp.targets);
-    }
-    for (const ln of lines) {
-      if (bad) break;
-      if (ln.kind === "onepair") onePairRule(geo.lineCells(ln.axis, ln.index));
-    }
-    // transitivity
-    for (let i = 0; i < N && !bad; i++)
-      for (let j = 0; j < N && !bad; j++) {
-        if (j === i || get(i, j) !== S) continue;
-        for (let k = 0; k < N; k++) {
-          if (k === i || k === j) continue;
-          const vjk = get(j, k);
-          if (vjk !== U) set(i, k, vjk);
-          if (bad) break;
-        }
-      }
-  }
-  if (bad) return null;
-  for (let i = 0; i < N; i++)
-    for (let j = i + 1; j < N; j++) if (get(i, j) === U) return null; // stuck
-  // extract the partition
-  const color = new Array(N).fill(-1);
-  let gid = 0;
-  for (let i = 0; i < N; i++) {
-    if (color[i] >= 0) continue;
-    color[i] = gid;
-    for (let j = 0; j < N; j++) if (j !== i && get(i, j) === S) color[j] = gid;
-    gid++;
-  }
-  if (gid !== 4 || color.some((c) => c < 0)) return null;
-  return { color, rounds };
 }
 
 // ---- candidate clues ---------------------------------------------------------
@@ -404,9 +215,7 @@ for (const lv of levels) {
   // human relation solver cracks it with zero guessing
   if (!relationSolve(lv.clues, lv.lines, lv.rows, lv.cols)) throw new Error(`${lv.id}: not human-solvable`);
   // and brute-force: exactly ONE of all partitions satisfies the shown clues
-  let count = 0;
-  for (const p of allPartitions(lv.rows * lv.cols))
-    if (lv.clues.every((cl) => clueHolds(cl, p, geo)) && lv.lines.every((ln) => lineClueHolds(ln, p, geo))) count++;
+  const count = countSolutions(lv.clues, lv.lines, lv.rows, lv.cols);
   if (count !== 1) throw new Error(`${lv.id}: ${count} solutions from shown clues`);
 }
 

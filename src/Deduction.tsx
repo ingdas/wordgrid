@@ -8,6 +8,7 @@ import {
   type DeductionLineClue,
 } from "./deductionLevels";
 import { CATEGORY_THEMES } from "./theme";
+import { clueTarget, countScope, grid, samePairsInLine } from "./deductionRules";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
 
@@ -79,56 +80,11 @@ function DeductionBoard({
   const { rows, cols } = level;
   const N = rows * cols;
 
-  // Orthogonal neighbours for this grid shape.
-  const neighbors = useMemo(() => {
-    const ns: number[][] = [];
-    for (let i = 0; i < N; i++) {
-      const r = Math.floor(i / cols), c = i % cols, a: number[] = [];
-      if (r > 0) a.push(i - cols);
-      if (r < rows - 1) a.push(i + cols);
-      if (c > 0) a.push(i - 1);
-      if (c < cols - 1) a.push(i + 1);
-      ns.push(a);
-    }
-    return ns;
-  }, [N, rows, cols]);
-
-  // The cells of a row/column, and the four corners — the scopes the newer
-  // clue kinds count over. Same definitions the generator verifies against.
-  const lineCells = useCallback(
-    (axis: DeductionAxis, index: number) => {
-      const out: number[] = [];
-      if (axis === "row") for (let c = 0; c < cols; c++) out.push(index * cols + c);
-      else for (let r = 0; r < rows; r++) out.push(r * cols + index);
-      return out;
-    },
-    [rows, cols]
-  );
-  const lineOf = useCallback(
-    (axis: DeductionAxis, cell: number) => (axis === "row" ? Math.floor(cell / cols) : cell % cols),
-    [cols]
-  );
-  const corners = useMemo(() => [0, cols - 1, (rows - 1) * cols, rows * cols - 1], [rows, cols]);
-
-  /** The cells a counting clue counts over (never itself) + the counts it allows. */
-  const scopeOf = useCallback(
-    (cl: DeductionClue): { cells: number[]; targets: number[] } | null => {
-      switch (cl.kind) {
-        case "deg":
-          return { cells: neighbors[cl.cell], targets: [cl.n] };
-        case "line":
-          return { cells: lineCells(cl.axis, lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [cl.n] };
-        case "parity":
-          // odd counting me → 0 or 2 group-mates alongside me on the line
-          return { cells: lineCells(cl.axis, lineOf(cl.axis, cl.cell)).filter((j) => j !== cl.cell), targets: [0, 2] };
-        case "corners":
-          return { cells: corners.filter((j) => j !== cl.cell), targets: [cl.n] };
-        default:
-          return null; // dir / diag name a single tile instead of counting
-      }
-    },
-    [neighbors, lineCells, lineOf, corners]
-  );
+  // Geometry and clue semantics come from the shared rules module — the same
+  // code the generator verified these levels with, so the board can't disagree
+  // with the puzzle it was handed.
+  const geo = useMemo(() => grid(rows, cols), [rows, cols]);
+  const { lineCells } = geo;
 
   const lineOfHeader = useCallback(
     (axis: DeductionAxis, index: number) => level.lines.find((l) => l.axis === axis && l.index === index),
@@ -141,16 +97,6 @@ function DeductionBoard({
     for (const cl of level.clues) m.set(cl.cell, cl);
     return m;
   }, [level]);
-
-  // Where a directional or diagonal clue points, so it can be checked.
-  const dirTarget = useCallback(
-    (cell: number, dir: string) => {
-      const r = Math.floor(cell / cols), c = cell % cols;
-      const [dr, dc] = DIR_STEP[dir];
-      return (r + dr) * cols + (c + dc);
-    },
-    [cols]
-  );
 
   const [colors, setColors] = useState<number[]>(() => new Array(N).fill(-1));
   const [brush, setBrush] = useState(0); // 0-3 theme, -1 eraser
@@ -173,7 +119,7 @@ function DeductionBoard({
     const m = new Map<number, ClueStatus>();
     for (const cl of level.clues) {
       if (cl.kind === "dir" || cl.kind === "diag") {
-        const t = dirTarget(cl.cell, cl.dir);
+        const t = clueTarget(cl, geo);
         if (colors[cl.cell] < 0 || colors[t] < 0) {
           m.set(cl.cell, { state: "pending", found: 0 });
           continue;
@@ -182,7 +128,7 @@ function DeductionBoard({
         m.set(cl.cell, { state: same === cl.same ? "ok" : "bad", found: same ? 1 : 0 });
         continue;
       }
-      const scope = scopeOf(cl);
+      const scope = countScope(cl, geo);
       if (!scope) continue;
       if (colors[cl.cell] < 0 || scope.cells.some((j) => colors[j] < 0)) {
         m.set(cl.cell, { state: "pending", found: 0 });
@@ -192,26 +138,22 @@ function DeductionBoard({
       m.set(cl.cell, { state: scope.targets.includes(found) ? "ok" : "bad", found });
     }
     return m;
-  }, [colors, level.clues, dirTarget, scopeOf]);
+  }, [colors, level.clues, geo]);
 
   // Row/column header clues judge themselves the same way, keyed by axis+index.
   const lineStatus = useMemo(() => {
     const m = new Map<string, ClueStatus>();
     for (const ln of level.lines) {
-      const cells = lineCells(ln.axis, ln.index);
       const key = `${ln.axis}${ln.index}`;
-      if (cells.some((j) => colors[j] < 0)) {
+      if (lineCells(ln.axis, ln.index).some((j) => colors[j] < 0)) {
         m.set(key, { state: "pending", found: 0 });
         continue;
       }
-      let same = 0;
-      for (let a = 0; a < cells.length; a++)
-        for (let b = a + 1; b < cells.length; b++) if (colors[cells[a]] === colors[cells[b]]) same++;
-      const want = ln.kind === "rainbow" ? 0 : 1;
-      m.set(key, { state: same === want ? "ok" : "bad", found: same });
+      const same = samePairsInLine(ln, colors, geo);
+      m.set(key, { state: same === (ln.kind === "rainbow" ? 0 : 1) ? "ok" : "bad", found: same });
     }
     return m;
-  }, [colors, level.lines, lineCells]);
+  }, [colors, level.lines, lineCells, geo]);
 
   // Evaluate the current painting (label-agnostic): every tile painted, each
   // colour used exactly 3×, and every shown clue satisfied. The generator
@@ -577,12 +519,6 @@ const DIR_WORD: Record<string, string> = {
   up: "above", down: "below", left: "left of", right: "right of",
   upLeft: "up-left of", upRight: "up-right of", downLeft: "down-left of", downRight: "down-right of",
 };
-/** Row/column step per direction name — shared by the clue targets. */
-const DIR_STEP: Record<string, [number, number]> = {
-  up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1],
-  upLeft: [-1, -1], upRight: [-1, 1], downLeft: [1, -1], downRight: [1, 1],
-};
-
 const AXIS_WORD: Record<DeductionAxis, string> = { row: "row", col: "column" };
 const MATES = ["Neither of my group-mates", "One of my group-mates", "Both of my group-mates"];
 

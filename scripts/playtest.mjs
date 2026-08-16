@@ -206,6 +206,34 @@ else {
   await p.screenshot({ path: `${SHOT}/r9-boss.png` });
 }
 
+// 10b. Logic Grid: paint a level's real solution and check the board accepts
+//      it. The clue semantics are unit-tested in scripts/deduction.test.mts;
+//      this covers the component actually wiring them up.
+{
+  const { DEDUCTION_LEVELS } = await import("../src/deductionLevels.ts");
+  const lv = DEDUCTION_LEVELS[0];
+  await p.goto(BASE, { waitUntil: "networkidle0" });
+  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("wordgrid:tutorial", "1"); });
+  await p.reload({ waitUntil: "networkidle0" });
+  await sleep(500);
+  await clickText("button", "Logic");
+  await sleep(500);
+  for (let k = 0; k < 4; k++) {
+    const brush = await p.$(`button[aria-label="Group ${k + 1} brush"]`);
+    if (!brush) { note("Logic Grid brush palette missing."); break; }
+    await brush.click();
+    for (let cell = 0; cell < lv.solution.length; cell++) {
+      if (lv.solution[cell] !== k) continue;
+      await (await p.$(`[data-cell="${cell}"]`)).click();
+    }
+  }
+  await sleep(500);
+  const solvedIt = /Deduced!/.test(await bodyText());
+  log("logic grid accepts its own solution:", solvedIt);
+  if (!solvedIt) note("Logic Grid rejected the solution it ships with.");
+  await p.screenshot({ path: `${SHOT}/r10-logic.png` });
+}
+
 // 11. On a loss, the secret link must STAY hidden (so it can be guessed on replay)
 await p.evaluate(() => {
   localStorage.clear();
