@@ -74,6 +74,10 @@ const cards = () =>
         placed,
         leftover: !placed,
         shape: placed ? (front.textContent || "").trim().charAt(0) : "",
+        // A face-up card's front sits at rotateY(180deg) — a matrix3d with -1
+        // in the x scale. Identity means it is facing away, and
+        // backface-visibility has made it invisible.
+        turned: front ? /^matrix3d\(-1/.test(getComputedStyle(front).transform) : false,
       };
     })
   );
@@ -151,8 +155,14 @@ for (const lo of leftovers) {
       sawWrong = true;
       const held = (await cards()).find((c) => c.i === lo.i);
       if (!held.leftover) note("a wrong couple placed the card anyway");
-      log(`  wrong couple: ${lo.label} → ${g} — kept in hand, +1 move ✓`);
-      await sleep(900);
+      // The card is still in hand — it also has to still be VISIBLE. The
+      // shake used to strip the front face's half-turn, so the card the
+      // player was holding went blank for the rest of the round.
+      await sleep(1400); // well past the 700ms red flash
+      const settled = (await cards()).find((c) => c.i === lo.i);
+      if (!settled.turned)
+        note(`the held card went invisible after a wrong couple (front face is not turned to camera)`);
+      log(`  wrong couple: ${lo.label} → ${g} — kept in hand, still visible, +1 move ✓`);
     }
     break;
   }

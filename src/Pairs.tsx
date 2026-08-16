@@ -459,14 +459,20 @@ function PairCard({
         >
           <span aria-hidden>◆</span>
         </div>
-        {/* Front: the word — inked in its theme colour once matched/coupled */}
+        {/* Front: the word — inked in its theme colour once matched/coupled.
+            The half-turn is handed to framer as `rotateY`, not baked into a
+            `transform` string: the mis-couple shake animates `x`, and framer
+            rebuilds the whole transform from the values it knows about. A
+            literal transform is not one of them, so the card lost its half-turn
+            mid-shake, turned its back — and backface-visibility hid it for the
+            rest of the round, with the player still holding it. */}
         <motion.div
           animate={wrong ? { x: [0, -6, 6, -4, 4, 0] } : {}}
           transition={{ duration: 0.4 }}
           className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${face}`}
           style={{
             backfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
+            rotateY: 180,
             color: matchedTheme?.ink,
             boxShadow: "2px 2px 0 rgba(38,34,26,0.25)",
           }}

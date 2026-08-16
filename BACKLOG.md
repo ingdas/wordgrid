@@ -298,9 +298,24 @@ Code quality:
 
 ## Timers and live state (iteration 24)
 
-Two Pairs bugs, both from state a handler could not see yet, and the same two
-patterns swept out of `Game.tsx` and `Deduction.tsx`.
+The reported bug — **the card you are holding vanishes when you mis-couple** —
+plus two more Pairs bugs found next to it, and the patterns behind them swept
+out of `Game.tsx` and `Deduction.tsx`.
 
+- **A mis-couple made the held card invisible** (the reported one). The card
+  faces are a CSS 3D flip: the wrapper turns to `rotateY(180deg)` and the front
+  face carries its own `transform: rotateY(180deg)` to face the camera, with
+  `backface-visibility: hidden` hiding whichever side is turned away. The red
+  mis-couple shake animates `x` on that same front face — and framer-motion
+  rebuilds the element's whole transform from the values it manages, so a
+  literal `transform` string in `style` is simply dropped. The card lost its
+  half-turn mid-shake (`matrix3d(-1,…)` → `none`), turned its back, and
+  backface-visibility hid it for the **rest of the round**: the player is left
+  holding a card that isn't drawn, on a board showing 11 cards and one blank
+  cell. Fixed by handing the half-turn to framer as `rotateY: 180` in `style`
+  so it composes with the shake instead of being overwritten. Anything that
+  animates a transform on an element with a static one in `style` has this
+  bug — Pairs' card face was the only instance in `src/`.
 - **A stray timer landed on the next board.** Every deferred beat of a Pairs
   round (the flip resolve, the two phase openings, the red flash, the end card)
   was a bare `setTimeout`; only the flip resolve was cancellable. Hitting
@@ -326,8 +341,10 @@ patterns swept out of `Game.tsx` and `Deduction.tsx`.
   give-up reveal at 700ms) is cancellable too, so nothing from a finished run
   can drop a restarted board into "won".
 
-Regression cover: `scripts/pairs.test.mjs` (headless) replays both repros plus
-a clean run through matching → a wrong couple → coupling → the finale.
+Regression cover: `scripts/pairs.test.mjs` (headless) replays all three repros
+inside a full run — matching → a wrong couple (still in hand, still **drawn**,
++1 move) → coupling → the finale. Each check was confirmed to fail on the
+pre-fix build before it was kept.
 
 ### Still open
 
