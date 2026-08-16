@@ -926,6 +926,16 @@ export function bossTwist(index: number): BossTwist | null {
   return CHAPTER_TWISTS[chapter % CHAPTER_TWISTS.length];
 }
 
+/**
+ * The title of the board actually played at a level — NOT always
+ * `LEVELS[index].title`, because the emoji boss substitutes its own board
+ * (Game.tsx does the same swap). The level map shows this back to a player who
+ * has solved the level, so it has to name the board they really saw.
+ */
+export function levelTitle(index: number): string {
+  return bossTwist(index) === "emoji" ? EMOJI_BOSS.title : LEVELS[index].title;
+}
+
 // The "decoy" boss salts the board with impostor words that fit no group. We
 // pull from a fixed pool, skipping anything that clashes with the real puzzle,
 // and pick deterministically from the puzzle id so a level is always the same.

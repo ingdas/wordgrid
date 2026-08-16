@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, isBossLevel, type Tier } from "./puzzles";
+import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, isBossLevel, levelTitle } from "./puzzles";
 import { chapterInk, type ChapterInk } from "./theme";
 import { playStar } from "./audio";
 import { t } from "./i18n";
@@ -9,15 +9,34 @@ import {
   isDebug,
   MAX_STARS,
   totalStars,
-  clearedCount,
-  furthestCleared,
   newlyUnlocked,
+  furthestCleared,
   type Progress,
 } from "./progress";
 
-// Pacing of the unlock reveal: the first lock pops shortly after the map
-// settles, and any others follow one at a time so two unlocks never read as
-// one blur.
+// ---------------------------------------------------------------------------
+// The level list is an INDEX, not a map.
+//
+// It used to be 63 identical numbered squares in a grid, which was wrong in two
+// directions at once. Behind you it threw away everything that makes a level
+// memorable — you solved "Bank On It", and the list remembered "a gold square".
+// Ahead of you a numbered square promises nothing, so there was nothing to want.
+//
+// So the two halves are now drawn differently, because they *are* different:
+//
+//   solved  → a word. The board's title, which the win card and the history
+//             already show once you've cracked it, on a chip in the chapter's
+//             ink. Titles are different lengths, so the rows set like a page of
+//             type and every player's index is shaped by what they've beaten.
+//   unsolved→ a bare number, small and quiet. Anonymity is the product here:
+//             a level you haven't played should give away nothing.
+//
+// And the thing you actually came to do — play the next level — is a card at the
+// top, not a node to hunt for in a grid.
+// ---------------------------------------------------------------------------
+
+// Pacing of the unlock reveal: the first lock pops shortly after the page
+// settles, and any others follow one at a time so two never read as one blur.
 const REVEAL_LEAD = 620;
 const REVEAL_GAP = 520;
 
@@ -37,7 +56,7 @@ export default function LevelSelect({
   progress: Progress;
   reduce: boolean;
   onPick: (index: number) => void;
-  /** Called once the map has shown what's new, so each unlock plays only once. */
+  /** Called once the page has shown what's new, so each unlock plays only once. */
   onSeen: () => void;
   onHome: () => void;
   onHelp: () => void;
@@ -47,13 +66,14 @@ export default function LevelSelect({
   musicOn: boolean;
   onToggleMusic: () => void;
 }) {
+  const starsOf = (i: number) => progress.stars[LEVELS[i].id] ?? 0;
   const stars = totalStars(progress);
-  const cleared = clearedCount(progress);
-  const nextIndex = LEVELS.findIndex((p, i) => isUnlocked(progress, i) && !(progress.stars[p.id] > 0));
+  const solvedCount = LEVELS.filter((_, i) => starsOf(i) > 0).length;
+  const perfectCount = LEVELS.filter((_, i) => starsOf(i) >= 3).length;
+  const nextIndex = LEVELS.findIndex((_, i) => isUnlocked(progress, i) && starsOf(i) === 0);
 
-  // What opened since the player last looked — captured once, at mount, before
-  // it's marked as seen. A player who hasn't cleared anything yet isn't told
-  // that level 1 "just unlocked"; they were never locked out of it.
+  // What opened since the player last looked — captured at mount, before it's
+  // marked seen.
   const [fresh] = useState<string[]>(() =>
     furthestCleared(progress) >= 0 ? newlyUnlocked(progress) : []
   );
@@ -63,39 +83,19 @@ export default function LevelSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Chapters start expanded only where there's something to do: the one you're
-  // in, and any other with an open level you haven't cleared. Finished
-  // chapters fold up into a one-line trophy row and locked ones into a teaser,
-  // so the map opens on your business instead of forty padlocks.
-  const [open, setOpen] = useState<Set<number>>(() => {
-    const set = new Set<number>();
-    CHAPTERS.forEach((chap, ci) => {
-      const slice = LEVELS.slice(chap.start, chap.end);
-      const hasOpenWork = slice.some((p, j) => isUnlocked(progress, chap.start + j) && !(progress.stars[p.id] > 0));
-      const hasFresh = slice.some((p) => freshOrder.has(p.id));
-      if (hasOpenWork || hasFresh) set.add(ci);
-    });
-    if (!set.size) set.add(CHAPTERS.length - 1); // everything cleared: show the last
-    return set;
-  });
-  const toggle = (ci: number) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(ci)) next.add(ci);
-      return next;
-    });
-
-  // The map is tall, so a returning player would land at level 1 and have to
-  // scroll to find where they are. Bring the next-playable node into view
-  // instead (instantly — no distracting glide).
-  const nextRef = useRef<HTMLButtonElement>(null);
+  // The old map auto-scrolled to the next level because that node was buried in
+  // the grid. It isn't any more — it's the card at the top — so the page opens
+  // at the top, on your record. The one exception is a pending unlock: that's
+  // an animation, and an animation nobody sees may as well not run.
+  const freshRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    nextRef.current?.scrollIntoView({ block: "center" });
+    freshRef.current?.scrollIntoView({ block: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const lastFresh = fresh[fresh.length - 1];
 
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-16 pt-5 lg:max-w-2xl">
+    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-20 pt-5 lg:max-w-2xl">
       <div className="flex items-center justify-between">
         <button
           onClick={onHome}
@@ -144,172 +144,151 @@ export default function LevelSelect({
         {t("levels.title")}
       </h2>
       <p className="mt-1 text-center text-xs font-semibold text-ink-soft">
-        {t("levels.cleared", { done: cleared, total: LEVELS.length })}
+        {t("levels.summary", { solved: solvedCount, perfect: perfectCount, total: LEVELS.length })}
       </p>
-      <div className="mx-auto mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-ink/10">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(cleared / LEVELS.length) * 100}%` }}
-          transition={{ duration: reduce ? 0 : 0.7, delay: reduce ? 0 : 0.2 }}
-          className="h-full rounded-full bg-press"
-        />
-      </div>
       {isDebug() && (
         <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf">
           {t("levels.debug")}
         </p>
       )}
 
+      {nextIndex >= 0 ? (
+        <UpNextCard index={nextIndex} reduce={reduce} onPlay={() => onPick(nextIndex)} />
+      ) : (
+        <div className="mt-5 rounded-3xl border-2 border-ink bg-white p-5 text-center shadow-[3px_3px_0_rgba(38,34,26,0.3)]">
+          <div className="text-3xl" aria-hidden>🏆</div>
+          <h3 className="mt-1 font-display text-xl font-bold text-ink">{t("levels.done.title")}</h3>
+          <p className="mt-1 text-sm text-ink-soft">{t("levels.done.body")}</p>
+        </div>
+      )}
+
       <UnlockBanner fresh={fresh} reduce={reduce} />
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-7 space-y-5">
         {CHAPTERS.map((chap, ci) => {
-          const slice = LEVELS.slice(chap.start, chap.end);
           const ink = chapterInk(ci);
+          const slice = LEVELS.slice(chap.start, chap.end);
           const chapStars = slice.reduce((n, p) => n + (progress.stars[p.id] ?? 0), 0);
-          const chapCleared = slice.filter((p) => (progress.stars[p.id] ?? 0) > 0).length;
-          const chapDone = chapCleared === slice.length;
+          const chapDone = slice.every((p) => (progress.stars[p.id] ?? 0) > 0);
           const chapUnlocked = isUnlocked(progress, chap.start);
-          const here = nextIndex >= chap.start && nextIndex < chap.end;
-          const expanded = open.has(ci);
-          const twist = bossTwist(chap.boss);
-          const bossOpen = isUnlocked(progress, chap.boss);
+
+          // A chapter you can't reach yet is one quiet line. It keeps its name
+          // — that's flavour, never puzzle content — so the tail of the index
+          // reads as things to come rather than a wall of padlocks.
+          if (!chapUnlocked) {
+            return (
+              <section key={ci} aria-label={t("levels.a11y.chapter", { n: ci + 1, name: t(chap.nameKey) }) + `, ${t("levels.locked")}`}>
+                <div className="flex items-baseline gap-2.5">
+                  <span aria-hidden className="font-display text-base font-bold text-ink-soft/70">
+                    {ci + 1}
+                  </span>
+                  <h3 className="font-display text-base font-bold text-ink-soft">{t(chap.nameKey)}</h3>
+                  <span aria-hidden className="text-xs">🔒</span>
+                  <span aria-hidden className="h-px flex-1 bg-ink/10" />
+                  <span className="shrink-0 text-xs font-semibold text-ink-soft/70">
+                    ⭐ 0/{slice.length * 3}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-ink-soft/80">
+                  {t("levels.chapter.locked", { n: chap.start - 2 })} · {t("levels.boss.teaser")}
+                </p>
+              </section>
+            );
+          }
 
           return (
-            <section
-              key={ci}
-              className="overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[3px_3px_0_rgba(38,34,26,0.3)]"
-            >
-              <button
-                onClick={() => toggle(ci)}
-                aria-expanded={expanded}
-                aria-label={
-                  t("levels.a11y.chapter", { n: ci + 1, name: t(chap.nameKey) }) +
-                  (chapUnlocked ? "" : `, ${t("levels.locked")}`)
-                }
-                className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:brightness-[0.97]"
-                style={{ background: ink.wash }}
-              >
-                <span
-                  aria-hidden
-                  className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 font-display text-lg font-bold ${
-                    chapUnlocked ? "border-ink text-ink" : "border-ink/40"
-                  }`}
-                  style={{ background: chapUnlocked ? ink.fill : "#fff", color: chapUnlocked ? undefined : ink.deep }}
-                >
+            <section key={ci}>
+              {/* A contents-page rule: numeral, name, hairline, star count. */}
+              <div className="flex items-baseline gap-2.5">
+                <span aria-hidden className="font-display text-base font-bold" style={{ color: ink.deep }}>
                   {ci + 1}
-                  {!chapUnlocked && <span className="absolute -bottom-1 -right-1 text-[0.7rem]">🔒</span>}
                 </span>
-
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    {/* A locked chapter still shows its name. It's flavour, never a
-                        puzzle spoiler, and five rows reading "Locked" was the
-                        dullest stretch of the map — a named chapter is a tease. */}
-                    <span
-                      className={`truncate font-display text-base font-bold ${
-                        chapUnlocked ? "text-ink" : "text-ink-soft"
-                      }`}
-                    >
-                      {t(chap.nameKey)}
-                    </span>
-                    {chapDone && (
-                      <span
-                        className="shrink-0 -rotate-6 rounded border border-press px-1 py-px text-[0.55rem] font-extrabold uppercase tracking-wider text-press"
-                        style={{ background: "rgba(217,72,43,0.08)" }}
-                      >
-                        {t("levels.chapter.done")}
-                      </span>
-                    )}
-                    {here && !chapDone && (
-                      <span className="shrink-0 rounded-full bg-press px-1.5 py-px text-[0.55rem] font-extrabold uppercase tracking-wider text-paper">
-                        {t("levels.chapter.next")}
-                      </span>
-                    )}
+                <h3 className="font-display text-base font-bold text-ink">{t(chap.nameKey)}</h3>
+                {chapDone && (
+                  <span className="-rotate-6 rounded border border-press px-1 py-px text-[0.55rem] font-extrabold uppercase tracking-wider text-press">
+                    {t("levels.chapter.done")}
                   </span>
-                  <span className="block truncate text-xs text-ink-soft">
-                    {chapUnlocked
-                      ? t(chap.flavorKey)
-                      : t("levels.chapter.locked", { n: chap.start - 2 })}
-                  </span>
-                  {/* A finished chapter drops the bar — a permanently full one
-                      says nothing, and the COMPLETE stamp already says it. */}
-                  {chapUnlocked && !chapDone && (
-                    <span className="mt-1.5 flex items-center gap-2">
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/10">
-                        <span
-                          className="block h-full rounded-full"
-                          style={{ width: `${(chapCleared / slice.length) * 100}%`, background: ink.deep }}
-                        />
-                      </span>
-                      <span className="shrink-0 text-[0.6rem] font-semibold text-ink-soft">
-                        {t("levels.chapter.progress", { done: chapCleared, total: slice.length })}
-                      </span>
-                    </span>
-                  )}
-                </span>
-
-                <span className="shrink-0 text-right">
-                  <span className="block text-xs font-bold" style={{ color: ink.deep }}>
-                    ⭐ {chapStars}/{slice.length * 3}
-                  </span>
-                  <span aria-hidden className="block text-sm text-ink-soft">
-                    {expanded ? "▴" : "▾"}
-                  </span>
-                </span>
-              </button>
-
-              <AnimatePresence initial={false}>
-                {expanded && (
-                  <motion.div
-                    key="body"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: reduce ? 0 : 0.25, ease: "easeOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="grid grid-cols-4 gap-3 px-3 pb-3 pt-3 sm:grid-cols-6">
-                      {slice.map((p, j) => {
-                        const i = chap.start + j;
-                        const revealAt = freshOrder.get(p.id);
-                        return (
-                          <LevelNode
-                            key={p.id}
-                            index={i}
-                            ink={ink}
-                            tier={p.tier}
-                            reduce={reduce}
-                            unlocked={isUnlocked(progress, i)}
-                            earned={progress.stars[p.id] ?? 0}
-                            highlight={i === nextIndex}
-                            nodeRef={i === nextIndex ? nextRef : undefined}
-                            boss={i === chap.boss}
-                            revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
-                            onClick={() => isUnlocked(progress, i) && onPick(i)}
-                          />
-                        );
-                      })}
-                    </div>
-                    {/* Each chapter ends on a boss that plays by different rules —
-                        saying which one gives the last node of a chapter its own
-                        pull instead of being level N+1. */}
-                    <p
-                      className="border-t px-3 py-2 text-[0.65rem] font-semibold"
-                      style={{ borderColor: "rgba(38,34,26,0.12)", color: ink.deep }}
-                    >
-                      {bossOpen && twist
-                        ? t("levels.boss.twist", { what: t(`twist.${twist}.short`) })
-                        : t("levels.boss.teaser")}
-                    </p>
-                  </motion.div>
                 )}
-              </AnimatePresence>
+                <span aria-hidden className="h-px flex-1" style={{ background: "rgba(38,34,26,0.18)" }} />
+                <span className="shrink-0 text-xs font-bold" style={{ color: ink.deep }}>
+                  ⭐ {chapStars}/{slice.length * 3}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-ink-soft">{t(chap.flavorKey)}</p>
+
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {slice.map((p, j) => {
+                  const i = chap.start + j;
+                  const revealAt = freshOrder.get(p.id);
+                  return (
+                    <LevelChip
+                      key={p.id}
+                      index={i}
+                      ink={ink}
+                      reduce={reduce}
+                      unlocked={isUnlocked(progress, i)}
+                      earned={progress.stars[p.id] ?? 0}
+                      isNext={i === nextIndex}
+                      chipRef={p.id === lastFresh ? freshRef : undefined}
+                      revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
+                      onClick={() => isUnlocked(progress, i) && onPick(i)}
+                    />
+                  );
+                })}
+              </div>
             </section>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * The one thing most visits are actually for. It names the chapter, the level
+ * and its difficulty — and, for a boss, which twist is waiting — but never the
+ * board's title, which would leak the link on a level you haven't played.
+ */
+function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean; onPlay: () => void }) {
+  const chapter = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
+  const ink = chapterInk(Math.max(chapter, 0));
+  const twist = bossTwist(index);
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[3px_3px_0_rgba(38,34,26,0.35)]"
+    >
+      <div className="px-4 pb-4 pt-3" style={{ background: ink.wash }}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-[0.6rem] font-extrabold uppercase tracking-[0.15em]" style={{ color: ink.deep }}>
+            {t("levels.upNext")} · {t(CHAPTERS[Math.max(chapter, 0)].nameKey)}
+          </span>
+          <span className="shrink-0 rounded-full border border-ink/25 bg-white px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-ink-soft">
+            {t(TIER_KEY[LEVELS[index].tier])}
+          </span>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-display text-2xl font-bold leading-tight text-ink">
+              {t("game.level", { n: index + 1 })}
+            </div>
+            <div className="mt-0.5 text-xs text-ink-soft">
+              {twist ? t("levels.boss.twist", { what: t(`twist.${twist}.short`) }) : t("levels.upNext.blurb")}
+            </div>
+          </div>
+          <button
+            onClick={onPlay}
+            className="shrink-0 rounded-full bg-press px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+          >
+            {t("levels.play")}
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -322,9 +301,7 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
   const [show, setShow] = useState(fresh.length > 0);
   const news = useMemo(() => {
     if (!fresh.length) return null;
-    const idx = fresh
-      .map((id) => LEVELS.findIndex((l) => l.id === id))
-      .filter((i) => i >= 0);
+    const idx = fresh.map((id) => LEVELS.findIndex((l) => l.id === id)).filter((i) => i >= 0);
     if (!idx.length) return null;
 
     const chapterOpener = idx.find((i) => CHAPTERS.some((c) => c.start === i));
@@ -334,8 +311,7 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
     }
     const boss = idx.find((i) => isBossLevel(i));
     if (boss != null) {
-      const twist = bossTwist(boss);
-      return { icon: "👑", text: t("levels.unlock.boss", { what: t(`twist.${twist}.short`) }) };
+      return { icon: "👑", text: t("levels.unlock.boss", { what: t(`twist.${bossTwist(boss)}.short`) }) };
     }
     const top = idx[idx.length - 1];
     return { icon: "🔓", text: t(`levels.unlock.flavor.${top % 5}`, { n: top + 1 }) };
@@ -360,9 +336,9 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
           transition={{ delay: delay / 1000, type: "spring", stiffness: 280, damping: 22 }}
           onClick={() => setShow(false)}
           role="status"
-          // Fixed, not in flow: the map scrolls itself to wherever the player
-          // left off, so a banner at the top of the page would announce the
-          // unlock somewhere they never look.
+          // Fixed, not in flow: the page scrolls itself to the chip that's
+          // opening, so a banner in the layout would announce the news
+          // somewhere the player isn't looking.
           className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-[3px_3px_0_rgba(38,34,26,0.55)]"
         >
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border-2 border-ink bg-white font-display text-base font-bold">
@@ -380,126 +356,143 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
   );
 }
 
-function LevelNode({
+/**
+ * One entry in the index. Solved levels wear their title; everything else is a
+ * bare number or a lock. All three are the same height so the rows set cleanly.
+ */
+function LevelChip({
   index,
   ink,
-  tier,
   reduce,
   unlocked,
   earned,
-  highlight,
-  nodeRef,
-  boss,
+  isNext,
+  chipRef,
   revealDelay,
   onClick,
 }: {
   index: number;
   ink: ChapterInk;
-  tier: Tier;
   reduce: boolean;
   unlocked: boolean;
   earned: number;
-  highlight: boolean;
-  nodeRef?: React.Ref<HTMLButtonElement>;
-  boss: boolean;
+  isNext: boolean;
+  chipRef?: React.Ref<HTMLButtonElement>;
   /** ms to wait before popping the lock off, or null for "already open". */
   revealDelay: number | null;
   onClick: () => void;
 }) {
-  // A freshly unlocked node starts on its locked face and opens on a timer, so
+  // A freshly unlocked entry starts on its locked face and opens on a timer, so
   // the player *watches* it happen instead of finding it already changed.
   const [opened, setOpened] = useState(revealDelay == null);
   useEffect(() => {
     if (revealDelay == null) return;
     const id = setTimeout(() => {
       setOpened(true);
-      playStar(Math.min(index % 5, 4));
+      playStar(index % 5);
     }, reduce ? 0 : revealDelay);
     return () => clearTimeout(id);
   }, [revealDelay, reduce, index]);
 
   const showOpen = unlocked && opened;
-  const done = earned > 0;
-  const perfect = earned >= 3;
+  const solved = earned > 0;
+  const boss = isBossLevel(index);
+  const twist = bossTwist(index);
 
+  const base =
+    "relative flex h-9 items-center justify-center gap-1 rounded-xl border-2 font-display transition-colors disabled:cursor-default";
   const style: React.CSSProperties = {};
-  let face = "border-2 border-dashed border-ink/25 bg-cream/70 text-ink";
-  if (done) {
-    face = "border-2 border-ink text-ink";
+  let cls: string;
+
+  if (solved) {
+    // Flat, no offset shadow: a level you've finished is a record, not a
+    // control. Only the things you can act on now — the Up next card and the
+    // open numbered entries — sit raised off the page.
+    cls = `${base} border-ink/20 px-2 text-ink`;
     style.background = ink.fill;
-    // A flawless clear keeps a gold rule inside the tile, so the map records
-    // *how well* you did rather than only that you passed.
-    if (perfect) style.boxShadow = "3px 3px 0 rgba(38,34,26,0.3), inset 0 0 0 3px #f7dd9a";
+    // A flawless clear keeps a gold rule inside the chip, so the index records
+    // how well you did and not only that you passed.
+    if (earned >= 3) style.boxShadow = "inset 0 0 0 2px #f7dd9a";
   } else if (showOpen && boss) {
-    face = "border-2 text-ink";
-    style.background = "#fff";
+    cls = `${base} bg-white px-2 shadow-[2px_2px_0_rgba(38,34,26,0.3)]`;
     style.borderColor = ink.deep;
-  } else if (showOpen) {
-    face = "border-2 border-ink bg-white";
     style.color = ink.deep;
+  } else if (showOpen) {
+    cls = `${base} w-9 border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]`;
+    style.color = ink.deep;
+  } else {
+    cls = `${base} w-9 border-dashed border-ink/25 bg-cream/60`;
   }
+
+  const label =
+    (solved
+      ? t("levels.a11y.solved", { n: index + 1, title: levelTitle(index) })
+      : t("levels.a11y.node", { n: index + 1 })) +
+    (boss ? t("levels.a11y.boss") : "") +
+    `, ${t(TIER_KEY[LEVELS[index].tier])}` +
+    (solved ? t("levels.a11y.stars", { n: earned }) : showOpen ? "" : t("levels.a11y.lockedNode")) +
+    (revealDelay != null ? t("levels.a11y.freshNode") : "");
 
   return (
     <motion.button
-      ref={nodeRef}
-      initial={{ opacity: 0, scale: 0.8 }}
+      ref={chipRef}
+      initial={reduce ? false : { opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: reduce ? 0 : Math.min(index * 0.01, 0.3), type: "spring", stiffness: 320, damping: 24 }}
-      whileTap={showOpen ? { scale: 0.92 } : undefined}
+      transition={{ delay: reduce ? 0 : Math.min(index * 0.008, 0.25), type: "spring", stiffness: 340, damping: 24 }}
+      whileTap={showOpen ? { scale: 0.94 } : undefined}
       onClick={onClick}
       disabled={!showOpen}
-      aria-label={
-        t("levels.a11y.node", { n: index + 1 }) +
-        (boss ? t("levels.a11y.boss") : "") +
-        `, ${t(TIER_KEY[tier])}` +
-        (done ? t("levels.a11y.stars", { n: earned }) : showOpen ? "" : t("levels.a11y.lockedNode")) +
-        (revealDelay != null ? t("levels.a11y.freshNode") : "")
-      }
-      className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-[3px_3px_0_rgba(38,34,26,0.3)] transition-colors disabled:cursor-default ${face}`}
+      aria-label={label}
+      className={cls}
       style={style}
     >
-      {highlight && showOpen && (
+      {isNext && showOpen && (
         <motion.span
           aria-hidden
-          className="absolute inset-0 rounded-2xl ring-2 ring-press"
-          animate={reduce ? { opacity: 1 } : { opacity: [0.4, 1, 0.4], scale: [1, 1.05, 1] }}
+          className="absolute -inset-0.5 rounded-xl ring-2 ring-press"
+          animate={reduce ? { opacity: 1 } : { opacity: [0.35, 1, 0.35] }}
           transition={reduce ? undefined : { duration: 1.6, repeat: Infinity }}
         />
-      )}
-      {/* The crown teases a boss on every boss node — even locked ones — while
-          the node face still shows a 🔒 so a locked boss never looks playable. */}
-      {boss && (
-        <span aria-hidden className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-sm drop-shadow">
-          👑
-        </span>
       )}
 
       <AnimatePresence mode="wait" initial={false}>
         {showOpen ? (
           <motion.span
             key="open"
-            className="flex flex-col items-center"
+            className="flex items-center gap-1"
             initial={reduce || revealDelay == null ? false : { scale: 0.4, rotate: -12 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 15 }}
           >
-            <span className="font-display text-xl font-bold leading-none">{index + 1}</span>
-            <span className="mt-1 flex gap-0.5 text-[0.6rem] leading-none">
-              {[0, 1, 2].map((s) => (
-                <span key={s} className={s < earned ? "" : "opacity-30"}>
-                  {s < earned ? "⭐" : "☆"}
+            {boss && <span aria-hidden className="text-[0.65rem] leading-none">👑</span>}
+            {solved ? (
+              <>
+                <span className="text-xs font-bold leading-none">{levelTitle(index)}</span>
+                <span aria-hidden className="flex gap-px text-[0.45rem] leading-none">
+                  {[0, 1, 2].map((s) => (
+                    <span key={s} className={s < earned ? "" : "opacity-30"}>
+                      {s < earned ? "⭐" : "☆"}
+                    </span>
+                  ))}
                 </span>
-              ))}
-            </span>
+              </>
+            ) : boss && twist ? (
+              // An open boss announces its twist: the last entry of a chapter is
+              // the one worth walking towards, and "63" doesn't say that.
+              <span className="text-xs font-bold capitalize leading-none">{t(`twist.${twist}.short`)}</span>
+            ) : (
+              <span className="text-sm font-bold leading-none">{index + 1}</span>
+            )}
           </motion.span>
         ) : (
           <motion.span
             key="locked"
             aria-hidden
-            className="text-lg opacity-60"
+            className="flex items-center gap-1 text-sm opacity-55"
             exit={reduce ? { opacity: 0 } : { scale: 1.6, opacity: 0, rotate: 25 }}
             transition={{ duration: 0.28 }}
           >
+            {boss && <span className="text-xs leading-none">👑</span>}
             🔒
           </motion.span>
         )}
@@ -509,10 +502,10 @@ function LevelNode({
       {revealDelay != null && showOpen && !reduce && (
         <motion.span
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-2xl border-2"
+          className="pointer-events-none absolute inset-0 rounded-xl border-2"
           style={{ borderColor: ink.deep }}
           initial={{ opacity: 0.9, scale: 1 }}
-          animate={{ opacity: 0, scale: 1.7 }}
+          animate={{ opacity: 0, scale: 1.8 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         />
       )}

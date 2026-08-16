@@ -162,22 +162,36 @@ if (starCount < 3) note(`Expected 3 stars on a flawless win, saw ${starCount}.`)
 log("link-guess acknowledged:", /guessed it/i.test(winText));
 await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
-// 8. Back to map: 63 nodes, window extends after a clear, stars banked (63*3 = 189)
+// 8. Back to the index: the unlock window extends after a clear, stars are
+//    banked (63*3 = 189), and a solved level is listed by title while an
+//    unsolved one is not.
 await clickText("button", "Levels");
 // A level that just opened plays its unlock reveal before it can be tapped —
-// wait it out, or every fresh node reads as still locked.
+// wait it out, or every fresh entry reads as still locked.
 await sleep(2500);
-// Chapters with nothing to play in them start collapsed, so only the current
-// chapter's nodes are in the DOM. Open them all before counting.
-await p.$$eval("section button[aria-expanded='false']", (els) => els.forEach((e) => e.click()));
-await sleep(700);
-const nodes = await p.$$eval("button[aria-label^='Level ']", (els) => els.map((e) => e.disabled));
-log("level nodes:", nodes.length, "locked:", nodes.filter(Boolean).length);
-if (nodes.length !== 63) note(`Expected 63 level nodes, found ${nodes.length}.`);
-if (nodes[0]) note("Level 1 should be unlocked after clearing it.");
-if (nodes[3]) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
-if (!nodes[4]) note("Level 5 should still be locked after clearing only level 1.");
+const nodes = await p.$$eval("button[aria-label^='Level ']", (els) =>
+  els.map((e) => ({ label: e.getAttribute("aria-label") || "", disabled: e.disabled })),
+);
+log("index entries:", nodes.length, "locked:", nodes.filter((n) => n.disabled).length);
+// Chapters the player can't reach yet are a single teaser line with no entries,
+// so after clearing level 1 only chapter 1 (6 levels) is listed.
+if (nodes.length !== 6) note(`Expected chapter 1's 6 entries, found ${nodes.length}.`);
+if (nodes[0]?.disabled) note("Level 1 should be unlocked after clearing it.");
+if (nodes[3]?.disabled) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
+if (!nodes[4]?.disabled) note("Level 5 should still be locked after clearing only level 1.");
 if (!/⭐\s*3\/189/.test(await bodyText())) note("Star total not updated to 3/189.");
+
+// The index names levels you've solved and only those. A title is a strong hint
+// at the link ("Star Power" → STAR), so leaking one for an unplayed level would
+// spoil it before the player ever opens the board.
+const idxText = await bodyText();
+log("solved level listed by title:", /star power/i.test(idxText));
+if (!/star power/i.test(idxText)) note("A solved level is not listed by its title.");
+for (const [lvl, title] of [[2, "Packed Trunk"], [3, "Ring of Truth"], [6, "Stick With It"]]) {
+  if (idxText.includes(title)) note(`Index leaks level ${lvl}'s title ("${title}") before it's solved.`);
+}
+// And the thing most visits are for: play the next level straight off the card.
+if (!/up next/i.test(idxText)) note("Index has no 'Up next' card.");
 await p.screenshot({ path: `${SHOT}/r7-levels-after.png` });
 
 // 9. Play history records the finished game

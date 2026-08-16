@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 24 (level-map chapter identity + a visible, varied
-unlock). This file is the single source of truth — a fresh session should
+_Last updated: iteration 24 (the level map became an index: solved levels
+wear their titles, unsolved ones stay anonymous, unlocks are watchable). This file is the single source of truth — a fresh session should
 be able to continue from here without any prior chat context._
 
 ## What this is
@@ -10,7 +10,7 @@ A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board of
 12 words that sort into 4 themed groups of three, all joined by one **hidden
 link word** (the "pivot", e.g. STAR) revealed by tapping letters at the end.
 Flow: first launch → straight into a guided tutorial; afterwards Home (Daily
-hero card) → Level map (8 chapters, boss at each chapter end) → Game.
+hero card) → Level index (8 chapters, boss at each chapter end) → Game.
 
 ## How to work on this repo (session bootstrap)
 
@@ -138,12 +138,15 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   levels" link under it), an Endless · Pairs · Logic mode row (each stat
   carries its unit), rank/XP bar. Two-column grid at `lg` so it fits a
   1280×720 embed above the fold.
-- `LevelSelect.tsx` — the chapter map. Eight collapsible chapter cards, one
-  `CHAPTER_INKS` colour each; a chapter expands only when it holds something to
-  play, so done/locked ones fold to a row. Nodes are locked / open / cleared /
-  perfect (gold inner rule) / boss, and a **freshly unlocked node starts locked
-  and pops open on a timer** (see `newlyUnlocked` below) under a fixed banner
-  that names what opened.
+- `LevelSelect.tsx` — the level **index** (not a map/grid — see iteration 24).
+  An **Up next** card on top, then eight chapter sections in their own
+  `CHAPTER_INKS` colour. Entries are chips in a `flex-wrap` run: a solved one
+  wears `levelTitle(i)` + stars and lies flat, an open one is a raised number,
+  an open boss names its twist, a locked one is a dashed lock, and an unreached
+  chapter collapses to a single named teaser line. **A solved level's title is
+  shown; an unsolved level's never is** — a title hints at the link. A freshly
+  unlocked chip starts locked and pops open on a timer (see `newlyUnlocked`
+  below) under a fixed banner naming what opened.
 - `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
   best, daily{lastDate,streak}, achievements, hints, history, score,
   endlessBest, pairsBest, seen), loadProgress/save, isUnlocked (lookahead 3 +
@@ -220,32 +223,52 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
-## Level map: chapter identity + a visible unlock (iteration 24)
+## The level map became an index (iteration 24)
 
-The map was a wall of ~63 identical gold squares in flat sections, and every
-unlock was invisible: you cleared a level, came back, and one square had quietly
-changed colour. Sixty-three unlocks read as one event repeated. Two fixes, one
-for the look and one for the moment.
+The screen was 63 identical numbered squares in a grid, and every unlock was
+invisible: you cleared a level, came back, and one square had quietly changed
+colour. The first pass at this coloured the grid in and gave the unlock a
+reveal, which helped — but the grid itself was the problem, so it was thrown
+away and the screen rebuilt around one idea.
 
-**The list is now a contents page, not a padlock wall.**
+**The two halves of the list are not the same thing, so they aren't drawn the
+same way.**
 
+- **Behind you: words.** A solved level wears the **title of the board you beat**
+  ("Bank On It ⭐⭐⭐") on a chip in its chapter's ink. Titles are already public
+  once you've solved a level — the win card and the history both show them — so
+  this leaks nothing, and it turns a wall of gold squares into a record of what
+  you actually cracked. Titles vary in length, so the rows set like a page of
+  type and no two players' collections look alike.
+- **Ahead of you: numbers.** An unplayed level is a small, quiet numbered chip
+  and a locked one is a dashed lock. Anonymity is the *product* here — a title
+  is a strong hint at the link ("Star Power" → STAR), so an unsolved level must
+  never be named. `scripts/playtest.mjs` asserts exactly that.
+- **The thing you came to do is a card, not a node to hunt for.** An **Up next**
+  card sits at the top with the chapter, the level number, its difficulty tier
+  (which used to live only in an aria-label), a boss's twist when there is one,
+  and a big Play. Clear everything and it becomes a "Collection complete" card.
+- **Flat past, raised present.** Solved chips have no offset shadow; only the
+  Up next card and the open numbered chips sit raised off the page, so the one
+  thing to press is obvious.
 - **One flat print ink per chapter** (`CHAPTER_INKS` in `theme.ts`, eight spot
-  colours on cream). Cleared nodes take the chapter's fill, open-but-unplayed
-  nodes take its border, so the map is navigable by colour and finishing a
-  chapter visibly changes the page.
-- **Chapters are cards** — numbered badge, name, flavour, a cleared/total bar,
-  the star count, and a rotated **COMPLETE** stamp when done.
-- **They collapse.** A chapter expands only if it holds something to play; done
-  chapters fold to a one-line trophy row, and locked ones to a teaser. The map
-  went from ~2300px to ~1300px — the whole journey is now about two screens
-  instead of eight, which retires backlog item 20 ("de-intimidate progress").
-- **Locked chapters show their name** ("Mind Benders · Opens after level 42").
-  Chapter names are flavour, never puzzle content, so this spoils nothing and
-  replaces five identical rows reading "Locked" with five things to want.
-- **Perfect clears keep a gold rule inside the tile**, so the map records how
-  well you did, not just that you passed.
-- **Each chapter's foot names its boss twist** once that boss is open
-  ("👑 Boss · the oracle"), teased as "👑 A boss closes this chapter" before.
+  colours on cream), with a contents-page rule — numeral, name, hairline, star
+  count — and a rotated **COMPLETE** stamp. Perfect clears keep a gold rule
+  inside the chip, so the index records how *well* you did.
+- **Chapters you can't reach are one quiet line** that still names them
+  ("Mind Benders · Opens after level 42 · 👑 A boss closes this chapter").
+  Chapter names are flavour, never puzzle content. This retires backlog item 20
+  ("de-intimidate progress") and replaces a wall of ~40 padlocks.
+- **An open boss chip names its twist** ("👑 Blackout") instead of a number, so
+  the last entry of a chapter is visibly the one worth walking towards.
+
+**Deliberate reversal — read before "fixing" it:** iteration 11 logged
+"*Level map didn't scroll to you — a player at L34 landed at L1*" and added a
+scroll-to-your-next-node on mount. That's gone. The next level is now the card
+at the top, so the page opens at the top on purpose, and the list below reads
+as your record from the beginning. The one exception is a pending unlock: the
+page scrolls to the chip that's about to open, because an animation nobody sees
+may as well not run.
 
 **Unlocking is now something you watch, once.**
 
@@ -254,23 +277,29 @@ for the look and one for the moment.
   debug switch, so `?debug` never counts as unlocking 63 levels. Existing saves
   are migrated with everything already-open marked seen, and a fresh save starts
   with its opening levels seen — nobody gets a backlog of stale reveals.
-- On the map, a freshly opened node **starts on its locked face** and pops open
-  on a timer (lock flies off, number springs in, a shockwave ring, a rising
-  blip), staggered so two unlocks never blur into one. Revisits are static.
+- A freshly opened entry **starts on its locked face** and pops open on a timer
+  (lock flies off, the chip springs in, a shockwave ring, a rising blip),
+  staggered so two unlocks never blur into one. Revisits are static.
 - A **fixed banner** names what opened, and varies by *kind*: a new chapter
   wins over a boss, which wins over a plain level; plain levels rotate through
-  five lines. It's fixed to the viewport because the map scrolls itself to
-  where you left off — a banner in flow announced the news off-screen.
+  five lines. It's fixed to the viewport because the page scrolls itself to the
+  chip that's opening — a banner in flow announced the news off-screen.
 - Most players never open the map between levels, so the **win card's Next
   button** teases the same thing: "👑 Boss next · scrambled tiles →" or
   "Next chapter: Warming Up →". Plain levels keep the plain label — the teaser
   only means anything if it isn't on every card.
 
-Notes for the next session: the map at `sm` and up lays nodes out 6-wide
-(4 on phones) and widens to `max-w-2xl` at `lg`, which fills the 1280×720
-embed better. `scripts/playtest.mjs` now opens every collapsed chapter before
-counting nodes, and waits out the unlock reveal — a node that is mid-reveal is
-deliberately still `disabled`.
+Notes for the next session:
+
+- The chips are a `flex-wrap` run, so the layout reflows with width for free —
+  2–3 per row on a phone, 5–7 in the 1280×720 embed. No breakpoint juggling.
+- `levelTitle(index)` in `puzzles.ts`, not `LEVELS[index].title`: the emoji boss
+  substitutes its own board (`EMOJI_BOSS`), so the index has to name the board
+  the player actually saw. Getting this wrong would print a title for a puzzle
+  that was never played there.
+- `scripts/playtest.mjs` counts only the *reachable* chapters' entries (locked
+  chapters render none), waits out the unlock reveal — a chip mid-reveal is
+  deliberately still `disabled` — and asserts unsolved titles never appear.
 
 ## Review pass (iteration 20) + backlog burn-down (iteration 21)
 
