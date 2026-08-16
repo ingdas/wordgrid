@@ -44,7 +44,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Worn on the head", words: ["HELMET", "TIARA", "TURBAN"] },
       { name: "At the dentist", words: ["ENAMEL", "FILLING", "CAVITY"] },
-      { name: "The very top", words: ["PEAK", "SUMMIT", "CREST"] },
+      { name: "The very top", words: ["PEAK", "SUMMIT", "TIP"] },
       { name: "A king's things", words: ["THRONE", "ROBE", "ORB"] },
     ],
   },
@@ -78,7 +78,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "Musicians who play together", words: ["TRIO", "QUARTET", "ORCHESTRA"] },
       { name: "Wraps around something", words: ["STRAP", "SASH", "RIBBON"] },
       { name: "Radio words", words: ["FREQUENCY", "STATIC", "ANTENNA"] },
-      { name: "At a wedding", words: ["RING", "BOUQUET", "VOWS"] },
+      { name: "At a wedding", words: ["CAKE", "BOUQUET", "VOWS"] },
     ],
   },
   {
@@ -110,7 +110,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Theatre words", words: ["SCRIPT", "PROP", "COSTUME"] },
       { name: "To throw", words: ["FLING", "HURL", "LOB"] },
-      { name: "For a broken arm", words: ["SLING", "SPLINT", "BANDAGE"] },
+      { name: "For a broken arm", words: ["PLASTER", "SPLINT", "BANDAGE"] },
       { name: "Done with a fishing rod", words: ["REEL", "HOOK", "LURE"] },
     ],
   },
@@ -130,7 +130,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "The Coach",
     pivot: "COACH",
     categories: [
-      { name: "Leads a sports team", words: ["MANAGER", "TRAINER", "CAPTAIN"] },
+      { name: "Leads a sports team", words: ["MANAGER", "SKIPPER", "CAPTAIN"] },
       { name: "To help someone learn", words: ["TEACH", "MENTOR", "GUIDE"] },
       { name: "Vehicles", words: ["BUS", "VAN", "CARRIAGE"] },
       { name: "Airplane seat classes", words: ["ECONOMY", "BUSINESS", "FIRST"] },
@@ -143,7 +143,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Winter clothing", words: ["PARKA", "JACKET", "SCARF"] },
       { name: "Layers of paint", words: ["PRIMER", "GLOSS", "VARNISH"] },
-      { name: "An animal's covering", words: ["FUR", "PELT", "FLEECE"] },
+      { name: "An animal's covering", words: ["FUR", "PELT", "HIDE"] },
       { name: "To put a thin layer on", words: ["COVER", "GLAZE", "DUST"] },
     ],
   },
@@ -155,7 +155,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
       { name: "To add up", words: ["TALLY", "NUMBER", "TOTAL"] },
       { name: "Noble titles", words: ["DUKE", "BARON", "EARL"] },
       { name: "To be important", words: ["MATTER", "WEIGH", "REGISTER"] },
-      { name: "Election words", words: ["BALLOT", "VOTE", "POLL"] },
+      { name: "Election words", words: ["BALLOT", "VOTE", "CAMPAIGN"] },
     ],
   },
   {
@@ -187,7 +187,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Water birds", words: ["SWAN", "GOOSE", "HERON"] },
       { name: "To move out of the way", words: ["DODGE", "SWERVE", "EVADE"] },
-      { name: "Meats on a menu", words: ["CHICKEN", "LAMB", "PORK"] },
+      { name: "Meats on a menu", words: ["BEEF", "LAMB", "PORK"] },
       { name: "Bath-time things", words: ["SPONGE", "SOAP", "TOWEL"] },
     ],
   },
@@ -340,7 +340,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "MARCH",
     categories: [
       { name: "Months", words: ["APRIL", "JUNE", "AUGUST"] },
-      { name: "To walk like soldiers", words: ["STRIDE", "PARADE", "PATROL"] },
+      { name: "To walk like soldiers", words: ["STRIDE", "TROOP", "PATROL"] },
       { name: "Public demonstrations", words: ["PROTEST", "RALLY", "PICKET"] },
       { name: "Pieces of music", words: ["ANTHEM", "WALTZ", "POLKA"] },
     ],
@@ -394,7 +394,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Take Your Pick",
     pivot: "PICK",
     categories: [
-      { name: "To decide on one", words: ["CHOOSE", "SELECT", "ELECT"] },
+      { name: "To decide on one", words: ["OPT", "SELECT", "ELECT"] },
       { name: "Guitar-playing words", words: ["STRUM", "RIFF", "SOLO"] },
       { name: "Digging tools", words: ["SHOVEL", "SPADE", "CHISEL"] },
       { name: "The one you like most", words: ["CHOICE", "BEST", "FAVORITE"] },
@@ -615,7 +615,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "TIP",
     categories: [
       { name: "Extra money for service", words: ["GRATUITY", "BONUS", "REWARD"] },
-      { name: "Helpful words", words: ["ADVICE", "POINTER", "HINT"] },
+      { name: "Helpful words", words: ["ADVICE", "GUIDANCE", "HINT"] },
       { name: "The furthest bit", words: ["POINT", "END", "APEX"] },
       { name: "To knock over", words: ["TOPPLE", "OVERTURN", "UPSET"] },
     ],
@@ -647,7 +647,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "The Whole Story",
     pivot: "STORY",
     categories: [
-      { name: "Told at bedtime", words: ["TALE", "FABLE", "YARN"] },
+      { name: "Told at bedtime", words: ["TALE", "FABLE", "LEGEND"] },
       { name: "Floors of a building", words: ["LEVEL", "BASEMENT", "ATTIC"] },
       { name: "In a newspaper", words: ["REPORT", "ARTICLE", "SCOOP"] },
       { name: "Not quite the truth", words: ["FIB", "LIE", "EXCUSE"] },
@@ -759,7 +759,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     title: "Race You",
     pivot: "RACE",
     categories: [
-      { name: "Running events", words: ["MARATHON", "SPRINT", "RELAY"] },
+      { name: "Running events", words: ["MARATHON", "HURDLES", "RELAY"] },
       { name: "To move fast", words: ["RUSH", "HURRY", "HUSTLE"] },
       { name: "Horse-track words", words: ["JOCKEY", "SADDLE", "STABLE"] },
       { name: "A scared heart does this", words: ["THUMP", "POUND", "FLUTTER"] },
@@ -848,7 +848,7 @@ export const DAILY_PUZZLES: RawPuzzle[] = [
     pivot: "STAFF",
     categories: [
       { name: "People at work", words: ["PERSONNEL", "WORKFORCE", "EMPLOYEES"] },
-      { name: "A wizard's kit", words: ["WAND", "CLOAK", "SPELLBOOK"] },
+      { name: "A wizard's kit", words: ["HAT", "CLOAK", "SPELLBOOK"] },
       { name: "On sheet music", words: ["MEASURE", "TREBLE", "NOTATION"] },
       { name: "Walking sticks", words: ["CANE", "CROOK", "ROD"] },
     ],

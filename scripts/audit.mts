@@ -40,6 +40,26 @@ for (let i = 0; i < groups.length; i++) {
 console.log(`\nNear-duplicate categories across boards (${twins.length}):`);
 console.log(twins.join("\n") || "  none");
 
+// Stem clashes: two tiles on one board sharing a long prefix (CRACK next to
+// CRACKER, POINT next to POINTER). Not ambiguity exactly — the reader's eye
+// pairs them anyway, and one of them is usually in the wrong group.
+const stems: string[] = [];
+for (const p of [...PUZZLES, ...DAILY_PUZZLES]) {
+  const tiles = p.categories.flatMap((c) => c.words.map((w) => ({ w, group: c.name })));
+  for (let i = 0; i < tiles.length; i++) {
+    for (let j = i + 1; j < tiles.length; j++) {
+      const [a, b] = [tiles[i], tiles[j]];
+      if (a.group === b.group) continue;
+      const n = Math.min(a.w.length, b.w.length);
+      let shared = 0;
+      while (shared < n && a.w[shared] === b.w[shared]) shared++;
+      if (shared >= 5) stems.push(`  ${p.id.padEnd(10)} ${a.w} / ${b.w}  ("${a.group}" vs "${b.group}")`);
+    }
+  }
+}
+console.log(`\nTiles on one board sharing a stem (${stems.length}):`);
+console.log(stems.join("\n") || "  none");
+
 const shortWords = [...owners.keys()].filter((w) => w.length <= 3).sort();
 console.log(`\nShort spokes (<=3 letters) to double-check (${shortWords.length}):`);
 console.log("  " + shortWords.join(", "));

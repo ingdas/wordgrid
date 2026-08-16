@@ -1,8 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 22 (Logic Grid clue vocabulary: 2 kinds → 8, 30 levels
-on a teaching ramp). This file is the single source of truth — a fresh session
-should be able to continue from here without any prior chat context._
+_Last updated: iteration 23 (shared Logic rules + tests, the full ambiguity
+pass, i18n). This file is the single source of truth — a fresh session should
+be able to continue from here without any prior chat context._
 
 ## What this is
 
@@ -167,6 +167,43 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
 
 ---
 
+## House rules for authoring a board
+
+Distilled from the iteration-23 ambiguity pass (every group on all 144 boards
+read by hand, 30 conflicts fixed). `npm run validate` enforces the structural
+rules and fails the build on them; the rest need a human read, because a script
+can't tell that a FLEECE is clothing.
+
+**Enforced by `validate`** (it exits non-zero):
+1. A category name may not spell the pivot — the 💡 hint prints that name.
+2. A category name may not name one of its own tiles, singular or plural.
+3. A category name may not name a tile from another group on the board.
+4. No tile may contain the pivot as a substring (SLIGHT on a LIGHT board).
+
+**Reported by `npm run audit`, for a human to judge:**
+5. Two tiles on one board sharing a 5-letter stem (CRACK next to CRACKER).
+6. Two groups on different boards sharing 2 of 3 words.
+7. Tiles reused across three or more boards, and very short tiles.
+
+**Only a human catches these** — the four classes the pass actually found:
+8. **A tile that belongs to another group's category.** FIELD sitting in
+   "Baseball venues" next to "Green spaces"; FLEECE in "An animal's covering"
+   next to "Winter clothing"; CHICKEN in "Meats" next to "Water birds"; SWING
+   in "To move back and forth" next to "Music genres". The commonest class by
+   far, and the most unfair: the player's read is correct and the game says no.
+9. **A tile that is a synonym of a tile in another group.** SWELL vs SURGE on
+   `wave`; PAIR vs COUPLE on `match`; SLING vs "to throw" on `cast`; TRAINER vs
+   "to teach" on `coach`; RANK vs "quality levels" on `grade`.
+10. **A tile that is a synonym of the pivot itself.** A wedding RING on a BAND
+    board hands over the link. Rule 4 only catches the spelling.
+11. **A category name that is factually wrong.** "Armored vehicles" over
+    JEEP/HUMVEE/CHOPPER — none of them armoured.
+
+The test to apply to every tile: *read it alone, with no category names, and
+ask which groups on this board it could join.* If the answer isn't exactly one,
+change the tile — not the category name, which the player can't see while
+guessing.
+
 ## Review pass (iteration 20) + backlog burn-down (iteration 21)
 
 A full read of `src/`, a puppeteer sweep (390×844, 320×568, 844×390 landscape,
@@ -268,11 +305,11 @@ Code quality:
    rather than an escape hatch.
 5. **[a11y] Modals have no focus trap or focus restore.** Escape closes them
    now, which was the bigger gap. Still never run against a real screen reader.
-6. **[content] Ambiguity is hand-reviewed, not solver-proven.** The structural
-   leaks are now enforced by `validate`, but semantic overlap between two
-   groups on the same board still needs a human (or an LLM-judge pass over all
-   248 groups). Two were found and fixed by eye this iteration; there is no
-   reason to think they were the only two.
+6. ✅ **[content] Ambiguity pass — done (iteration 23).** All 576 groups across
+   144 boards read one board at a time; 30 conflicts found and fixed. See
+   "House rules for authoring a board" below for the classes it turned up.
+   Semantic overlap still can't be enforced by a script, so a new content batch
+   needs the same read.
 7. **[i18n] `src/i18n.ts` covers 12 strings**; everything else is inline. The
    scaffold is not coverage.
 8. **[platform] Save-data resilience in iframes** — localStorage can be
