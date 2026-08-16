@@ -72,6 +72,8 @@ export const es: Record<string, string> = {
   "levels.upNext": "Ahora toca",
   "levels.upNext.blurb": "12 palabras · 4 grupos ocultos · 1 palabra secreta",
   "levels.play": "Jugar →",
+  "levels.bossIn.one": "👑 Un nivel más para el próximo jefe",
+  "levels.bossIn.other": "👑 {n} niveles para el próximo jefe",
   "levels.done.title": "Colección completa",
   "levels.done.body": "Todos los niveles superados. Repite el que quieras para lograr un ⭐⭐⭐ perfecto.",
   "levels.boss.teaser": "👑 Un jefe cierra este capítulo",

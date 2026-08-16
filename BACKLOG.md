@@ -261,6 +261,18 @@ same way.**
 - **Flat past, raised present.** Solved rows are flat; only the Up next card
   and the open numbered tiles sit raised off the page, so the one thing to
   press is obvious.
+- **Landscape-first for the portal.** At `lg` the screen splits the way the
+  game screen already does: what to play on the left, the collection in its own
+  `overflow-y-auto` pane on the right, so the whole thing sits above the fold in
+  the 1280×720 iframe CrazyGames serves most desktop players — **the page itself
+  never scrolls, even with all 63 levels solved**, which `scripts/playtest.mjs`
+  now asserts. The Play button goes full width in that column: on a games portal
+  the primary CTA should be the biggest thing on screen, not a chip beside a
+  heading. Portrait is untouched (one column, as before).
+- **A carrot under the hero**: "👑 5 levels to the next boss". Bosses are the
+  most distinctive content in the game, so distance-to-boss is a better thing to
+  walk towards than "level 26" — and it's a count, not a sentence, which suits
+  the platform's international audience.
 - **One flat print ink per chapter** (`CHAPTER_INKS` in `theme.ts`, eight spot
   colours on cream), with a contents-page rule — numeral, name, hairline, star
   count — and a rotated **COMPLETE** stamp. Perfect clears keep a gold rule
@@ -303,8 +315,9 @@ may as well not run.
 Notes for the next session:
 
 - Rows are full-width and tiles are a uniform `flex-wrap` strip, so both reflow
-  with width for free — no breakpoint juggling. A fully-solved index is ~2500px;
-  that's fine, because the thing you came to press is the card at the top.
+  with width for free — no breakpoint juggling. A fully-solved index is ~2500px
+  of list; in portrait you scroll it, and at `lg` it lives inside the right
+  pane's scroller so the page height stays fixed.
 - Only tiles need the unlock reveal: a freshly unlocked level is unsolved by
   definition, so it's always in the strip. `LevelRow` has no reveal logic.
 - `levelTitle(index)` in `puzzles.ts`, not `LEVELS[index].title`: the emoji boss
@@ -489,7 +502,9 @@ impact on the platform:
    into two columns: link card + banners + board on the left, timer/controls/
    finale/end-card in a right-hand rail. At a 1280×720 embed everything sits
    above the fold with zero page overflow (Submit at y≈222). Mobile flow is
-   untouched (the wrappers only flex at lg).
+   untouched (the wrappers only flex at lg). **The level index got the same
+   treatment in iteration 24** (hero left, collection in its own scroll pane
+   right); the playtest now guards both against page overflow at 1280×720.
 3. ✅ **Enable the real CrazyGames SDK** — the v3 script now loads (async,
    defensive: every call no-ops when it's absent, so local/GitHub Pages play is
    unaffected), with loadingStart/loadingStop wired around app boot. Final QA

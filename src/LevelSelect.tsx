@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, isBossLevel, levelTitle } from "./puzzles";
 import { chapterInk, type ChapterInk } from "./theme";
 import { playStar } from "./audio";
-import { t } from "./i18n";
+import { plural, t } from "./i18n";
 import {
   isUnlocked,
   isDebug,
@@ -95,8 +95,16 @@ export default function LevelSelect({
   }, []);
   const lastFresh = fresh[fresh.length - 1];
 
+  // A concrete thing to walk towards. Bosses are the most distinctive content
+  // in the game, so "3 to the boss" is a better carrot than "level 26".
+  const bossAhead = useMemo(() => {
+    if (nextIndex < 0) return null;
+    const boss = CHAPTERS.map((c) => c.boss).find((b) => b >= nextIndex);
+    return boss == null || boss === nextIndex ? null : boss - nextIndex;
+  }, [nextIndex]);
+
   return (
-    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-20 pt-5 lg:max-w-2xl">
+    <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-20 pt-5 lg:h-screen lg:max-w-5xl lg:pb-5">
       <div className="flex items-center justify-between">
         <button
           onClick={onHome}
@@ -141,31 +149,46 @@ export default function LevelSelect({
         </div>
       </div>
 
-      <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink">
-        {t("levels.title")}
-      </h2>
-      <p className="mt-1 text-center text-xs font-semibold text-ink-soft">
-        {t("levels.summary", { solved: solvedCount, perfect: perfectCount, total: LEVELS.length })}
-      </p>
-      {isDebug() && (
-        <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf">
-          {t("levels.debug")}
-        </p>
-      )}
-
-      {nextIndex >= 0 ? (
-        <UpNextCard index={nextIndex} reduce={reduce} onPlay={() => onPick(nextIndex)} />
-      ) : (
-        <div className="mt-5 rounded-3xl border-2 border-ink bg-white p-5 text-center shadow-[3px_3px_0_rgba(38,34,26,0.3)]">
-          <div className="text-3xl" aria-hidden>🏆</div>
-          <h3 className="mt-1 font-display text-xl font-bold text-ink">{t("levels.done.title")}</h3>
-          <p className="mt-1 text-sm text-ink-soft">{t("levels.done.body")}</p>
-        </div>
-      )}
-
       <UnlockBanner fresh={fresh} reduce={reduce} />
 
-      <div className="mt-7 space-y-5">
+      {/* Portrait keeps one column. On a landscape embed — the 1280×720 iframe
+          CrazyGames serves most desktop players — it splits: what to play on
+          the left, the collection in its own scroller on the right, so the
+          whole screen sits above the fold and the page itself never scrolls
+          (the same trick the game screen uses at lg). */}
+      <div className="lg:flex lg:min-h-0 lg:flex-1 lg:items-stretch lg:gap-8">
+        <div className="lg:flex lg:w-[21rem] lg:shrink-0 lg:flex-col lg:justify-start lg:pt-6">
+          <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink lg:mt-0 lg:text-left lg:text-4xl">
+            {t("levels.title")}
+          </h2>
+          <p className="mt-1 text-center text-xs font-semibold text-ink-soft lg:text-left">
+            {t("levels.summary", { solved: solvedCount, perfect: perfectCount, total: LEVELS.length })}
+          </p>
+          {isDebug() && (
+            <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf lg:text-left">
+              {t("levels.debug")}
+            </p>
+          )}
+
+          {nextIndex >= 0 ? (
+            <>
+              <UpNextCard index={nextIndex} reduce={reduce} onPlay={() => onPick(nextIndex)} />
+              {bossAhead != null && (
+                <p className="mt-2.5 text-center text-xs font-semibold text-ink-soft lg:text-left">
+                  {plural("levels.bossIn", bossAhead)}
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="mt-5 rounded-3xl border-2 border-ink bg-white p-5 text-center shadow-[3px_3px_0_rgba(38,34,26,0.3)]">
+              <div className="text-3xl" aria-hidden>🏆</div>
+              <h3 className="mt-1 font-display text-xl font-bold text-ink">{t("levels.done.title")}</h3>
+              <p className="mt-1 text-sm text-ink-soft">{t("levels.done.body")}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-7 space-y-5 lg:mt-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4 lg:pr-2 lg:pt-4">
         {CHAPTERS.map((chap, ci) => {
           const ink = chapterInk(ci);
           const slice = LEVELS.slice(chap.start, chap.end);
@@ -278,6 +301,7 @@ export default function LevelSelect({
             </section>
           );
         })}
+        </div>
       </div>
     </div>
   );
@@ -300,7 +324,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
       className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[3px_3px_0_rgba(38,34,26,0.35)]"
     >
-      <div className="px-4 pb-4 pt-3" style={{ background: ink.wash }}>
+      <div className="px-4 pb-4 pt-3 lg:px-5 lg:pb-5 lg:pt-4" style={{ background: ink.wash }}>
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-[0.6rem] font-extrabold uppercase tracking-[0.15em]" style={{ color: ink.deep }}>
             {t("levels.upNext")} · {t(CHAPTERS[Math.max(chapter, 0)].nameKey)}
@@ -310,18 +334,22 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
           </span>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
+        {/* Compact side-by-side on a phone. In the landscape embed it stacks
+            and the Play button goes full width — on a games portal the primary
+            CTA should be the biggest thing in its column, not a chip beside a
+            heading. */}
+        <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3 lg:mt-2 lg:block">
           <div className="min-w-0">
-            <div className="font-display text-2xl font-bold leading-tight text-ink">
+            <div className="font-display text-2xl font-bold leading-tight text-ink lg:text-4xl">
               {t("game.level", { n: index + 1 })}
             </div>
-            <div className="mt-0.5 text-xs text-ink-soft">
+            <div className="mt-0.5 text-xs text-ink-soft lg:mt-1 lg:text-sm">
               {twist ? t("levels.boss.twist", { what: t(`twist.${twist}.short`) }) : t("levels.upNext.blurb")}
             </div>
           </div>
           <button
             onClick={onPlay}
-            className="shrink-0 rounded-full bg-press px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+            className="shrink-0 rounded-full bg-press px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95 lg:mt-4 lg:w-full lg:py-3.5 lg:text-base lg:shadow-[4px_4px_0_rgba(38,34,26,0.8)]"
           >
             {t("levels.play")}
           </button>
@@ -378,7 +406,7 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
           // Fixed, not in flow: the page scrolls itself to the chip that's
           // opening, so a banner in the layout would announce the news
           // somewhere the player isn't looking.
-          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-[3px_3px_0_rgba(38,34,26,0.55)]"
+          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-[3px_3px_0_rgba(38,34,26,0.55)] lg:left-[max(1rem,calc((100vw-64rem)/2+1rem))] lg:right-auto lg:mx-0 lg:w-[21rem]"
         >
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border-2 border-ink bg-white font-display text-base font-bold">
             {news.icon}

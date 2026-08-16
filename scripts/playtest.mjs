@@ -295,6 +295,30 @@ if (/star power/i.test(lostText)) note("Level title was revealed on a loss (spoi
 if (!/replay/i.test(lostText)) note("Loss card should invite the player to replay.");
 await p.screenshot({ path: `${SHOT}/r10-loss.png` });
 
+// 12. The 1280x720 landscape iframe — CrazyGames' most common desktop embed.
+//     The index has to sit above the fold there like the game screen does: the
+//     collection scrolls inside its own pane, the page itself never scrolls.
+//     Checked with everything solved, the longest the list can ever get.
+await p.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+await p.evaluate(() => {
+  localStorage.setItem("wordgrid:tutorial", "1");
+  localStorage.setItem("wordgrid:debug", "1");
+});
+await p.goto(BASE, { waitUntil: "networkidle0" });
+await sleep(500);
+await clickText("button", "Browse all");
+await sleep(900);
+const embed = await p.evaluate(() => ({
+  down: document.documentElement.scrollHeight - window.innerHeight,
+  across: document.documentElement.scrollWidth - window.innerWidth,
+  pane: !!document.querySelector(".lg\\:overflow-y-auto"),
+}));
+log("1280x720 embed overflow:", `${embed.down}px down, ${embed.across}px across`);
+if (embed.down > 0) note(`Index overflows the 1280x720 embed by ${embed.down}px — it should fit above the fold.`);
+if (embed.across > 0) note(`Index scrolls horizontally at 1280x720 by ${embed.across}px.`);
+if (!embed.pane) note("Index has no internal scroll pane at lg; the page will scroll instead.");
+await p.screenshot({ path: `${SHOT}/r11-embed.png` });
+
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");
 console.log(errors.length ? errors.join("\n") : "(none)");
