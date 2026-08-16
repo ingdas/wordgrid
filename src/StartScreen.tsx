@@ -13,7 +13,7 @@ import {
   playerRank,
   type Progress,
 } from "./progress";
-import { t } from "./i18n";
+import { getLocale, t } from "./i18n";
 
 const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
 
@@ -71,7 +71,7 @@ export default function StartScreen({
   // A streak only counts while it's still alive (cleared today or yesterday).
   const streakNow = liveDailyStreak(progress, now);
   const countdown = fmtCountdown(msUntilNextDaily(now));
-  const dateLabel = now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const dateLabel = now.toLocaleDateString(getLocale(), { weekday: "short", month: "short", day: "numeric" });
 
   // Portrait keeps a single centred column. On a landscape embed (the 1280×720
   // iframe CrazyGames serves most desktop players) it splits: the masthead and
@@ -82,7 +82,7 @@ export default function StartScreen({
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-12 text-center sm:pt-20 lg:grid lg:min-h-screen lg:max-w-4xl lg:grid-cols-2 lg:content-center lg:items-center lg:gap-x-12 lg:pt-12">
       <button
         onClick={onSettings}
-        aria-label="Settings"
+        aria-label={t("a11y.settings")}
         className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
       >
         ⚙️
@@ -90,7 +90,7 @@ export default function StartScreen({
       <div className="absolute right-4 top-4 flex gap-2">
         <button
           onClick={onToggleMusic}
-          aria-label={musicOn ? "Turn music off" : "Turn music on"}
+          aria-label={t(musicOn ? "a11y.musicOff" : "a11y.musicOn")}
           className={`grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95 ${
             musicOn ? "" : "opacity-50"
           }`}
@@ -99,7 +99,7 @@ export default function StartScreen({
         </button>
         <button
           onClick={onToggleMute}
-          aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+          aria-label={t(muted ? "a11y.unmute" : "a11y.mute")}
           className="grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
         >
           {muted ? "🔇" : "🔊"}
@@ -135,7 +135,7 @@ export default function StartScreen({
         transition={{ delay: 0.1 }}
         className="mt-4 font-display text-5xl font-bold tracking-tight text-ink sm:mt-6 sm:text-6xl"
       >
-        WordGrid
+        {t("app.name")}
       </motion.h1>
 
       <motion.p
@@ -144,8 +144,9 @@ export default function StartScreen({
         transition={{ delay: 0.2 }}
         className="mt-2 max-w-xs text-balance text-base leading-relaxed text-ink-soft sm:mt-3 sm:text-lg"
       >
-        Four hidden groups. <span className="font-semibold text-press">One secret word</span> they all
-        share. Can you find it?
+        {t("home.taglineBefore")}{" "}
+        <span className="font-semibold text-press">{t("home.taglineHighlight")}</span>{" "}
+        {t("home.taglineAfter")}
       </motion.p>
       </div>
 
@@ -163,7 +164,7 @@ export default function StartScreen({
         >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-              <span aria-hidden>📅</span> Daily Challenge
+              <span aria-hidden>📅</span> {t("home.daily")}
             </span>
             <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink-soft">{dateLabel}</span>
           </div>
@@ -171,7 +172,9 @@ export default function StartScreen({
           <div className="mt-3 flex justify-between gap-1">
             {week.map((d) => (
               <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-[0.55rem] font-bold uppercase text-ink-soft">{d.label}</span>
+                <span className="text-[0.55rem] font-bold uppercase text-ink-soft">
+                  {d.date.toLocaleDateString(getLocale(), { weekday: "narrow" })}
+                </span>
                 <span
                   className={`grid h-7 w-full place-items-center rounded-lg text-xs ${
                     d.done
@@ -191,16 +194,16 @@ export default function StartScreen({
             {dailyDone ? (
               <>
                 <span className="text-sm font-bold text-leaf">
-                  ✓ Solved! {streakNow > 0 && `🔥 ${streakNow}`}
+                  {t("home.daily.solved")} {streakNow > 0 && `🔥 ${streakNow}`}
                 </span>
-                <span className="text-xs font-semibold text-ink-soft">Next in {countdown}</span>
+                <span className="text-xs font-semibold text-ink-soft">{t("home.daily.nextIn", { time: countdown })}</span>
               </>
             ) : (
               <>
                 <span className="text-sm font-semibold text-ink">
-                  {streakNow > 0 ? `🔥 ${streakNow}-day streak` : "Start your streak"}
+                  {streakNow > 0 ? t("home.daily.streak", { n: streakNow }) : t("home.daily.start")}
                 </span>
-                <span className="rounded-full bg-press px-4 py-1.5 text-sm font-bold text-paper">Solve →</span>
+                <span className="rounded-full bg-press px-4 py-1.5 text-sm font-bold text-paper">{t("home.daily.solve")}</span>
               </>
             )}
           </div>
@@ -210,19 +213,34 @@ export default function StartScreen({
           onClick={onPlay}
           className="w-full rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
         >
-          {returning ? `Continue · L${nextLevel}` : t("btn.play")}
+          {returning ? t("home.continue", { n: nextLevel }) : t("home.play")}
         </button>
         <button
           onClick={onLevels}
           className="-mt-1 text-xs font-semibold text-ink-soft underline-offset-4 transition hover:text-ink hover:underline"
         >
-          🗺 Browse all {LEVELS.length} levels
+          {t("home.browseLevels", { n: LEVELS.length })}
         </button>
         <div className="grid w-full grid-cols-3 gap-2">
           {[
-            { icon: "🧘", label: "Endless", stat: progress.endlessBest > 0 ? `best ${progress.endlessBest}` : "no fail", onClick: onEndless },
-            { icon: "🃏", label: "Pairs", stat: progress.pairsBest > 0 ? `${progress.pairsBest} moves` : "memory", onClick: onPairs },
-            { icon: "🧩", label: "Logic", stat: `${progress.deductionSolved.length}/${DEDUCTION_COUNT} solved`, onClick: onDeduction },
+            {
+              icon: "🧘",
+              label: t("home.mode.endless"),
+              stat: progress.endlessBest > 0 ? t("home.mode.endless.best", { n: progress.endlessBest }) : t("home.mode.endless.empty"),
+              onClick: onEndless,
+            },
+            {
+              icon: "🃏",
+              label: t("home.mode.pairs"),
+              stat: progress.pairsBest > 0 ? t("home.mode.pairs.best", { n: progress.pairsBest }) : t("home.mode.pairs.empty"),
+              onClick: onPairs,
+            },
+            {
+              icon: "🧩",
+              label: t("home.mode.logic"),
+              stat: t("home.mode.logic.stat", { n: progress.deductionSolved.length, total: DEDUCTION_COUNT }),
+              onClick: onDeduction,
+            },
           ].map((m) => (
             <button
               key={m.label}
@@ -239,9 +257,9 @@ export default function StartScreen({
 
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
           {[
-            { label: t("btn.howToPlay"), icon: "❔", onClick: onHelp },
-            { label: "Achievements", icon: "🏆", onClick: onStats },
-            { label: "History", icon: "📜", onClick: onHistory },
+            { label: t("home.howToPlay"), icon: "❔", onClick: onHelp },
+            { label: t("home.achievements"), icon: "🏆", onClick: onStats },
+            { label: t("home.history"), icon: "📜", onClick: onHistory },
           ].map((b) => (
             <button
               key={b.label}
@@ -264,10 +282,10 @@ export default function StartScreen({
       >
         <div className="flex items-baseline justify-between">
           <span className="font-display text-sm font-bold text-ink">
-            Lv {rank.level} · <span className="text-press">{rank.title}</span>
+            {t("home.rank", { level: rank.level, title: t(`rank.${rank.titleIndex}`) })}
           </span>
           <span className="text-[0.7rem] font-semibold text-ink-soft">
-            {rank.into}/{rank.span} XP
+            {t("home.xp", { into: rank.into, span: rank.span })}
           </span>
         </div>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink/10">

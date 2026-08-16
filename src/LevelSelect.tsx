@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { LEVELS, CHAPTERS, TIER_LABELS, type Tier } from "./puzzles";
+import { LEVELS, CHAPTERS, TIER_KEY, type Tier } from "./puzzles";
+import { t } from "./i18n";
 import { isUnlocked, isDebug, MAX_STARS, totalStars, type Progress } from "./progress";
 
 export default function LevelSelect({
@@ -41,14 +42,14 @@ export default function LevelSelect({
       <div className="flex items-center justify-between">
         <button
           onClick={onHome}
-          aria-label="Home"
+          aria-label={t("common.home")}
           className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base text-ink transition hover:bg-cream active:scale-95"
         >
           ‹
         </button>
         <button
           onClick={onStats}
-          aria-label="Stats and achievements"
+          aria-label={t("levels.a11y.stats")}
           className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow transition hover:bg-cream active:scale-95"
         >
           <span>⭐ {stars}/{MAX_STARS}</span>
@@ -58,7 +59,7 @@ export default function LevelSelect({
         <div className="flex gap-2">
           <button
             onClick={onToggleMusic}
-            aria-label={musicOn ? "Turn music off" : "Turn music on"}
+            aria-label={t(musicOn ? "a11y.musicOff" : "a11y.musicOn")}
             className={`grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base transition hover:bg-cream active:scale-95 ${
               musicOn ? "" : "opacity-50"
             }`}
@@ -67,14 +68,14 @@ export default function LevelSelect({
           </button>
           <button
             onClick={onToggleMute}
-            aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+            aria-label={t(muted ? "a11y.unmute" : "a11y.mute")}
             className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base transition hover:bg-cream active:scale-95"
           >
             {muted ? "🔇" : "🔊"}
           </button>
           <button
             onClick={onHelp}
-            aria-label="How to play"
+            aria-label={t("home.howToPlay")}
             className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base font-semibold text-ink transition hover:bg-cream active:scale-95"
           >
             ?
@@ -83,11 +84,11 @@ export default function LevelSelect({
       </div>
 
       <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink">
-        Your journey
+        {t("levels.title")}
       </h2>
       {isDebug() && (
         <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf">
-          🛠 Debug · all levels unlocked
+          {t("levels.debug")}
         </p>
       )}
 
@@ -103,11 +104,11 @@ export default function LevelSelect({
                 <div className="min-w-0">
                   <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
                     <span className="text-ink-soft">{ci + 1}.</span>
-                    {chapUnlocked ? chap.name : "Locked"}
+                    {t(chapUnlocked ? chap.nameKey : "levels.locked")}
                     {chapDone && <span aria-hidden>✓</span>}
                   </h3>
                   <p className="truncate text-xs text-ink-soft">
-                    {chapUnlocked ? chap.flavor : "Clear the previous chapter to unlock."}
+                    {chapUnlocked ? t(chap.flavorKey) : t("levels.lockedHint")}
                   </p>
                 </div>
                 <span className="shrink-0 text-xs font-semibold text-gold-deep">
@@ -176,9 +177,12 @@ function LevelNode({
       whileTap={unlocked ? { scale: 0.92 } : undefined}
       onClick={onClick}
       disabled={!unlocked}
-      aria-label={`Level ${index + 1}${boss ? ", boss" : ""}, ${TIER_LABELS[tier]}${
-        done ? `, ${earned} of 3 stars` : unlocked ? "" : ", locked"
-      }`}
+      aria-label={
+        t("levels.a11y.node", { n: index + 1 }) +
+        (boss ? t("levels.a11y.boss") : "") +
+        `, ${t(TIER_KEY[tier])}` +
+        (done ? t("levels.a11y.stars", { n: earned }) : unlocked ? "" : t("levels.a11y.lockedNode"))
+      }
       className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl p-1 shadow-[3px_3px_0_rgba(38,34,26,0.3)] transition disabled:cursor-default ${face}`}
     >
       {highlight && (

@@ -4,14 +4,15 @@ import { clearedCount, totalStars, type Progress } from "./progress";
 // Tiered achievements (Bronze / Silver / Gold). Each tier has a threshold on a
 // cumulative metric and grants hint tokens as a reward when first reached.
 
-export const TIER_NAMES = ["Bronze", "Silver", "Gold"];
+/** Localized as ach.tier.0 … ach.tier.2 (see src/i18n). */
 export const TIER_COLORS = ["#cd7f32", "#cbd5e1", "#fbbf24"];
 
 export interface AchievementDef {
   id: string;
   icon: string;
-  title: string;
-  unit: string;
+  /** Catalogue keys — the copy lives in src/i18n. */
+  titleKey: string;
+  unitKey: string;
   tiers: [number, number, number];
   reward: [number, number, number]; // hint tokens granted per tier
   metric: (p: Progress) => number;
@@ -21,12 +22,12 @@ const threeStarCount = (p: Progress) => Object.values(p.stars).filter((s) => s =
 const MAX = LEVELS.length;
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: "clear", icon: "🧩", title: "Solver", unit: "levels cleared", tiers: [1, 20, MAX], reward: [1, 2, 3], metric: clearedCount },
-  { id: "stars", icon: "⭐", title: "Star Collector", unit: "stars earned", tiers: [3, 75, MAX * 3], reward: [1, 2, 3], metric: totalStars },
-  { id: "streak", icon: "🔥", title: "Streaker", unit: "best win streak", tiers: [3, 6, 12], reward: [1, 2, 3], metric: (p) => p.bestStreak },
-  { id: "links", icon: "🔑", title: "Mind Reader", unit: "links guessed", tiers: [1, 15, 50], reward: [1, 2, 3], metric: (p) => p.linksGuessed },
-  { id: "perfect", icon: "🌟", title: "Perfectionist", unit: "3-star levels", tiers: [1, 15, MAX], reward: [1, 2, 3], metric: threeStarCount },
-  { id: "daily", icon: "📅", title: "Daily Devotee", unit: "daily streak", tiers: [3, 7, 30], reward: [2, 3, 5], metric: (p) => p.daily.streak },
+  { id: "clear", icon: "🧩", titleKey: "ach.clear.title", unitKey: "ach.clear.unit", tiers: [1, 20, MAX], reward: [1, 2, 3], metric: clearedCount },
+  { id: "stars", icon: "⭐", titleKey: "ach.stars.title", unitKey: "ach.stars.unit", tiers: [3, 75, MAX * 3], reward: [1, 2, 3], metric: totalStars },
+  { id: "streak", icon: "🔥", titleKey: "ach.streak.title", unitKey: "ach.streak.unit", tiers: [3, 6, 12], reward: [1, 2, 3], metric: (p) => p.bestStreak },
+  { id: "links", icon: "🔑", titleKey: "ach.links.title", unitKey: "ach.links.unit", tiers: [1, 15, 50], reward: [1, 2, 3], metric: (p) => p.linksGuessed },
+  { id: "perfect", icon: "🌟", titleKey: "ach.perfect.title", unitKey: "ach.perfect.unit", tiers: [1, 15, MAX], reward: [1, 2, 3], metric: threeStarCount },
+  { id: "daily", icon: "📅", titleKey: "ach.daily.title", unitKey: "ach.daily.unit", tiers: [3, 7, 30], reward: [2, 3, 5], metric: (p) => p.daily.streak },
 ];
 
 export function tierKey(id: string, tier: number): string {

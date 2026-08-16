@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { fmtTime } from "./format";
+import { t } from "./i18n";
 import { renderShareCard, type ShareCardData } from "./sharecard";
 
-const RATINGS = ["Flawless ✨", "Brilliant!", "Great work!", "Nicely done", "Just made it!"];
+const RATING_COUNT = 5; // end.rating.0 … end.rating.4 (see src/i18n)
 
 function StarRow({ stars }: { stars: number }) {
   return (
@@ -97,9 +98,9 @@ export function EndCard({
       a.download = "wordgrid.png";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      onShareToast("Image saved · text copied!");
+      onShareToast(t("end.shared.image"));
     } else {
-      onShareToast("Result copied to clipboard!");
+      onShareToast(t("end.shared.text"));
     }
   };
 
@@ -115,53 +116,53 @@ export function EndCard({
         <>
           <StarRow stars={stars} />
           <h3 className="mt-3 font-display text-2xl font-bold text-ink">
-            {RATINGS[Math.min(mistakes, RATINGS.length - 1)]}
+            {t(`end.rating.${Math.min(mistakes, RATING_COUNT - 1)}`)}
           </h3>
           <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-press">{title}</p>
           <p className="mt-2 text-sm text-ink-soft">
-            The secret link was{" "}
+            {t("end.linkWas")}{" "}
             <span className="font-bold text-ink underline decoration-press/70 decoration-2 underline-offset-4">
               {pivot}
             </span>
-            . {linkCorrect ? "🔑 You guessed it!" : "Missed the link — that cost a star."}
+            . {t(linkCorrect ? "end.linkGot" : "end.linkMissed")}
           </p>
-          {streak >= 2 && <div className="mt-1 text-sm font-semibold text-gold-deep">🔥 {streak} in a row!</div>}
+          {streak >= 2 && (
+            <div className="mt-1 text-sm font-semibold text-gold-deep">{t("end.streak", { n: streak })}</div>
+          )}
           <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-4 py-1.5 text-base font-extrabold text-gold-deep">
-            <span aria-hidden>✦</span> {score.toLocaleString()} pts
-            {stars === 3 && <span className="text-sm font-bold text-press">· full combo!</span>}
+            <span aria-hidden>✦</span> {t("end.points", { n: score.toLocaleString() })}
+            {stars === 3 && <span className="text-sm font-bold text-press">{t("end.fullCombo")}</span>}
           </div>
           {endless && endlessInfo ? (
             <div className="mt-2 text-sm font-semibold text-leaf">
-              🧘 {endlessInfo.solved} solved this run
+              {t("end.endlessSolved", { n: endlessInfo.solved })}
               {endlessInfo.solved > 0 && endlessInfo.solved >= endlessInfo.best ? (
-                <span className="ml-1 text-gold-deep">· new best!</span>
+                <span className="ml-1 text-gold-deep">{t("end.newBestRun")}</span>
               ) : (
-                endlessInfo.best > 0 && <span className="ml-1 text-leaf/70">· best {endlessInfo.best}</span>
+                endlessInfo.best > 0 && <span className="ml-1 text-leaf/70">{t("end.bestRun", { n: endlessInfo.best })}</span>
               )}
             </div>
           ) : (
             <div className="mt-2 text-xs text-ink-soft">
               ⏱ {fmtTime(timeMs)}
               {newBest ? (
-                <span className="ml-1 font-semibold text-leaf">— new best!</span>
+                <span className="ml-1 font-semibold text-leaf">{t("end.newBestTime")}</span>
               ) : (
-                bestMs != null && <span className="ml-1">· best {fmtTime(bestMs)}</span>
+                bestMs != null && <span className="ml-1">{t("end.bestTime", { time: fmtTime(bestMs) })}</span>
               )}
             </div>
           )}
           {daily && (
             <div className="mt-3 rounded-2xl border border-gold/70 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold-deep">
-              🔥 Daily done — come back tomorrow to keep your streak!
+              {t("end.dailyDone")}
             </div>
           )}
         </>
       ) : (
         <>
           <div className="text-4xl">🧩</div>
-          <h3 className="mt-2 font-display text-2xl font-bold text-ink">Out of guesses</h3>
-          <p className="mt-2 text-sm text-ink-soft">
-            The secret link stays hidden — replay the level and you can still crack it.
-          </p>
+          <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("end.lost.title")}</h3>
+          <p className="mt-2 text-sm text-ink-soft">{t("end.lost.body")}</p>
         </>
       )}
       <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -169,13 +170,13 @@ export function EndCard({
           onClick={onExit}
           className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
-          {endless ? "End run" : "Levels"}
+          {t(endless ? "common.endRun" : "common.levels")}
         </button>
         <button
           onClick={won ? share : onRestart}
           className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
-          {won ? "Share" : "Try again"}
+          {t(won ? "common.share" : "common.tryAgain")}
         </button>
         {won &&
           (onNext ? (
@@ -183,14 +184,14 @@ export function EndCard({
               onClick={onNext}
               className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
             >
-              {endless ? "Next puzzle →" : "Next level →"}
+              {t(endless ? "end.nextPuzzle" : "end.next")}
             </button>
           ) : (
             <button
               onClick={onExit}
               className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
             >
-              {daily ? "See you tomorrow 👋" : "All done 🎉"}
+              {t(daily ? "end.seeYouTomorrow" : "end.allDone")}
             </button>
           ))}
       </div>

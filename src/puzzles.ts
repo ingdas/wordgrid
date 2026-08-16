@@ -846,30 +846,24 @@ export const LEVELS: Level[] = orderedRaw.map((raw, i) => ({
   tier: (i < orderedRaw.length / 3 ? 1 : i < (2 * orderedRaw.length) / 3 ? 2 : 3) as Tier,
 }));
 
-export const TIER_LABELS: Record<Tier, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
+/** Localized via `tier.1` … `tier.3` — see src/i18n. */
+export const TIER_KEY: Record<Tier, string> = { 1: "tier.1", 2: "tier.2", 3: "tier.3" };
 
 // ---------------------------------------------------------------------------
 // Chapters: a light story-flavoured grouping of the difficulty-ordered levels.
 // The last level of each chapter is a "boss".
 
 export interface Chapter {
-  name: string;
-  flavor: string;
+  /** Catalogue keys — the copy itself lives in src/i18n. */
+  nameKey: string;
+  flavorKey: string;
   start: number; // inclusive index into LEVELS
   end: number; // exclusive
   boss: number; // index of the chapter's final (boss) level
 }
 
-const CHAPTER_META = [
-  { name: "First Light", flavor: "Learn the basics." },
-  { name: "Warming Up", flavor: "The links get trickier." },
-  { name: "Crossed Wires", flavor: "Words with double lives." },
-  { name: "Double Meanings", flavor: "One word, many masks." },
-  { name: "Twists & Turns", flavor: "Expect the unexpected." },
-  { name: "Rare Words", flavor: "For expert solvers." },
-  { name: "Mind Benders", flavor: "For the sharpest minds." },
-  { name: "The Final Test", flavor: "Everything you've learned." },
-];
+// Chapter copy is localized: chapter.1.name / chapter.1.flavor … (src/i18n).
+const CHAPTER_COUNT = 8;
 
 // Front-loaded chapter sizes: the first chapter is short so a player meets a
 // boss (the most distinctive content) by ~level 6 instead of level 8, and the
@@ -879,10 +873,10 @@ const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 10];
 export const CHAPTERS: Chapter[] = (() => {
   const out: Chapter[] = [];
   let start = 0;
-  for (let i = 0; i < CHAPTER_META.length && start < LEVELS.length; i++) {
-    const last = i === CHAPTER_META.length - 1;
+  for (let i = 0; i < CHAPTER_COUNT && start < LEVELS.length; i++) {
+    const last = i === CHAPTER_COUNT - 1;
     const end = last ? LEVELS.length : Math.min(start + (CHAPTER_SIZES[i] ?? 8), LEVELS.length);
-    out.push({ ...CHAPTER_META[i], start, end, boss: end - 1 });
+    out.push({ nameKey: `chapter.${i + 1}.name`, flavorKey: `chapter.${i + 1}.flavor`, start, end, boss: end - 1 });
     start = end;
   }
   return out;

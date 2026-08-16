@@ -9,6 +9,7 @@ import {
 } from "./deductionLevels";
 import { CATEGORY_THEMES } from "./theme";
 import { clueTarget, countScope, grid, samePairsInLine } from "./deductionRules";
+import { t } from "./i18n";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
 
@@ -106,8 +107,8 @@ function DeductionBoard({
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1900);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 1900);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   // Live status of every clue: "pending" until the tile and everything it
@@ -250,8 +251,8 @@ function DeductionBoard({
     setBadKey((k) => k + 1);
     setToast(
       !evalNow.sizesOk
-        ? "Each group needs exactly 3 tiles."
-        : "Not solved yet — check the ✕ clues below."
+        ? t("logic.sizes")
+        : t("logic.notYet")
     );
   }, [evalNow]);
 
@@ -269,21 +270,21 @@ function DeductionBoard({
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
-          <span aria-hidden>‹</span> Home
+          <span aria-hidden>‹</span> {t("common.home")}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-ink">
-            <span aria-hidden>🧩</span> Logic Grid
+            <span aria-hidden>🧩</span> {t("logic.title")}
           </div>
           <div className="mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-ink-soft">
-            {solvedIds.length}/{total} solved
+            {t("logic.solved", { n: solvedIds.length, total })}
           </div>
         </div>
         <button
           onClick={reset}
           className="rounded-full border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-ink transition hover:bg-cream active:scale-95"
         >
-          Reset
+          {t("common.reset")}
         </button>
       </div>
 
@@ -291,24 +292,24 @@ function DeductionBoard({
       <div className="mt-3 flex items-center justify-center gap-3">
         <button
           onClick={() => onPick((index - 1 + total) % total)}
-          aria-label="Previous puzzle"
+          aria-label={t("logic.a11y.prev")}
           className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
         >
           ‹
         </button>
         <span className="flex min-w-[6.5rem] items-center justify-center gap-1.5 text-center text-sm font-bold text-ink">
-          Puzzle {index + 1} / {total}
+          {t("logic.puzzle", { n: index + 1, total })}
           <span
             className="rounded-full px-1.5 py-0.5 text-[0.6rem] font-extrabold uppercase"
             style={{ background: `${TIER_COLOR[level.tier]}22`, color: TIER_COLOR[level.tier] }}
           >
-            {TIER_NAME[level.tier]}
+            {t(`logic.tier.${level.tier}`)}
           </span>
           {alreadySolved && <span className="text-leaf">✓</span>}
         </span>
         <button
           onClick={() => onPick((index + 1) % total)}
-          aria-label="Next puzzle"
+          aria-label={t("logic.a11y.next")}
           className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
         >
           ›
@@ -316,8 +317,7 @@ function DeductionBoard({
       </div>
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
-        Four hidden groups of 3 tiles — any shapes, they don't have to touch.
-        Every clue talks about its own tile's group. Deduce and colour all 12.
+        {t("logic.rules")}
       </p>
 
       <main className="relative mt-4 flex flex-1 flex-col justify-center">
@@ -376,7 +376,7 @@ function DeductionBoard({
             >
               {!evalNow.sizesOk ? (
                 <p className="text-sm font-semibold text-press">
-                  Each colour must be used on exactly 3 tiles.
+                  {t("logic.sizes")}
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -407,17 +407,17 @@ function DeductionBoard({
           <div className="mx-auto mt-3 grid w-full max-w-sm grid-cols-2 gap-x-3 gap-y-0.5 text-[0.62rem] leading-tight text-ink-soft">
             {LEGEND.filter((e) => level.clues.some(e.match)).map((e) => (
               <span key={e.icon} className="flex items-baseline gap-1">
-                <b className="shrink-0 font-display text-xs text-ink">{e.icon}</b> {e.text}
+                <b className="shrink-0 font-display text-xs text-ink">{e.icon}</b> {t(e.key)}
               </span>
             ))}
             {level.lines.some((l) => l.kind === "rainbow") && (
               <span className="flex items-baseline gap-1">
-                <b className="shrink-0 font-display text-xs text-ink">≠</b> that whole line is all different groups
+                <b className="shrink-0 font-display text-xs text-ink">≠</b> {t("logic.key.rainbow")}
               </span>
             )}
             {level.lines.some((l) => l.kind === "onepair") && (
               <span className="flex items-baseline gap-1">
-                <b className="shrink-0 font-display text-xs text-ink">1=</b> that line holds exactly one matching pair
+                <b className="shrink-0 font-display text-xs text-ink">1=</b> {t("logic.key.onepair")}
               </span>
             )}
           </div>
@@ -430,7 +430,7 @@ function DeductionBoard({
               <button
                 key={k}
                 onClick={() => { setBrush(k); playSelect(); }}
-                aria-label={`Group ${k + 1} brush`}
+                aria-label={t("logic.a11y.brush", { n: k + 1 })}
                 className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 bg-gradient-to-br ${th.grad} text-lg font-bold transition ${
                   brush === k ? "border-ink ring-2 ring-ink" : "border-ink/30"
                 }`}
@@ -444,7 +444,7 @@ function DeductionBoard({
             ))}
             <button
               onClick={() => { setBrush(-1); playDeselect(); }}
-              aria-label="Eraser"
+              aria-label={t("logic.a11y.eraser")}
               className={`grid h-11 w-11 place-items-center rounded-xl border-2 bg-white text-lg transition ${
                 brush === -1 ? "border-ink ring-2 ring-ink" : "border-ink/30"
               }`}
@@ -463,24 +463,21 @@ function DeductionBoard({
               className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center"
             >
               <div className="text-4xl" aria-hidden>🧠</div>
-              <h3 className="mt-2 font-display text-2xl font-bold text-ink">Deduced!</h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                All four groups placed by pure logic — every clue checks out, and no
-                other colouring fits.
-              </p>
+              <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("logic.win.title")}</h3>
+              <p className="mt-2 text-sm text-ink-soft">{t("logic.win.body")}</p>
               <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <button
                   onClick={onExit}
                   className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
                 >
-                  Home
+                  {t("common.home")}
                 </button>
                 {index < total - 1 && (
                   <button
                     onClick={() => onPick(index + 1)}
                     className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
                   >
-                    Next puzzle →
+                    {t("end.nextPuzzle")}
                   </button>
                 )}
               </div>
@@ -508,47 +505,44 @@ function DeductionBoard({
   );
 }
 
-const TIER_NAME: Record<number, string> = { 1: "Easy", 2: "Medium", 3: "Hard" };
 const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9482b" };
 
 const DIR_ARROW: Record<string, string> = {
   up: "↑", down: "↓", left: "←", right: "→",
   upLeft: "↖", upRight: "↗", downLeft: "↙", downRight: "↘",
 };
-const DIR_WORD: Record<string, string> = {
-  up: "above", down: "below", left: "left of", right: "right of",
-  upLeft: "up-left of", upRight: "up-right of", downLeft: "down-left of", downRight: "down-right of",
-};
-const AXIS_WORD: Record<DeductionAxis, string> = { row: "row", col: "column" };
-const MATES = ["Neither of my group-mates", "One of my group-mates", "Both of my group-mates"];
 
-const where = (cell: number, cols: number) => `Row ${Math.floor(cell / cols) + 1}, column ${(cell % cols) + 1}`;
+const axisWord = (axis: DeductionAxis) => t(`logic.axis.${axis}`);
+const dirWord = (dir: string) => t(`logic.dir.${dir}`);
+const at = (cell: number, cols: number) =>
+  t("logic.at", { row: Math.floor(cell / cols) + 1, col: (cell % cols) + 1 });
 
 // Plain-words explanation of a violated clue, locating the tile by row/column.
 function violationText(cl: DeductionClue, found: number, cols: number): string {
-  const at = where(cl.cell, cols);
+  const where = at(cl.cell, cols);
   switch (cl.kind) {
-    case "deg": {
-      const want = cl.n === 0 ? "no neighbours" : cl.n === 1 ? "exactly one neighbour" : "two neighbours";
-      return `${at} needs ${want} in its group — your colouring gives it ${found}.`;
-    }
+    case "deg":
+      return t(`logic.bad.deg.${cl.n}`, { at: where, found });
     case "dir":
     case "diag":
-      return `${at} says the tile ${DIR_WORD[cl.dir]} it is ${cl.same ? "" : "not "}in its group — in your colouring it ${cl.same ? "isn't" : "is"}.`;
+      return t(cl.same ? "logic.bad.dir" : "logic.bad.dirNot", { at: where, where: dirWord(cl.dir) });
     case "line":
-      return `${at} needs ${cl.n} of its group in the rest of its ${AXIS_WORD[cl.axis]} — your colouring puts ${found} there.`;
+      return t("logic.bad.line", { at: where, n: cl.n, axis: axisWord(cl.axis), found });
     case "parity":
-      return `${at} needs an odd number of its ${AXIS_WORD[cl.axis]} in its group, counting itself — your colouring makes it ${found + 1}.`;
+      return t("logic.bad.parity", { at: where, axis: axisWord(cl.axis), found: found + 1 });
     case "corners":
-      return `${at} needs ${cl.n} of its group in the grid's corners — your colouring puts ${found} there.`;
+      return t("logic.bad.corners", { at: where, n: cl.n, found });
   }
 }
 
 function lineViolationText(ln: DeductionLineClue, found: number): string {
-  const at = `${ln.axis === "row" ? "Row" : "Column"} ${ln.index + 1}`;
+  const where = `${t(ln.axis === "row" ? "logic.row" : "logic.col")} ${ln.index + 1}`;
   return ln.kind === "rainbow"
-    ? `${at} must have four different groups — your colouring repeats ${found === 1 ? "one pair" : `${found} pairs`}.`
-    : `${at} must hold exactly one matching pair — your colouring has ${found}.`;
+    ? t("logic.bad.rainbow", {
+        at: where,
+        found: found === 1 ? t("logic.bad.rainbow.pair") : t("logic.bad.rainbow.pairs", { n: found }),
+      })
+    : t("logic.bad.onepair", { at: where, found });
 }
 
 // A clue tile is read at a glance, not word by word. Each clue draws as an
@@ -558,59 +552,46 @@ function lineViolationText(ln: DeductionLineClue, found: number): string {
 function clueText(cl: DeductionClue): { icon: string; value: string; full: string } {
   switch (cl.kind) {
     case "deg":
-      return {
-        icon: "✛",
-        value: String(cl.n),
-        full:
-          cl.n === 0
-            ? "No neighbour is in my group"
-            : cl.n === 1
-              ? "One neighbour is in my group"
-              : "Two neighbours are in my group",
-      };
+      return { icon: "✛", value: String(cl.n), full: t(`logic.clue.deg.${cl.n}`) };
     case "dir":
     case "diag":
       return {
         icon: DIR_ARROW[cl.dir],
         value: cl.same ? "=" : "≠",
-        full: `The tile ${DIR_WORD[cl.dir]} me is ${cl.same ? "" : "not "}in my group`,
+        full: t(cl.same ? "logic.clue.dir" : "logic.clue.dirNot", { where: dirWord(cl.dir) }),
       };
     case "line":
       return {
         icon: cl.axis === "row" ? "↔" : "↕",
         value: String(cl.n),
-        full: `${MATES[cl.n]} ${cl.n === 1 ? "is" : "are"} in my ${AXIS_WORD[cl.axis]}`,
+        full: t(`logic.clue.line.${cl.n}`, { axis: axisWord(cl.axis) }),
       };
     case "parity":
       return {
         icon: cl.axis === "row" ? "↔" : "↕",
         value: "ODD",
-        full: `Counting me, an odd number of my ${AXIS_WORD[cl.axis]} is in my group`,
+        full: t("logic.clue.parity", { axis: axisWord(cl.axis) }),
       };
     case "corners":
-      return {
-        icon: "◱",
-        value: String(cl.n),
-        full: `${MATES[cl.n]} ${cl.n === 1 ? "is" : "are"} in a corner of the grid`,
-      };
+      return { icon: "◱", value: String(cl.n), full: t(`logic.clue.corners.${cl.n}`) };
   }
 }
 
 function lineClueText(ln: DeductionLineClue): { glyph: string; full: string } {
   return ln.kind === "rainbow"
-    ? { glyph: "≠", full: `No two tiles in this ${AXIS_WORD[ln.axis]} share a group` }
-    : { glyph: "1=", full: `Exactly one pair in this ${AXIS_WORD[ln.axis]} shares a group` };
+    ? { glyph: "≠", full: t("logic.clue.rainbow", { axis: axisWord(ln.axis) }) }
+    : { glyph: "1=", full: t("logic.clue.onepair", { axis: axisWord(ln.axis) }) };
 }
 
 // One legend line per icon actually on this board.
-const LEGEND: { match: (cl: DeductionClue) => boolean; icon: string; text: string }[] = [
-  { match: (c) => c.kind === "deg", icon: "✛n", text: "n of my 4 neighbours share my group (never diagonal)" },
-  { match: (c) => c.kind === "dir", icon: "→=", text: "that tile is mine (≠ it isn't)" },
-  { match: (c) => c.kind === "diag", icon: "↘=", text: "that diagonal is mine (≠ it isn't)" },
-  { match: (c) => c.kind === "line" && c.axis === "row", icon: "↔n", text: "n group-mates in my row" },
-  { match: (c) => c.kind === "line" && c.axis === "col", icon: "↕n", text: "n group-mates in my column" },
-  { match: (c) => c.kind === "parity", icon: "↕ODD", text: "odd count in that line, me included" },
-  { match: (c) => c.kind === "corners", icon: "◱n", text: "n group-mates in a corner" },
+const LEGEND: { match: (cl: DeductionClue) => boolean; icon: string; key: string }[] = [
+  { match: (c) => c.kind === "deg", icon: "✛n", key: "logic.key.deg" },
+  { match: (c) => c.kind === "dir", icon: "→=", key: "logic.key.dir" },
+  { match: (c) => c.kind === "diag", icon: "↘=", key: "logic.key.diag" },
+  { match: (c) => c.kind === "line" && c.axis === "row", icon: "↔n", key: "logic.key.lineRow" },
+  { match: (c) => c.kind === "line" && c.axis === "col", icon: "↕n", key: "logic.key.lineCol" },
+  { match: (c) => c.kind === "parity", icon: "↕ODD", key: "logic.key.parity" },
+  { match: (c) => c.kind === "corners", icon: "◱n", key: "logic.key.corners" },
 ];
 
 function GridTile({
@@ -630,8 +611,10 @@ function GridTile({
   onClick: () => void;
 }) {
   const text = clue ? clueText(clue) : null;
-  const statusWord = status === "ok" ? ", satisfied" : status === "bad" ? ", NOT satisfied" : "";
-  const label = `Tile${text ? `, clue: ${text.full}${statusWord}` : ", no clue"}${theme ? `, ${theme.shape}` : ", uncoloured"}`;
+  const statusWord = status === "ok" ? t("logic.a11y.satisfied") : status === "bad" ? t("logic.a11y.violated") : "";
+  const label =
+    (text ? t("logic.a11y.tileClue", { clue: text.full }) + statusWord : t("logic.a11y.noClue")) +
+    (theme ? `, ${theme.shape}` : t("logic.a11y.uncoloured"));
   // NOTE: the red outline must live in the inline boxShadow — Tailwind's ring
   // is also a box-shadow, and the inline style would silently override it.
   const shadow =
@@ -706,9 +689,12 @@ function LineHeader({
   return (
     <span
       role="note"
-      aria-label={`${clue.axis === "row" ? "Row" : "Column"} ${clue.index + 1} clue: ${text.full}${
-        status === "ok" ? ", satisfied" : status === "bad" ? ", NOT satisfied" : ""
-      }`}
+      aria-label={
+        t("logic.a11y.lineClue", {
+          line: `${t(clue.axis === "row" ? "logic.row" : "logic.col")} ${clue.index + 1}`,
+          clue: text.full,
+        }) + (status === "ok" ? t("logic.a11y.satisfied") : status === "bad" ? t("logic.a11y.violated") : "")
+      }
       className={`relative grid h-6 w-full place-items-center self-center justify-self-center rounded-lg border-2 font-display text-xs font-bold leading-none ${
         status === "bad"
           ? "border-press bg-press/10 text-press"

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { buildLetterBank } from "./letters";
 import { playDeselect, playSelect } from "./audio";
+import { t } from "./i18n";
 
 // The spell-the-link finale: tap (or type) letters from a bank into the
 // answer slots, auto-checked the moment they're full. Also serves the Oracle
@@ -68,7 +69,7 @@ export function LinkGuess({
   useEffect(() => {
     if (resolved || !full || submitting.current) return;
     submitting.current = true;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const ok = onSubmit(built);
       submitting.current = false;
       if (!ok) {
@@ -79,7 +80,7 @@ export function LinkGuess({
         if (early) setTimeout(() => onMiss?.(), 700);
       }
     }, 280);
-    return () => { clearTimeout(t); submitting.current = false; };
+    return () => { clearTimeout(timer); submitting.current = false; };
   }, [full, built, resolved, onSubmit, early, onMiss]);
 
   const tap = (i: number) => {
@@ -117,14 +118,10 @@ export function LinkGuess({
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
-        {oracle ? "🔮 Name the hidden link" : early ? "🔑 Call it early" : "All four groups found!"}
+        {t(oracle ? "finale.oracle.title" : early ? "game.early.title" : "finale.title")}
       </h3>
       <p className="mt-1 text-sm text-ink-soft">
-        {oracle
-          ? "Read the words and themes above — tap letters to spell the word that joins them."
-          : early
-            ? "One attempt. Get it and the word is yours — plus a bonus for every group you haven't found yet."
-            : "Tap the letters to spell the secret word that links them all."}
+        {t(oracle ? "finale.oracle.body" : early ? "game.early.body" : "finale.body")}
       </p>
 
       {/* The answer so far. Tapped letters pop into the slots; a wrong word
@@ -134,7 +131,7 @@ export function LinkGuess({
         animate={resolved ? { scale: [1, 1.08, 1] } : wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
         transition={{ duration: 0.4 }}
         className="mt-4 flex flex-wrap justify-center gap-1.5"
-        aria-label={`${pivot.length} letters`}
+        aria-label={t("finale.a11y.slots", { n: pivot.length })}
       >
         {pivot.split("").map((_, i) => {
           const locked = i < revealedLetters;
@@ -172,9 +169,9 @@ export function LinkGuess({
       </motion.div>
 
       {wrong ? (
-        <p className="mt-2 text-sm font-semibold text-press">Not the word — try again.</p>
+        <p className="mt-2 text-sm font-semibold text-press">{t("finale.wrong")}</p>
       ) : (
-        <p className="mt-2 text-xs text-ink-soft">Tap a tile — or just type — to place it; each letter is used once.</p>
+        <p className="mt-2 text-xs text-ink-soft">{t("finale.hintLine")}</p>
       )}
 
       {/* The letter bank */}
@@ -187,7 +184,7 @@ export function LinkGuess({
               whileTap={isUsed || resolved ? undefined : { scale: 0.88 }}
               onClick={() => tap(i)}
               disabled={isUsed || resolved || full}
-              aria-label={`Letter ${ch}${isUsed ? ", used" : ""}`}
+              aria-label={t(isUsed ? "finale.a11y.letterUsed" : "finale.a11y.letter", { letter: ch })}
               className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
                 isUsed
                   ? "border border-ink/10 bg-cream text-ink/15"
@@ -206,14 +203,14 @@ export function LinkGuess({
           disabled={resolved || !taps.length}
           className="flex items-center gap-1.5 rounded-full border border-ink/30 px-4 py-2 text-xs font-bold text-ink transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-35"
         >
-          ⌫ Undo
+          {t("finale.undo")}
         </button>
         {hintBank === 0 && !resolved ? (
           <button
             onClick={onRefill}
             className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
           >
-            🎬 Refill hints (+3)
+            {t("finale.refill")}
           </button>
         ) : (
           <button
@@ -221,7 +218,7 @@ export function LinkGuess({
             disabled={resolved || !canRevealLetter}
             className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-4 py-2 text-xs font-bold text-gold-deep transition enabled:hover:bg-gold/25 enabled:active:scale-95 disabled:opacity-35"
           >
-            💡 Reveal a letter
+            {t("finale.revealLetter")}
             <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.65rem] font-extrabold text-ink">
               {hintBank}
             </span>
@@ -233,7 +230,7 @@ export function LinkGuess({
             disabled={resolved}
             className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
           >
-            Back to the board
+            {t("game.early.back")}
           </button>
         ) : (
           <button
@@ -241,7 +238,7 @@ export function LinkGuess({
             disabled={resolved}
             className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
           >
-            Give up (costs a star)
+            {t("finale.giveUp")}
           </button>
         )}
       </div>

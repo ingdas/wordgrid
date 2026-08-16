@@ -26,13 +26,8 @@ import {
   showInterstitial,
   requestRewarded,
 } from "./sdk";
-import {
-  ACHIEVEMENTS,
-  evaluateUnlocks,
-  achievementStatus,
-  TIER_NAMES,
-  TIER_COLORS,
-} from "./achievements";
+import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
+import { LOCALES, getLocale, setLocale, t, type Locale } from "./i18n";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
@@ -81,6 +76,13 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>(startedInGame ? "game" : "home");
   const [levelIndex, setLevelIndex] = useState(0);
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
+  // t() reads a module-level locale, so the switch has to force a re-render:
+  // the whole tree is keyed on it below.
+  const [locale, setLocaleState] = useState<Locale>(() => getLocale());
+  const changeLocale = useCallback((next: Locale) => {
+    setLocale(next);
+    setLocaleState(next);
+  }, []);
   const [muted, setMutedState] = useState(() => isMuted());
   const [musicOn, setMusicOnState] = useState(() => isMusicOn());
   const [showHelp, setShowHelp] = useState(false);
@@ -159,7 +161,12 @@ export default function App() {
     const rank = playerRank(after);
     if (rank.level > playerRank(before).level) {
       setTimeout(
-        () => setUnlockedAch({ icon: "⬆️", header: "Rank up!", label: `Lv ${rank.level} · ${rank.title}` }),
+        () =>
+          setUnlockedAch({
+            icon: "⬆️",
+            header: t("rank.up"),
+            label: t("home.rank", { level: rank.level, title: t(`rank.${rank.titleIndex}`) }),
+          }),
         2100
       );
     }
@@ -305,7 +312,10 @@ export default function App() {
       celebrateRank(prev.score, next.score);
       if (unlocked.length) {
         const top = unlocked[unlocked.length - 1];
-        setTimeout(() => setUnlockedAch({ icon: top.def.icon, label: `${TIER_NAMES[top.tier]} · ${top.def.title}` }), 1800);
+        setTimeout(
+          () => setUnlockedAch({ icon: top.def.icon, label: `${t(`ach.tier.${top.tier}`)} · ${t(top.def.titleKey)}` }),
+          1800
+        );
       }
     },
     [levelIndex, playingDaily, dailyRaw, applyProgress, celebrateRank]
@@ -481,7 +491,7 @@ export default function App() {
   }, [endlessSolved, applyProgress]);
 
   return (
-    <>
+    <div key={locale} className="contents">
       <div className="aurora" />
       <div className="grain" />
 
@@ -603,6 +613,7 @@ export default function App() {
             onToggleMute={toggleMute}
             onToggleMusic={toggleMusic}
             onToggleCalm={toggleCalm}
+            onLocale={changeLocale}
             onReset={resetProgress}
             onClose={() => setShowSettings(false)}
           />
@@ -623,7 +634,7 @@ export default function App() {
               </span>
               <div className="text-left">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-gold-deep">
-                  {unlockedAch.header ?? "Achievement unlocked"}
+                  {unlockedAch.header ?? t("achievement.unlocked")}
                 </div>
                 <div className="text-sm font-bold text-ink">{unlockedAch.label}</div>
               </div>
@@ -631,7 +642,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
 
@@ -647,14 +658,14 @@ function StatsModal({
   useEscape(onClose);
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
-    ["Total score", `✦ ${progress.score.toLocaleString()}`],
-    ["Stars collected", `${totalStars(progress)} / ${MAX_STARS}`],
-    ["Levels cleared", `${cleared} / ${LEVELS.length}`],
-    ["Completion", `${Math.round((cleared / LEVELS.length) * 100)}%`],
-    ["Links guessed", `${progress.linksGuessed}`],
-    ["Hints available", `💡 ${progress.hints}`],
-    ["Current streak", `🔥 ${progress.streak}`],
-    ["Best streak", `${progress.bestStreak}`],
+    [t("stats.score"), `✦ ${progress.score.toLocaleString()}`],
+    [t("stats.stars"), `${totalStars(progress)} / ${MAX_STARS}`],
+    [t("stats.cleared"), `${cleared} / ${LEVELS.length}`],
+    [t("stats.completion"), `${Math.round((cleared / LEVELS.length) * 100)}%`],
+    [t("stats.links"), `${progress.linksGuessed}`],
+    [t("stats.hints"), `💡 ${progress.hints}`],
+    [t("stats.streak"), `🔥 ${progress.streak}`],
+    [t("stats.bestStreak"), `${progress.bestStreak}`],
   ];
   return (
     <motion.div
@@ -664,7 +675,7 @@ function StatsModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Your stats"
+      aria-label={t("stats.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
@@ -675,7 +686,7 @@ function StatsModal({
         onClick={(e) => e.stopPropagation()}
         className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-ink">Your stats</h3>
+        <h3 className="font-display text-2xl font-bold text-ink">{t("stats.title")}</h3>
         <dl className="mt-4 divide-y divide-ink/15">
           {stats.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between py-2.5">
@@ -689,7 +700,7 @@ function StatsModal({
           const earnedTiers = ACHIEVEMENTS.reduce((n, d) => n + achievementStatus(progress, d).tier + 1, 0);
           return (
             <h4 className="mt-5 text-sm font-bold uppercase tracking-widest text-ink-soft">
-              Achievements {earnedTiers}/{ACHIEVEMENTS.length * 3}
+              {t("stats.achievements", { earned: earnedTiers, total: ACHIEVEMENTS.length * 3 })}
             </h4>
           );
         })()}
@@ -707,16 +718,16 @@ function StatsModal({
               <div key={def.id} className="rounded-2xl border border-ink/20 bg-white p-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg" aria-hidden>{def.icon}</span>
-                  <span className="flex-1 text-sm font-bold text-ink">{def.title}</span>
+                  <span className="flex-1 text-sm font-bold text-ink">{t(def.titleKey)}</span>
                   {tier >= 0 ? (
                     <span
                       className="rounded-full px-2 py-0.5 text-[0.6rem] font-extrabold uppercase"
                       style={{ background: `${TIER_COLORS[tier]}33`, color: TIER_COLORS[tier] }}
                     >
-                      {TIER_NAMES[tier]}
+                      {t(`ach.tier.${tier}`)}
                     </span>
                   ) : (
-                    <span className="text-[0.6rem] font-semibold uppercase text-ink-soft">Locked</span>
+                    <span className="text-[0.6rem] font-semibold uppercase text-ink-soft">{t("stats.locked")}</span>
                   )}
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
@@ -727,11 +738,13 @@ function StatsModal({
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[0.65rem]">
                   <span className="text-ink-soft">
-                    {nextThreshold ? `${value} / ${nextThreshold} ${def.unit}` : `Maxed · ${value} ${def.unit}`}
+                    {nextThreshold
+                      ? t("stats.progress", { value, target: nextThreshold, unit: t(def.unitKey) })
+                      : t("stats.maxed", { value, unit: t(def.unitKey) })}
                   </span>
                   {almost && (
                     <span className="font-bold text-gold-deep">
-                      🔥 {remaining} to {TIER_NAMES[tier + 1]}!
+                      {t("stats.almost", { n: remaining, tier: t(`ach.tier.${tier + 1}`) })}
                     </span>
                   )}
                 </div>
@@ -744,7 +757,7 @@ function StatsModal({
           onClick={onHistory}
           className="mt-5 w-full rounded-2xl border border-ink/30 py-3 text-sm font-bold text-ink transition hover:bg-cream"
         >
-          📜 View play history
+          {t("stats.viewHistory")}
         </button>
         <button
           onClick={onClose}
@@ -759,13 +772,13 @@ function StatsModal({
 
 function relativeTime(at: number): string {
   const s = Math.floor((Date.now() - at) / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("history.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return t("history.minutes", { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return t("history.hours", { n: h });
   const d = Math.floor(h / 24);
-  return d === 1 ? "yesterday" : `${d}d ago`;
+  return d === 1 ? t("history.yesterday") : t("history.days", { n: d });
 }
 
 function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
@@ -779,7 +792,7 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Play history"
+      aria-label={t("history.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
@@ -790,10 +803,10 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-ink">Play history</h3>
+        <h3 className="font-display text-2xl font-bold text-ink">{t("history.title")}</h3>
         {progress.history.length === 0 ? (
           <p className="mt-6 text-center text-sm text-ink-soft">
-            No games yet — your finished levels will appear here.
+            {t("history.empty")}
           </p>
         ) : (
           <ul className="mt-4 -mr-2 space-y-2 overflow-y-auto pr-2">
@@ -806,10 +819,11 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
                   <div className="flex items-center gap-1.5 truncate font-bold text-ink">
                     {h.daily && <span className="text-xs">📅</span>}
                     {/* A lost level's title spells the link, so keep it hidden until cleared. */}
-                    {h.won ? h.title : <span className="text-ink-soft">🔒 Link still hidden</span>}
+                    {h.won ? h.title : <span className="text-ink-soft">{t("history.hidden")}</span>}
                   </div>
                   <div className="text-[0.7rem] text-ink-soft">
-                    {h.daily ? "Daily" : `Level ${h.level}`} · {relativeTime(h.at)} · ⏱ {fmt(h.timeMs)}
+                    {h.daily ? t("history.daily") : t("history.level", { n: h.level })} · {relativeTime(h.at)} · ⏱{" "}
+                    {fmt(h.timeMs)}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
@@ -819,7 +833,7 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
                       <span className="text-ink/20">{"★".repeat(3 - h.stars)}</span>
                     </div>
                   ) : (
-                    <div className="font-bold text-press">Missed</div>
+                    <div className="font-bold text-press">{t("history.missed")}</div>
                   )}
                   <div className="text-[0.7rem] text-ink-soft">{h.linkCorrect ? "🔑 link" : ""}</div>
                 </div>
@@ -877,6 +891,7 @@ function SettingsModal({
   onToggleMute,
   onToggleMusic,
   onToggleCalm,
+  onLocale,
   onReset,
   onClose,
 }: {
@@ -886,6 +901,7 @@ function SettingsModal({
   onToggleMute: () => void;
   onToggleMusic: () => void;
   onToggleCalm: () => void;
+  onLocale: (l: Locale) => void;
   onReset: () => void;
   onClose: () => void;
 }) {
@@ -899,7 +915,7 @@ function SettingsModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Settings"
+      aria-label={t("settings.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
@@ -910,34 +926,47 @@ function SettingsModal({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
-        <h3 className="font-display text-2xl font-bold text-ink">Settings</h3>
+        <h3 className="font-display text-2xl font-bold text-ink">{t("settings.title")}</h3>
         <div className="mt-3 divide-y divide-ink/15">
-          <ToggleRow label="Sound effects" hint="Taps, solves, wins" on={!muted} onToggle={onToggleMute} />
-          <ToggleRow label="Music" hint="Ambient background loop" on={musicOn} onToggle={onToggleMusic} />
-          <ToggleRow
-            label="Calm mode"
-            hint="Dial back confetti & motion"
-            on={calm}
-            onToggle={onToggleCalm}
-          />
+          <ToggleRow label={t("settings.sfx")} hint={t("settings.sfx.hint")} on={!muted} onToggle={onToggleMute} />
+          <ToggleRow label={t("settings.music")} hint={t("settings.music.hint")} on={musicOn} onToggle={onToggleMusic} />
+          <ToggleRow label={t("settings.calm")} hint={t("settings.calm.hint")} on={calm} onToggle={onToggleCalm} />
+          <div className="py-3">
+            <div className="text-sm font-bold text-ink">{t("settings.language")}</div>
+            <div className="text-[0.7rem] text-ink-soft">{t("settings.language.hint")}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {LOCALES.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => onLocale(l.id)}
+                  aria-pressed={getLocale() === l.id}
+                  className={`rounded-full border-2 px-3 py-1.5 text-xs font-bold transition ${
+                    getLocale() === l.id ? "border-ink bg-ink text-paper" : "border-ink/30 text-ink hover:bg-cream"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">
           {confirm ? (
             <div className="text-center">
-              <p className="text-sm font-semibold text-press">Erase all stars, scores & history?</p>
+              <p className="text-sm font-semibold text-press">{t("settings.reset.confirm")}</p>
               <div className="mt-2 flex justify-center gap-2">
                 <button
                   onClick={() => setConfirm(false)}
                   className="rounded-full border border-ink/30 px-4 py-2 text-xs font-bold text-ink transition hover:bg-cream"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={onReset}
                   className="rounded-full bg-press px-4 py-2 text-xs font-bold text-paper transition hover:bg-press-deep active:scale-95"
                 >
-                  Reset everything
+                  {t("settings.reset.yes")}
                 </button>
               </div>
             </div>
@@ -946,7 +975,7 @@ function SettingsModal({
               onClick={() => setConfirm(true)}
               className="w-full text-sm font-bold text-press transition hover:text-press"
             >
-              Reset progress
+              {t("settings.reset")}
             </button>
           )}
         </div>
@@ -955,7 +984,7 @@ function SettingsModal({
           onClick={onClose}
           className="mt-4 w-full rounded-2xl bg-ink py-3 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
-          Done
+          {t("common.done")}
         </button>
       </motion.div>
     </motion.div>
@@ -977,24 +1006,9 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
 }
 
 const STEPS = [
-  {
-    icon: "🔗",
-    grad: "from-[#c5a3e8] to-[#b48fd9]",
-    title: "There's a secret link",
-    body: "One hidden word belongs to every group. It stays masked at the top until the very end.",
-  },
-  {
-    icon: "🔤",
-    grad: "from-[#7cc0e8] to-[#5eb0e0]",
-    title: "Group the words",
-    body: "Tap three words that share a theme, then Submit. The hidden link joins them to make a group of four.",
-  },
-  {
-    icon: "⭐",
-    grad: "from-[#f2b544] to-[#eda820]",
-    title: "Guess the link, earn stars",
-    body: "Find all four groups (four mistakes allowed), then spell the secret word that links them all. Spot it early? Call it for a bonus — one shot per level.",
-  },
+  { icon: "🔗", grad: "from-[#c5a3e8] to-[#b48fd9]", key: "help.step1" },
+  { icon: "🔤", grad: "from-[#7cc0e8] to-[#5eb0e0]", key: "help.step2" },
+  { icon: "⭐", grad: "from-[#f2b544] to-[#eda820]", key: "help.step3" },
 ];
 
 function HelpModal({ onClose }: { onClose: () => void }) {
@@ -1007,7 +1021,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="How to play"
+      aria-label={t("help.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
       <motion.div
@@ -1022,20 +1036,20 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-press text-lg text-paper">
             <span aria-hidden>◆</span>
           </div>
-          <h3 className="font-display text-2xl font-bold text-ink">How to play</h3>
+          <h3 className="font-display text-2xl font-bold text-ink">{t("help.title")}</h3>
         </div>
 
         <div className="mt-5 space-y-3">
           {STEPS.map((s) => (
-            <div key={s.title} className="flex gap-3 rounded-2xl bg-white p-3">
+            <div key={s.key} className="flex gap-3 rounded-2xl bg-white p-3">
               <div
                 className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${s.grad} text-xl shadow-lg`}
               >
                 <span aria-hidden>{s.icon}</span>
               </div>
               <div>
-                <div className="font-bold text-ink">{s.title}</div>
-                <p className="mt-0.5 text-sm leading-snug text-ink-soft">{s.body}</p>
+                <div className="font-bold text-ink">{t(`${s.key}.title`)}</div>
+                <p className="mt-0.5 text-sm leading-snug text-ink-soft">{t(`${s.key}.body`)}</p>
               </div>
             </div>
           ))}
@@ -1045,7 +1059,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
         >
-          Let's play
+          {t("help.letsPlay")}
         </button>
       </motion.div>
     </motion.div>

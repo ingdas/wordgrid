@@ -110,14 +110,13 @@ export function clearedCount(p: Progress): number {
 // --- Player rank ----------------------------------------------------------
 // A lightweight XP ladder off lifetime score, for a constant sense of growth.
 // Each level costs ~25% more than the last; titles repeat the top once maxed.
-const RANK_TITLES = [
-  "Novice", "Apprentice", "Wordsmith", "Sharp Eye", "Cryptic Mind",
-  "Mastermind", "Luminary", "Grandmaster", "Legend",
-];
+// Nine titles, localized as rank.1 … rank.9 (see src/i18n).
+const RANK_COUNT = 9;
 
 export interface Rank {
   level: number; // 1-based
-  title: string;
+  /** 1-based index into the rank titles — look up `rank.${titleIndex}`. */
+  titleIndex: number;
   into: number; // XP into the current level
   span: number; // XP needed to finish the current level
   pct: number; // 0-100 progress to next level
@@ -135,7 +134,7 @@ export function playerRank(score: number): Rank {
   const into = score - acc;
   return {
     level: level + 1,
-    title: RANK_TITLES[Math.min(level, RANK_TITLES.length - 1)],
+    titleIndex: Math.min(level, RANK_COUNT - 1) + 1,
     into,
     span: need,
     pct: Math.min(100, Math.round((into / need) * 100)),
@@ -230,7 +229,8 @@ export function recordDaily(p: Progress, key = todayKey()): Progress {
 
 export interface DayCell {
   key: string;
-  label: string; // weekday initial
+  /** The day itself — the caller formats the weekday in the active locale. */
+  date: Date;
   done: boolean;
   today: boolean;
 }
@@ -253,7 +253,7 @@ export function dailyWeek(p: Progress, now = new Date()): DayCell[] {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const key = todayKey(d);
-    cells.push({ key, label: "SMTWTFS"[d.getDay()], done: done.has(key), today: key === todayK });
+    cells.push({ key, date: d, done: done.has(key), today: key === todayK });
   }
   return cells;
 }

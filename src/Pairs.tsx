@@ -5,6 +5,7 @@ import { DAILY_PUZZLES } from "./dailyPuzzles";
 import { CATEGORY_THEMES } from "./theme";
 import { buildLetterBank } from "./letters";
 import { linkMatches } from "./engine";
+import { plural, t } from "./i18n";
 import { showInterstitial } from "./sdk";
 import Confetti from "./Confetti";
 import { playSelect, playDeselect, playCorrect, playWrong, playWin, playStar } from "./audio";
@@ -71,8 +72,8 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1700);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 1700);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const newBoard = useCallback(() => {
@@ -156,7 +157,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       if (placedCat !== trueCat) {
         // Wrong group — flash red and keep it in hand for another try.
         playWrong();
-        setToast("Not that group — try again.");
+        setToast(t("pairs.wrongCouple"));
         setWrongCouple(leftover);
         setTimeout(() => setWrongCouple(null), 700);
         return;
@@ -226,39 +227,37 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
-          <span aria-hidden>‹</span> Home
+          <span aria-hidden>‹</span> {t("common.home")}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-ink">
-            <span aria-hidden>🃏</span> Pairs
+            <span aria-hidden>🃏</span> {t("pairs.title")}
           </div>
           <div className="mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-ink-soft">
-            {moves} {moves === 1 ? "move" : "moves"}
-            {best > 0 ? ` · best ${best}` : " · fewest wins"}
+            {plural("common.moves", moves)}
+            {best > 0 ? t("pairs.best", { n: best }) : t("pairs.fewestWins")}
           </div>
         </div>
         <button
           onClick={newBoard}
           className="rounded-full border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-ink transition hover:bg-cream active:scale-95"
         >
-          🔀 New
+          {t("pairs.newBoard")}
         </button>
       </div>
 
       <p className="mt-3 text-center text-sm text-ink-soft">
         {phase === "matching"
-          ? "Flip two cards — they match when they share a theme."
+          ? t("pairs.matching")
           : phase === "coupling"
-            ? selectedLeftover
-              ? "Now tap a card from the group it joins."
-              : "Four left! Tap one, then tap a card from its group."
+            ? t(selectedLeftover ? "pairs.couplingHeld" : "pairs.coupling")
             : phase === "spell"
-              ? "Spell the word that links the last four."
+              ? t("pairs.spell")
               : ""}
       </p>
 
       {phase !== "done" && (
-        <div className="mt-2 flex items-center justify-center gap-2" aria-label="Groups completed">
+        <div className="mt-2 flex items-center justify-center gap-2" aria-label={t("pairs.a11y.progress")}>
           {CATEGORY_THEMES.map((th, k) => (
             <span
               key={k}
@@ -311,33 +310,33 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
               className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center"
             >
               <div className="text-4xl" aria-hidden>🃏</div>
-              <h3 className="mt-2 font-display text-2xl font-bold text-ink">Board cleared!</h3>
+              <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("pairs.cleared")}</h3>
               <p className="mt-2 text-sm text-ink-soft">
-                The secret link was{" "}
+                {t("end.linkWas")}{" "}
                 <span className="font-bold text-ink underline decoration-press/70 decoration-2 underline-offset-4">
                   {puzzle.pivot}
                 </span>
-                . {linkSpelled ? "🔑 You spelled it!" : "Revealed for you this time."}
+                . {t(linkSpelled ? "pairs.spelled" : "pairs.revealed")}
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold">
-                <span className="rounded-full bg-cream px-3 py-1 text-ink">{moves} moves</span>
+                <span className="rounded-full bg-cream px-3 py-1 text-ink">{plural("common.moves", moves)}</span>
                 <span className="rounded-full bg-gold/15 px-3 py-1 font-extrabold text-gold-deep">
                   ✦ {score.toLocaleString()}
                 </span>
-                {newBest && <span className="rounded-full bg-leaf/15 px-3 py-1 text-leaf">New best!</span>}
+                {newBest && <span className="rounded-full bg-leaf/15 px-3 py-1 text-leaf">{t("pairs.newBest")}</span>}
               </div>
               <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <button
                   onClick={onExit}
                   className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
                 >
-                  Home
+                  {t("common.home")}
                 </button>
                 <button
                   onClick={newBoard}
                   className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
                 >
-                  Next board →
+                  {t("end.nextPuzzle")}
                 </button>
               </div>
             </motion.div>
@@ -411,7 +410,7 @@ function PairCard({
       onClick={onClick}
       disabled={disabled}
       // Never leak the word while face down (screen readers included).
-      aria-label={faceUp ? word : "Face-down card"}
+      aria-label={faceUp ? word : t("pairs.a11y.faceDown")}
       className="aspect-[1.15/1] select-none disabled:cursor-default sm:aspect-[1.55/1]"
       style={{ perspective: 600 }}
     >
@@ -475,7 +474,7 @@ function LinkSpell({
 
   useEffect(() => {
     if (resolved || !full) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (linkMatches(built, pivot, accept)) {
         setResolved(true);
         onSolve(true);
@@ -485,7 +484,7 @@ function LinkSpell({
         setTaps([]);
       }
     }, 280);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [full, built, resolved, pivot, accept, onSolve]);
 
   return (
@@ -516,7 +515,7 @@ function LinkSpell({
           );
         })}
       </motion.div>
-      {wrong && <p className="mt-2 text-sm font-semibold text-press">Not the word — try again.</p>}
+      {wrong && <p className="mt-2 text-sm font-semibold text-press">{t("finale.wrong")}</p>}
 
       <div className="mx-auto mt-3 flex max-w-sm flex-wrap justify-center gap-2">
         {bank.map((ch, i) => {
@@ -531,7 +530,7 @@ function LinkSpell({
                 setTaps((prev) => [...prev, i]);
               }}
               disabled={used || resolved || full}
-              aria-label={`Letter ${ch}${used ? ", used" : ""}`}
+              aria-label={t(used ? "finale.a11y.letterUsed" : "finale.a11y.letter", { letter: ch })}
               className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
                 used
                   ? "border border-ink/10 bg-cream text-ink/15"

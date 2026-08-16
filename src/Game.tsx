@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, TIER_LABELS, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
+import { LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
 import { CATEGORY_THEMES } from "./theme";
 import { fmtTime } from "./format";
+import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { EndCard } from "./EndCard";
 import Confetti from "./Confetti";
@@ -21,21 +22,8 @@ import {
 const MAX_MISTAKES = 4;
 
 // Per-twist flavour shown in the top bar and the one-time intro toast.
-const TWIST_LABEL: Record<BossTwist, string> = {
-  scramble: "Boss · scrambled tiles",
-  emoji: "Boss · emoji only",
-  oracle: "Boss · the oracle",
-  decoy: "Boss · impostors",
-  blackout: "Boss · blackout",
-};
-
-const TWIST_INTRO: Record<BossTwist, string> = {
-  scramble: "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
-  emoji: "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  oracle: "🔮 The Oracle — every word and theme is laid bare. Name the hidden link first, then group at your leisure.",
-  decoy: "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
-  blackout: "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
-};
+const twistLabel = (tw: BossTwist) => t(`twist.${tw}.label`);
+const twistIntro = (tw: BossTwist) => t(`twist.${tw}.intro`);
 
 
 type Status = "playing" | "guessing" | "won" | "lost";
@@ -164,20 +152,20 @@ export default function Game({
   // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {
     if (status !== "playing") return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, [status]);
 
   // One-time boss intro, tailored to this boss's twist.
   useEffect(() => {
-    if (twist) setToast(TWIST_INTRO[twist]);
+    if (twist) setToast(twistIntro(twist));
   }, [twist]);
 
   // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
   useEffect(() => {
     if (isTutorialRun && status === "guessing" && !finaleHinted.current) {
       finaleHinted.current = true;
-      setToast("🎯 Last step! All four groups point to ONE hidden word — tap it out.");
+      setToast(t("finale.firstTime"));
     }
   }, [isTutorialRun, status]);
 
@@ -196,8 +184,8 @@ export default function Game({
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1900);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 1900);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const solvedSpokes = useMemo(() => {
@@ -230,7 +218,7 @@ export default function Game({
       playCorrect(index);
       buzz(30);
       setBurst((b) => b + 1);
-      setAnnounce(`Group found: ${cat.name}. ${index + 1} of 4.`);
+      setAnnounce(t("game.groupFound", { theme: cat.name, n: index + 1 }));
       setSolved((prev) => [...prev, cat]);
       setSelected([]);
       // A consecutive-solve combo multiplies the 100-point base.
@@ -251,8 +239,8 @@ export default function Game({
     if (status !== "playing") return;
     if (solved.length === puzzle.categories.length - 1) {
       const last = unsolvedCategories[0];
-      const t = setTimeout(() => solveCategory(last, solved.length), 600);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => solveCategory(last, solved.length), 600);
+      return () => clearTimeout(timer);
     }
     // A link already named (the Oracle, or a successful early call) means the
     // finale has nothing left to ask — the last group solved is the win.
@@ -281,17 +269,17 @@ export default function Game({
     if (reported.current) return;
     if (status === "won") {
       reported.current = true;
-      const t = Date.now() - startedAt.current;
-      setFinalMs(t);
+      const elapsed = Date.now() - startedAt.current;
+      setFinalMs(elapsed);
       playWin();
       buzz([0, 40, 60, 40]);
-      setAnnounce(`Solved! The secret link was ${puzzle.pivot}. ${finalStars} of 3 stars.`);
+      setAnnounce(t("game.a11y.won", { word: puzzle.pivot, stars: finalStars }));
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect, timeMs: t, mistakes, title: puzzle.title, score });
+      onWin({ stars: finalStars, linkCorrect, timeMs: elapsed, mistakes, title: puzzle.title, score });
     } else if (status === "lost") {
       reported.current = true;
       // The link stays secret on a loss so it can still be guessed on a replay.
-      setAnnounce("Out of guesses. Replay the level to discover the secret link.");
+      setAnnounce(t("game.a11y.lost"));
       onLoss({ timeMs: Date.now() - startedAt.current, mistakes, title: puzzle.title });
     }
   }, [status, finalStars, onWin, onLoss, buzz, linkCorrect, puzzle.title, mistakes, score]);
@@ -321,7 +309,7 @@ export default function Game({
       return;
     }
     if (result.kind === "repeat") {
-      setToast("You already tried that group.");
+      setToast(t("game.repeat"));
       setShake((s) => s + 1);
       return;
     }
@@ -335,19 +323,19 @@ export default function Game({
       const n = coachMisses.current++;
       const teach = puzzle.categories[0];
       const msg = result.oneAway
-        ? "🎯 So close — two of those belong together. Swap the odd one out!"
+        ? t("coach.nudge.oneAway")
         : n === 0
-          ? `Not a group — which three words fit “${teach.name}”? 🤔`
+          ? t("coach.nudge.1", { theme: teach.name })
           : n === 1
-            ? `Keep looking — three of these words fit “${teach.name}”.`
-            : `Tip: “${teach.spokes[0]}” is one of the three. Find its two friends.`;
+            ? t("coach.nudge.2", { theme: teach.name })
+            : t("coach.nudge.3", { word: teach.spokes[0] });
       setToast(msg);
       return;
     }
     setPastGuesses((prev) => new Set(prev).add(guessKey(selected)));
-    setToast(result.oneAway ? "🎯 So close — one away!" : "Those three aren't a group.");
+    setToast(t(result.oneAway ? "game.oneAway" : "game.wrong"));
     setCombo(0); // a wrong guess breaks the combo
-    if (combo >= 2) pushPop("Combo lost");
+    if (combo >= 2) pushPop(t("game.comboLost"));
     setMistakes((m) => {
       const next = m + 1;
       if (next >= maxMistakes) {
@@ -372,7 +360,7 @@ export default function Game({
     setSecondChanceUsed(true);
     setOffering(false);
     setMistakes((m) => Math.max(0, m - 2));
-    setToast("Second chance! Two tries back. 🎬");
+    setToast(t("game.continue.taken"));
   }, []);
   const declineSecondChance = useCallback(() => {
     setOffering(false);
@@ -396,7 +384,7 @@ export default function Game({
     if (!canHint) return;
     const cat = hintableCategories[0];
     setRevealedHints((prev) => new Set(prev).add(cat.name));
-    setToast(`Hint: a group is “${cat.name}”.`);
+    setToast(t("game.hint.given", { theme: cat.name }));
     onUseHint();
     playSelect();
   }, [canHint, hintableCategories, onUseHint]);
@@ -414,7 +402,7 @@ export default function Game({
   const refill = useCallback(async () => {
     const ok = await onRefillHints();
     if (ok) {
-      setToast("+3 hints! 💡");
+      setToast(t("game.hint.refilled"));
       playCorrect(0);
     }
   }, [onRefillHints]);
@@ -500,7 +488,7 @@ export default function Game({
     buzz(30);
     setEarlyCall(false);
     setStatus("playing");
-    setToast("Not the link — back to the board. That was your one call.");
+    setToast(t("game.early.missed"));
   }, [buzz]);
 
   // Give up: reveal the word (counts as a miss → costs a star). For the Oracle
@@ -533,18 +521,18 @@ export default function Game({
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
-          <span aria-hidden>‹</span> {endless ? "End run" : daily ? "Home" : "Levels"}
+          <span aria-hidden>‹</span> {t(endless ? "common.endRun" : daily ? "common.home" : "common.levels")}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-ink">
             {endless ? (
-              <><span aria-hidden>🧘</span> Endless</>
+              <><span aria-hidden>🧘</span> {t("game.endless")}</>
             ) : daily ? (
-              <><span aria-hidden>📅</span> Daily</>
+              <><span aria-hidden>📅</span> {t("game.daily")}</>
             ) : (
               <>
                 {boss && !revealLink && <span aria-hidden>👑</span>}
-                Level {puzzleIndex + 1}
+                {t("game.level", { n: puzzleIndex + 1 })}
               </>
             )}
           </div>
@@ -554,21 +542,21 @@ export default function Game({
             }`}
           >
             {endless
-              ? `Solved ${endlessInfo?.solved ?? 0} · ✦ ${(endlessInfo?.score ?? 0).toLocaleString()}`
+              ? t("game.endless.progress", { n: endlessInfo?.solved ?? 0, score: (endlessInfo?.score ?? 0).toLocaleString() })
               : revealLink
                 ? puzzle.title
                 : daily
-                  ? "Today's challenge"
+                  ? t("game.daily.today")
                   : twist
-                    ? TWIST_LABEL[twist]
+                    ? twistLabel(twist)
                     : tier
-                      ? TIER_LABELS[tier]
+                      ? t(TIER_KEY[tier])
                       : ""}
           </div>
         </div>
         <button
           onClick={onHelp}
-          aria-label="How to play"
+          aria-label={t("home.howToPlay")}
           className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           ?
@@ -681,7 +669,7 @@ export default function Game({
         )}
         {status === "lost" && (
           <p className="mt-6 text-center text-sm text-ink-soft">
-            Out of guesses — the link is still a secret. Replay to crack it!
+            {t("game.lost")}
           </p>
         )}
         </div>
@@ -690,14 +678,14 @@ export default function Game({
         <div className="lg:w-80 lg:shrink-0">
         {status === "playing" && !offering && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-soft">
-            <span aria-label="time elapsed">⏱ {fmtTime(now - startedAt.current)}</span>
+            <span aria-label={t("game.time")}>⏱ {fmtTime(now - startedAt.current)}</span>
             <span aria-hidden>·</span>
-            <span>{moves} {moves === 1 ? "move" : "moves"}</span>
+            <span>{plural("common.moves", moves)}</span>
             <button
               onClick={shuffleTiles}
               className="rounded-full border-2 border-ink px-2.5 py-1 font-semibold text-ink transition hover:bg-cream active:scale-95"
             >
-              🔀 Shuffle
+              {t("game.shuffle")}
             </button>
           </div>
         )}
@@ -708,7 +696,7 @@ export default function Game({
               onClick={startEarlyCall}
               className="rounded-full border-2 border-dashed border-press/70 px-4 py-2 text-xs font-bold text-press transition hover:bg-press/5 active:scale-95"
             >
-              🔑 Spotted the link? Call it — one shot, big bonus
+              {t("game.early.offer")}
             </button>
           </div>
         )}
@@ -871,13 +859,13 @@ function buildShare(opts: {
 }): string {
   // Spoiler-free: shows the solve path as coloured squares, never the words or
   // the level title (which would give the link away to whoever you share with).
-  const head = opts.daily ? "WordGrid Daily" : `WordGrid · Level ${opts.level}`;
+  const head = opts.daily ? t("share.daily") : t("share.level", { n: opts.level });
   const rating = opts.won ? "★".repeat(opts.stars) + "☆".repeat(3 - opts.stars) : "✖✖✖";
   const grid = opts.order.map((c) => CATEGORY_THEMES[opts.indexByName.get(c.name) ?? 0].emoji).join("");
   const detail = opts.won
     ? `${opts.linkCorrect ? "🔑✅" : "🔑❌"}  ⏱️ ${fmtTime(opts.timeMs)}${opts.mistakes ? `  ❌${opts.mistakes}` : ""}`
-    : "So close!";
-  return `${head}  ${rating}\n${grid}\n${detail}\nPlay 👉 ${location.href}`;
+    : t("share.soClose");
+  return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: location.href })}`;
 }
 
 function SecretLink({
@@ -910,7 +898,7 @@ function SecretLink({
         </div>
       )}
       <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-ink-soft">
-        {score > 0 ? "Secret link" : "Secret link · in every group"}
+        {t(score > 0 ? "game.secretLink" : "game.secretLinkFull")}
       </div>
       <div className="mt-1 flex items-center justify-center gap-2">
         <span aria-hidden className="text-lg">◆</span>
@@ -1008,7 +996,7 @@ function SolvedBanner({
     >
       <span className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-widest opacity-80">
         <span aria-hidden className="text-xs">{theme.shape}</span>
-        {masked ? `Group ${order + 1} · locked` : cat.name}
+        {masked ? t("game.lockedGroup", { n: order + 1 }) : cat.name}
       </span>
       <span className={`flex gap-1.5 font-extrabold ${compact ? "text-xs" : "text-sm"}`}>
         {cat.spokes.map((w) => (
@@ -1042,7 +1030,7 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
         <span aria-hidden className="text-sm">{theme.shape}</span>
         {cat.name}
       </span>
-      <span className="flex gap-1.5" aria-label="words not revealed">
+      <span className="flex gap-1.5" aria-label={t("game.a11y.wordsHidden")}>
         {cat.spokes.map((_, i) => (
           <span
             key={i}
@@ -1075,14 +1063,14 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
       className="mt-7 rounded-3xl border border-gold/70 bg-gold/10 p-6 text-center"
     >
       <div className="text-4xl">😮‍💨</div>
-      <h3 className="mt-2 font-display text-2xl font-bold text-ink">So close — don't stop now!</h3>
-      <p className="mt-1 text-sm text-ink-soft">Take a second chance and get two tries back.</p>
+      <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("game.continue.title")}</h3>
+      <p className="mt-1 text-sm text-ink-soft">{t("game.continue.body")}</p>
       <button
         onClick={accept}
         disabled={pending}
         className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
       >
-        <span aria-hidden>🎬</span> {pending ? "Loading…" : "Watch & continue (+2)"}
+        <span aria-hidden>🎬</span> {t(pending ? "game.continue.loading" : "game.continue.accept")}
       </button>
       <div>
         <button
@@ -1090,7 +1078,7 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
           disabled={pending}
           className="mt-3 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
         >
-          No thanks — end the run
+          {t("game.continue.decline")}
         </button>
       </div>
     </motion.div>
@@ -1128,12 +1116,12 @@ function Controls({
     <div className="mt-7 flex flex-col items-center gap-4">
       {hideMistakes ? (
         <div className="flex items-center gap-1.5 text-sm font-semibold text-leaf">
-          <span aria-hidden>🧘</span> Zen — no fail, just flow
+          <span aria-hidden>🧘</span> {t("game.zen")}
         </div>
       ) : (
         <div className="flex items-center gap-2 text-sm text-ink-soft">
-          <span>Mistakes left</span>
-          <div className="flex gap-1.5" role="img" aria-label={`${max - mistakes} of ${max} guesses remaining`}>
+          <span>{t("game.mistakesLeft")}</span>
+          <div className="flex gap-1.5" role="img" aria-label={t("game.a11y.guessesLeft", { n: max - mistakes, max })}>
             {Array.from({ length: max }).map((_, i) => (
               <motion.span
                 key={i}
@@ -1150,14 +1138,14 @@ function Controls({
           disabled={!hasSelection}
           className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition enabled:hover:bg-cream disabled:opacity-35"
         >
-          Clear
+          {t("game.clear")}
         </button>
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
           className="rounded-full bg-ink px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
-          Submit group
+          {t("game.submit")}
         </button>
       </div>
       {showRefill ? (
@@ -1166,7 +1154,7 @@ function Controls({
           className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
         >
           <span className="text-base" aria-hidden>🎬</span>
-          Out of hints — refill (+3)
+          {t("game.hint.refill")}
         </button>
       ) : (
         <button
@@ -1175,7 +1163,7 @@ function Controls({
           className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
           <span className="text-base" aria-hidden>💡</span>
-          Reveal a group's theme
+          {t("game.hint")}
           <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
             {hintBank}
           </span>
@@ -1192,26 +1180,16 @@ function Controls({
 // Step 1 teaches with the tutorial board's own first theme rather than words
 // baked in here, so re-pinning the opening level can't leave the coach
 // describing a puzzle the player isn't looking at.
-const COACH: readonly (null | { title: (theme: string) => string; body: (theme: string) => string; cta: string | null })[] = [
+const COACH: readonly (null | { key: string; cta: string | null })[] = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
-  {
-    title: () => "Your move: find the first group",
-    body: (theme) =>
-      `Three of these words fit “${theme}”. Tap the three you think belong, then Submit — I won't point them out. You can do this.`,
-    cta: null, // advances when the player solves any group
-  },
-  {
-    title: () => "That's a group! 🎉",
-    body: () =>
-      "Each group hides the same link word. Now find the other three on your own, then tap out the secret link to win. Good luck!",
-    cta: "Got it",
-  },
+  { key: "coach.1", cta: null }, // advances when the player solves any group
+  { key: "coach.2", cta: "common.gotIt" },
 ];
 
 const WELCOME_RULES = [
-  { icon: "🔗", text: "One hidden word links all four groups." },
-  { icon: "👆", text: "Tap 3 words that share a theme, then Submit." },
-  { icon: "⭐", text: "Find all four groups, then spell the secret word to win." },
+  { icon: "🔗", key: "welcome.rule1" },
+  { icon: "👆", key: "welcome.rule2" },
+  { icon: "⭐", key: "welcome.rule3" },
 ];
 
 function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
@@ -1222,7 +1200,7 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
       exit={{ opacity: 0 }}
       role="dialog"
       aria-modal="true"
-      aria-label="How to play"
+      aria-label={t("welcome.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-5"
     >
       <motion.div
@@ -1240,8 +1218,8 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
         >
           <span aria-hidden>◆</span>
         </motion.div>
-        <h2 className="mt-4 font-display text-3xl font-bold text-ink">How to play</h2>
-        <p className="mt-1 text-sm text-ink-soft">Three quick rules, then it's your turn.</p>
+        <h2 className="mt-4 font-display text-3xl font-bold text-ink">{t("welcome.title")}</h2>
+        <p className="mt-1 text-sm text-ink-soft">{t("welcome.subtitle")}</p>
         <div className="mt-5 space-y-2.5 text-left">
           {WELCOME_RULES.map((r, i) => (
             <motion.div
@@ -1254,7 +1232,7 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>
                 {r.icon}
               </span>
-              <span className="text-sm font-semibold leading-snug text-ink">{r.text}</span>
+              <span className="text-sm font-semibold leading-snug text-ink">{t(r.key)}</span>
             </motion.div>
           ))}
         </div>
@@ -1265,13 +1243,13 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
           onClick={onStart}
           className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
         >
-          Let's play →
+          {t("welcome.start")}
         </motion.button>
         <button
           onClick={onSkip}
           className="mx-auto mt-2 block py-1.5 text-xs font-semibold text-ink-soft transition hover:text-ink"
         >
-          Skip tutorial
+          {t("welcome.skip")}
         </button>
       </motion.div>
     </motion.div>
@@ -1308,24 +1286,26 @@ function Coach({
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">
           💡
         </span>
-        <span className="font-bold text-ink">{c.title(theme)}</span>
+        <span className="font-bold text-ink">{t(`${c.key}.title`)}</span>
         <button
           onClick={onSkip}
           className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-cream hover:text-ink"
         >
-          Skip
+          {t("common.skip")}
         </button>
       </div>
-      <p className="mt-2 text-sm leading-snug text-ink-soft">{c.body(theme)}</p>
+      <p className="mt-2 text-sm leading-snug text-ink-soft">{t(`${c.key}.body`, { theme })}</p>
       {c.cta && (
         <button
           onClick={step === COACH.length - 1 ? onDone : onNext}
           className="mt-3 w-full rounded-xl bg-ink py-2.5 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
-          {c.cta}
+          {t(c.cta)}
         </button>
       )}
-      {!c.cta && <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-press">Your turn ↑</div>}
+      {!c.cta && (
+        <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-press">{t("coach.yourTurn")}</div>
+      )}
     </motion.div>
   );
 }

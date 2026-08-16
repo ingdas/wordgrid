@@ -22,6 +22,16 @@ word, then build all four groups of three around it.
 There are **62 levels** on a hypercasual level map — clear one to unlock the
 next, and chase the ⭐ total and your 🔥 streak.
 
+## Languages
+
+The interface is localized (`src/i18n/`): English and Spanish, picked up from
+`navigator.language` and switchable in Settings. The **word puzzles stay
+English** — a board of English words can't be translated, only rewritten — so
+a translated UI fully unlocks the Logic Grid (pure deduction, no vocabulary)
+and makes every menu, rule and result screen readable around the rest. Adding
+a language is one catalogue file plus a line in `LOCALES`; `npm test` fails on
+a missing key or a dropped `{placeholder}`.
+
 ## Tech stack
 
 - [Vite](https://vitejs.dev/) + [React 19](https://react.dev/) + TypeScript

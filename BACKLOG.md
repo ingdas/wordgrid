@@ -146,6 +146,14 @@ hero card) → Level map (8 chapters, boss at each chapter end) → Game.
   playerRank ladder.
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
 - `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
+- `i18n/` — `index.ts` (locale detection + persistence, `t("key", {params})`,
+  `plural()`), `en.ts` (source of truth, ~290 keys), `es.ts`. Components never
+  hold user-visible copy: chapter names, rank titles, tier labels, achievement
+  titles, boss twists and every Logic clue sentence are catalogue keys, so
+  `puzzles.ts`/`achievements.ts`/`progress.ts` carry `nameKey`/`titleKey`/
+  `titleIndex` rather than English. Switching locale re-keys the App subtree to
+  force a re-render. Puzzle *content* (board words, category names) is
+  deliberately not localized — see the i18n note in the still-open list.
 - `sdk.ts` — defensive CrazyGames v3 wrapper (init, loading, gameplay,
   interstitial, requestRewarded → resolves true offline). Script tag is LIVE in
   index.html (async, no-ops when absent).
@@ -310,8 +318,15 @@ Code quality:
    "House rules for authoring a board" below for the classes it turned up.
    Semantic overlap still can't be enforced by a script, so a new content batch
    needs the same read.
-7. **[i18n] `src/i18n.ts` covers 12 strings**; everything else is inline. The
-   scaffold is not coverage.
+7. ✅ **[i18n] Done (iteration 23).** `src/i18n/` holds one catalogue per
+   locale (~290 keys), English as the source of truth, Spanish alongside it,
+   with `scripts/i18n.test.mts` failing the build on a missing key, a stray
+   key, or a lost `{placeholder}`. Locale comes from `navigator.language`,
+   is overridable in Settings, and persists. **The word puzzles stay English**
+   — a board of English words can only be rewritten per language, not
+   translated — so what a locale actually unlocks today is the Logic Grid
+   (pure deduction, no vocabulary) plus every menu, rule and result screen.
+   Adding a language is now one file plus a line in `LOCALES`.
 8. **[platform] Save-data resilience in iframes** — localStorage can be
    partitioned in embeds; mirror progress through the CrazyGames data module
    when present.
