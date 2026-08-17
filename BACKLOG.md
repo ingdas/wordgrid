@@ -1,6 +1,6 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 30 (debug mode: free hints, auto-solve, a tool tray).
+_Last updated: iteration 31 (the boss briefing: every twist explains itself).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -81,10 +81,15 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   a miss hands the board back), and the **chapter key** (`bank` for an
   exact-letters bank, `titleKey`/`bodyKey` for its copy, `dismissKey` for a
   panel with no "give up" to offer).
+- `BossBriefing.tsx` — the boss's rules: `BossBriefing` (the dialog the game
+  opens on an unbeaten boss and the board's rule strip reopens) and `BossRules`
+  (its what-changes / how-to-play pair, reused by the how-to-play sheet).
+  Copy lives in i18n as `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
 - `EndCard.tsx` — win/loss card, StarRow, RATINGS, share (canvas + Web Share).
 - `Game.tsx` — the in-game screen. Key props: puzzleIndex,
   overrideRaw (play a non-campaign RawPuzzle — daily pool / Endless), twist,
-  daily, endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
+  bossBeaten (a boss with stars doesn't re-open its briefing), daily,
+  endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
   onLoss (carry title+score), onNext/onExit. Systems inside: score+combo with
   floating pops; tap-**or-type**-to-spell finale; **early link call** (offered
   once a group is solved and ≥2 remain, not during the tutorial or on the
@@ -258,6 +263,62 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## The boss briefing — every twist explains itself (iteration 31)
+
+Owner report: *"the individual boss mechanics are not clear to the player."*
+They were right, and the reason was that the game only ever **named** them.
+A boss's rule reached the player through exactly two channels:
+
+- a **1.9-second toast** on entering the level (`twist.*.intro`), fired once,
+  unrecoverable — blink, or come back to the level tomorrow, and the rules of
+  the board you're on are gone;
+- a **two-word noun phrase** — "impostors", "blackout", "the oracle" — on the
+  boss door, the up-next card, the win card's Next button and the top bar.
+  Names, not rules. "Blackout" tells a player nothing about what the board is
+  about to do to them, and the one that *sounds* self-explanatory is the one
+  that misleads: "the oracle" gives no hint that grouping is locked until you
+  spell the link.
+
+Nothing else said a word, including the **?** button — asked for help mid-boss,
+it explained the ordinary game the player was already playing.
+
+### What each twist now says for itself
+
+Every twist gained a **rule** (one line, the mechanic in a sentence) and a
+two-part **briefing** (`brief.a` = what changes, `brief.b` = how to play it),
+in `en` and `es`. `twist.*.intro` is gone — the toast it fed is what failed.
+
+### Where it says it
+
+- **The briefing** (`BossBriefing.tsx`) — a dialog, not a toast: crown, twist
+  name, the rule, then what changes / how to play it. It **opens itself on a
+  boss you haven't beaten** (`bossBeaten` = the level has stars) and waits to be
+  dismissed; a boss you've already cleared doesn't re-brief you.
+- **A rule strip on the board**, under the header, for as long as the rule is in
+  force (it goes at the win/loss card). It states the rule and **reopens the
+  briefing** when tapped — the recall path the toast never had. On lg it drops
+  its own eyebrow, because the top bar names the twist right beside it and the
+  1280×720 embed has no vertical room to spare.
+- **The how-to-play sheet leads with the boss** you're actually fighting, above
+  the three ordinary steps (and now scrolls, because that stack is taller than
+  a phone).
+- **The boss door and the up-next card** carry the rule under the name, so the
+  choice to walk in is made knowing which game is behind it. A *beaten* door
+  still names the board it was — there's nothing left to warn about.
+
+### Fixed on the way through
+
+- The Oracle's "the four themes — what single word joins them all?" prompt was
+  **hard-coded English** in `Game.tsx`; it's `game.oracle.prompt` now.
+- `LinkGuess` takes `suspended`: its window keydown handler would otherwise
+  **type the briefing-reader's keystrokes into the answer** behind the dialog,
+  which the Oracle (whose guess phase is open from the first frame) would hit
+  every time.
+
+`playtest.mjs` covers the new flow (the briefing explains the twist → dismiss →
+the rule survives on the board → tapping it reopens the briefing). All three
+headless suites and `npm test` pass with zero issues.
 
 ## Debug mode: hints, auto-solve, tools (iteration 30)
 

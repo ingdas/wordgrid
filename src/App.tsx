@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type RawPuzzle } from "./puzzles";
+import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type BossTwist, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
@@ -38,6 +38,7 @@ import { LOCALES, getLocale, setLocale, t, type Locale } from "./i18n";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
+import { BossRules } from "./BossBriefing";
 import Pairs from "./Pairs";
 import Deduction from "./Deduction";
 
@@ -691,6 +692,9 @@ export default function App() {
               endless={endless}
               endlessInfo={endless ? { solved: endlessSolved, score: endlessScore, best: progress.endlessBest } : undefined}
               twist={endless || playingDaily ? null : bossTwist(levelIndex)}
+              // A boss you've already beaten doesn't re-brief you on the way
+              // in — you know what it does; the rule strip is there if not.
+              bossBeaten={!endless && !playingDaily && (progress.stars[LEVELS[levelIndex].id] ?? 0) > 0}
               bestMs={endless || playingDaily ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
               debug={debug}
@@ -737,7 +741,14 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+        {showHelp && (
+          <HelpModal
+            // Asked for help mid-boss, the sheet answers about *this* boss
+            // first: the three ordinary steps aren't what stopped them.
+            twist={screen === "game" && !endless && !playingDaily ? bossTwist(levelIndex) : null}
+            onClose={() => setShowHelp(false)}
+          />
+        )}
         {showStats && (
           <StatsModal
             progress={progress}
@@ -1176,7 +1187,7 @@ const STEPS = [
   { icon: "⭐", grad: "from-[#f2b544] to-[#eda820]", key: "help.step3" },
 ];
 
-function HelpModal({ onClose }: { onClose: () => void }) {
+function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () => void }) {
   useEscape(onClose);
   return (
     <motion.div
@@ -1195,7 +1206,9 @@ function HelpModal({ onClose }: { onClose: () => void }) {
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
+        // Mid-boss the sheet carries the boss's rules on top of the three
+        // steps, which is taller than a phone — so it scrolls.
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
         <div className="flex items-center gap-2.5">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-press text-lg text-paper">
@@ -1203,6 +1216,24 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           </div>
           <h3 className="font-display text-2xl font-bold text-ink">{t("help.title")}</h3>
         </div>
+
+        {twist && (
+          <div className="mt-5 rounded-2xl border-2 border-ink bg-ink/5 p-3">
+            <div className="flex items-baseline gap-1.5">
+              <span aria-hidden>👑</span>
+              <span className="text-[0.6rem] font-extrabold uppercase tracking-[0.2em] text-press">
+                {t("help.boss.eyebrow")}
+              </span>
+            </div>
+            <div className="mt-0.5 font-display text-lg font-bold capitalize leading-tight text-ink">
+              {t(`twist.${twist}.short`)}
+            </div>
+            <p className="mt-0.5 text-sm font-semibold leading-snug text-ink-soft">{t(`twist.${twist}.rule`)}</p>
+            <div className="mt-2.5">
+              <BossRules twist={twist} />
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 space-y-3">
           {STEPS.map((s) => (

@@ -118,6 +118,16 @@ export const es: Record<string, string> = {
   "boss.a11y.open": "Jugar contra el jefe del capítulo {n}, nivel {level}",
   "boss.a11y.beaten": "Jefe del capítulo {n} derrotado, {title}",
 
+  // El informe: qué le hace este jefe al juego, contado entero antes de tocar
+  // el tablero y accesible desde él durante toda la partida.
+  "boss.brief.eyebrow": "Combate de jefe",
+  "boss.brief.what": "Qué cambia",
+  "boss.brief.how": "Cómo se juega",
+  "boss.brief.cta": "Entendido — ¡vamos!",
+  "boss.brief.a11y": "Reglas del jefe: {what}",
+  "boss.rule.cta": "Reglas",
+  "boss.rule.a11y": "Reglas del jefe — {what}: {rule} Abre el informe completo.",
+
   // --- in game ------------------------------------------------------------
   "game.level": "Nivel {n}",
   "game.daily": "Diario",
@@ -147,6 +157,7 @@ export const es: Record<string, string> = {
   "game.a11y.lost": "Sin intentos. Repite el nivel para descubrir la palabra secreta.",
   "game.a11y.won": "¡Resuelto! La palabra secreta era {word}. {stars} de 3 estrellas.",
   "game.a11y.wordsHidden": "palabras no reveladas",
+  "game.oracle.prompt": "Los cuatro temas: ¿qué palabra los une a todos?",
 
   // second chance
   "game.continue.title": "¡Casi lo tienes, no lo dejes ahora!",
@@ -247,6 +258,7 @@ export const es: Record<string, string> = {
   "help.step3.title": "Adivina la palabra, gana estrellas",
   "help.step3.body":
     "Encuentra los cuatro grupos (con cuatro fallos permitidos) y escribe la palabra secreta que los une. ¿La ves antes? Adivínala para un bonus — un intento por nivel.",
+  "help.boss.eyebrow": "Este nivel es un jefe",
   "help.letsPlay": "A jugar",
   "stats.title": "Tus estadísticas",
   "stats.score": "Puntuación total",
@@ -445,12 +457,30 @@ export const es: Record<string, string> = {
   "twist.oracle.short": "el oráculo",
   "twist.decoy.short": "impostores",
   "twist.blackout.short": "apagón",
-  "twist.scramble.intro": "👑 Jefe — las fichas están revueltas. ¡Ordénalas y luego agrúpalas!",
-  "twist.emoji.intro": "👑 Jefe — cada ficha es un emoji. ¡Lee los dibujos y luego agrúpalos!",
-  "twist.oracle.intro":
-    "🔮 El Oráculo — todas las palabras y temas a la vista. Nombra primero la palabra oculta y agrupa con calma.",
-  "twist.decoy.intro": "👑 Jefe — tres fichas impostoras no son de NINGÚN grupo. ¡Elige con cuidado!",
-  "twist.blackout.intro": "👑 Jefe — ¡apagón! Los grupos resueltos quedan ocultos hasta el final.",
+  "twist.scramble.rule": "Cada ficha es un anagrama: ordénala y luego agrupa.",
+  "twist.emoji.rule": "Cada ficha es un dibujo. En el tablero no hay ni una letra.",
+  "twist.oracle.rule": "Nombra primero el enlace oculto: palabras y temas están a la vista.",
+  "twist.decoy.rule": "Tres de las quince fichas no pertenecen a ningún grupo.",
+  "twist.blackout.rule": "Los grupos que resuelvas se apagan y siguen ocultos hasta el final.",
+  "twist.scramble.brief.a":
+    "Las doce palabras siguen ahí, pero cada ficha llega con sus letras desordenadas.",
+  "twist.scramble.brief.b":
+    "Descífrala antes de usarla. Barajar, las pistas y tus cuatro fallos funcionan igual que siempre.",
+  "twist.emoji.brief.a": "Este tablero no tiene ninguna palabra: doce emojis ocupan su lugar.",
+  "twist.emoji.brief.b":
+    "Pon tú el nombre a cada dibujo y agrupa los tres que comparten tema. La palabra oculta se sigue deletreando al final.",
+  "twist.oracle.brief.a":
+    "El puzle está del revés: tienes las doce palabras Y los cuatro temas desde el principio, y lo que falta es el enlace.",
+  "twist.oracle.brief.b":
+    "Deletrea el enlace antes de agrupar nada. No hay reloj y fallar no cuesta nada: el tablero se abre en cuanto lo nombres.",
+  "twist.decoy.brief.a":
+    "Han colado impostoras en el tablero: quince fichas, y solo doce pertenecen a un grupo.",
+  "twist.decoy.brief.b":
+    "Un grupo con una impostora dentro falla como cualquier otro y te cuesta un fallo, así que detecta las falsas antes de enviar.",
+  "twist.blackout.brief.a":
+    "Cada grupo que encuentras se tapa: su tema y sus tres palabras desaparecen en vez de quedarse en pantalla.",
+  "twist.blackout.brief.b":
+    "No puedes releer tu propio avance en el tablero, así que lleva tú la cuenta de lo que ya has usado.",
 
   // --- achievements -------------------------------------------------------
   "ach.tier.0": "Bronce",

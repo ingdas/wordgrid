@@ -7,6 +7,7 @@ import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
+import { BossBriefing } from "./BossBriefing";
 import { DebugPanel } from "./DebugPanel";
 import { EndCard } from "./EndCard";
 import Confetti from "./Confetti";
@@ -22,9 +23,12 @@ import {
 
 const MAX_MISTAKES = 4;
 
-// Per-twist flavour shown in the top bar and the one-time intro toast.
+// Per-twist copy. `label` names the twist in the top bar; `rule` is the one
+// line that has to carry the mechanic wherever the name alone would say
+// nothing ("blackout" means something only once you've been told what it does).
 const twistLabel = (tw: BossTwist) => t(`twist.${tw}.label`);
-const twistIntro = (tw: BossTwist) => t(`twist.${tw}.intro`);
+const twistName = (tw: BossTwist) => t(`twist.${tw}.short`);
+const twistRule = (tw: BossTwist) => t(`twist.${tw}.rule`);
 
 
 type Status = "playing" | "guessing" | "won" | "lost";
@@ -38,6 +42,8 @@ interface GameProps {
   tutorial: boolean;
   daily: boolean;
   twist: BossTwist | null;
+  /** This boss has been beaten before, so its briefing doesn't open itself. */
+  bossBeaten?: boolean;
   endless?: boolean;
   endlessInfo?: { solved: number; score: number; best: number };
   bestMs?: number;
@@ -67,6 +73,7 @@ export default function Game({
   tutorial,
   daily,
   twist,
+  bossBeaten = false,
   endless = false,
   endlessInfo,
   bestMs,
@@ -170,10 +177,12 @@ export default function Game({
     return () => clearInterval(timer);
   }, [status]);
 
-  // One-time boss intro, tailored to this boss's twist.
-  useEffect(() => {
-    if (twist) setToast(twistIntro(twist));
-  }, [twist]);
+  // A boss changes the rules, and a 1.9-second toast was the only place it ever
+  // said how — miss it and you're playing a game you don't know the rules to.
+  // The briefing is a dialog instead: it opens itself on a boss you haven't
+  // beaten and waits to be dismissed, and the rule strip under the header
+  // reopens it at any point in the fight.
+  const [brief, setBrief] = useState(twist != null && !bossBeaten);
 
   // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
   useEffect(() => {
@@ -668,6 +677,37 @@ export default function Game({
         </button>
       </div>
 
+      {/* The boss's rule, in play, for as long as the rule is in force. The
+          name alone ("impostors", "blackout") is a label, not an explanation —
+          this is the sentence that says what the board is doing to you, and
+          tapping it brings the full briefing back. */}
+      {twist && status !== "won" && status !== "lost" && (
+        <button
+          onClick={() => setBrief(true)}
+          aria-label={t("boss.rule.a11y", { what: twistName(twist), rule: twistRule(twist) })}
+          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-left text-paper shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
+        >
+          <span aria-hidden className="text-base leading-tight">👑</span>
+          <span aria-hidden className="min-w-0 flex-1">
+            {/* The name is repeated in the top bar, which is beside the strip
+                rather than above it once there's width — so the wide layout
+                drops it and keeps the sentence that does the work. */}
+            <span className="block text-[0.55rem] font-extrabold uppercase tracking-[0.2em] text-paper/60 lg:hidden">
+              {twistName(twist)}
+            </span>
+            <span className="mt-0.5 block text-[0.78rem] font-semibold leading-snug text-paper lg:mt-0">
+              {twistRule(twist)}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="mt-0.5 shrink-0 rounded-full border border-paper/40 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-paper/80 lg:mt-0"
+          >
+            {t("boss.rule.cta")}
+          </span>
+        </button>
+      )}
+
       <main className="relative mt-4 flex flex-1 flex-col justify-center lg:block">
         {/* Floating reward popups ("+200 ×2") rising near the link card */}
         <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex flex-col items-center gap-1">
@@ -704,7 +744,7 @@ export default function Game({
         {oraclePending && (
           <div className="mt-3 rounded-2xl border border-ink/20 bg-press/5 p-3">
             <div className="text-center text-[0.7rem] font-bold uppercase tracking-widest text-press">
-              The four themes — what single word joins them all?
+              {t("game.oracle.prompt")}
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {puzzle.categories.map((cat) => {
@@ -831,6 +871,7 @@ export default function Game({
         {status === "guessing" && (
           <LinkGuess
             oracle={twist === "oracle"}
+            suspended={brief}
             early={earlyCall}
             onMiss={missEarlyCall}
             resolved={linkGuess != null}
@@ -926,6 +967,10 @@ export default function Game({
             onSkip={() => { setCoach(-1); onTutorialDone(); }}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {brief && twist && <BossBriefing twist={twist} onClose={() => setBrief(false)} />}
       </AnimatePresence>
 
       <div className="sr-only" role="status" aria-live="polite">

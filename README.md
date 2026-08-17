@@ -20,7 +20,10 @@ word, then build all four groups of three around it.
 5. Fewer mistakes earn more **stars** (3 max per level).
 
 There are **100 levels** across twelve chapters, each closing on a **boss** that
-plays by its own rule. The order isn't a straight climb: every chapter opens on a
+plays by its own rule — and says what that rule is: the door and the up-next
+card carry it in a line, a **briefing** opens on any boss you haven't beaten,
+and the rule stays on the board (tap it for the briefing again) for the whole
+fight. The order isn't a straight climb: every chapter opens on a
 breather, works up, and finishes on the hardest board it can find — one that
 suits the twist that boss plays by. They're browsed from an **index** rather than a level
 grid, and the two halves of it read differently on purpose: a level you've

@@ -119,6 +119,16 @@ export const en: Record<string, string> = {
   "boss.a11y.open": "Play the boss of chapter {n}, level {level}",
   "boss.a11y.beaten": "Boss of chapter {n} defeated, {title}",
 
+  // The briefing: what this boss actually does to the game, said in full
+  // before the board is playable and reachable from the board afterwards.
+  "boss.brief.eyebrow": "Boss fight",
+  "boss.brief.what": "What changes",
+  "boss.brief.how": "How to play it",
+  "boss.brief.cta": "Got it — bring it on",
+  "boss.brief.a11y": "Boss rules: {what}",
+  "boss.rule.cta": "Rules",
+  "boss.rule.a11y": "Boss rules — {what}: {rule} Open the full briefing.",
+
   // --- in game ------------------------------------------------------------
   "game.level": "Level {n}",
   "game.daily": "Daily",
@@ -148,6 +158,7 @@ export const en: Record<string, string> = {
   "game.a11y.lost": "Out of guesses. Replay the level to discover the secret link.",
   "game.a11y.won": "Solved! The secret link was {word}. {stars} of 3 stars.",
   "game.a11y.wordsHidden": "words not revealed",
+  "game.oracle.prompt": "The four themes — what single word joins them all?",
 
   // second chance
   "game.continue.title": "So close — don't stop now!",
@@ -254,6 +265,9 @@ export const en: Record<string, string> = {
   "help.step3.title": "Guess the link, earn stars",
   "help.step3.body":
     "Find all four groups (four mistakes allowed), then spell the secret word that links them all. Spot it early? Call it for a bonus — one shot per level.",
+  // Opened mid-boss, the sheet leads with the boss you are actually fighting —
+  // the three ordinary steps are not what a stuck player came here for.
+  "help.boss.eyebrow": "This level is a boss",
   "help.letsPlay": "Let's play",
   "stats.title": "Your stats",
   "stats.score": "Total score",
@@ -457,12 +471,35 @@ export const en: Record<string, string> = {
   "twist.oracle.short": "the oracle",
   "twist.decoy.short": "impostors",
   "twist.blackout.short": "blackout",
-  "twist.scramble.intro": "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
-  "twist.emoji.intro": "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  "twist.oracle.intro":
-    "🔮 The Oracle — every word and theme is laid bare. Name the hidden link first, then group at your leisure.",
-  "twist.decoy.intro": "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
-  "twist.blackout.intro": "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
+  // The rule in one line. This is the string that has to carry the mechanic on
+  // its own: it sits on the boss door, on the board the whole fight, and in the
+  // how-to-play sheet — everywhere a name like "blackout" would say nothing.
+  "twist.scramble.rule": "Every tile is an anagram — unscramble it, then group.",
+  "twist.emoji.rule": "Every tile is a picture. There are no letters on the board.",
+  "twist.oracle.rule": "Name the hidden link first — the words and themes are laid bare.",
+  "twist.decoy.rule": "Three of the fifteen tiles belong to no group at all.",
+  "twist.blackout.rule": "Groups you solve go dark and stay hidden until the reveal.",
+  // The briefing's two halves: what the twist does to the board, then what the
+  // player is supposed to do about it.
+  "twist.scramble.brief.a":
+    "The twelve words are all still there, but every tile arrives with its letters shuffled.",
+  "twist.scramble.brief.b":
+    "Decode a tile before you use it. Shuffle, hints and your four mistakes work exactly as they always do.",
+  "twist.emoji.brief.a": "This board has no words on it at all — twelve emoji stand in for them.",
+  "twist.emoji.brief.b":
+    "Name each picture yourself, then group the three that share a theme. The secret link is still spelled out at the end.",
+  "twist.oracle.brief.a":
+    "The puzzle is inside out: you get all twelve words AND the four theme names up front, and the link is the piece that's missing.",
+  "twist.oracle.brief.b":
+    "Spell the link before you group anything. There's no timer and a wrong guess costs you nothing — the board opens up as soon as you name it.",
+  "twist.decoy.brief.a":
+    "Impostors have been salted onto the board: fifteen tiles, and only twelve of them belong to a group.",
+  "twist.decoy.brief.b":
+    "A group with an impostor in it busts like any wrong guess and costs a mistake, so spot the fakes before you submit.",
+  "twist.blackout.brief.a":
+    "Every group you find is boarded up — its theme and its three words vanish instead of staying on screen.",
+  "twist.blackout.brief.b":
+    "You can't read your own progress back off the board, so keep track of what you have already used.",
 
   // --- achievements -------------------------------------------------------
   "ach.tier.0": "Bronze",
