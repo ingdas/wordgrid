@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 26 (chapter keys gate the bosses; each chapter
-stains the page it's played on). This file is the single source of truth — a fresh session should
+_Last updated: iteration 28 (the campaign runs to 100 levels across twelve
+chapters). This file is the single source of truth — a fresh session should
 be able to continue from here without any prior chat context._
 
 ## What this is
@@ -10,7 +10,7 @@ A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board of
 12 words that sort into 4 themed groups of three, all joined by one **hidden
 link word** (the "pivot", e.g. STAR) revealed by tapping letters at the end.
 Flow: first launch → straight into a guided tutorial; afterwards Home (Daily
-hero card) → Level index (8 chapters, boss at each chapter end) → Game.
+hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 
 ## How to work on this repo (session bootstrap)
 
@@ -39,10 +39,11 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
 
 ## Architecture map (src/)
 
-- `puzzles.ts` — 63 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
+- `puzzles.ts` — 100 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
   seededShuffle, difficulty sort with hand-pinned OPENING =
   star,trunk,ring,bug,bank (concrete → abstract ramp); CHAPTERS
-  (sizes [6,7,7,8,8,8,8,10], boss = last of chapter), BossTwist type +
+  (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
+  BossTwist type +
   CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
   owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles;
   CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
@@ -234,6 +235,61 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
+## 100 levels, twelve chapters (iteration 28)
+
+The campaign was 63 boards in eight chapters. It is now **100 boards in twelve
+chapters** — 37 new pivots authored to the house rules above, and the chapter
+frame stretched to carry them.
+
+**The content.** 37 new `RawPuzzle`s: DRAW, SPOT, RUN, SHIFT, TRIP, CROSS,
+STEAM, SINK, CHARM, VOLUME, PLUG, SCORE, RAIL, MARK, PRESENT, STALL, SWING,
+DRIVE, GRAIN, PEAK, HOOK, TURN, LEAD, CLIP, FLOOR, PRIME, SHOCK, SPIN, TENDER,
+CHANNEL, VAULT, PANEL, STEP, SNAP, TEMPER, SLATE, STRAIN. None of them re-uses
+a campaign or Daily pivot (`validate` enforces the Daily half of that), and the
+difficulty sort places them, so the new boards are spread across the whole
+campaign rather than bolted on at the end.
+
+Every board was read against the four human-only classes in *House rules*, and
+that read is where most of the authoring time went. What it caught, as a guide
+to the next batch:
+
+- **A tile another group could claim** — PASS ("___ + WORD") beside "to get to
+  the other side"; BOILER in an engine room beside "cook over boiling water";
+  FUNNEL beside a group of ducts; POINTER (a dog) beside a dog lead; PATCH
+  beside a tear in a stocking; SEESAW beside "to move to and fro"; a BOARD
+  beside a plank.
+- **A tile that is the pivot** — TIE on a DRAW board, SPRAIN one letter off
+  STRAIN, POPPER on a SNAP board (it's British for exactly that fastener).
+- **Same group twice on one board** — RAIL had "beside the staircase" and "a
+  long straight bar", which are the same idea; the second became `___ + WAY`.
+- **Spelling** — the tile vocabulary is US (HARBOR, THEATER, TIRE), even though
+  the prose here isn't: PLOW, INSTALLMENT, HUMOR, EMCEE, SANDBOX.
+
+`npm run audit` is back to one near-duplicate pair (`spring`/`fall` Seasons),
+which is the pre-existing one — every clash the new boards introduced was
+resolved by changing a tile, never a category name.
+
+**The frame.** `CHAPTER_SIZES` is now [6,7,7,8,8,8,8,9,9,9,10] + remainder:
+chapters grow as the campaign goes on, and the twelfth swallows the rest (11).
+Four new chapters — Deep Water, Sleight of Hand, The Long Game, No Safety Net —
+sit in front of The Final Test, which keeps its MASTERMIND key and its clay
+paper. Their keys are UNDERTOW · MISCHIEF · PATIENCE · TIGHTROPE, sized to
+their chapters' non-boss level counts (`validate` and `npm test` both check).
+
+Two things that would have broken quietly if left alone:
+
+- **`CHAPTER_TWISTS` is no longer cycled with a modulo.** It has one entry per
+  chapter now, because "emoji" swaps in the one bespoke picture board — a
+  second emoji chapter would have replayed a board the player already solved.
+  Adjacent chapters still never share a twist.
+- **`CHAPTER_INKS` gained four inks** (indigo, lime, slate, plum) before the
+  clay finale. `chapterInk`/`chapterPage` are modulo lookups, so twelve
+  chapters against eight inks would have restarted the palette at chapter 9 and
+  handed the finale gold.
+
+Nothing else needed touching: level counts, star totals, achievement ceilings
+and the "N levels to the next boss" carrot all derive from `LEVELS.length`.
+
 ## The boss door, and letters you watch being earned (iteration 27)
 
 Iteration 26 built the chapter key as a *rule*: clear the levels, a counter
@@ -322,7 +378,8 @@ Every chapter hides a **keyword**, and every non-boss level in it banks one of
 that keyword's letters when you clear it. Bank them all and the key panel
 opens: the letters come back **jumbled, with no decoys**, and spelling the word
 opens the boss door. The keywords are themed to their chapters —
-SPARK · EMBERS · TANGLE · MIRRORS · SPIRALS · LEXICON · RIDDLES · MASTERMIND —
+SPARK · EMBERS · TANGLE · MIRRORS · SPIRALS · LEXICON · RIDDLES · UNDERTOW ·
+MISCHIEF · PATIENCE · TIGHTROPE · MASTERMIND —
 so the chapter's own name is the clue.
 
 It reuses what the game already teaches: `LinkGuess` is the finale's panel, and
@@ -411,7 +468,7 @@ same way.**
   game screen already does: what to play on the left, the collection in its own
   `overflow-y-auto` pane on the right, so the whole thing sits above the fold in
   the 1280×720 iframe CrazyGames serves most desktop players — **the page itself
-  never scrolls, even with all 63 levels solved**, which `scripts/playtest.mjs`
+  never scrolls, even with every level solved**, which `scripts/playtest.mjs`
   now asserts. The Play button goes full width in that column: on a games portal
   the primary CTA should be the biggest thing on screen, not a chip beside a
   heading. Portrait is untouched (one column, as before).
@@ -443,7 +500,7 @@ may as well not run.
 
 - `Progress.seen` records which levels the player has already seen open.
   `newlyUnlocked()` / `markSeen()` in `progress.ts` drive it; both ignore the
-  debug switch, so `?debug` never counts as unlocking 63 levels. Existing saves
+  debug switch, so `?debug` never counts as unlocking the campaign. Existing saves
   are migrated with everything already-open marked seen, and a fresh save starts
   with its opening levels seen — nobody gets a backlog of stale reveals.
 - A freshly opened entry **starts on its locked face** and pops open on a timer

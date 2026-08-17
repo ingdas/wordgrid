@@ -163,8 +163,9 @@ log("link-guess acknowledged:", /guessed it/i.test(winText));
 await p.screenshot({ path: `${SHOT}/r6-win.png` });
 
 // 8. Back to the index: the unlock window extends after a clear, stars are
-//    banked (63*3 = 189), and a solved level is listed by title while an
-//    unsolved one is not.
+//    banked (3 per level, so the ceiling is LEVELS.length*3 — read off the page
+//    rather than hard-coded, since the campaign grows), and a solved level is
+//    listed by title while an unsolved one is not.
 await clickText("button", "Levels");
 // The map pays out the letter the clear just bought BEFORE it opens anything
 // new, so a fresh entry is still locked for the length of the hand-over plus
@@ -185,7 +186,9 @@ if (!/1 of 5 letters/i.test(rail)) note(`Clearing level 1 did not bank exactly o
 if (nodes[0]?.disabled) note("Level 1 should be unlocked after clearing it.");
 if (nodes[3]?.disabled) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
 if (!nodes[4]?.disabled) note("Level 5 should still be locked after clearing only level 1.");
-if (!/⭐\s*3\/189/.test(await bodyText())) note("Star total not updated to 3/189.");
+const starTotal = (await bodyText()).match(/⭐\s*(\d+)\/(\d+)/);
+if (!starTotal || starTotal[1] !== "3") note(`Star total not updated to 3 (saw ${starTotal ? starTotal[0] : "nothing"}).`);
+else if (Number(starTotal[2]) % 3 !== 0) note(`Star ceiling ${starTotal[2]} is not 3 per level.`);
 
 // The index names levels you've solved and only those. A title is a strong hint
 // at the link ("Star Power" → STAR), so leaking one for an unplayed level would

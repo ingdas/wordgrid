@@ -719,6 +719,413 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Folded from paper", words: ["BOAT", "FROG", "FAN"] },
     ],
   },
+  {
+    id: "draw",
+    title: "Luck of the Draw",
+    pivot: "DRAW",
+    categories: [
+      { name: "To move by force", words: ["HAUL", "DRAG", "TUG"] },
+      { name: "Neither side wins", words: ["STALEMATE", "STANDOFF", "DEADHEAT"] },
+      { name: "Made with a pencil", words: ["SCRIBBLE", "CARTOON", "OUTLINE"] },
+      { name: "What pulls a crowd in", words: ["LURE", "MAGNET", "ATTRACTION"] },
+    ],
+  },
+  {
+    id: "spot",
+    title: "Hit the Spot",
+    pivot: "SPOT",
+    categories: [
+      { name: "A mark on the tablecloth", words: ["STAIN", "BLOT", "SMUDGE"] },
+      { name: "To catch sight of", words: ["NOTICE", "DETECT", "GLIMPSE"] },
+      { name: "Where something sits", words: ["SITE", "LOCATION", "POSITION"] },
+      { name: "A break in the broadcast", words: ["ADVERT", "PROMO", "TRAILER"] },
+    ],
+  },
+  {
+    id: "run",
+    title: "On the Run",
+    pivot: "RUN",
+    categories: [
+      { name: "Move fast on foot", words: ["SPRINT", "JOG", "GALLOP"] },
+      { name: "Be in charge of a business", words: ["MANAGE", "OPERATE", "DIRECT"] },
+      { name: "Damage in a stocking", words: ["SNAG", "TEAR", "LADDER"] },
+      { name: "An unbroken series", words: ["SPELL", "STRETCH", "PERIOD"] },
+    ],
+  },
+  {
+    id: "shift",
+    title: "Night Shift",
+    pivot: "SHIFT",
+    categories: [
+      { name: "A spell of work", words: ["STINT", "WATCH", "SESSION"] },
+      { name: "To move a little", words: ["BUDGE", "INCH", "EDGE"] },
+      { name: "A move to something new", words: ["CHANGE", "SWITCH", "TRANSITION"] },
+      { name: "A simple loose dress", words: ["TUNIC", "SMOCK", "FROCK"] },
+    ],
+  },
+  {
+    id: "trip",
+    title: "Round Trip",
+    pivot: "TRIP",
+    categories: [
+      { name: "Time away from home", words: ["VOYAGE", "EXCURSION", "OUTING"] },
+      { name: "To lose your footing", words: ["STUMBLE", "TUMBLE", "STAGGER"] },
+      { name: "To set an alarm off", words: ["TRIGGER", "ACTIVATE", "SPRING"] },
+      { name: "___ + WIRE", words: ["HIGH", "HAY", "LIVE"] },
+    ],
+  },
+  {
+    id: "cross",
+    title: "Cross Purposes",
+    pivot: "CROSS",
+    categories: [
+      { name: "In a bad mood", words: ["ANNOYED", "IRRITABLE", "GRUMPY"] },
+      { name: "To get to the other side", words: ["TRAVERSE", "SPAN", "FORD"] },
+      { name: "Made from two breeds", words: ["HYBRID", "BLEND", "MONGREL"] },
+      { name: "___ + WORD", words: ["CATCH", "SWEAR", "BUZZ"] },
+    ],
+  },
+  {
+    id: "steam",
+    title: "Full Steam",
+    pivot: "STEAM",
+    categories: [
+      { name: "Cook over boiling water", words: ["POACH", "BRAISE", "SIMMER"] },
+      { name: "A hot white cloud", words: ["VAPOR", "MIST", "HAZE"] },
+      { name: "Getting a move on", words: ["ENERGY", "IMPETUS", "MOMENTUM"] },
+      { name: "In a Victorian engine room", words: ["PISTON", "FLYWHEEL", "FURNACE"] },
+    ],
+  },
+  {
+    id: "sink",
+    title: "Sink or Swim",
+    pivot: "SINK",
+    categories: [
+      { name: "Go beneath the surface", words: ["SUBMERGE", "DROWN", "SCUTTLE"] },
+      { name: "Holds water to wash in", words: ["BASIN", "TROUGH", "FONT"] },
+      { name: "Put money into something", words: ["INVEST", "PLOW", "POUR"] },
+      { name: "___ + HOLE", words: ["MAN", "KEY", "LOOP"] },
+    ],
+  },
+  {
+    id: "charm",
+    title: "Third Time's a Charm",
+    pivot: "CHARM",
+    categories: [
+      { name: "Magic worked on someone", words: ["HEX", "SPELL", "ENCHANTMENT"] },
+      { name: "Hanging from a bracelet", words: ["BEAD", "PENDANT", "TRINKET"] },
+      { name: "What makes someone likeable", words: ["CHARISMA", "ALLURE", "GRACE"] },
+      { name: "Brings good luck", words: ["CLOVER", "HORSESHOE", "WISHBONE"] },
+    ],
+  },
+  {
+    id: "volume",
+    title: "Speaks Volumes",
+    pivot: "VOLUME",
+    categories: [
+      { name: "How loud it is", words: ["LEVEL", "DECIBELS", "AMPLITUDE"] },
+      { name: "One book of a set", words: ["TOME", "EDITION", "INSTALLMENT"] },
+      { name: "How much it holds", words: ["CAPACITY", "BULK", "SIZE"] },
+      { name: "How much business passes through", words: ["TURNOVER", "THROUGHPUT", "TRAFFIC"] },
+    ],
+  },
+  {
+    id: "plug",
+    title: "Shameless Plug",
+    pivot: "PLUG",
+    categories: [
+      { name: "A mention on air", words: ["PROMOTE", "PUSH", "PUFF"] },
+      { name: "Jammed in to block a gap", words: ["BUNG", "CORK", "WEDGE"] },
+      { name: "Bits of the wiring", words: ["ADAPTER", "FUSE", "CABLE"] },
+      { name: "Keep at it", words: ["SLOG", "GRIND", "PERSEVERE"] },
+    ],
+  },
+  {
+    id: "score",
+    title: "Know the Score",
+    pivot: "SCORE",
+    categories: [
+      { name: "The running count", words: ["TOTAL", "SUM", "RECKONING"] },
+      { name: "What the orchestra reads", words: ["NOTATION", "SHEET", "ARRANGEMENT"] },
+      { name: "A cut in a surface", words: ["SCRATCH", "GROOVE", "NOTCH"] },
+      { name: "To get hold of something", words: ["OBTAIN", "ACQUIRE", "BAG"] },
+    ],
+  },
+  {
+    id: "rail",
+    title: "Off the Rails",
+    pivot: "RAIL",
+    categories: [
+      { name: "To protest furiously", words: ["RANT", "FUME", "RAGE"] },
+      { name: "Part of a railway", words: ["SLEEPER", "GAUGE", "JUNCTION"] },
+      { name: "Beside the staircase", words: ["BANISTER", "BALUSTRADE", "NEWEL"] },
+      { name: "___ + WAY", words: ["SUB", "HIGH", "DRIVE"] },
+    ],
+  },
+  {
+    id: "mark",
+    title: "Mark My Words",
+    pivot: "MARK",
+    categories: [
+      { name: "Money before the euro", words: ["FRANC", "LIRA", "PESETA"] },
+      { name: "Go over an exam paper", words: ["ASSESS", "CORRECT", "APPRAISE"] },
+      { name: "A dirty smudge", words: ["SMEAR", "STREAK", "SPLOTCH"] },
+      { name: "What you aim at", words: ["TARGET", "BULLSEYE", "GOAL"] },
+    ],
+  },
+  {
+    id: "present",
+    title: "Present Company",
+    pivot: "PRESENT",
+    categories: [
+      { name: "Something wrapped up", words: ["GIFT", "PACKAGE", "PARCEL"] },
+      { name: "At this very moment", words: ["NOW", "TODAY", "CURRENTLY"] },
+      { name: "Front the programme", words: ["HOST", "EMCEE", "INTRODUCE"] },
+      { name: "Put before the judge", words: ["SUBMIT", "OFFER", "EXHIBIT"] },
+    ],
+  },
+  {
+    id: "stall",
+    title: "Market Stall",
+    pivot: "STALL",
+    categories: [
+      { name: "A pitch at the market", words: ["BOOTH", "STAND", "COUNTER"] },
+      { name: "Play for time", words: ["DELAY", "STONEWALL", "FILIBUSTER"] },
+      { name: "The engine gives up", words: ["SPUTTER", "CONK", "SEIZE"] },
+      { name: "Seating in a theatre", words: ["BALCONY", "CIRCLE", "GALLERY"] },
+    ],
+  },
+  {
+    id: "swing",
+    title: "In Full Swing",
+    pivot: "SWING",
+    categories: [
+      { name: "Playground kit", words: ["SLIDE", "SEESAW", "SANDBOX"] },
+      { name: "Big-band music", words: ["BEBOP", "RAGTIME", "BOOGIE"] },
+      { name: "To pull something off", words: ["ARRANGE", "MANAGE", "FINAGLE"] },
+      { name: "A wild go at the ball", words: ["SWIPE", "LUNGE", "WALLOP"] },
+    ],
+  },
+  {
+    id: "drive",
+    title: "Test Drive",
+    pivot: "DRIVE",
+    categories: [
+      { name: "What keeps you going", words: ["AMBITION", "MOTIVATION", "HUNGER"] },
+      { name: "Storage inside a computer", words: ["DISK", "MEMORY", "CACHE"] },
+      { name: "The way up to a house", words: ["PATH", "APPROACH", "LANE"] },
+      { name: "Take the wheel", words: ["STEER", "MOTOR", "NAVIGATE"] },
+    ],
+  },
+  {
+    id: "grain",
+    title: "Against the Grain",
+    pivot: "GRAIN",
+    categories: [
+      { name: "Cereal crops", words: ["WHEAT", "BARLEY", "OATS"] },
+      { name: "The pattern in timber", words: ["STRIPE", "TEXTURE", "VEIN"] },
+      { name: "The tiniest amount", words: ["SPECK", "TRACE", "PARTICLE"] },
+      { name: "Small units of weight", words: ["OUNCE", "DRAM", "CARAT"] },
+    ],
+  },
+  {
+    id: "peak",
+    title: "Peak Season",
+    pivot: "PEAK",
+    categories: [
+      { name: "The top of a mountain", words: ["SUMMIT", "CREST", "RIDGE"] },
+      { name: "Somebody's best years", words: ["PRIME", "HEYDAY", "BLOOM"] },
+      { name: "The front of a cap", words: ["BRIM", "VISOR", "BILL"] },
+      { name: "When it is busiest", words: ["RUSH", "CRUSH", "SURGE"] },
+    ],
+  },
+  {
+    id: "hook",
+    title: "Off the Hook",
+    pivot: "HOOK",
+    categories: [
+      { name: "In the tackle box", words: ["BAIT", "FLOAT", "SINKER"] },
+      { name: "The catchy part of a song", words: ["CHORUS", "RIFF", "REFRAIN"] },
+      { name: "Thrown in the ring", words: ["JAB", "UPPERCUT", "HAYMAKER"] },
+      { name: "Hang your coat on it", words: ["PEG", "HANGER", "RACK"] },
+    ],
+  },
+  {
+    id: "turn",
+    title: "Turn for the Better",
+    pivot: "TURN",
+    categories: [
+      { name: "Your chance to play", words: ["MOVE", "INNINGS", "STINT"] },
+      { name: "Go round and round", words: ["ROTATE", "GYRATE", "CIRCLE"] },
+      { name: "What old milk does", words: ["SOUR", "CURDLE", "SPOIL"] },
+      { name: "A kink in the road", words: ["BEND", "CORNER", "CURVE"] },
+    ],
+  },
+  {
+    id: "lead",
+    title: "Take the Lead",
+    pivot: "LEAD",
+    categories: [
+      { name: "Heavy metals", words: ["TIN", "ZINC", "COPPER"] },
+      { name: "Walking the dog", words: ["LEASH", "COLLAR", "HARNESS"] },
+      { name: "What the detective follows", words: ["CLUE", "TIP", "TRAIL"] },
+      { name: "The main part in a film", words: ["ROLE", "PROTAGONIST", "HEADLINER"] },
+    ],
+  },
+  {
+    id: "clip",
+    title: "At a Clip",
+    pivot: "CLIP",
+    categories: [
+      { name: "Cut the hedge back", words: ["TRIM", "SNIP", "SHEAR"] },
+      { name: "Holds sheets together", words: ["STAPLE", "PIN", "BINDER"] },
+      { name: "A short bit of film", words: ["OUTTAKE", "EXCERPT", "SEGMENT"] },
+      { name: "How fast you are going", words: ["PACE", "SPEED", "RATE"] },
+    ],
+  },
+  {
+    id: "floor",
+    title: "Ground Floor",
+    pivot: "FLOOR",
+    categories: [
+      { name: "One storey up", words: ["MEZZANINE", "LANDING", "GALLERY"] },
+      { name: "Put an opponent on the canvas", words: ["FLATTEN", "FELL", "DOWN"] },
+      { name: "Leave somebody clueless", words: ["STUMP", "CONFOUND", "BAFFLE"] },
+      { name: "Laid over the boards", words: ["CARPET", "TILE", "LINOLEUM"] },
+    ],
+  },
+  {
+    id: "prime",
+    title: "Prime Cut",
+    pivot: "PRIME",
+    categories: [
+      { name: "Grade A quality", words: ["CHOICE", "SELECT", "TOP"] },
+      { name: "Kinds of number", words: ["INTEGER", "FRACTION", "DECIMAL"] },
+      { name: "___ + TIME", words: ["BED", "LUNCH", "OVER"] },
+      { name: "Set up in advance", words: ["READY", "BRIEF", "GROOM"] },
+    ],
+  },
+  {
+    id: "shock",
+    title: "Shock to the System",
+    pivot: "SHOCK",
+    categories: [
+      { name: "Down the wire", words: ["VOLT", "JOLT", "CURRENT"] },
+      { name: "Catch somebody off guard", words: ["SURPRISE", "STARTLE", "ASTONISH"] },
+      { name: "A thick head of hair", words: ["MOP", "MANE", "TUFT"] },
+      { name: "Under the chassis", words: ["DAMPER", "STRUT", "AXLE"] },
+    ],
+  },
+  {
+    id: "spin",
+    title: "Spin Cycle",
+    pivot: "SPIN",
+    categories: [
+      { name: "Turn on the spot", words: ["WHIRL", "TWIRL", "PIROUETTE"] },
+      { name: "How a story is framed", words: ["ANGLE", "SLANT", "GLOSS"] },
+      { name: "A short drive out", words: ["JAUNT", "RIDE", "CRUISE"] },
+      { name: "Settings on a washing machine", words: ["RINSE", "WASH", "DRAIN"] },
+    ],
+  },
+  {
+    id: "tender",
+    title: "Tender Loving",
+    pivot: "TENDER",
+    categories: [
+      { name: "Full of kindness", words: ["GENTLE", "SOFT", "LOVING"] },
+      { name: "Hurts when touched", words: ["SORE", "ACHING", "PAINFUL"] },
+      { name: "Sent in to win the contract", words: ["BID", "QUOTE", "PROPOSAL"] },
+      { name: "A small boat serving a ship", words: ["DINGHY", "SKIFF", "LAUNCH"] },
+    ],
+  },
+  {
+    id: "channel",
+    title: "Change the Channel",
+    pivot: "CHANNEL",
+    categories: [
+      { name: "Where you find a programme", words: ["STATION", "NETWORK", "FREQUENCY"] },
+      { name: "Salt water between two shores", words: ["STRAIT", "NARROWS", "PASSAGE"] },
+      { name: "Aim your energy somewhere", words: ["DIRECT", "FOCUS", "STEER"] },
+      { name: "Carries water underground", words: ["DUCT", "CONDUIT", "CULVERT"] },
+    ],
+  },
+  {
+    id: "vault",
+    title: "Under the Vault",
+    pivot: "VAULT",
+    categories: [
+      { name: "Where the bank keeps cash", words: ["SAFE", "STRONGBOX", "COFFER"] },
+      { name: "Gymnastics apparatus", words: ["BEAM", "RINGS", "BARS"] },
+      { name: "A curved ceiling", words: ["ARCH", "DOME", "CANOPY"] },
+      { name: "Burial chambers", words: ["CRYPT", "TOMB", "CATACOMB"] },
+    ],
+  },
+  {
+    id: "panel",
+    title: "Panel Show",
+    pivot: "PANEL",
+    categories: [
+      { name: "Experts taking questions", words: ["JURY", "COMMISSION", "TRIBUNAL"] },
+      { name: "A flat piece of wood", words: ["PLANK", "SLAB", "PLYWOOD"] },
+      { name: "Parts of a comic book", words: ["STRIP", "FRAME", "SPREAD"] },
+      { name: "In the cockpit", words: ["DASHBOARD", "CONSOLE", "DIAL"] },
+    ],
+  },
+  {
+    id: "step",
+    title: "Step by Step",
+    pivot: "STEP",
+    categories: [
+      { name: "Part of a staircase", words: ["STAIR", "RUNG", "TREAD"] },
+      { name: "Moves on the dance floor", words: ["SHUFFLE", "GLIDE", "TAP"] },
+      { name: "One part of a process", words: ["PHASE", "STAGE", "LEG"] },
+      { name: "___ + MOTHER", words: ["GOD", "GRAND", "HOUSE"] },
+    ],
+  },
+  {
+    id: "snap",
+    title: "Snap Decision",
+    pivot: "SNAP",
+    categories: [
+      { name: "Break with a sharp sound", words: ["CRACK", "SPLIT", "FRACTURE"] },
+      { name: "Taken with a camera", words: ["PHOTO", "SHOT", "PICTURE"] },
+      { name: "A sudden cold spell", words: ["FREEZE", "FROST", "CHILL"] },
+      { name: "Does up a jacket", words: ["BUTTON", "CLASP", "STUD"] },
+    ],
+  },
+  {
+    id: "temper",
+    title: "Lose Your Temper",
+    pivot: "TEMPER",
+    categories: [
+      { name: "Blind anger", words: ["FURY", "WRATH", "RAGE"] },
+      { name: "Treat steel in the forge", words: ["HARDEN", "ANNEAL", "QUENCH"] },
+      { name: "To tone something down", words: ["MODERATE", "SOFTEN", "MELLOW"] },
+      { name: "The mood somebody is in", words: ["HUMOR", "DISPOSITION", "SPIRITS"] },
+    ],
+  },
+  {
+    id: "slate",
+    title: "Clean Slate",
+    pivot: "SLATE",
+    categories: [
+      { name: "Up on the roof", words: ["SHINGLE", "THATCH", "TILE"] },
+      { name: "The candidates standing", words: ["TICKET", "LINEUP", "FIELD"] },
+      { name: "To review savagely", words: ["PAN", "TRASH", "MAUL"] },
+      { name: "Shades of grey", words: ["ASH", "PEWTER", "CHARCOAL"] },
+    ],
+  },
+  {
+    id: "strain",
+    title: "Under Strain",
+    pivot: "STRAIN",
+    categories: [
+      { name: "Hurt a muscle", words: ["WRENCH", "PULL", "TWEAK"] },
+      { name: "A variety of virus", words: ["VARIANT", "TYPE", "BREED"] },
+      { name: "Pour the pasta water off", words: ["SIEVE", "FILTER", "DRAIN"] },
+      { name: "What a deadline puts you under", words: ["STRESS", "TENSION", "PRESSURE"] },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -863,12 +1270,14 @@ export interface Chapter {
 }
 
 // Chapter copy is localized: chapter.1.name / chapter.1.flavor … (src/i18n).
-const CHAPTER_COUNT = 8;
+const CHAPTER_COUNT = 12;
 
 // Front-loaded chapter sizes: the first chapter is short so a player meets a
 // boss (the most distinctive content) by ~level 6 instead of level 8, and the
-// early map feels less like a wall. The last chapter swallows any remainder.
-const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 10];
+// early map feels less like a wall. Chapters grow as the campaign goes on —
+// by then a player is here for the puzzles, not the ceremony — and the last
+// chapter swallows any remainder.
+const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10];
 
 export const CHAPTERS: Chapter[] = (() => {
   const out: Chapter[] = [];
@@ -914,6 +1323,10 @@ export function isBossLevel(index: number): boolean {
 
 export type BossTwist = "scramble" | "emoji" | "oracle" | "decoy" | "blackout";
 
+// One entry per chapter, and the list is deliberately NOT cycled with a
+// modulo: "emoji" swaps in the one bespoke picture board, so a second emoji
+// chapter would replay a board the player has already solved. Adjacent
+// chapters never repeat a twist either.
 const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
   "oracle",
@@ -923,6 +1336,10 @@ const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
   "oracle",
   "decoy",
+  "blackout",
+  "scramble",
+  "oracle",
+  "blackout",
 ];
 
 /** The twist for a given level index, or null if it isn't a boss. */
@@ -949,7 +1366,11 @@ export const CHAPTER_KEYS = [
   "SPIRALS", // 5 Twists & Turns
   "LEXICON", // 6 Rare Words
   "RIDDLES", // 7 Mind Benders
-  "MASTERMIND", // 8 The Final Test
+  "UNDERTOW", // 8 Deep Water
+  "MISCHIEF", // 9 Sleight of Hand
+  "PATIENCE", // 10 The Long Game
+  "TIGHTROPE", // 11 No Safety Net
+  "MASTERMIND", // 12 The Final Test
 ];
 
 /** The keyword guarding a chapter's boss. */

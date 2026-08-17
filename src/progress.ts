@@ -281,13 +281,14 @@ export function keyLockedBoss(p: Progress, index: number): boolean {
 
 // --- What's new since you last looked at the map ---------------------------
 // Clearing a level opens the next one silently: you came back to the map and a
-// square had quietly changed colour, which made 62 unlocks feel like one event
-// repeated. The map now *shows* the lock coming off — but only once per level,
+// square had quietly changed colour, which made a hundred unlocks feel like one
+// event repeated. The map now *shows* the lock coming off — but only once per
+// level,
 // which is what `seen` is for.
 
 /**
  * Ids of every currently-open level. Deliberately ignores the debug switch:
- * flipping `?debug` on shouldn't count as unlocking 62 levels, nor should
+ * flipping `?debug` on shouldn't count as unlocking the whole campaign, nor should
  * flipping it off take them away again.
  */
 export function unlockedIds(p: Progress): string[] {
