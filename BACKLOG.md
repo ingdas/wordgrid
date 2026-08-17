@@ -1,8 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 28 (the campaign runs to 100 levels across twelve
-chapters). This file is the single source of truth — a fresh session should
-be able to continue from here without any prior chat context._
+_Last updated: iteration 29 (the difficulty ramp is hand-graded and the level
+order is a rising sawtooth). This file is the single source of truth — a fresh
+session should be able to continue from here without any prior chat context._
 
 ## What this is
 
@@ -18,7 +18,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   to `docs/` (GitHub Pages). Always run `npm run build` before committing so
   `docs/` stays in sync.
 - Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
-  structure + chapter-key lengths), `npm run audit` (ambiguity helper),
+  structure + chapter-key lengths + the campaign curve), `npm run audit`
+  (ambiguity helper),
   `npm test` (engine, deduction, **progress/key gating**, i18n),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
@@ -40,8 +41,11 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 ## Architecture map (src/)
 
 - `puzzles.ts` — 100 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
-  seededShuffle, difficulty sort with hand-pinned OPENING =
-  star,trunk,ring,bug,bank (concrete → abstract ramp); CHAPTERS
+  seededShuffle; **the campaign curve** — hand grades (`GRADE_BANDS`, 1–5),
+  `lexicalLoad` as a tiebreak only, `suitsTwist`, and the placement pass
+  (`dealChapters` → `spreadWordplay` → `spaceOutRepeats`) that deals them into a
+  rising sawtooth, with hand-pinned OPENING = star,trunk,ring,bug,bank (the
+  tutorial ramp) — see iteration 29; CHAPTERS
   (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
   BossTwist type +
   CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
@@ -240,6 +244,116 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## The difficulty ramp, rebuilt (iteration 29)
+
+Owner report: *"the difficulty ramp in levels is not right yet — reorder the
+levels in a more interesting way."* It was backlog item 10, and reading the old
+order end to end showed it was two separate problems wearing one hat.
+
+**Length was standing in for difficulty.** The score was average spoke length
+plus a nudge for long and obscure words, and it ranked GLASS — drinkware, window
+parts, vision aids, fragile materials, four concrete sets under a household word
+— as the **hardest board in the game**, so the campaign's final boss was "Raise a
+Glass". PIPE closed at 99 and SOLE at 97, while TENDER (kindness / a sore knee /
+a contract bid / a boat serving a ship) sat at 56 and RUN at 35. Long words are a
+reading test; they are not the puzzle.
+
+**And one sort is a line, not a ramp.** Levels 1–52 all fell inside a 1.7-point
+band, then the last ten climbed a cliff. Nothing marked a chapter as its own arc,
+so 100 levels each felt a hair harder than the last — which is the same as
+feeling identical.
+
+### Three parts replace the one number
+
+1. **A hand grade per board, 1–5** (`GRADE_BANDS` in `puzzles.ts`), on what a
+   cheap script can't see: how many of the four groups are *senses* rather than
+   *sets* ("To influence" vs "Parts of a tree"), how far the pivot sits from its
+   everyday meaning (the finale is the level's climax — STAR gives itself up,
+   TEMPER doesn't), and how much the groups tempt each other (SOLE puts "Parts of
+   a shoe" beside "Parts of the foot"). Ids, not numbers, so a band reads as a
+   list you can argue with.
+2. **The old score, demoted to a tiebreak** (`lexicalLoad`). Word length still
+   decides the order *inside* a grade, which is the one thing it was good at.
+3. **A placement pass**, because a graded pool still needs a shape.
+
+### The shape: a rising sawtooth
+
+`dealChapters()` gives each chapter the next slice off the easy end of the pool
+and orders it rising — then lets it reach up to `SPIKE` boards *past* its own band
+for a boss. Reaching past the band is what gives a chapter a peak; the board it
+displaces falls back to the front of the pool and **opens the next chapter**,
+which is what gives that chapter its breather. Climb, spike, relief, climb
+higher. Chapter mean grade still rises monotonically (1.1 → 4.9 from chapter 2 to
+12), but no two neighbours feel the same any more.
+
+Two rules the pass enforces, both learned from what it produced first:
+
+- **A boss tops its own chapter.** The first attempt handed level 6 a grade-1
+  boss sitting behind three grade-2 levels, because chapter 1's band is a single
+  board and the pool's easy end is all it could see. A boss must now grade at or
+  above every level the player beat to reach it — on the *grade*, not the lexical
+  tiebreak, since the twist itself is worth more than a point of word length.
+- **One compound-word board per chapter.** The "___ + FISH" / "A ___ of ice"
+  groups are the only beat that asks for a different kind of thinking, and there
+  are almost exactly twelve of them. The sort had no reason to spread them: two
+  landed in chapter 2 and none in 5, 9 or 12. `spreadWordplay` trades a spare to
+  the nearest chapter with none, for the board closest to it in difficulty. It's
+  now exactly one per chapter, all twelve.
+
+`spaceOutRepeats` then stops two levels in a row from showing the same tile
+(GEAR is on both `spring` and `bolt`; TOFFEE on `mint` and `drop`) by swapping
+within a chapter, where difficulty is a band and a swap costs the curve nothing.
+Down from a handful of clashes to zero.
+
+### Bosses are now cast, not left over
+
+`suitsTwist()` asks whether a board can carry the twist its chapter hands it,
+which nothing used to ask:
+
+- **scramble** wants short tiles. The old order gave chapter 6's scramble boss to
+  SPIN, i.e. *decode the anagram PIROUETTE*, and chapter 10's to TRIP. Anagrams of
+  10-letter words aren't harder, they're a different and worse game. Scramble
+  bosses are now `stick`, `crash`, `swing` — nothing over 7 letters.
+- **oracle** makes you name the link cold, so a long or unusual pivot turns
+  lateral thinking into a spelling lottery: pivots are capped at 5 letters
+  (`wave`, `nail`, `spot`).
+- **decoy** salts the board with impostors, so it refuses **compound-word
+  boards**. This one was a genuine fairness bug in the first pass of this
+  iteration: it cast `palm` as the decoy boss, where SPRINGS / BEACH / SUNDAY can
+  only be verified once you know the link is PALM — so on a board with three
+  fakes, those three tiles are indistinguishable from the fakes. The twist would
+  have been attacking the one group the player has no way to check.
+- **blackout** is pure memory load; any board carries it, so it takes the
+  hardest. The finale is now VOLUME (loudness / one book of a set / capacity /
+  throughput — every group an abstract measure) instead of "Raise a Glass".
+
+**`bolt` is pinned to the emoji boss slot.** The emoji boss replaces its slot's
+board outright, and EMOJI_BOSS *is* the BOLT board in pictures — same pivot, same
+four ideas (toolbox, things that run, storm, keeping it shut). With `bolt` loose
+in the campaign the player solved BOLT twice, nine levels apart, once in words
+and once in emoji. Pinning it spends the duplicate on the one slot whose own
+board is never played, and costs the campaign nothing.
+
+### The tier chip stopped lying
+
+`tier` was thirds-of-the-campaign by *position*, so it described a slot, not a
+board: `run` said "Medium" and `glass` said "Hard". It's derived from the hand
+grade now (1–2 → Easy, 3 → Medium, 4–5 → Hard), which lands within a couple of
+levels of thirds anyway — and it means a breather deep in the campaign is
+*labelled* as one. "MIND BENDERS · EASY" on level 45 is the sawtooth telling you
+this one's a warm-up, not a bug.
+
+### Guard rails
+
+`npm run validate` now fails on: a campaign puzzle with no hand grade (a new
+batch would otherwise land silently mid-curve), an id graded twice or unknown, a
+lost or duplicated board, level 1 not being `star` (the tutorial coach is written
+against that board's own first category), a boss milder than a level it follows,
+boss grades that drop across chapters, a boss that can't carry its twist, two
+chapters' worth of compound-word boards in one chapter, and two adjacent levels
+sharing a tile. The emoji chapter is exempt from the grade rules and says so —
+its board is never played.
 
 ## 100 levels, twelve chapters (iteration 28)
 
@@ -707,8 +821,12 @@ pre-fix build before it was kept.
    when present.
 9. **[polish] Recorded SFX set** — the synth blips are serviceable; real
    samples (tile tap, group pop, win sting) would lift perceived quality.
-10. **[content] Difficulty is still a length heuristic**, not semantic
-    difficulty; the curve is approximate.
+10. ✅ **[content] Difficulty is hand-graded now (iteration 29).** The length
+    heuristic is demoted to a tiebreak and the order is a sawtooth, not a sort.
+    What's still approximate: the grades are one number per board, so a board
+    that's hard *because two groups tempt each other* is scored the same as one
+    that's hard *because the pivot hides* — a facet split (abstraction / pivot /
+    interference) would let a chapter be built out of one kind of hard.
 
 ## SHIPPED — owner priorities #4, #8, #9, #12 + Pairs (iterations 18–19)
 

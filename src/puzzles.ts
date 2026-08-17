@@ -1208,15 +1208,99 @@ export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
 }
 
 // ---------------------------------------------------------------------------
-// Difficulty curve. We can't measure "abstractness" cheaply, so we proxy it
-// with word length + count of long/rare spokes — longer, less-common words make
-// a level harder. Levels are ordered easiest-first (with the STAR tutorial
-// pinned to #1) and bucketed into three tiers for the level map.
+// Difficulty, and the shape of the campaign.
+//
+// What used to be here: one number per board — average spoke length, nudged for
+// long and obscure words — sorted ascending after a hand-pinned opening five.
+// Two things were wrong with it.
+//
+// **Length is not difficulty.** GLASS (drinkware / window parts / vision aids /
+// fragile materials: four concrete sets under a household word) scored as the
+// hardest board in the game and closed the campaign, with PIPE at 99 and SOLE at
+// 97 — while TENDER (kindness, a sore knee, a contract bid, a boat serving a
+// ship) sat at 56 and RUN at 35. The sort was measuring how long the words are,
+// which is a reading test, not a puzzle.
+//
+// **And a single sort is a line, not a ramp.** Levels 1–52 all landed inside a
+// 1.7-point band, then the last ten climbed a cliff. Every level felt like its
+// neighbours, no chapter had an arc of its own, and a boss was just whichever
+// board the sort happened to leave last — which is how a *scramble* boss ended
+// up on SPIN (decode the anagram PIROUETTE) and the finale on "Raise a Glass".
+//
+// What replaces it has three parts: a hand grade per board (what a script can't
+// see), the old lexical score demoted to a tiebreak (what it can), and a
+// placement pass that shapes the graded pool into a rising **sawtooth** — every
+// chapter opens on a breather, climbs, and ends on a boss picked to suit that
+// chapter's twist.
 
 export type Tier = 1 | 2 | 3;
 export interface Level extends RawPuzzle {
   tier: Tier;
+  /** Hand-graded difficulty, 1 (gentle) – 5 (hardest). See GRADE_BANDS. */
+  grade: number;
 }
+
+// --- 1. The hand grade ------------------------------------------------------
+// The one thing no cheap script can read: how hard the board is to *think*
+// through. What the grade weighs, in order of how much it matters:
+//
+//  - How many of the four groups are figurative. A set of things ("Parts of a
+//    tree") is spotted at a glance; a sense of a verb ("To influence", "Getting
+//    a move on") has to be reasoned out, and a board of four of those is a
+//    different game from a board of four noun sets.
+//  - How far the pivot is from its everyday meaning, and how findable it is at
+//    the finale — the level's actual climax. STAR and GLASS give themselves up;
+//    TEMPER (rage / heat-treat steel / soften / mood) does not.
+//  - How much the groups tempt each other. SOLE puts "Parts of a shoe" beside
+//    "Parts of the foot"; STRAIN pulls a muscle beside pouring pasta water.
+//
+// Adding a board means adding its id to one of these bands: `npm run validate`
+// fails on any campaign puzzle that is ungraded, graded twice, or unknown, so a
+// new content batch can't quietly default to the middle of the curve.
+const GRADE_BANDS: string[][] = [
+  // 1 — gentle. Four concrete sets, a household pivot, nothing to untangle.
+  ["star", "trunk", "glass", "cap", "bat", "club", "cell", "chip", "spring"],
+  // 2 — one figurative group among concrete ones; the pivot is still obvious.
+  [
+    "ring", "bug", "bank", "stick", "bark", "sheet", "step", "bolt", "wave",
+    "fire", "block", "pen", "check", "track", "rock", "light", "park", "note",
+    "pipe", "crane", "seal",
+  ],
+  // 3 — roughly half the groups are senses rather than sets, and the pivot
+  // wants a moment's thought (TABLE a motion, ROLL the register, CLIP a pace).
+  [
+    "fry", "table", "pound", "well", "scale", "date", "press", "clip", "palm",
+    "spell", "pitch", "jam", "drop", "crash", "roll", "mint", "post", "spin",
+    "deck", "break", "tank", "brush", "vault", "figure", "nail", "hook", "plot",
+    "court", "lead", "trip", "stamp", "panel", "shower",
+  ],
+  // 4 — mostly figurative, or a sense most players meet once a decade (GRAIN
+  // the unit of weight, SLATE the list of candidates, SHOCK of hair).
+  [
+    "peak", "turn", "snap", "switch", "match", "sink", "plug", "slate", "grain",
+    "prime", "swing", "shift", "strain", "string", "shock", "channel", "cross",
+    "steam", "rail", "forge", "stall", "grade", "sole", "charm", "fan", "drive",
+  ],
+  // 5 — every group is a different sense of the word, and the link is the last
+  // thing you see rather than the first.
+  ["tender", "temper", "present", "draw", "floor", "score", "mold", "run", "volume", "spot", "mark"],
+];
+
+const GRADE_OF = new Map<string, number>();
+GRADE_BANDS.forEach((ids, band) => ids.forEach((id) => GRADE_OF.set(id, band + 1)));
+
+/** The hand grade for a board id, 1–5. Ungraded ids sit mid-curve (validate). */
+export function gradeOf(id: string): number {
+  return GRADE_OF.get(id) ?? 3;
+}
+
+/** The grade bands themselves, for `npm run validate` to check coverage. */
+export const GRADE_BAND_IDS = GRADE_BANDS;
+
+// --- 2. The lexical tiebreak ------------------------------------------------
+// Word length still matters — it just isn't the difficulty. Two boards a player
+// would rank the same are ordered so the shorter, plainer one comes first, which
+// is what the old score was actually good at.
 
 // Short words can still be brutally obscure (KETCH, OBOE, ARDOR…), which the
 // length heuristic misses — so a curated set adds weight and keeps them out of
@@ -1227,7 +1311,7 @@ const OBSCURE = new Set([
   "INSTEP", "EYELET", "STENCIL", "POSTMARK", "DEVOTEE", "FANATIC",
 ]);
 
-function difficultyScore(raw: RawPuzzle): number {
+function lexicalLoad(raw: RawPuzzle): number {
   const spokes = raw.categories.flatMap((c) => c.words);
   const avgLen = spokes.reduce((s, w) => s + w.length, 0) / spokes.length;
   const longCount = spokes.filter((w) => w.length >= 8).length;
@@ -1235,30 +1319,19 @@ function difficultyScore(raw: RawPuzzle): number {
   return avgLen + longCount * 0.6 + obscureCount * 1.6;
 }
 
-// The heuristic alone made levels 1–5 feel identical, so the opening chapter is
-// hand-ordered as a real ramp: STAR tutorial → all-concrete nouns (trunk) →
-// one verb group (ring) → mixed concrete/abstract (bug) → mostly abstract verb
-// groups (bank) → the first boss. Level 5 should already feel like a step up.
-const OPENING = ["star", "trunk", "ring", "bug", "bank"];
+/** Sort key: the hand grade decides, lexical load only breaks ties inside it. */
+function difficultyKey(raw: RawPuzzle): number {
+  return gradeOf(raw.id) * 100 + lexicalLoad(raw);
+}
 
-const orderedRaw = [
-  ...OPENING.map((id) => PUZZLES.find((p) => p.id === id)!),
-  ...PUZZLES.filter((p) => !OPENING.includes(p.id)).sort(
-    (a, b) => difficultyScore(a) - difficultyScore(b),
-  ),
-];
-
-export const LEVELS: Level[] = orderedRaw.map((raw, i) => ({
-  ...raw,
-  tier: (i < orderedRaw.length / 3 ? 1 : i < (2 * orderedRaw.length) / 3 ? 2 : 3) as Tier,
-}));
-
-/** Localized via `tier.1` … `tier.3` — see src/i18n. */
-export const TIER_KEY: Record<Tier, string> = { 1: "tier.1", 2: "tier.2", 3: "tier.3" };
+/** Does the board carry a compound-word group ("___ + FISH", "A ___ of ice")? */
+const hasWordplay = (raw: RawPuzzle) =>
+  raw.categories.some((c) => c.name.includes("___") || /after the link/i.test(c.name));
 
 // ---------------------------------------------------------------------------
-// Chapters: a light story-flavoured grouping of the difficulty-ordered levels.
-// The last level of each chapter is a "boss".
+// Chapters: a light story-flavoured grouping of the levels. The last level of
+// each chapter is a "boss". The frame is fixed before the levels are placed —
+// the placement pass below fills these spans, so it has to know their shape.
 
 export interface Chapter {
   /** Catalogue keys — the copy itself lives in src/i18n. */
@@ -1279,30 +1352,23 @@ const CHAPTER_COUNT = 12;
 // chapter swallows any remainder.
 const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10];
 
-export const CHAPTERS: Chapter[] = (() => {
-  const out: Chapter[] = [];
+interface Span {
+  start: number;
+  end: number;
+  boss: number;
+}
+
+const SPANS: Span[] = (() => {
+  const out: Span[] = [];
   let start = 0;
-  for (let i = 0; i < CHAPTER_COUNT && start < LEVELS.length; i++) {
+  for (let i = 0; i < CHAPTER_COUNT && start < PUZZLES.length; i++) {
     const last = i === CHAPTER_COUNT - 1;
-    const end = last ? LEVELS.length : Math.min(start + (CHAPTER_SIZES[i] ?? 8), LEVELS.length);
-    out.push({ nameKey: `chapter.${i + 1}.name`, flavorKey: `chapter.${i + 1}.flavor`, start, end, boss: end - 1 });
+    const end = last ? PUZZLES.length : Math.min(start + (CHAPTER_SIZES[i] ?? 8), PUZZLES.length);
+    out.push({ start, end, boss: end - 1 });
     start = end;
   }
   return out;
 })();
-
-const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
-
-/** Which chapter a level belongs to (index into CHAPTERS). */
-export function chapterOfLevel(index: number): number {
-  const ci = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
-  return ci < 0 ? 0 : ci;
-}
-
-/** Is this level (index into LEVELS) the boss of its chapter? */
-export function isBossLevel(index: number): boolean {
-  return BOSS_SET.has(index);
-}
 
 // ---------------------------------------------------------------------------
 // Boss variety. Every chapter's boss plays differently — and these are real
@@ -1341,6 +1407,252 @@ const CHAPTER_TWISTS: BossTwist[] = [
   "oracle",
   "blackout",
 ];
+
+/**
+ * Can this board carry that twist? A twist changes how the board is *read*, so
+ * some boards fight it — and the old order picked bosses without asking.
+ *
+ *  - scramble: every tile arrives as an anagram. PIROUETTE and TRANSISTOR are
+ *    not "harder", they're a different (worse) game, so a scramble boss keeps
+ *    to short tiles and earns its difficulty from the grouping.
+ *  - decoy: three impostors join the board — fifteen tiles have to stay legible,
+ *    and the board must carry no compound-word group. "Comes after the link"
+ *    (SPRINGS / BEACH / SUNDAY) can only be checked once you know the link is
+ *    PALM, so on a board salted with fakes those three tiles are indistinguishable
+ *    from impostors: the twist would be attacking the one group the player has no
+ *    way to verify.
+ *  - oracle: you must NAME the link before you group anything. A long or
+ *    unusual pivot turns that from lateral thinking into a spelling lottery.
+ *  - blackout / emoji: nothing about the board fights them (the emoji boss
+ *    replaces its board outright), so anything can carry them.
+ */
+export function suitsTwist(twist: BossTwist, raw: RawPuzzle): boolean {
+  const spokes = raw.categories.flatMap((c) => c.words);
+  switch (twist) {
+    case "scramble":
+      return spokes.every((w) => w.length <= 7);
+    case "decoy":
+      return !hasWordplay(raw) && spokes.filter((w) => w.length >= 9).length <= 1;
+    case "oracle":
+      return raw.pivot.length <= 5;
+    default:
+      return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. Placement: turning a graded pool into a curve worth playing.
+
+// The opening chapter stays hand-ordered — it's the tutorial ramp, and the coach
+// copy is derived from OPENING[0]'s own first category: STAR tutorial →
+// all-concrete nouns (trunk) → one verb group (ring) → mixed concrete/abstract
+// (bug) → mostly abstract verb groups (bank) → the first boss.
+const OPENING = ["star", "trunk", "ring", "bug", "bank"];
+
+// The emoji boss hides the board in its slot completely (Game.tsx swaps in
+// EMOJI_BOSS), and EMOJI_BOSS *is* the BOLT board in pictures — same pivot, same
+// four ideas: toolbox, things that run, storm, keeping it shut. Leaving `bolt`
+// loose in the campaign meant solving BOLT twice, once with words and once with
+// emoji, nine levels apart. Pinning it to the emoji slot spends the duplicate on
+// the one slot whose own board is never played.
+const EMOJI_TWIN = "bolt";
+
+// How far past its own difficulty band a chapter may reach for a boss.
+const SPIKE = 4;
+
+/**
+ * Deal the graded pool into the chapter spans as a rising sawtooth.
+ *
+ * Each chapter takes the next `size` boards off the easy end of the pool (so the
+ * campaign still climbs), orders them rising, and then looks for its boss among
+ * its own hardest boards *and* the next few in the pool. Reaching past its band
+ * is what gives a chapter a peak; the board it displaces drops back to the front
+ * of the pool and opens the next chapter, which is what gives the next chapter
+ * its breather. Between them: climb, spike, relief, climb higher — instead of
+ * one hundred levels of "very slightly harder than the last one".
+ */
+function dealChapters(): RawPuzzle[][] {
+  const byId = (id: string) => PUZZLES.find((p) => p.id === id)!;
+  const pinned = new Set([...OPENING, EMOJI_TWIN]);
+  const pool = PUZZLES.filter((p) => !pinned.has(p.id)).sort((a, b) => difficultyKey(a) - difficultyKey(b));
+
+  return SPANS.map((span, ci) => {
+    const twist = CHAPTER_TWISTS[ci % CHAPTER_TWISTS.length];
+    const head = ci === 0 ? OPENING.map(byId) : [];
+    const slots = span.end - span.start - head.length;
+
+    // The emoji chapter's boss is fixed, so it only deals its ordinary levels.
+    if (twist === "emoji") return [...head, ...pool.splice(0, slots - 1), byId(EMOJI_TWIN)];
+
+    const band = pool.splice(0, slots);
+    // A boss has to top its own chapter: it's the end of the arc, and on the
+    // grade it must not sit *below* a level the player has already beaten to get
+    // there. (Grade, not the lexical tiebreak — the twist itself is worth more
+    // than a point of word length.) Chapter 1 is why this rule exists: its band
+    // is a single board, and the easy end of the pool handed level 6 a grade-1
+    // boss behind three grade-2 levels.
+    const floor = Math.max(...[...head, ...band].map((p) => gradeOf(p.id)));
+    const ok = (p: RawPuzzle) => suitsTwist(twist, p) && gradeOf(p.id) >= floor;
+    const reach = [...band, ...pool.slice(0, SPIKE)];
+    // The hardest board in reach that can carry the twist and tops the chapter.
+    // If the reach holds none, take the *easiest* board further up the pool that
+    // does — an escalation, so it's kept as small as the pool allows.
+    const fit = reach.filter(ok);
+    const boss = fit.length
+      ? fit.reduce((best, p) => (difficultyKey(p) > difficultyKey(best) ? p : best))
+      : (pool.find(ok) ??
+        reach.reduce((best, p) => (difficultyKey(p) > difficultyKey(best) ? p : best)));
+    if (band.includes(boss)) {
+      band.splice(band.indexOf(boss), 1);
+    } else {
+      pool.splice(pool.indexOf(boss), 1);
+      pool.unshift(band.pop()!); // the band's own peak becomes the next breather
+    }
+    return [...head, ...band, boss];
+  });
+}
+
+/**
+ * One compound-word board per chapter, where supply allows.
+ *
+ * The "___ + FISH" / "A ___ of ice" groups are the only beat on the board that
+ * asks for a different kind of thinking, and there are almost exactly twelve of
+ * them — one per chapter, if they're spread. Sorting by difficulty has no reason
+ * to spread them: it used to put two in chapter 2 and none in 5, 9 or 12. So a
+ * chapter holding a spare trades it to the nearest chapter with none, for the
+ * board closest to it in difficulty.
+ *
+ * Bosses never move (they were chosen for the twist), and neither does the
+ * opening — so chapter 1 keeps STAR's ___ + FISH and takes no part in the trade.
+ */
+function spreadWordplay(rosters: RawPuzzle[][]) {
+  const movable = (ci: number) => (ci === 0 ? [] : rosters[ci].slice(0, -1));
+  /** Would this board fit chapter `ci` without out-grading its boss? */
+  const fits = (ci: number, p: RawPuzzle) => gradeOf(p.id) <= bossGrade(rosters, ci);
+
+  const trade = (from: number, to: number): boolean => {
+    const give = movable(from).filter(hasWordplay).find((p) => fits(to, p));
+    if (!give) return false;
+    const near = (p: RawPuzzle) => Math.abs(difficultyKey(p) - difficultyKey(give));
+    const swaps = movable(to).filter((p) => !hasWordplay(p) && fits(from, p));
+    if (!swaps.length) return false;
+    const take = swaps.reduce((best, p) => (near(p) < near(best) ? p : best));
+    rosters[from][rosters[from].indexOf(give)] = take;
+    rosters[to][rosters[to].indexOf(take)] = give;
+    [from, to].forEach((ci) => sortInPlace(rosters[ci]));
+    return true;
+  };
+
+  // One trade per pass, then look again — a chapter with three spares needs two.
+  // A pair that can't trade (no board on either side the other chapter can hold)
+  // is skipped, not fatal: the next-nearest chapter usually can.
+  for (let pass = 0; pass < 12; pass++) {
+    const counts = rosters.map((r) => r.filter(hasWordplay).length);
+    const spare = counts.map((_, ci) => ci).filter((ci) => counts[ci] >= 2);
+    const empty = counts.map((_, ci) => ci).filter((ci) => counts[ci] === 0);
+    const done = !spare.some((from) =>
+      [...empty].sort((a, b) => Math.abs(a - from) - Math.abs(b - from)).some((to) => trade(from, to)),
+    );
+    if (done) return;
+  }
+}
+
+/**
+ * The grade a chapter's boss counts as. The emoji boss is the exception: its own
+ * board is never played (EMOJI_BOSS is swapped in), and a board of nothing but
+ * pictures is the hardest read in the game whatever its words would have graded.
+ */
+function bossGrade(rosters: RawPuzzle[][], ci: number): number {
+  if (CHAPTER_TWISTS[ci % CHAPTER_TWISTS.length] === "emoji") return GRADE_BANDS.length;
+  return gradeOf(rosters[ci][rosters[ci].length - 1].id);
+}
+
+/** Re-sort a roster's ordinary levels rising, leaving its boss last. */
+function sortInPlace(roster: RawPuzzle[]) {
+  const boss = roster[roster.length - 1];
+  const rest = roster.slice(0, -1).sort((a, b) => difficultyKey(a) - difficultyKey(b));
+  roster.splice(0, roster.length, ...rest, boss);
+}
+
+/**
+ * Never show the same tile on two levels in a row.
+ *
+ * GEAR is on both `spring` and `bolt`; TOFFEE on `mint` and `drop`. Back to back
+ * that reads as the game repeating itself (and hands over a word the player has
+ * just spent a minute placing). A clash is fixed by swapping the later board
+ * with another ordinary level in its own chapter — difficulty is a band inside a
+ * chapter, so a swap within one costs the curve nothing.
+ */
+function spaceOutRepeats(rosters: RawPuzzle[][]) {
+  const tiles = (raw: RawPuzzle) => new Set(raw.categories.flatMap((c) => c.words.map((w) => w.toUpperCase())));
+  const clash = (a: RawPuzzle | undefined, b: RawPuzzle | undefined) => {
+    if (!a || !b) return false;
+    const seen = tiles(a);
+    return [...tiles(b)].some((w) => seen.has(w));
+  };
+  // Flat view, so a clash across a chapter boundary is seen too.
+  const flat = rosters.flat();
+  const movable = flat.map((_, i) => {
+    const ci = SPANS.findIndex((s) => i >= s.start && i < s.end);
+    return i >= OPENING.length && i !== SPANS[ci].boss;
+  });
+  const clashes = () => flat.filter((p, i) => i > 0 && clash(flat[i - 1], p)).length;
+
+  // A swap is kept only if it leaves the whole order with fewer clashes than it
+  // found — simpler to trust than reasoning about four neighbours by hand, and
+  // it can't trade one repeat for another somewhere else.
+  for (let i = 1; i < flat.length; i++) {
+    if (!movable[i] || !clash(flat[i - 1], flat[i])) continue;
+    const ci = SPANS.findIndex((s) => i >= s.start && i < s.end);
+    const before = clashes();
+    for (let j = SPANS[ci].start; j < SPANS[ci].end; j++) {
+      if (j === i || !movable[j]) continue;
+      [flat[i], flat[j]] = [flat[j], flat[i]];
+      if (clashes() < before) break;
+      [flat[i], flat[j]] = [flat[j], flat[i]]; // no better: put them back
+    }
+  }
+  // Write the repaired order back over the rosters.
+  SPANS.forEach((s, ci) => rosters[ci].splice(0, rosters[ci].length, ...flat.slice(s.start, s.end)));
+}
+
+const orderedRaw: RawPuzzle[] = (() => {
+  const rosters = dealChapters();
+  spreadWordplay(rosters);
+  spaceOutRepeats(rosters);
+  return rosters.flat();
+})();
+
+// The tier chip now reports the board's own grade rather than its slot — a
+// breather at level 61 says "Easy" because it *is* one, which is the whole point
+// of the sawtooth. Thirds of the campaign land almost exactly on the band edges
+// (grades 1–2 ≈ 30 levels, grade 3 ≈ 33, grades 4–5 ≈ 37).
+export const LEVELS: Level[] = orderedRaw.map((raw) => {
+  const grade = gradeOf(raw.id);
+  return { ...raw, grade, tier: (grade <= 2 ? 1 : grade === 3 ? 2 : 3) as Tier };
+});
+
+/** Localized via `tier.1` … `tier.3` — see src/i18n. */
+export const TIER_KEY: Record<Tier, string> = { 1: "tier.1", 2: "tier.2", 3: "tier.3" };
+
+export const CHAPTERS: Chapter[] = SPANS.map((s, i) => ({
+  nameKey: `chapter.${i + 1}.name`,
+  flavorKey: `chapter.${i + 1}.flavor`,
+  ...s,
+}));
+
+const BOSS_SET = new Set(CHAPTERS.map((c) => c.boss));
+
+/** Which chapter a level belongs to (index into CHAPTERS). */
+export function chapterOfLevel(index: number): number {
+  const ci = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
+  return ci < 0 ? 0 : ci;
+}
+
+/** Is this level (index into LEVELS) the boss of its chapter? */
+export function isBossLevel(index: number): boolean {
+  return BOSS_SET.has(index);
+}
 
 /** The twist for a given level index, or null if it isn't a boss. */
 export function bossTwist(index: number): BossTwist | null {

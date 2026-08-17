@@ -1,7 +1,21 @@
 // Structural validation for every puzzle: the campaign, the emoji boss and
-// the dedicated daily pool.
+// the dedicated daily pool — plus the chapter keys and the campaign curve.
 // Run with:  npm run validate
-import { PUZZLES, EMOJI_BOSS, CHAPTERS, CHAPTER_KEYS, buildPuzzle, chapterKey, keyLevels, keySlots } from "../src/puzzles.ts";
+import {
+  PUZZLES,
+  EMOJI_BOSS,
+  CHAPTERS,
+  CHAPTER_KEYS,
+  GRADE_BAND_IDS,
+  LEVELS,
+  buildPuzzle,
+  bossTwist,
+  chapterKey,
+  gradeOf,
+  keyLevels,
+  keySlots,
+  suitsTwist,
+} from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
@@ -106,7 +120,90 @@ CHAPTERS.forEach((_, ci) => {
   }
 });
 
+// --- The campaign curve ----------------------------------------------------
+// The level order is computed from hand grades (see GRADE_BANDS in puzzles.ts),
+// so the things that order guarantees are checked here rather than eyeballed on
+// the level index. An ungraded board is the failure a new content batch will hit
+// first: it would silently land mid-curve, in whatever chapter grade 3 fills.
+
+const graded = GRADE_BAND_IDS.flat();
+const campaignIds = new Set(PUZZLES.map((p) => p.id));
+graded.forEach((id, i) => {
+  if (graded.indexOf(id) !== i) {
+    bad++;
+    console.log(`✗ curve: "${id}" appears in more than one grade band`);
+  }
+  if (!campaignIds.has(id)) {
+    bad++;
+    console.log(`✗ curve: grade band lists "${id}", which is not a campaign puzzle`);
+  }
+});
+PUZZLES.forEach((p) => {
+  if (!graded.includes(p.id)) {
+    bad++;
+    console.log(`✗ curve: ${p.id} has no hand grade — add its id to a GRADE_BANDS band`);
+  }
+});
+
+// Every board is played exactly once.
+if (LEVELS.length !== PUZZLES.length || new Set(LEVELS.map((l) => l.id)).size !== PUZZLES.length) {
+  bad++;
+  console.log(`✗ curve: ${LEVELS.length} levels over ${PUZZLES.length} puzzles — the order lost or repeated a board`);
+}
+
+// The tutorial is level 1: the coach copy is derived from this board's own first
+// category, so a reorder that moves it leaves the coach describing other tiles.
+if (LEVELS[0].id !== "star") {
+  bad++;
+  console.log(`✗ curve: level 1 is ${LEVELS[0].id}, but the tutorial coach is written against "star"`);
+}
+
+// The rules the placement pass exists to keep.
+const spokesOf = (i: number) => new Set(LEVELS[i].categories.flatMap((c) => c.words));
+for (let i = 1; i < LEVELS.length; i++) {
+  const shared = [...spokesOf(i)].filter((w) => spokesOf(i - 1).has(w));
+  if (shared.length) {
+    bad++;
+    console.log(`✗ curve: levels ${i} and ${i + 1} (${LEVELS[i - 1].id}/${LEVELS[i].id}) both show ${shared.join(", ")}`);
+  }
+}
+let lastBossGrade = 0;
+CHAPTERS.forEach((c, ci) => {
+  const rows = LEVELS.slice(c.start, c.end);
+  const twist = bossTwist(c.boss)!;
+  const boss = LEVELS[c.boss];
+  // The emoji boss never plays its own board (EMOJI_BOSS is swapped in), so its
+  // grade says nothing about the fight and is exempt from both rules below.
+  const emoji = twist === "emoji";
+  const bossGrade = emoji ? GRADE_BAND_IDS.length : gradeOf(boss.id);
+  const peak = Math.max(...rows.slice(0, -1).map((l) => gradeOf(l.id)));
+  if (bossGrade < peak) {
+    bad++;
+    console.log(`✗ curve: chapter ${ci + 1}'s boss (${boss.id}, grade ${bossGrade}) is milder than a level it follows (grade ${peak})`);
+  }
+  // Boss grades climb across the campaign — but the emoji chapter sits outside
+  // that chain entirely: a picture board is a different kind of hard, not a
+  // point on the word curve, so it neither has to beat the last boss nor sets
+  // the bar for the next one.
+  if (!emoji) {
+    if (bossGrade < lastBossGrade) {
+      bad++;
+      console.log(`✗ curve: chapter ${ci + 1}'s boss drops to grade ${bossGrade} after an earlier chapter's grade ${lastBossGrade}`);
+    }
+    lastBossGrade = bossGrade;
+  }
+  if (!emoji && !suitsTwist(twist, boss)) {
+    bad++;
+    console.log(`✗ curve: chapter ${ci + 1}'s boss ${boss.id} can't carry its "${twist}" twist`);
+  }
+  const wordplay = rows.filter((l) => l.categories.some((cc) => cc.name.includes("___") || /after the link/i.test(cc.name)));
+  if (wordplay.length > 1) {
+    bad++;
+    console.log(`✗ curve: chapter ${ci + 1} holds ${wordplay.length} compound-word boards (${wordplay.map((l) => l.id).join(", ")})`);
+  }
+});
+
 console.log(
-  `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) + ${CHAPTER_KEYS.length} chapter keys — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,
+  `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) + ${CHAPTER_KEYS.length} chapter keys + the ${LEVELS.length}-level curve — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,
 );
 process.exit(bad ? 1 : 0);
