@@ -11,7 +11,7 @@ export const CATEGORY_THEMES = [
 /**
  * One flat print ink per chapter, for the level map.
  *
- * The map used to be a single wall of identical gold tiles — 62 of them — so
+ * The map used to be a single wall of identical gold tiles — one per level — so
  * every chapter, every clear and every unlock looked exactly alike. Giving each
  * chapter its own spot colour (still flat inks on cream, in keeping with the
  * press identity) makes the list navigable by colour and makes finishing a
@@ -29,6 +29,10 @@ export const CHAPTER_INKS = [
   { fill: "#ef9350", deep: "#a1490b", wash: "#fce4d2" }, // orange
   { fill: "#57aaa5", deep: "#12615d", wash: "#d8ecea" }, // teal
   { fill: "#e084a9", deep: "#a33a63", wash: "#fadfe8" }, // rose
+  { fill: "#7f95dc", deep: "#31489f", wash: "#e0e5f8" }, // indigo
+  { fill: "#a9c65a", deep: "#5b7211", wash: "#edf3d6" }, // lime
+  { fill: "#93a2b3", deep: "#455568", wash: "#e3e8ee" }, // slate
+  { fill: "#a879b8", deep: "#6a2f7c", wash: "#eddff2" }, // plum
   { fill: "#e2705a", deep: "#a93318", wash: "#fadcd5" }, // clay — the finale
 ];
 
@@ -37,7 +41,7 @@ export const CHAPTER_INKS = [
  * background pulled a few percent toward the chapter's wash, and `glow` is the
  * ink at low alpha for the backdrop's top light. Derived rather than authored
  * so a new chapter colour can't forget to bring them, and kept deliberately
- * faint — the identity is still warm newsprint, not eight different skins.
+ * faint — the identity is still warm newsprint, not a dozen different skins.
  */
 const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a: string, b: string, amount: number) => {

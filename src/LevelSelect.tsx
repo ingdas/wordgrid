@@ -33,7 +33,8 @@ import {
 // ---------------------------------------------------------------------------
 // The level list is an INDEX, not a map.
 //
-// It used to be 63 identical numbered squares in a grid, which was wrong in two
+// It used to be one identical numbered square per level in a grid, which was
+// wrong in two
 // directions at once. Behind you it threw away everything that makes a level
 // memorable — you solved "Bank On It", and the list remembered "a gold square".
 // Ahead of you a numbered square promises nothing, so there was nothing to want.

@@ -19,7 +19,7 @@ word, then build all four groups of three around it.
    level, and it pays a bonus for every group you hadn't found yet.
 5. Fewer mistakes earn more **stars** (3 max per level).
 
-There are **63 levels** across eight chapters, each closing on a **boss** that
+There are **100 levels** across twelve chapters, each closing on a **boss** that
 plays by its own rule. They're browsed from an **index** rather than a level
 grid, and the two halves of it read differently on purpose: a level you've
 solved gets an index line naming the board you beat (`Bank On It ··· ⭐⭐⭐`),
