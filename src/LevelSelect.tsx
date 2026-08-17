@@ -16,9 +16,9 @@ import { playCorrect, playClear, playStar, playWin } from "./audio";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { shuffledLetters } from "./letters";
+import { DebugPanel } from "./DebugPanel";
 import {
   isUnlocked,
-  isDebug,
   MAX_STARS,
   totalStars,
   newlyUnlocked,
@@ -85,9 +85,12 @@ const wait = (ms: number, sink: ReturnType<typeof setTimeout>[]) =>
 export default function LevelSelect({
   progress,
   reduce,
+  debug = false,
   onPick,
   onSeen,
   onSolveKey,
+  onDebugClear,
+  onDebugHints,
   hints,
   onUseHint,
   onRefillHints,
@@ -101,11 +104,17 @@ export default function LevelSelect({
 }: {
   progress: Progress;
   reduce: boolean;
+  /** Debug mode: everything is open, and the tool tray can clear levels. */
+  debug?: boolean;
   onPick: (index: number) => void;
   /** Called once the page has shown what's new, so each unlock plays only once. */
   onSeen: () => void;
   /** A chapter's keyword was spelled — its boss door opens. */
   onSolveKey: (chapter: number) => void;
+  /** Debug: mark a level cleared at three stars without playing it. */
+  onDebugClear?: (index: number) => void;
+  /** Debug: drop ten hints into the bank. */
+  onDebugHints?: () => void;
   hints: number;
   onUseHint: () => void;
   onRefillHints: () => Promise<boolean>;
@@ -307,7 +316,7 @@ export default function LevelSelect({
           <p className="mt-1 text-center text-xs font-semibold text-ink-soft lg:text-left">
             {t("levels.summary", { solved: solvedCount, perfect: perfectCount, total: LEVELS.length })}
           </p>
-          {isDebug() && (
+          {debug && (
             <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf lg:text-left">
               {t("levels.debug")}
             </p>
@@ -502,11 +511,25 @@ export default function LevelSelect({
         )}
       </AnimatePresence>
 
+      {debug && (
+        <DebugPanel
+          tools={[
+            {
+              key: "debug.clearLevel",
+              onClick: () => nextIndex >= 0 && onDebugClear?.(nextIndex),
+              disabled: nextIndex < 0 || !onDebugClear,
+            },
+            { key: "debug.hints10", onClick: () => onDebugHints?.(), disabled: !onDebugHints },
+          ]}
+        />
+      )}
+
       <AnimatePresence>
         {keyPanel != null && (
           <ChapterKeyPanel
             chapter={keyPanel}
             hints={hints}
+            unlimited={debug}
             onUseHint={onUseHint}
             onRefillHints={onRefillHints}
             onSolved={() => onSolveKey(keyPanel)}
@@ -922,6 +945,7 @@ function Rune({
 function ChapterKeyPanel({
   chapter,
   hints,
+  unlimited,
   onUseHint,
   onRefillHints,
   onSolved,
@@ -929,6 +953,8 @@ function ChapterKeyPanel({
 }: {
   chapter: number;
   hints: number;
+  /** Debug: hints are free, so the letter reveal never runs out. */
+  unlimited?: boolean;
   onUseHint: () => void;
   onRefillHints: () => Promise<boolean>;
   onSolved: () => void;
@@ -982,9 +1008,10 @@ function ChapterKeyPanel({
           pivot={word}
           revealedLetters={revealed}
           hintBank={hints}
-          canRevealLetter={hints > 0 && revealed < word.length - 1}
+          unlimited={unlimited}
+          canRevealLetter={(unlimited || hints > 0) && revealed < word.length - 1}
           onRevealLetter={() => {
-            if (hints <= 0) return;
+            if (!unlimited && hints <= 0) return;
             onUseHint();
             setRevealed((r) => r + 1);
           }}

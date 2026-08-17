@@ -1,5 +1,6 @@
 import { CHAPTERS, LEVELS, chapterKey, keyLevels, seededShuffle, type RawPuzzle } from "./puzzles.ts";
 import { DAILY_PUZZLES } from "./dailyPuzzles.ts";
+import { isDebug } from "./debug.ts";
 
 // Meta-progression: per-level star ratings (best of), a win streak, and a few
 // lifetime stats. This is the "collect the stars / keep the streak alive" hook
@@ -163,22 +164,8 @@ export function playerRank(score: number): Rank {
 // How many levels ahead of your furthest clear stay unlocked.
 const LOOKAHEAD = 3;
 
-// Debug switch: add `?debug` to the URL (it's remembered afterwards) or set
-// localStorage["wordgrid:debug"]="1" to unlock every level immediately. Add
-// `?debug=0` to turn it back off. Read once per load.
-const DEBUG_KEY = "wordgrid:debug";
-let debugCache: boolean | null = null;
-export function isDebug(): boolean {
-  if (debugCache !== null) return debugCache;
-  try {
-    const q = new URLSearchParams(window.location.search);
-    if (q.has("debug")) localStorage.setItem(DEBUG_KEY, q.get("debug") === "0" ? "0" : "1");
-    debugCache = localStorage.getItem(DEBUG_KEY) === "1";
-  } catch {
-    debugCache = false;
-  }
-  return debugCache;
-}
+// The debug switch itself lives in ./debug.ts (it is read by the UI too); what
+// it means for gating is here: every level and every boss door stands open.
 
 /** Index (in LEVELS order) of the furthest cleared level, or -1. */
 export function furthestCleared(p: Progress): number {

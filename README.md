@@ -61,6 +61,23 @@ npm run validate  # structurally check every puzzle (13 unique tiles, link fits)
 npm run audit     # flag spokes that may be ambiguous, for human review
 ```
 
+### Debug mode
+
+For playtesting and QA. Turn it on by appending **`?debug`** to the URL (it's
+remembered afterwards — `?debug=0` clears it) or with the **Debug mode** toggle
+in **Settings → Developer**. It gives you:
+
+- every level and every boss door **unlocked**, keys included;
+- **free hints** — the bank reads ∞, nothing is spent, and no ad is offered;
+- a **🛠 tool tray** in the bottom-left corner: *solve a group*, *auto-solve
+  level* (which wins it outright, stars and all), *reveal all themes*, *peek at
+  the link*, *+5 hints* and *force a loss*;
+- on the level index, *clear next level* and *+10 hints*; on the Logic Grid,
+  *auto-solve grid*.
+
+Nothing about it leaks into a normal save: the tray is only mounted while debug
+is on, and the switch lives in its own localStorage key (`wordgrid:debug`).
+
 ### Automated playtest
 
 `scripts/playtest.mjs` drives a headless Chrome through the solve / lose /

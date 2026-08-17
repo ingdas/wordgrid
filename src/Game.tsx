@@ -7,6 +7,7 @@ import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
+import { DebugPanel } from "./DebugPanel";
 import { EndCard } from "./EndCard";
 import Confetti from "./Confetti";
 import {
@@ -41,6 +42,10 @@ interface GameProps {
   endlessInfo?: { solved: number; score: number; best: number };
   bestMs?: number;
   hintBank: number;
+  /** Debug mode: free hints plus the tool panel (solve, peek, force a loss). */
+  debug?: boolean;
+  /** Debug: top the hint bank up without watching anything. */
+  onDebugHints?: () => void;
   onUseHint: () => void;
   onRefillHints: () => Promise<boolean>;
   onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => void;
@@ -66,6 +71,8 @@ export default function Game({
   endlessInfo,
   bestMs,
   hintBank,
+  debug = false,
+  onDebugHints,
   onUseHint,
   onRefillHints,
   onWin,
@@ -119,6 +126,8 @@ export default function Game({
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
   const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
+  // Debug only: show the secret link on its card without ending the round.
+  const [peek, setPeek] = useState(false);
   // No letters revealed up front — the letter bank already removes blank-page
   // paralysis. The reveal-a-letter hint locks in letters one at a time.
   const [revealedLetters, setRevealedLetters] = useState(0);
@@ -405,7 +414,11 @@ export default function Game({
     () => unsolvedCategories.filter((c) => !revealedHints.has(c.name)),
     [unsolvedCategories, revealedHints]
   );
-  const canHint = status === "playing" && hintBank > 0 && hintableCategories.length > 0;
+  // In debug the bank is bottomless: the hint buttons stay live at zero tokens
+  // and nothing is ever spent (App.useHintToken no-ops), so the hint UI itself
+  // can be exercised without grinding levels for tokens first.
+  const hasHint = debug || hintBank > 0;
+  const canHint = status === "playing" && hasHint && hintableCategories.length > 0;
 
   // Hint: spend a token to reveal one category's description (not its words).
   const revealCategory = useCallback(() => {
@@ -418,13 +431,13 @@ export default function Game({
   }, [canHint, hintableCategories, onUseHint]);
 
   // Finale hint: spend a token to reveal the next letter of the secret link.
-  const canRevealLetter = hintBank > 0 && revealedLetters < puzzle.pivot.length;
+  const canRevealLetter = hasHint && revealedLetters < puzzle.pivot.length;
   const revealLetter = useCallback(() => {
-    if (hintBank <= 0) return;
+    if (!hasHint) return;
     setRevealedLetters((n) => Math.min(n + 1, puzzle.pivot.length));
     onUseHint();
     playSelect();
-  }, [hintBank, puzzle.pivot.length, onUseHint]);
+  }, [hasHint, puzzle.pivot.length, onUseHint]);
 
   // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
   const refill = useCallback(async () => {
@@ -434,6 +447,58 @@ export default function Game({
       playCorrect(0);
     }
   }, [onRefillHints]);
+
+  // --- debug tools ---------------------------------------------------------
+  // Only reachable from the panel below, which only mounts in debug mode.
+  // Where a tool has an honest in-game equivalent it uses it — solving a group
+  // goes through solveCategory, so the points, the combo and the banner behave
+  // exactly as they do for a group the player found.
+
+  /** Take the next unsolved group off the board. */
+  const debugSolveGroup = useCallback(() => {
+    if (status !== "playing") return;
+    const cat = unsolvedCategories[0];
+    if (cat) solveCategory(cat, solved.length);
+  }, [status, unsolvedCategories, solveCategory, solved.length]);
+
+  /**
+   * Auto-solve: every group falls, the link is named, the win card comes up.
+   * Set outright instead of staged through the usual beats — the point is to
+   * reach the end state — and the report effect then pays the stars, the
+   * streak and the history entry a real clear would have earned.
+   */
+  const debugSolveAll = useCallback(() => {
+    if (status === "won" || status === "lost") return;
+    clearTimers();
+    const remaining = puzzle.categories.filter((c) => !solved.includes(c));
+    setSelected([]);
+    setEarlyCall(false);
+    setOffering(false);
+    setSolved(puzzle.categories);
+    setLinkGuess(puzzle.pivot);
+    setScore((s) => s + remaining.length * 100 + 250);
+    setStatus("won");
+  }, [status, puzzle, solved, clearTimers]);
+
+  /** Reveal every category's theme at once (the hint, four times over). */
+  const debugRevealThemes = useCallback(() => {
+    setRevealedHints(new Set(puzzle.categories.map((c) => c.name)));
+    playSelect();
+  }, [puzzle]);
+
+  /** Show/hide the link word on its card, without resolving the finale. */
+  const debugTogglePeek = useCallback(() => setPeek((v) => !v), []);
+
+  /** Burn every remaining guess, skipping the second-chance offer. */
+  const debugLose = useCallback(() => {
+    if (status === "won" || status === "lost") return;
+    clearTimers();
+    mistakesRef.current = MAX_MISTAKES;
+    setMistakes(MAX_MISTAKES);
+    setSelected([]);
+    setOffering(false);
+    setStatus("lost");
+  }, [status, clearTimers]);
 
   const restart = useCallback(() => {
     clearTimers(); // nothing from the finished run may land on the fresh one
@@ -452,6 +517,7 @@ export default function Game({
     setLinkGuess(null);
     setRevealedHints(new Set());
     setRevealedLetters(0);
+    setPeek(false);
     setMoves(0);
     setScore(0);
     comboRef.current = 0;
@@ -537,8 +603,9 @@ export default function Game({
   // they're what you're reasoning from.
   const linkPending = oraclePending || (earlyCall && linkGuess == null);
   // A win reveals the link; a loss keeps it secret for the replay. The Oracle
-  // also reveals it the moment you've named it (you've earned the sight).
-  const revealLink = status === "won" || linkGuess != null;
+  // also reveals it the moment you've named it (you've earned the sight) — and
+  // debug's peek shows it whenever it's asked to.
+  const revealLink = status === "won" || linkGuess != null || peek;
   const stars = finalStars;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
   const maskSolved = twist === "blackout" && !revealLink;
@@ -748,7 +815,8 @@ export default function Game({
             hasSelection={selected.length > 0}
             canHint={canHint}
             hintBank={hintBank}
-            showRefill={hintBank === 0}
+            unlimited={debug}
+            showRefill={hintBank === 0 && !debug}
             onSubmit={submit}
             onClear={clearSelection}
             onHint={revealCategory}
@@ -769,6 +837,7 @@ export default function Game({
             pivot={puzzle.pivot}
             revealedLetters={revealedLetters}
             hintBank={hintBank}
+            unlimited={debug}
             canRevealLetter={canRevealLetter}
             onRevealLetter={revealLetter}
             onRefill={refill}
@@ -874,6 +943,19 @@ export default function Game({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {debug && (
+        <DebugPanel
+          tools={[
+            { key: "debug.solveGroup", onClick: debugSolveGroup, disabled: status !== "playing" },
+            { key: "debug.solveAll", onClick: debugSolveAll, disabled: status === "won" || status === "lost" },
+            { key: "debug.themes", onClick: debugRevealThemes, disabled: status === "lost" },
+            { key: peek ? "debug.peek.off" : "debug.peek", onClick: debugTogglePeek },
+            { key: "debug.hints", onClick: () => onDebugHints?.(), disabled: !onDebugHints },
+            { key: "debug.lose", onClick: debugLose, disabled: status === "won" || status === "lost", danger: true },
+          ]}
+        />
+      )}
 
       {!reduce && burst > 0 && status === "playing" && (
         <Confetti key={burst} count={Math.min(64, 16 + combo * 12)} />
@@ -1132,6 +1214,7 @@ function Controls({
   hasSelection,
   canHint,
   hintBank,
+  unlimited,
   showRefill,
   onSubmit,
   onClear,
@@ -1145,6 +1228,8 @@ function Controls({
   hasSelection: boolean;
   canHint: boolean;
   hintBank: number;
+  /** Debug: the bank is bottomless, so the badge reads ∞ and never empties. */
+  unlimited?: boolean;
   showRefill?: boolean;
   onSubmit: () => void;
   onClear: () => void;
@@ -1204,7 +1289,7 @@ function Controls({
           <span className="text-base" aria-hidden>💡</span>
           {t("game.hint")}
           <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
-            {hintBank}
+            {unlimited ? "∞" : hintBank}
           </span>
         </button>
       )}

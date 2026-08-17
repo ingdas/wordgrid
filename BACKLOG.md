@@ -1,8 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 29 (the difficulty ramp is hand-graded and the level
-order is a rising sawtooth). This file is the single source of truth — a fresh
-session should be able to continue from here without any prior chat context._
+_Last updated: iteration 30 (debug mode: free hints, auto-solve, a tool tray).
+This file is the single source of truth — a fresh session should be able to
+continue from here without any prior chat context._
 
 ## What this is
 
@@ -20,7 +20,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 - Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
   structure + chapter-key lengths + the campaign curve), `npm run audit`
   (ambiguity helper),
-  `npm test` (engine, deduction, **progress/key gating**, i18n),
+  `npm test` (engine, deduction, **progress/key gating**, **the debug
+  switch**, i18n),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
@@ -28,9 +29,16 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   NEW port, never `pkill`), then
   `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`, and
   `BASE=http://localhost:<port>/ node scripts/pairs.test.mjs` (Pairs mode:
-  a full run, plus the two iteration-24 timer/stale-state repros).
-- Debug: append `?debug` to the URL → unlocks all levels (persists in
-  localStorage; `?debug=0` turns it off).
+  a full run, plus the two iteration-24 timer/stale-state repros), and
+  `BASE=http://localhost:<port>/ node scripts/debug.playtest.mjs` (debug mode:
+  the tool tray, free hints, auto-solve, the index/Logic-Grid tools).
+- **Debug mode** (iteration 30): three ways in — `?debug` in the URL (remembered
+  afterwards; `?debug=0` turns it off), the **Settings → Developer** toggle, or
+  `localStorage["wordgrid:debug"]="1"` (what the headless scripts do). It opens
+  every level and boss door, makes hints free, and mounts a 🛠 tool tray:
+  solve a group / auto-solve the level / reveal all themes / peek at the link /
+  +5 hints / force a loss in the game, clear-next-level and +10 hints on the
+  index, auto-solve on the Logic Grid.
 - Commit style: imperative summary + short body; end with
   `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
   session's `Claude-Session:` URL trailer. Never mention the model id in code.
@@ -163,7 +171,7 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 - `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
   best, daily{lastDate,streak}, achievements, hints, history, score,
   endlessBest, pairsBest, seen, keys), loadProgress/save, isUnlocked (lookahead
-  3 + isDebug + the chapter-key boss gate), the key helpers
+  3 + isDebug (from `debug.ts`) + the chapter-key boss gate), the key helpers
   (bankedLetters/keyReady/keySolved/solveKey/keyLockedBoss/bossAwaitingKey —
   rules pinned in `scripts/progress.test.mts`),
   unlockedIds/newlyUnlocked/markSeen (what the map still owes the
@@ -171,6 +179,12 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   fresh ones both start with nothing pending), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
   shared, no repeat within an 80-day cycle), dailyWeek/msUntilNextDaily,
   playerRank ladder.
+- `debug.ts` — the debug switch and nothing else: isDebug (URL / storage,
+  cached per load), setDebug (the Settings toggle, live), resetDebugCache (the
+  test seam). Rules pinned in `scripts/debug.test.mts`.
+- `DebugPanel.tsx` — the 🛠 tool tray. Collapsed to one button, pinned
+  bottom-left (the one corner the toast and the coach card don't claim), and
+  mounted only in debug mode; each screen passes its own tools.
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
 - `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
 - `i18n/` — `index.ts` (locale detection + persistence, `t("key", {params})`,
@@ -244,6 +258,40 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## Debug mode: hints, auto-solve, tools (iteration 30)
+
+Owner ask: *"add a debug mode which I can use to get more hints, auto solve
+levels…"*. `?debug` already existed but did exactly one thing — unlock the
+level map — and needed a URL to reach.
+
+- **The switch moved to `src/debug.ts`** (out of `progress.ts`, which now only
+  reads it for gating) and gained `setDebug`, so it can be flipped live. Three
+  ways in: `?debug`, **Settings → Developer → Debug mode**, or the localStorage
+  key. It is mirrored in App state, so the gating, the hint bank and the tool
+  trays all react without a reload.
+- **Hints are free.** `useHintToken` no-ops in debug, the hint buttons stay
+  live on an empty bank, the badge reads ∞, and the ad refill is never offered
+  — in the game, the finale and the chapter-key panel alike.
+- **The 🛠 tool tray** (`DebugPanel.tsx`), collapsed until asked for:
+  - Game: *solve a group* (goes through solveCategory, so the points, the combo
+    and the banner behave like a real solve), *auto-solve level* (every group +
+    the link + the win card; the report effect still pays the stars, the streak
+    and the history entry), *reveal all themes*, *peek at the link* (shows the
+    pivot on its card without resolving the finale, and toggles back off),
+    *+5 hints*, *force a loss*.
+  - Index: *clear next level* (3 stars, so the letters, the unlock reveals and
+    the chapter keys all behave as they do after a real clear) and *+10 hints*.
+  - Logic Grid: *auto-solve grid* paints the level's own verified `solution`,
+    so the existing solve effect lands the win.
+- **Concealment is preserved**: nothing shows the link until a tool asks for
+  it, and a forced loss keeps the word secret for the replay, exactly like a
+  played loss does.
+- Covered by `scripts/debug.test.mts` (5 unit tests: the URL, the toggle,
+  persistence, and the gates opening — and closing again) and
+  `scripts/debug.playtest.mjs` (5 headless checks: the tray only exists in
+  debug, the in-game tools, free hints from an empty bank, the index tool, the
+  Logic Grid). `playtest.mjs` and `pairs.test.mjs` still pass with zero issues.
 
 ## The difficulty ramp, rebuilt (iteration 29)
 

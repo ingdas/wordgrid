@@ -285,6 +285,23 @@ export const es: Record<string, string> = {
   "settings.reset": "Borrar el progreso",
   "settings.reset.confirm": "¿Borrar estrellas, puntos e historial?",
   "settings.reset.yes": "Borrarlo todo",
+  "settings.developer": "Desarrollo",
+  "settings.debug": "Modo depuración",
+  "settings.debug.hint": "Pistas gratis, resolver solo y todos los niveles abiertos",
+
+  // --- debug tools (only mounted when debug mode is on) --------------------
+  "debug.title": "Depuración",
+  "debug.tools": "Herramientas de depuración",
+  "debug.solveGroup": "Resolver un grupo",
+  "debug.solveAll": "Resolver el nivel",
+  "debug.themes": "Mostrar todos los temas",
+  "debug.peek": "Ver la palabra oculta",
+  "debug.peek.off": "Ocultar la palabra",
+  "debug.hints": "+5 pistas",
+  "debug.lose": "Forzar una derrota",
+  "debug.solveGrid": "Resolver la cuadrícula",
+  "debug.clearLevel": "Completar el nivel siguiente",
+  "debug.hints10": "+10 pistas",
   "achievement.unlocked": "Logro desbloqueado",
   "rank.up": "¡Subiste de rango!",
 

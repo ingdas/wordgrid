@@ -19,6 +19,7 @@ import {
   MAX_STARS,
   type Progress,
 } from "./progress";
+import { isDebug, setDebug } from "./debug";
 import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic, suspendAudio, resumeAudio } from "./audio";
 import {
   initSdk,
@@ -103,6 +104,17 @@ export default function App() {
   const changeLocale = useCallback((next: Locale) => {
     setLocale(next);
     setLocaleState(next);
+  }, []);
+  // Debug mode. The flag lives in localStorage (and answers to `?debug`), but
+  // it's mirrored in state so flipping it in Settings re-renders the tree —
+  // the level gating, the hint bank and the tool panels all read it.
+  const [debug, setDebugState] = useState(() => isDebug());
+  const toggleDebug = useCallback(() => {
+    setDebugState((d) => {
+      const next = !d;
+      setDebug(next);
+      return next;
+    });
   }, []);
   const [muted, setMutedState] = useState(() => isMuted());
   const [musicOn, setMusicOnState] = useState(() => isMusicOn());
@@ -364,9 +376,34 @@ export default function App() {
     [levelIndex, playingDaily, dailyRaw, applyProgress, celebrateRank]
   );
 
+  // Debug mode plays with an unlimited bank, so a hint spent there costs
+  // nothing — otherwise testing the hints is what empties them.
   const useHintToken = useCallback(() => {
+    if (debug) return;
     applyProgress((p) => (p.hints <= 0 ? p : { ...p, hints: p.hints - 1 }));
-  }, [applyProgress]);
+  }, [applyProgress, debug]);
+
+  /** Debug: drop a handful of hints straight into the bank. */
+  const grantHints = useCallback(
+    (n: number) => {
+      applyProgress((p) => ({ ...p, hints: p.hints + n }));
+    },
+    [applyProgress]
+  );
+
+  /**
+   * Debug: mark a campaign level cleared at three stars, exactly as a real win
+   * would leave it — so the letters, the unlock reveals and the chapter keys
+   * all behave the way they do for a player who actually solved it.
+   */
+  const debugClearLevel = useCallback(
+    (index: number) => {
+      const id = LEVELS[index]?.id;
+      if (!id) return;
+      applyProgress((p) => ({ ...p, stars: { ...p.stars, [id]: Math.max(p.stars[id] ?? 0, 3) } }));
+    },
+    [applyProgress]
+  );
 
   // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
   const refillHints = useCallback(async (): Promise<boolean> => {
@@ -584,9 +621,12 @@ export default function App() {
             <LevelSelect
               progress={progress}
               reduce={reduce}
+              debug={debug}
               onPick={pickLevel}
               onSeen={markLevelsSeen}
               onSolveKey={solveChapterKey}
+              onDebugClear={debugClearLevel}
+              onDebugHints={() => grantHints(10)}
               hints={progress.hints}
               onUseHint={useHintToken}
               onRefillHints={refillHints}
@@ -616,6 +656,7 @@ export default function App() {
           <ScreenWrap key="deduction">
             <Deduction
               reduce={reduce}
+              debug={debug}
               solvedIds={progress.deductionSolved}
               onSolve={handleDeductionSolve}
               onExit={exitDeduction}
@@ -644,6 +685,8 @@ export default function App() {
               twist={endless || playingDaily ? null : bossTwist(levelIndex)}
               bestMs={endless || playingDaily ? undefined : progress.best[LEVELS[levelIndex].id]}
               hintBank={progress.hints}
+              debug={debug}
+              onDebugHints={() => grantHints(5)}
               onUseHint={useHintToken}
               onRefillHints={refillHints}
               onWin={endless ? handleEndlessWin : handleWin}
@@ -697,9 +740,11 @@ export default function App() {
             muted={muted}
             musicOn={musicOn}
             calm={calm}
+            debug={debug}
             onToggleMute={toggleMute}
             onToggleMusic={toggleMusic}
             onToggleCalm={toggleCalm}
+            onToggleDebug={toggleDebug}
             onLocale={changeLocale}
             onReset={resetProgress}
             onClose={() => setShowSettings(false)}
@@ -975,9 +1020,11 @@ function SettingsModal({
   muted,
   musicOn,
   calm,
+  debug,
   onToggleMute,
   onToggleMusic,
   onToggleCalm,
+  onToggleDebug,
   onLocale,
   onReset,
   onClose,
@@ -985,9 +1032,11 @@ function SettingsModal({
   muted: boolean;
   musicOn: boolean;
   calm: boolean;
+  debug: boolean;
   onToggleMute: () => void;
   onToggleMusic: () => void;
   onToggleCalm: () => void;
+  onToggleDebug: () => void;
   onLocale: (l: Locale) => void;
   onReset: () => void;
   onClose: () => void;
@@ -1036,6 +1085,21 @@ function SettingsModal({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Developer tools. Off by default and last on the page, but a real
+            switch rather than a URL you have to remember: it's the same flag
+            `?debug` sets, so everything downstream behaves identically. */}
+        <div className="mt-4 border-t border-dashed border-ink/20 pt-1">
+          <div className="pt-2 text-[0.6rem] font-bold uppercase tracking-widest text-ink-soft">
+            {t("settings.developer")}
+          </div>
+          <ToggleRow
+            label={t("settings.debug")}
+            hint={t("settings.debug.hint")}
+            on={debug}
+            onToggle={onToggleDebug}
+          />
         </div>
 
         <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">

@@ -11,6 +11,7 @@ import { CATEGORY_THEMES } from "./theme";
 import { clueTarget, countScope, grid, samePairsInLine } from "./deductionRules";
 import { t } from "./i18n";
 import Confetti from "./Confetti";
+import { DebugPanel } from "./DebugPanel";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
 
 // ---------------------------------------------------------------------------
@@ -30,12 +31,14 @@ import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio"
 
 interface DeductionProps {
   reduce: boolean;
+  /** Debug mode: the board can paint its own solution. */
+  debug?: boolean;
   solvedIds: string[];
   onSolve: (id: string) => void;
   onExit: () => void;
 }
 
-export default function Deduction({ reduce, solvedIds, onSolve, onExit }: DeductionProps) {
+export default function Deduction({ reduce, debug = false, solvedIds, onSolve, onExit }: DeductionProps) {
   // Open on the first puzzle you haven't cracked yet, so coming back doesn't
   // mean paging past everything already solved. (All solved → back to #1.)
   const [levelIdx, setLevelIdx] = useState(() => {
@@ -50,6 +53,7 @@ export default function Deduction({ reduce, solvedIds, onSolve, onExit }: Deduct
       index={levelIdx}
       total={DEDUCTION_LEVELS.length}
       reduce={reduce}
+      debug={debug}
       solvedIds={solvedIds}
       onSolve={onSolve}
       onPick={setLevelIdx}
@@ -63,6 +67,7 @@ function DeductionBoard({
   index,
   total,
   reduce,
+  debug,
   solvedIds,
   onSolve,
   onPick,
@@ -72,6 +77,7 @@ function DeductionBoard({
   index: number;
   total: number;
   reduce: boolean;
+  debug: boolean;
   solvedIds: string[];
   onSolve: (id: string) => void;
   onPick: (i: number) => void;
@@ -269,6 +275,13 @@ function DeductionBoard({
   }, [colors]);
 
   const used = (k: number) => colors.filter((c) => c === k).length;
+
+  // Debug: paint the level's own verified solution. The solve effect above
+  // watches the grid, so this lands the win exactly as hand-painting it would.
+  const debugSolve = useCallback(() => {
+    colorsRef.current = [...level.solution];
+    setColors(colorsRef.current);
+  }, [level.solution]);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-8 pt-4">
@@ -506,6 +519,10 @@ function DeductionBoard({
         )}
       </AnimatePresence>
       <div className="sr-only" role="status" aria-live="polite">{toast}</div>
+
+      {debug && (
+        <DebugPanel tools={[{ key: "debug.solveGrid", onClick: debugSolve, disabled: solved }]} />
+      )}
 
       {solved && !reduce && <Confetti count={90} />}
     </div>

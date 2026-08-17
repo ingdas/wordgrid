@@ -290,6 +290,23 @@ export const en: Record<string, string> = {
   "settings.reset": "Reset progress",
   "settings.reset.confirm": "Erase all stars, scores & history?",
   "settings.reset.yes": "Reset everything",
+  "settings.developer": "Developer",
+  "settings.debug": "Debug mode",
+  "settings.debug.hint": "Free hints, auto-solve, every level open",
+
+  // --- debug tools (only mounted when debug mode is on) --------------------
+  "debug.title": "Debug",
+  "debug.tools": "Debug tools",
+  "debug.solveGroup": "Solve a group",
+  "debug.solveAll": "Auto-solve level",
+  "debug.themes": "Reveal all themes",
+  "debug.peek": "Peek at the link",
+  "debug.peek.off": "Hide the link again",
+  "debug.hints": "+5 hints",
+  "debug.lose": "Force a loss",
+  "debug.solveGrid": "Auto-solve grid",
+  "debug.clearLevel": "Clear next level",
+  "debug.hints10": "+10 hints",
   "achievement.unlocked": "Achievement unlocked",
   "rank.up": "Rank up!",
 

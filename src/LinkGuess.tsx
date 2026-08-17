@@ -20,6 +20,7 @@ export function LinkGuess({
   pivot,
   revealedLetters,
   hintBank,
+  unlimited = false,
   canRevealLetter,
   onRevealLetter,
   onRefill,
@@ -42,6 +43,8 @@ export function LinkGuess({
   pivot: string;
   revealedLetters: number;
   hintBank: number;
+  /** Debug: hints are free here, so never offer the refill and show ∞. */
+  unlimited?: boolean;
   canRevealLetter: boolean;
   onRevealLetter: () => void;
   onRefill: () => void;
@@ -217,7 +220,7 @@ export function LinkGuess({
         >
           {t("finale.undo")}
         </button>
-        {hintBank === 0 && !resolved ? (
+        {hintBank === 0 && !unlimited && !resolved ? (
           <button
             onClick={onRefill}
             className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
@@ -232,7 +235,7 @@ export function LinkGuess({
           >
             {t("finale.revealLetter")}
             <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.65rem] font-extrabold text-ink">
-              {hintBank}
+              {unlimited ? "∞" : hintBank}
             </span>
           </button>
         )}
