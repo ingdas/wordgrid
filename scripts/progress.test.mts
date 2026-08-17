@@ -17,6 +17,7 @@ import {
   markSeen,
   newlyBanked,
   newlyUnlocked,
+  nextLevelIndex,
   solveKey,
   unlockedIds,
   type Progress,
@@ -167,6 +168,28 @@ test("markSeen only ever grows, and settles", () => {
   assert.ok(once.seen.length > p.seen.length, "the freshly opened boss is recorded");
   assert.equal(markSeen(once), once, "a second pass is a no-op (same object)");
   assert.deepEqual(newlyUnlocked(once), []);
+});
+
+test("Next walks one level forward on the frontier", () => {
+  assert.equal(nextLevelIndex(withCleared([0]), 0), 1);
+  assert.equal(nextLevelIndex(withCleared([0, 1, 2]), 2), 3);
+});
+
+test("Next skips levels already cleared when you replay an old one", () => {
+  // Ten levels done, and the player goes back to replay level 3 (index 2).
+  const p = withCleared([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(nextLevelIndex(p, 2), 10, "jumps to where they left off, not level 4");
+  // Gaps count as unplayed: an out-of-order clear leaves a hole to come back to.
+  const gap = withCleared([0, 1, 2, 3, 5, 6]);
+  assert.equal(nextLevelIndex(gap, 0), 4, "the skipped level is still owed");
+  assert.equal(nextLevelIndex(gap, 4), 7, "…and past it, the frontier again");
+});
+
+test("Next falls back to the plain next level once nothing is left uncleared", () => {
+  const all = withCleared(LEVELS.map((_, i) => i));
+  assert.equal(nextLevelIndex(all, 5), 6, "a finished campaign replays in order");
+  assert.equal(nextLevelIndex(all, LEVELS.length - 1), null, "…and stops at the end");
+  assert.equal(nextLevelIndex(withCleared([LEVELS.length - 1]), LEVELS.length - 1), null);
 });
 
 console.log(`\n${passed} progress tests passed ✓\n`);

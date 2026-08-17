@@ -210,6 +210,9 @@ export const en: Record<string, string> = {
   // The next level is a boss whose door is still sealed: the button has to
   // send the player to the key, not into a level they can't enter.
   "end.next.sealed": "🔑 To the sealed door →",
+  // Replaying an old level: Next jumps past everything already cleared, so it
+  // names the level it's jumping to rather than pretending it's the next one.
+  "end.next.resume": "Resume at level {n} →",
   "end.nextPuzzle": "Next puzzle →",
   "end.allDone": "All done 🎉",
   "end.seeYouTomorrow": "See you tomorrow 👋",

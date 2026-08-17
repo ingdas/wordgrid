@@ -12,6 +12,7 @@ import {
   pushHistory,
   playerRank,
   furthestCleared,
+  nextLevelIndex,
   markSeen,
   markBanked,
   keyLockedBoss,
@@ -433,11 +434,18 @@ export default function App() {
     [levelIndex, playingDaily, dailyRaw, applyProgress]
   );
 
+  // Where "Next" leads from the campaign level being played. Read from live
+  // progress — the win that opened the card is already recorded by the time
+  // this renders, so a replayed level counts as cleared here and is skipped
+  // like any other. (Endless and the daily have their own Next; they ignore it.)
+  const nextIndex = nextLevelIndex(progress, levelIndex);
+
   const nextLevel = useCallback(() => {
+    if (nextIndex === null) return;
     showInterstitial(); // between-level ad break (no-op without the SDK)
-    setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1));
+    setLevelIndex(nextIndex);
     gameplayStart();
-  }, []);
+  }, [nextIndex]);
 
   const exitToLevels = useCallback(() => {
     gameplayStop();
@@ -577,9 +585,9 @@ export default function App() {
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
 
-  // Is the level after this one a boss still shut behind its chapter key?
+  // Is the level Next would take you to a boss still shut behind its chapter key?
   const nextIsSealed =
-    !endless && !playingDaily && keyLockedBoss(progress, levelIndex + 1);
+    !endless && !playingDaily && nextIndex !== null && keyLockedBoss(progress, nextIndex);
 
   return (
     <div key={locale} className="contents">
@@ -702,18 +710,24 @@ export default function App() {
                   ? nextEndless
                   : playingDaily
                     ? undefined
-                    : levelIndex >= LEVELS.length - 1
+                    : nextIndex === null
                       ? undefined
                       : nextIsSealed
                         ? exitToLevels
                         : nextLevel
               }
               nextLabel={
-                endless || playingDaily
+                endless || playingDaily || nextIndex === null
                   ? undefined
                   : nextIsSealed
                     ? t("end.next.sealed")
-                    : nextLevelTeaser(levelIndex + 1)
+                    : // Skipping cleared levels lands somewhere the player
+                      // isn't expecting, so the button says where — unless the
+                      // teaser already has something better to announce.
+                      nextLevelTeaser(nextIndex) ??
+                      (nextIndex > levelIndex + 1
+                        ? t("end.next.resume", { n: nextIndex + 1 })
+                        : undefined)
               }
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}

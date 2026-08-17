@@ -176,6 +176,24 @@ export function furthestCleared(p: Progress): number {
   return furthest;
 }
 
+/**
+ * Where the win card's "Next" button should go after finishing level `index`.
+ *
+ * Walking to `index + 1` is right on the frontier and wrong on a replay: a
+ * player who dips back into level 3 with forty levels cleared does not want to
+ * be marched through 4, 5, 6 … one win card at a time. So Next skips whatever
+ * they have already cleared and lands on the first level they haven't — the
+ * place they actually left off. With nothing uncleared left ahead (a finished
+ * campaign) it falls back to the plain next level, and it returns null at the
+ * end of the campaign, where the card says "all done" instead.
+ */
+export function nextLevelIndex(p: Progress, index: number): number | null {
+  for (let i = index + 1; i < LEVELS.length; i++) {
+    if ((p.stars[LEVELS[i].id] ?? 0) === 0) return i;
+  }
+  return index + 1 < LEVELS.length ? index + 1 : null;
+}
+
 /** Looser gating: the first few levels plus a window ahead of your progress. */
 export function isUnlocked(p: Progress, index: number): boolean {
   if (isDebug()) return true; // debug: everything open

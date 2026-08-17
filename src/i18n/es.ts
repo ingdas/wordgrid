@@ -205,6 +205,7 @@ export const es: Record<string, string> = {
   "end.next.chapter": "Siguiente capítulo: {name} →",
   "end.next.boss": "👑 Ahora un jefe · {what} →",
   "end.next.sealed": "🔑 A la puerta sellada →",
+  "end.next.resume": "Continuar en el nivel {n} →",
   "end.nextPuzzle": "Siguiente puzle →",
   "end.allDone": "¡Completado! 🎉",
   "end.seeYouTomorrow": "Hasta mañana 👋",
