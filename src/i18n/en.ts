@@ -59,7 +59,6 @@ export const en: Record<string, string> = {
   "levels.locked": "Locked",
   "levels.a11y.stats": "Stats and achievements",
   "levels.a11y.node": "Level {n}",
-  "levels.a11y.boss": ", boss",
   "levels.a11y.stars": ", {n} of 3 stars",
   "levels.a11y.lockedNode": ", locked",
   "levels.a11y.freshNode": ", just unlocked",
@@ -89,14 +88,36 @@ export const en: Record<string, string> = {
   "levels.unlock.more": "+{n} more",
 
   // --- chapter keys -------------------------------------------------------
-  "key.open": "🔑 Open the key",
-  "key.progress": "Key {done}/{total}",
   "key.chapter": "Chapter {n} · {name}",
   "key.title": "🔑 The chapter key",
   "key.body": "Every level here gave up one letter. Put them back in order to open the boss door.",
-  "key.bossLocked": "🔑 Spell the chapter key to open this boss",
-  "key.a11y.locked": ", locked until the chapter key is spelled",
   "key.unlocked": "🔑 Key found — the boss door is open!",
+
+  // The rail of letters the chapter's levels have handed over.
+  "key.rail": "Letters {done}/{total}",
+  "key.rail.ready": "Every letter is in — unscramble the key",
+  "key.rail.solved": "Key spelled",
+  "key.rail.hint": "Clear a level, take its letter",
+  "key.a11y.rail": "Chapter key, {done} of {total} letters banked",
+  "key.a11y.rune": "Letter {letter}",
+  "key.a11y.emptyRune": "Empty letter slot",
+  "key.a11y.banked": "Level {n} banked the letter {letter}",
+
+  // --- the boss door ------------------------------------------------------
+  "boss.label": "Boss",
+  "boss.far": "Locked — keep clearing this chapter",
+  "boss.sealed": "Sealed by the chapter key",
+  "boss.ready": "The key is ready",
+  "boss.open": "The door is open",
+  "boss.beaten": "Defeated",
+  "boss.cta.key": "🔑 Unseal",
+  "boss.cta.play": "Enter →",
+  "boss.cta.replay": "Replay",
+  "boss.a11y.far": "Boss of chapter {n}, locked",
+  "boss.a11y.sealed": "Boss of chapter {n}, sealed until the chapter key is spelled",
+  "boss.a11y.ready": "Spell the chapter key to open the boss of chapter {n}",
+  "boss.a11y.open": "Play the boss of chapter {n}, level {level}",
+  "boss.a11y.beaten": "Boss of chapter {n} defeated, {title}",
 
   // --- in game ------------------------------------------------------------
   "game.level": "Level {n}",
@@ -186,6 +207,9 @@ export const en: Record<string, string> = {
   // level, so a run of wins doesn't end on the same button every time.
   "end.next.chapter": "Next chapter: {name} →",
   "end.next.boss": "👑 Boss next · {what} →",
+  // The next level is a boss whose door is still sealed: the button has to
+  // send the player to the key, not into a level they can't enter.
+  "end.next.sealed": "🔑 To the sealed door →",
   "end.nextPuzzle": "Next puzzle →",
   "end.allDone": "All done 🎉",
   "end.seeYouTomorrow": "See you tomorrow 👋",

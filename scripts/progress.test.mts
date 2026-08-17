@@ -3,8 +3,9 @@
 // a boss waits for its key, a beaten boss never re-locks, and the campaign can
 // always continue even when a key is unsolved.
 import assert from "node:assert/strict";
-import { CHAPTERS, LEVELS, chapterKey, keyLevels } from "../src/puzzles.ts";
+import { CHAPTERS, LEVELS, chapterKey, keyLetterOf, keyLevels, keySlots } from "../src/puzzles.ts";
 import {
+  bankedIds,
   bankedLetters,
   isUnlocked,
   bossAwaitingKey,
@@ -12,7 +13,9 @@ import {
   keyReady,
   keySolved,
   loadProgress,
+  markBanked,
   markSeen,
+  newlyBanked,
   newlyUnlocked,
   solveKey,
   unlockedIds,
@@ -31,7 +34,7 @@ function withCleared(indices: number[], keys: number[] = []): Progress {
   const p = loadProgress(); // no localStorage under node → the fresh default
   const stars: Record<string, number> = {};
   indices.forEach((i) => (stars[LEVELS[i].id] = 3));
-  return { ...p, stars, keys, seen: [] };
+  return { ...p, stars, keys, seen: [], banked: [] };
 }
 
 const CH0 = 0;
@@ -118,6 +121,44 @@ test("solving a key gives the boss its own unlock reveal", () => {
   const opened = solveKey(shut, CH0);
   assert.ok(unlockedIds(opened).includes(LEVELS[boss0].id));
   assert.deepEqual(newlyUnlocked(opened), [LEVELS[boss0].id]);
+});
+
+test("every level banks exactly one letter of its chapter's key", () => {
+  CHAPTERS.forEach((_, ci) => {
+    const key = chapterKey(ci);
+    const dealt = keySlots(ci);
+    assert.equal(dealt.length, key.length, `chapter ${ci + 1} deals one letter per slot`);
+    assert.deepEqual(
+      dealt.map((d) => d.letter).sort(),
+      key.split("").sort(),
+      `chapter ${ci + 1} deals the keyword's own letters`,
+    );
+    assert.deepEqual(dealt.map((d) => d.index), keyLevels(ci), "slots follow the chapter's levels");
+    // The rail is on screen from the first clear, so a deal in the answer's
+    // order would spell the key for free.
+    assert.notEqual(dealt.map((d) => d.letter).join(""), key, `chapter ${ci + 1} deals it scrambled`);
+    // And it's stable: the same level must never bank a different letter.
+    dealt.forEach((d) => assert.equal(keyLetterOf(d.index), d.letter));
+  });
+  // A boss buys nothing — it's what the letters are FOR.
+  CHAPTERS.forEach((c) => assert.equal(keyLetterOf(c.boss), null));
+});
+
+test("a letter is owed to the map once, then never again", () => {
+  const p = withCleared(levels0.slice(0, 2));
+  assert.deepEqual(bankedIds(p), levels0.slice(0, 2).map((i) => LEVELS[i].id));
+  assert.deepEqual(newlyBanked(p), bankedIds(p), "nothing has been shown yet");
+
+  const shown = markBanked(p);
+  assert.deepEqual(newlyBanked(shown), [], "…and now it has");
+  assert.equal(markBanked(shown), shown, "a second pass is a no-op (same object)");
+
+  // Clearing one more owes exactly that one, not the whole chapter again.
+  const more = { ...shown, stars: { ...shown.stars, [LEVELS[levels0[2]].id]: 1 } };
+  assert.deepEqual(newlyBanked(more), [LEVELS[levels0[2]].id]);
+  // A boss clear owes nothing: it banks no letter.
+  const bossToo = { ...markBanked(more), stars: { ...more.stars, [LEVELS[boss0].id]: 3 } };
+  assert.deepEqual(newlyBanked(bossToo), []);
 });
 
 test("markSeen only ever grows, and settles", () => {

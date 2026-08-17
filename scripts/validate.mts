@@ -1,7 +1,7 @@
 // Structural validation for every puzzle: the campaign, the emoji boss and
 // the dedicated daily pool.
 // Run with:  npm run validate
-import { PUZZLES, EMOJI_BOSS, CHAPTERS, CHAPTER_KEYS, buildPuzzle, chapterKey, keyLevels } from "../src/puzzles.ts";
+import { PUZZLES, EMOJI_BOSS, CHAPTERS, CHAPTER_KEYS, buildPuzzle, chapterKey, keyLevels, keySlots } from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 
 const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
@@ -90,6 +90,19 @@ CHAPTERS.forEach((_, ci) => {
   if (key.length !== banks) {
     bad++;
     console.log(`✗ chapter ${ci + 1} key "${key}": ${key.length} letters but ${banks} levels bank one each`);
+  }
+  // The deal is what the map actually shows. It must be the keyword's own
+  // letters (no more, no fewer) and it must not sit in the answer's order,
+  // which would spell the key across the rail before it's earned.
+  const dealt = keySlots(ci);
+  const sorted = (s: string[]) => [...s].sort().join("");
+  if (sorted(dealt.map((d) => d.letter)) !== sorted(key.split(""))) {
+    bad++;
+    console.log(`✗ chapter ${ci + 1} key "${key}": the dealt letters aren't the keyword's`);
+  }
+  if (dealt.map((d) => d.letter).join("") === key) {
+    bad++;
+    console.log(`✗ chapter ${ci + 1} key "${key}": the levels bank it in order — the rail spells the answer`);
   }
 });
 

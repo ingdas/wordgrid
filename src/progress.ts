@@ -20,6 +20,7 @@ export interface Progress {
   pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
   deductionSolved: string[]; // ids of solved Deduction Grid levels
   seen: string[]; // level ids already watched opening on the map (see newlyUnlocked)
+  banked: string[]; // level ids already watched handing their key letter over
   keys: number[]; // chapter indices whose key has been spelled (opens that boss)
 }
 
@@ -66,12 +67,16 @@ export function loadProgress(): Progress {
         pairsBest: p.pairsBest ?? 0,
         deductionSolved: p.deductionSolved ?? [],
         seen: p.seen ?? [],
+        banked: p.banked ?? [],
         keys: p.keys ?? [],
       };
       // A returning player shouldn't be met by a dozen "just unlocked!" reveals
       // for levels they opened months ago — the first time this field appears,
       // everything already open counts as seen.
       if (p.seen === undefined) loaded.seen = unlockedIds(loaded);
+      // Same for the letters: a save from before the runes existed has already
+      // banked them, so they're on the rail, not queued up to fly there.
+      if (p.banked === undefined) loaded.banked = bankedIds(loaded);
       return loaded;
     }
   } catch {
@@ -94,6 +99,7 @@ export function loadProgress(): Progress {
     // The levels a brand-new player starts with were never locked to them, so
     // they don't get an unlock reveal on the first visit to the map.
     seen: LEVELS.slice(0, LOOKAHEAD).map((l) => l.id),
+    banked: [],
     keys: [],
   };
 }
@@ -201,6 +207,41 @@ export function isUnlocked(p: Progress, index: number): boolean {
 /** How many of chapter `ci`'s key letters the player has banked. */
 export function bankedLetters(p: Progress, ci: number): number {
   return keyLevels(ci).filter((i) => (p.stars[LEVELS[i].id] ?? 0) > 0).length;
+}
+
+// --- Which letters the map still owes the player a moment for ---------------
+// Clearing a level buys a letter, and that hand-over is the payoff for the
+// clear — so the map plays it: the level's own chip turns into its letter and
+// flies to the chapter's rail. `banked` is what stops it replaying forever,
+// exactly as `seen` does for unlocks.
+
+/** Ids of every cleared level that banks a key letter, in level order. */
+export function bankedIds(p: Progress): string[] {
+  const out: string[] = [];
+  CHAPTERS.forEach((_, ci) => {
+    keyLevels(ci).forEach((i) => {
+      if ((p.stars[LEVELS[i].id] ?? 0) > 0) out.push(LEVELS[i].id);
+    });
+  });
+  return out;
+}
+
+/** Letters banked since the map last showed them arriving, oldest first. */
+export function newlyBanked(p: Progress): string[] {
+  const shown = new Set(p.banked);
+  return bankedIds(p).filter((id) => !shown.has(id));
+}
+
+/**
+ * Record every banked letter as shown. Additive like markSeen, and for the
+ * same reason: a replayed level can bank a letter out of level order.
+ */
+export function markBanked(p: Progress): Progress {
+  const ids = bankedIds(p);
+  const shown = new Set(p.banked);
+  if (ids.every((id) => shown.has(id))) return p;
+  ids.forEach((id) => shown.add(id));
+  return { ...p, banked: [...shown] };
 }
 
 /** Every letter banked — the key can be attempted. */

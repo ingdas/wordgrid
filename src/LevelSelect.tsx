@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LEVELS, CHAPTERS, TIER_KEY, bossTwist, chapterKey, isBossLevel, levelTitle } from "./puzzles";
+import {
+  LEVELS,
+  CHAPTERS,
+  TIER_KEY,
+  bossTwist,
+  chapterKey,
+  isBossLevel,
+  keyLetterOf,
+  keySlots,
+  levelTitle,
+} from "./puzzles";
 import { chapterInk, type ChapterInk } from "./theme";
-import { playStar, playWin } from "./audio";
+import { playCorrect, playClear, playStar, playWin } from "./audio";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { shuffledLetters } from "./letters";
@@ -12,8 +22,8 @@ import {
   MAX_STARS,
   totalStars,
   newlyUnlocked,
+  newlyBanked,
   furthestCleared,
-  bankedLetters,
   keyReady,
   keySolved,
   bossAwaitingKey,
@@ -40,12 +50,36 @@ import {
 //
 // And the thing you actually came to do — play the next level — is a card at the
 // top, not a node to hunt for in a grid.
+//
+// The boss is the exception to all of it. It closes the chapter, it's the most
+// distinctive content in the game, and it used to be an 11mm square with a
+// crown sticker. It now gets the BossPanel: a rail of the letters this
+// chapter's levels have handed over, sitting on a door drawn in solid ink —
+// the one dark object on a page of cream, which is exactly how much weight it
+// deserves.
 // ---------------------------------------------------------------------------
 
 // Pacing of the unlock reveal: the first lock pops shortly after the page
 // settles, and any others follow one at a time so two never read as one blur.
 const REVEAL_LEAD = 620;
 const REVEAL_GAP = 520;
+
+// Pacing of the letter hand-over, which runs FIRST: clearing a level is what
+// bought the letter, so the map pays that out before it opens anything new.
+const BANK_LEAD = 520; // page settles, then the first chip turns
+const FLIP_HOLD = 660; // how long the letter is held up on the chip
+const FLY_MS = 620; // chip → rail
+const LAND_HOLD = 300; // the slot's pop, before the next letter starts
+const BANK_STEP = FLIP_HOLD + FLY_MS + LAND_HOLD;
+// A chapter's worth of letters at full pace would be a ten-second cutscene, so
+// a backlog plays quicker. One letter always gets the full performance.
+const bankRate = (n: number) => (n > 2 ? 0.62 : 1);
+
+/** The moment the key panel dismisses itself — the door opens on that beat. */
+const KEY_PANEL_MS = 1900;
+
+const wait = (ms: number, sink: ReturnType<typeof setTimeout>[]) =>
+  new Promise<void>((resolve) => sink.push(setTimeout(resolve, ms)));
 
 export default function LevelSelect({
   progress,
@@ -94,21 +128,111 @@ export default function LevelSelect({
     furthestCleared(progress) >= 0 ? newlyUnlocked(progress) : []
   );
   const freshOrder = useMemo(() => new Map(fresh.map((id, i) => [id, i])), [fresh]);
+
+  // …and which levels still owe the map their key letter. Same deal: captured
+  // at mount, then marked, so the hand-over plays exactly once.
+  const [pending] = useState<string[]>(() => newlyBanked(progress));
+  const pendingSet = useMemo(() => new Set(pending), [pending]);
+
   useEffect(() => {
     onSeen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The old map auto-scrolled to the next level because that node was buried in
-  // the grid. It isn't any more — it's the card at the top — so the page opens
-  // at the top, on your record. The one exception is a pending unlock: that's
-  // an animation, and an animation nobody sees may as well not run.
-  const freshRef = useRef<HTMLButtonElement>(null);
+  // --- the hand-over --------------------------------------------------------
+  // One level id at a time: its chip flips to the letter, the letter flies to
+  // the chapter's rail, the slot pops. `landed` is what the rail draws from, so
+  // a slot the player is about to watch fill starts the page empty.
+  // With motion turned down there is no hand-over to watch, so the letters are
+  // simply already there — no empty first frame that fills a beat later.
+  const [landed, setLanded] = useState<Set<string>>(() => new Set(reduce ? pending : []));
+  const [flipping, setFlipping] = useState<string | null>(null);
+  const [flight, setFlight] = useState<Flight | null>(null);
+  // The hand-over is a purely visual event, so it's narrated separately for
+  // anyone who isn't watching it happen.
+  const [said, setSaid] = useState("");
+  const chipRefs = useRef(new Map<string, HTMLElement | null>());
+  const slotRefs = useRef(new Map<string, HTMLElement | null>());
+
   useEffect(() => {
-    freshRef.current?.scrollIntoView({ block: "center" });
+    if (!pending.length || reduce) return;
+    let dead = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const rate = bankRate(pending.length);
+    (async () => {
+      await wait(BANK_LEAD, timers);
+      for (let n = 0; n < pending.length; n++) {
+        const id = pending[n];
+        if (dead) return;
+        setFlipping(id);
+        playStar(n % 5);
+        await wait(FLIP_HOLD * rate, timers);
+        if (dead) return;
+
+        const from = chipRefs.current.get(id)?.getBoundingClientRect();
+        const to = slotRefs.current.get(id)?.getBoundingClientRect();
+        const index = LEVELS.findIndex((l) => l.id === id);
+        if (from && to && index >= 0) {
+          // The chip turns back to its numeral as the letter leaves it: the
+          // level handed the letter over, so it can't still be holding one.
+          setFlipping(null);
+          setFlight({
+            letter: keyLetterOf(index) ?? "",
+            fill: chapterInk(CHAPTERS.findIndex((c) => index >= c.start && index < c.end)).fill,
+            x0: from.left + from.width / 2,
+            y0: from.top + from.height / 2,
+            x1: to.left + to.width / 2,
+            y1: to.top + to.height / 2,
+            w: to.width,
+            h: to.height,
+          });
+          await wait(FLY_MS * rate, timers);
+          if (dead) return;
+        }
+        setFlight(null);
+        setFlipping(null);
+        setLanded((prev) => new Set(prev).add(id));
+        setSaid(t("key.a11y.banked", { n: index + 1, letter: keyLetterOf(index) ?? "" }));
+        playClear();
+        await wait(LAND_HOLD * rate, timers);
+      }
+    })();
+    return () => {
+      dead = true;
+      timers.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Is this level's letter on the rail yet, as far as the page is concerned? */
+  const onRail = (index: number) => {
+    const id = LEVELS[index].id;
+    if ((progress.stars[id] ?? 0) <= 0) return false;
+    return !pendingSet.has(id) || landed.has(id);
+  };
+
+  // Everything new waits for the letters: bank first, then open doors.
+  const bankTime = reduce || !pending.length
+    ? 0
+    : BANK_LEAD + pending.length * BANK_STEP * bankRate(pending.length);
+
+  // The map used to open at the top, on your record — the next level is a card
+  // up there, not a node to hunt for. Two things still pull the page down: a
+  // letter about to be handed over, and a lock about to pop. The letter wins,
+  // because it's the one that happens first.
+  const freshRef = useRef<HTMLButtonElement>(null);
+  const bankRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    (bankRef.current ?? freshRef.current)?.scrollIntoView({ block: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const lastFresh = fresh[fresh.length - 1];
+  const bankChapter = pending.length
+    ? CHAPTERS.findIndex((c) => {
+        const i = LEVELS.findIndex((l) => l.id === pending[0]);
+        return i >= c.start && i < c.end;
+      })
+    : -1;
 
   // Which chapter's key panel is open, if any.
   const [keyPanel, setKeyPanel] = useState<number | null>(null);
@@ -167,7 +291,7 @@ export default function LevelSelect({
         </div>
       </div>
 
-      <UnlockBanner fresh={fresh} reduce={reduce} />
+      <UnlockBanner fresh={fresh} reduce={reduce} lead={bankTime + REVEAL_LEAD} />
 
       {/* Portrait keeps one column. On a landscape embed — the 1280×720 iframe
           CrazyGames serves most desktop players — it splits: what to play on
@@ -234,17 +358,25 @@ export default function LevelSelect({
                 <p className="mt-0.5 text-xs text-ink-soft/80">
                   {t("levels.chapter.locked", { n: chap.start - 2 })} · {t("levels.boss.teaser")}
                 </p>
+                {/* The empty rail, greyed out: the shape of the thing you'll be
+                    collecting, so a locked chapter still advertises the game
+                    it's holding rather than just refusing you. */}
+                <div aria-hidden className="mt-1.5 flex items-center gap-1 opacity-30">
+                  {chapterKey(ci)
+                    .split("")
+                    .map((_, i) => (
+                      <span key={i} className="h-4 w-3.5 rounded-[3px] border border-dashed border-ink" />
+                    ))}
+                </div>
               </section>
             );
           }
 
-          // Two registers, so each can be laid out by its own rules.
-          const indices = slice.map((_, j) => chap.start + j);
+          // Two registers, so each can be laid out by its own rules — and the
+          // boss belongs to neither: it gets the panel underneath.
+          const indices = slice.map((_, j) => chap.start + j).filter((i) => i !== chap.boss);
           const solved = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) > 0);
           const ahead = indices.filter((i) => (progress.stars[LEVELS[i].id] ?? 0) === 0);
-          const bossUnbeaten = (progress.stars[LEVELS[chap.boss].id] ?? 0) === 0;
-          const bossTwistOpen = bossUnbeaten && isUnlocked(progress, chap.boss) ? bossTwist(chap.boss) : null;
-          const bossNeedsKey = bossUnbeaten && bossAwaitingKey(progress, chap.boss);
 
           return (
             <section key={ci}>
@@ -266,19 +398,10 @@ export default function LevelSelect({
               </div>
               <p className="mt-0.5 text-xs text-ink-soft">{t(chap.flavorKey)}</p>
 
-              <ChapterKeyBar
-                chapter={ci}
-                ink={ink}
-                banked={bankedLetters(progress, ci)}
-                ready={keyReady(progress, ci)}
-                solved={keySolved(progress, ci)}
-                onOpen={() => setKeyPanel(ci)}
-              />
-
               {/* Solved levels are index lines: a colour-coded numeral, the
-                  board's name, a leader, the stars. Both edges align, so the
-                  different title lengths read as typesetting instead of as a
-                  ragged row of pills. */}
+                  board's name, a leader, the stars, and the letter it gave up.
+                  Both edges align, so the different title lengths read as
+                  typesetting instead of as a ragged row of pills. */}
               {solved.length > 0 && (
                 <div className="mt-2">
                   {solved.map((i) => (
@@ -287,6 +410,10 @@ export default function LevelSelect({
                       index={i}
                       ink={ink}
                       earned={progress.stars[LEVELS[i].id] ?? 0}
+                      letter={keyLetterOf(i)}
+                      banked={onRail(i)}
+                      flipping={flipping === LEVELS[i].id}
+                      chipRef={(el) => chipRefs.current.set(LEVELS[i].id, el)}
                       onClick={() => onPick(i)}
                     />
                   ))}
@@ -307,10 +434,9 @@ export default function LevelSelect({
                         ink={ink}
                         reduce={reduce}
                         unlocked={isUnlocked(progress, i)}
-                        keyLocked={bossAwaitingKey(progress, i)}
                         isNext={i === nextIndex}
                         tileRef={LEVELS[i].id === lastFresh ? freshRef : undefined}
-                        revealDelay={revealAt == null ? null : REVEAL_LEAD + revealAt * REVEAL_GAP}
+                        revealDelay={revealAt == null ? null : bankTime + REVEAL_LEAD + revealAt * REVEAL_GAP}
                         onClick={() => isUnlocked(progress, i) && onPick(i)}
                       />
                     );
@@ -318,23 +444,62 @@ export default function LevelSelect({
                 </div>
               )}
 
-              {/* The boss's twist can't ride on a fixed-size square, so it gets
-                  a caption once that boss is reachable and still unbeaten. */}
-              {bossTwistOpen && (
-                <p className="mt-2 px-1 text-[0.65rem] font-semibold capitalize" style={{ color: ink.deep }}>
-                  {t("levels.boss.twist", { what: t(`twist.${bossTwistOpen}.short`) })}
-                </p>
-              )}
-              {bossNeedsKey && (
-                <p className="mt-2 px-1 text-[0.65rem] font-semibold" style={{ color: ink.deep }}>
-                  {t("key.bossLocked")}
-                </p>
-              )}
+              <BossPanel
+                chapter={ci}
+                ink={ink}
+                reduce={reduce}
+                boss={chap.boss}
+                bossStars={progress.stars[LEVELS[chap.boss].id] ?? 0}
+                open={isUnlocked(progress, chap.boss)}
+                awaitingKey={bossAwaitingKey(progress, chap.boss)}
+                solvedKey={keySolved(progress, ci)}
+                canSpell={keyReady(progress, ci)}
+                onRail={onRail}
+                slotRef={(id, el) => slotRefs.current.set(id, el)}
+                panelRef={ci === bankChapter ? bankRef : undefined}
+                onOpenKey={() => setKeyPanel(ci)}
+                onPlay={() => onPick(chap.boss)}
+              />
             </section>
           );
         })}
         </div>
       </div>
+
+      <span role="status" aria-live="polite" className="sr-only">
+        {said}
+      </span>
+
+      {/* The letter in transit, drawn above everything and outside the layout
+          so it can cross from an index row into the rail below it. */}
+      <AnimatePresence>
+        {flight && (
+          <motion.span
+            key="flight"
+            aria-hidden
+            className="pointer-events-none fixed z-[80] grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.45)]"
+            style={{
+              left: flight.x0 - flight.w / 2,
+              top: flight.y0 - flight.h / 2,
+              width: flight.w,
+              height: flight.h,
+              background: flight.fill,
+            }}
+            initial={{ x: 0, y: 0, scale: 1.3, rotate: -12 }}
+            animate={{
+              x: [0, (flight.x1 - flight.x0) * 0.45, flight.x1 - flight.x0],
+              // A lob, not a slide: the letter is thrown to the rail.
+              y: [0, (flight.y1 - flight.y0) * 0.5 - 38, flight.y1 - flight.y0],
+              scale: [1.3, 1.15, 1],
+              rotate: [-12, 8, 0],
+            }}
+            exit={{ opacity: 0, scale: 1.4, transition: { duration: 0.14 } }}
+            transition={{ duration: FLY_MS / 1000, times: [0, 0.5, 1], ease: "easeInOut" }}
+          >
+            {flight.letter}
+          </motion.span>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {keyPanel != null && (
@@ -352,65 +517,398 @@ export default function LevelSelect({
   );
 }
 
-/**
- * A chapter's key, on its header: one slot per level that banks a letter, a
- * button once they're all in, and the word itself as a trophy once solved.
- * Filled slots stay blank — showing the letters here would hand over the
- * anagram before the player ever opens the panel.
- */
-function ChapterKeyBar({
+/** A letter mid-throw, in viewport coordinates. */
+interface Flight {
+  letter: string;
+  fill: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  w: number;
+  h: number;
+}
+
+// ---------------------------------------------------------------------------
+// The boss panel: the chapter's climax, and the only dark object on the page.
+//
+// Above, the rail — one slot per letter of the chapter's key, filled by the
+// levels that gave them up. Below, the door itself, which reads its state off
+// the rail: sealed while letters are missing, charged the moment the last one
+// lands, open once the key is spelled, forced once the boss is beaten.
+// ---------------------------------------------------------------------------
+
+type DoorState = "far" | "sealed" | "ready" | "open" | "beaten";
+
+function BossPanel({
   chapter,
   ink,
-  banked,
-  ready,
-  solved,
-  onOpen,
+  reduce,
+  boss,
+  bossStars,
+  open,
+  awaitingKey,
+  solvedKey,
+  canSpell,
+  onRail,
+  slotRef,
+  panelRef,
+  onOpenKey,
+  onPlay,
 }: {
   chapter: number;
   ink: ChapterInk;
-  banked: number;
-  ready: boolean;
-  solved: boolean;
-  onOpen: () => void;
+  reduce: boolean;
+  boss: number;
+  bossStars: number;
+  /** The boss is playable right now (key spelled, or already beaten). */
+  open: boolean;
+  /** Shut by its key rather than by the progress window. */
+  awaitingKey: boolean;
+  solvedKey: boolean;
+  /** Every letter is genuinely banked in the save (not just on screen). */
+  canSpell: boolean;
+  onRail: (index: number) => boolean;
+  slotRef: (id: string, el: HTMLElement | null) => void;
+  panelRef?: React.Ref<HTMLDivElement>;
+  onOpenKey: () => void;
+  onPlay: () => void;
 }) {
   const word = chapterKey(chapter);
-  if (solved) {
-    return (
-      <p className="mt-1.5 px-1 text-[0.7rem] font-bold tracking-[0.2em]" style={{ color: ink.deep }}>
-        🔑 {word}
-      </p>
-    );
-  }
+  const slots = useMemo(() => keySlots(chapter), [chapter]);
+  const filled = slots.filter((s) => onRail(s.index)).length;
+  const railFull = filled >= slots.length;
+  const twist = bossTwist(boss);
+
+  // Solving the key happens in a modal that sits over this panel and dismisses
+  // itself. Opening the door underneath it while it's still up would spend the
+  // payoff on a covered-up view, so the panel waits for the modal to clear and
+  // then swings — jumble reordering into the keyword, door burst, and all.
+  const [spelled, setSpelled] = useState(solvedKey);
+  const wasSolved = useRef(solvedKey);
+  const [burst, setBurst] = useState(false);
+  useEffect(() => {
+    const was = wasSolved.current;
+    wasSolved.current = solvedKey;
+    if (!solvedKey || was) return;
+    if (reduce) {
+      setSpelled(true);
+      return;
+    }
+    const a = setTimeout(() => {
+      setSpelled(true);
+      setBurst(true);
+      playWin();
+    }, KEY_PANEL_MS);
+    const b = setTimeout(() => setBurst(false), KEY_PANEL_MS + 1400);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+    };
+  }, [solvedKey, reduce]);
+
+  // The last letter landing is the moment the key becomes usable, so the rail
+  // charges: a gold sweep across the slots and an arpeggio. It fires on the
+  // transition only — a rail that was already full when the page opened has
+  // had its moment.
+  const [charge, setCharge] = useState(false);
+  const wasFull = useRef(railFull);
+  useEffect(() => {
+    const was = wasFull.current;
+    wasFull.current = railFull;
+    if (!railFull || was || solvedKey || reduce) return;
+    setCharge(true);
+    const a = setTimeout(() => playCorrect(4), 220);
+    const b = setTimeout(() => setCharge(false), 1500);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+    };
+  }, [railFull, solvedKey, reduce]);
+
+  // A door can be open for reasons that have nothing to do with this key — a
+  // boss beaten before keys existed, or the debug switch — so `open` is the
+  // authority. `spelled` only holds it shut for the beat between solving the
+  // key and the modal getting out of the way.
+  const doorOpen = open && (spelled || !solvedKey);
+  const state: DoorState =
+    bossStars > 0 ? "beaten"
+    : doorOpen ? "open"
+    : railFull ? "ready"
+    : awaitingKey ? "sealed"
+    : "far";
+
+  // The twist is the hook, so it's revealed as soon as the chapter's levels are
+  // done — one beat before the door itself opens. Until then it's a rumour.
+  const known = state !== "far" && state !== "sealed";
+  const headline = state === "beaten"
+    ? levelTitle(boss)
+    : known && twist
+      ? t(`twist.${twist}.short`)
+      : "? ? ?";
+
+  const label = t(`boss.a11y.${state}`, { n: chapter + 1, level: boss + 1, title: levelTitle(boss) });
+
   return (
-    <div className="mt-1.5 flex items-center gap-2 px-1">
-      <span aria-hidden className="flex gap-1">
-        {word.split("").map((_, i) => (
-          <span
-            key={i}
-            className="h-2.5 w-2.5 rounded-[3px] border"
-            style={{
-              borderColor: ink.deep,
-              background: i < banked ? ink.fill : "transparent",
-              opacity: i < banked ? 1 : 0.4,
-            }}
-          />
-        ))}
-      </span>
-      {ready ? (
-        <motion.button
-          onClick={onOpen}
-          animate={{ scale: [1, 1.04, 1] }}
-          transition={{ duration: 1.8, repeat: Infinity }}
-          className="rounded-full border-2 border-ink bg-gold px-2.5 py-0.5 text-[0.65rem] font-extrabold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.4)] transition hover:brightness-105 active:scale-95"
+    <motion.div
+      ref={panelRef}
+      className="relative mt-3 overflow-hidden rounded-2xl border-2 border-ink shadow-[3px_3px_0_rgba(38,34,26,0.35)]"
+      style={{ background: ink.wash, opacity: state === "far" ? 0.9 : 1 }}
+      animate={burst && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* --- the rail ------------------------------------------------------ */}
+      <div
+        className="relative flex flex-wrap items-center gap-1.5 px-2.5 pb-2 pt-2.5"
+        role="group"
+        aria-label={t("key.a11y.rail", { done: filled, total: slots.length })}
+      >
+        {spelled
+          ? // Spelled: the jumble settles into the word itself, which is the
+            // trophy — and the only place the player ever sees it written out.
+            word.split("").map((ch, i) => (
+              <Rune
+                key={`solved-${i}`}
+                letter={ch}
+                filled
+                gold
+                index={i}
+                ink={ink}
+                reduce={reduce}
+                pop={burst}
+              />
+            ))
+          : slots.map((slot, i) => (
+              <Rune
+                key={slot.index}
+                letter={slot.letter}
+                filled={onRail(slot.index)}
+                index={i}
+                ink={ink}
+                reduce={reduce}
+                charge={charge || (railFull && !reduce)}
+                tileRef={(el) => slotRef(LEVELS[slot.index].id, el)}
+              />
+            ))}
+
+        <span
+          className="ml-auto shrink-0 pl-1 text-[0.6rem] font-bold"
+          style={{ color: spelled ? "#8a5c00" : ink.deep }}
         >
-          {t("key.open")}
-        </motion.button>
-      ) : (
-        <span className="text-[0.65rem] font-semibold text-ink-soft">
-          {t("key.progress", { done: banked, total: word.length })}
+          {spelled
+            ? `🔑 ${t("key.rail.solved")}`
+            : railFull
+              ? t("key.rail.ready")
+              : filled === 0
+                ? // An empty rail explains itself: nobody should have to infer
+                  // what six dashed boxes want from them.
+                  t("key.rail.hint")
+                : t("key.rail", { done: filled, total: slots.length })}
         </span>
-      )}
-    </div>
+
+        {/* The charge sweep: one pass of gold light across the finished rail. */}
+        {charge && !reduce && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 w-24 -skew-x-12"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(237,168,32,0.55), transparent)" }}
+            initial={{ left: "-20%", opacity: 0 }}
+            animate={{ left: "110%", opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 1.1, ease: "easeInOut" }}
+          />
+        )}
+      </div>
+
+      {/* --- the door ------------------------------------------------------ */}
+      <div className="relative flex items-center gap-2.5 border-t-2 border-ink bg-ink px-2.5 py-2 text-paper">
+        {/* Ink is the darkest thing on a cream page; the chapter's colour bleeds
+            up through it so the door still belongs to its chapter. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-25"
+          style={{ background: `radial-gradient(120% 140% at 12% 120%, ${ink.fill}, transparent 65%)` }}
+        />
+
+        <motion.span
+          aria-hidden
+          className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink text-lg"
+          style={{ background: state === "far" || state === "sealed" ? "#4a443a" : ink.fill }}
+          animate={
+            reduce || state === "far" || state === "sealed"
+              ? { scale: 1 }
+              : state === "beaten"
+                ? { scale: 1 }
+                : { scale: [1, 1.09, 1], rotate: [0, -4, 0] }
+          }
+          transition={{ duration: 2.1, repeat: state === "open" || state === "ready" ? Infinity : 0 }}
+        >
+          {state === "far" || state === "sealed" ? "🔒" : "👑"}
+        </motion.span>
+
+        {/* The whole stack is decorative: the sr-only label at the foot of the
+            panel says the same thing in one sentence, and reads "? ? ?" as the
+            mystery it is rather than three question marks. */}
+        <div aria-hidden className="relative min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.55rem] font-extrabold uppercase tracking-[0.2em] text-paper/55">
+              {t("boss.label")} · {t("game.level", { n: boss + 1 })}
+            </span>
+            {state === "beaten" && (
+              <span aria-hidden className="text-[0.6rem] leading-none">
+                {[0, 1, 2].map((s) => (
+                  <span key={s} className={s < bossStars ? "" : "opacity-30"}>
+                    {s < bossStars ? "⭐" : "☆"}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
+          <div
+            className={`truncate font-display text-base font-bold capitalize leading-tight ${
+              known ? "text-paper" : "tracking-[0.25em] text-paper/45"
+            }`}
+          >
+            {headline}
+          </div>
+          <div className="truncate text-[0.6rem] font-semibold text-paper/60">{t(`boss.${state}`)}</div>
+        </div>
+
+        {state === "ready" && (
+          <motion.button
+            onClick={onOpenKey}
+            disabled={!canSpell}
+            aria-label={label}
+            className="relative shrink-0 rounded-full border-2 border-ink bg-gold px-3.5 py-1.5 text-xs font-extrabold text-ink shadow-[2px_2px_0_rgba(0,0,0,0.45)] transition hover:brightness-105 active:scale-95"
+            animate={reduce ? { scale: 1 } : { scale: [1, 1.055, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            {t("boss.cta.key")}
+          </motion.button>
+        )}
+        {(state === "open" || state === "beaten") && (
+          <motion.button
+            onClick={onPlay}
+            aria-label={label}
+            className={`relative shrink-0 rounded-full border-2 border-ink px-3.5 py-1.5 text-xs font-extrabold shadow-[2px_2px_0_rgba(0,0,0,0.45)] transition active:scale-95 ${
+              state === "open" ? "bg-press text-paper hover:brightness-110" : "bg-paper text-ink hover:bg-cream"
+            }`}
+            animate={reduce || state === "beaten" ? { scale: 1 } : { scale: [1, 1.06, 1] }}
+            transition={{ duration: 1.5, repeat: state === "open" ? Infinity : 0 }}
+          >
+            {t(state === "open" ? "boss.cta.play" : "boss.cta.replay")}
+          </motion.button>
+        )}
+        {(state === "far" || state === "sealed") && (
+          // A keyhole, drawn rather than set in emoji: the shut door's answer
+          // to the CTA the other states get. It's what the key is *for*.
+          <span
+            aria-hidden
+            className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-paper/20"
+          >
+            <span className="h-[7px] w-[7px] rounded-full bg-paper/35" />
+            <span
+              className="absolute h-2.5 w-2 bg-paper/35"
+              style={{ top: "52%", clipPath: "polygon(38% 0, 62% 0, 100% 100%, 0 100%)" }}
+            />
+          </span>
+        )}
+
+        {/* The door coming open: one flash of light across the ink. */}
+        <AnimatePresence>
+          {burst && !reduce && (
+            <motion.span
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(255,240,200,0.85), transparent)" }}
+              initial={{ x: "-100%", opacity: 0.9 }}
+              animate={{ x: "100%" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.85, ease: "easeOut" }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* A shut door has no control to carry its state, so it says it here.
+          The other states put the same sentence on their button. */}
+      {(state === "far" || state === "sealed") && <span className="sr-only">{label}</span>}
+    </motion.div>
+  );
+}
+
+/**
+ * One slot on a chapter's rail. Empty it's a dashed hole; filled it's a letter
+ * pressed in the chapter's ink, set a degree or two off square so a full rail
+ * reads as hand-set type rather than a progress bar.
+ */
+function Rune({
+  letter,
+  filled,
+  gold,
+  index,
+  ink,
+  reduce,
+  charge,
+  pop,
+  tileRef,
+}: {
+  letter: string;
+  filled: boolean;
+  /** The spelled key: the whole rail goes gold. */
+  gold?: boolean;
+  index: number;
+  ink: ChapterInk;
+  reduce: boolean;
+  /** The rail is complete and waiting to be spelled — the slots stir. */
+  charge?: boolean;
+  /** Land with a pop (the key was just spelled). */
+  pop?: boolean;
+  tileRef?: (el: HTMLElement | null) => void;
+}) {
+  const tilt = index % 2 ? 1.5 : -1.5;
+  return (
+    <span ref={tileRef} className="relative grid h-8 w-[1.65rem] place-items-center">
+      <AnimatePresence initial={false}>
+        {filled ? (
+          <motion.span
+            key="filled"
+            className="absolute inset-0 grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.3)]"
+            style={{ background: gold ? "#f0c04a" : ink.fill }}
+            initial={reduce ? { opacity: 1 } : { scale: 0.35, rotate: tilt - 22, opacity: 0 }}
+            animate={
+              reduce || !charge
+                ? { scale: 1, rotate: tilt, opacity: 1, y: 0 }
+                : { scale: 1, rotate: tilt, opacity: 1, y: [0, -3, 0] }
+            }
+            exit={{ opacity: 0 }}
+            transition={
+              reduce
+                ? { duration: 0 }
+                : charge
+                  ? { y: { duration: 1.5, repeat: Infinity, delay: index * 0.11 }, default: { type: "spring", stiffness: 460, damping: 16 } }
+                  : { type: "spring", stiffness: 460, damping: 16, delay: pop ? index * 0.06 : 0 }
+            }
+          >
+            {letter}
+            {charge && !reduce && !gold && (
+              <span aria-hidden className="pointer-events-none absolute -inset-0.5 rounded-md ring-2 ring-gold" />
+            )}
+          </motion.span>
+        ) : (
+          <motion.span
+            key="empty"
+            aria-hidden
+            className="absolute inset-0 rounded-md border-2 border-dashed bg-ink/5"
+            style={{ borderColor: ink.deep, opacity: 0.35 }}
+            exit={reduce ? { opacity: 0 } : { scale: 1.5, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+      </AnimatePresence>
+      <span className="sr-only">
+        {filled ? t("key.a11y.rune", { letter }) : t("key.a11y.emptyRune")}
+      </span>
+    </span>
   );
 }
 
@@ -446,7 +944,7 @@ function ChapterKeyPanel({
     setResolved(true);
     playWin();
     onSolved();
-    setTimeout(onClose, 1900);
+    setTimeout(onClose, KEY_PANEL_MS);
     return true;
   };
 
@@ -555,7 +1053,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
  * a boss with its twist named, or a plain level with one of five rotating lines
  * — so a run of unlocks doesn't repeat one sentence over and over.
  */
-function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
+function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolean; lead: number }) {
   const [show, setShow] = useState(fresh.length > 0);
   const news = useMemo(() => {
     if (!fresh.length) return null;
@@ -576,7 +1074,7 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
   }, [fresh]);
 
   const extra = fresh.length - 1;
-  const delay = reduce ? 0 : REVEAL_LEAD + (fresh.length - 1) * REVEAL_GAP;
+  const delay = reduce ? 0 : lead + (fresh.length - 1) * REVEAL_GAP;
   useEffect(() => {
     if (!news) return;
     const id = setTimeout(() => setShow(false), delay + 5200);
@@ -615,49 +1113,93 @@ function UnlockBanner({ fresh, reduce }: { fresh: string[]; reduce: boolean }) {
 }
 
 /**
- * One entry in the index. Solved levels wear their title; everything else is a
- * bare number or a lock. All three are the same height so the rows set cleanly.
- */
-/**
  * A solved level, as a line in a contents page: a colour-coded numeral, the
  * board's name, a leader, the stars. The numerals form one aligned column and
  * the stars another, so titles of different lengths sit between fixed edges
  * instead of ragging out into the gutter.
+ *
+ * The numeral chip is also where a cleared level pays out: it turns over to
+ * show the key letter this level bought, holds it up, and then that letter is
+ * thrown down to the chapter's rail (the parent drives the throw). The row
+ * keeps a faint copy at the end, so the rail can always be read back to the
+ * levels that filled it.
  */
 function LevelRow({
   index,
   ink,
   earned,
+  letter,
+  banked,
+  flipping,
+  chipRef,
   onClick,
 }: {
   index: number;
   ink: ChapterInk;
   earned: number;
+  letter: string | null;
+  /** The letter has reached the rail — the row can show its copy. */
+  banked: boolean;
+  /** Right now: the chip is holding the letter up, about to throw it. */
+  flipping: boolean;
+  chipRef: (el: HTMLElement | null) => void;
   onClick: () => void;
 }) {
-  const boss = isBossLevel(index);
   return (
     <button
       onClick={onClick}
       aria-label={
         t("levels.a11y.solved", { n: index + 1, title: levelTitle(index) }) +
-        (boss ? t("levels.a11y.boss") : "") +
         `, ${t(TIER_KEY[LEVELS[index].tier])}` +
         t("levels.a11y.stars", { n: earned })
       }
       className="flex w-full items-center gap-2.5 rounded-lg px-1 py-[3px] text-left transition hover:bg-cream"
     >
-      <span
+      <motion.span
+        ref={chipRef}
         aria-hidden
-        className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-ink/25 font-display text-[0.7rem] font-bold tabular-nums text-ink"
-        style={{ background: ink.fill }}
+        className="relative grid h-6 w-6 shrink-0 place-items-center rounded-md border font-display text-[0.7rem] font-bold tabular-nums text-ink"
+        style={{ background: ink.fill, borderColor: flipping ? ink.deep : "rgba(38,34,26,0.25)" }}
+        animate={flipping ? { scale: 1.35, y: -2 } : { scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 18 }}
       >
-        {index + 1}
-      </span>
-      {/* The crown trails the title rather than leading it, so every row's
-          title starts at the same x. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {flipping && letter ? (
+            <motion.span
+              key="letter"
+              className="text-[0.8rem]"
+              initial={{ rotateY: -90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              {letter}
+            </motion.span>
+          ) : (
+            <motion.span
+              key="num"
+              initial={{ rotateY: -90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              {index + 1}
+            </motion.span>
+          )}
+        </AnimatePresence>
+        {flipping && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-md border-2"
+            style={{ borderColor: ink.deep }}
+            initial={{ opacity: 0.9, scale: 1 }}
+            animate={{ opacity: 0, scale: 2.1 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          />
+        )}
+      </motion.span>
+
       <span className="shrink-0 font-display text-sm font-bold text-ink">{levelTitle(index)}</span>
-      {boss && <span aria-hidden className="-ml-1 text-[0.7rem] leading-none">👑</span>}
       <span aria-hidden className="h-0 flex-1 self-end border-b border-dotted border-ink/30 pb-[7px]" />
       {/* A fixed three-cell grid: ☆ is narrower than ⭐, so letting the pips
           size themselves would leave every leader ending somewhere different. */}
@@ -667,6 +1209,13 @@ function LevelRow({
             {s < earned ? "⭐" : "☆"}
           </span>
         ))}
+      </span>
+      <span
+        aria-hidden
+        className="w-3 shrink-0 text-right font-display text-[0.65rem] font-bold"
+        style={{ color: ink.deep, opacity: banked && !flipping ? 0.45 : 0 }}
+      >
+        {letter}
       </span>
     </button>
   );
@@ -684,7 +1233,6 @@ function LevelTile({
   ink,
   reduce,
   unlocked,
-  keyLocked,
   isNext,
   tileRef,
   revealDelay,
@@ -694,8 +1242,6 @@ function LevelTile({
   ink: ChapterInk;
   reduce: boolean;
   unlocked: boolean;
-  /** Shut by its chapter key rather than by the progress window. */
-  keyLocked: boolean;
   isNext: boolean;
   tileRef?: React.Ref<HTMLButtonElement>;
   /** ms to wait before popping the lock off, or null for "already open". */
@@ -713,15 +1259,11 @@ function LevelTile({
   }, [revealDelay, reduce, index]);
 
   const showOpen = unlocked && opened;
-  const boss = isBossLevel(index);
   const style: React.CSSProperties = {};
-  if (keyLocked) style.borderColor = ink.deep;
   let face = "border-dashed border-ink/25 bg-cream/60";
-  if (!showOpen && keyLocked) face = "border-dashed bg-gold/15";
   if (showOpen) {
     face = "border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]";
     style.color = ink.deep;
-    if (boss) style.borderColor = ink.deep;
   }
 
   return (
@@ -735,9 +1277,8 @@ function LevelTile({
       disabled={!showOpen}
       aria-label={
         t("levels.a11y.node", { n: index + 1 }) +
-        (boss ? t("levels.a11y.boss") : "") +
         `, ${t(TIER_KEY[LEVELS[index].tier])}` +
-        (showOpen ? "" : t(keyLocked ? "key.a11y.locked" : "levels.a11y.lockedNode")) +
+        (showOpen ? "" : t("levels.a11y.lockedNode")) +
         (revealDelay != null ? t("levels.a11y.freshNode") : "")
       }
       className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 font-display transition-colors disabled:cursor-default ${face}`}
@@ -751,35 +1292,43 @@ function LevelTile({
           transition={reduce ? undefined : { duration: 1.6, repeat: Infinity }}
         />
       )}
-      {boss && (
-        <span aria-hidden className="absolute -top-2 left-1/2 -translate-x-1/2 text-sm drop-shadow">
-          👑
-        </span>
-      )}
 
-      <AnimatePresence mode="wait" initial={false}>
-        {showOpen ? (
-          <motion.span
-            key="open"
-            className="text-base font-bold leading-none"
-            initial={reduce || revealDelay == null ? false : { scale: 0.4, rotate: -12 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 420, damping: 15 }}
-          >
-            {index + 1}
-          </motion.span>
+      {/* With motion turned down the face is plain markup, not an animation
+          that has been shortened to nothing: the page's own reduced-motion CSS
+          caps every animation at 0.001ms, which used to leave the numeral
+          stuck on a frame that never painted — an open tile with nothing on
+          it. Nothing to animate, nothing to get stuck. */}
+      {reduce ? (
+        showOpen ? (
+          <span className="text-base font-bold leading-none">{index + 1}</span>
         ) : (
-          <motion.span
-            key="locked"
-            aria-hidden
-            className="text-sm opacity-55"
-            exit={reduce ? { opacity: 0 } : { scale: 1.6, opacity: 0, rotate: 25 }}
-            transition={{ duration: 0.28 }}
-          >
-            {keyLocked ? "🔑" : "🔒"}
-          </motion.span>
-        )}
-      </AnimatePresence>
+          <span aria-hidden className="text-sm opacity-55">🔒</span>
+        )
+      ) : (
+        <AnimatePresence mode="wait" initial={false}>
+          {showOpen ? (
+            <motion.span
+              key="open"
+              className="text-base font-bold leading-none"
+              initial={revealDelay == null ? false : { scale: 0.4, rotate: -12 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 420, damping: 15 }}
+            >
+              {index + 1}
+            </motion.span>
+          ) : (
+            <motion.span
+              key="locked"
+              aria-hidden
+              className="text-sm opacity-55"
+              exit={{ scale: 1.6, opacity: 0, rotate: 25 }}
+              transition={{ duration: 0.28 }}
+            >
+              🔒
+            </motion.span>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* The shockwave the popping lock leaves behind. */}
       {revealDelay != null && showOpen && !reduce && (

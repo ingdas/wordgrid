@@ -966,6 +966,41 @@ export function keyLevels(chapter: number): number[] {
 }
 
 /**
+ * Which letter each level hands over, chapter by chapter.
+ *
+ * The keyword is dealt out SCRAMBLED before the levels get it, for two
+ * reasons. The map shows the letters you've collected, and a rail that spells
+ * the answer left to right would hand over the anagram — the anagram *is* the
+ * puzzle. And a jumble that fills in as you play is a far better collectible
+ * than a word slowly typing itself.
+ */
+const KEY_DEAL: string[][] = CHAPTER_KEYS.map((word, ci) => {
+  const letters = word.split("");
+  // A shuffle is allowed to come back as the word itself; that one outcome
+  // gives the key away, so try again from a moved seed. Repeated letters make
+  // several shuffles read alike, never the word, so this settles at once.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const dealt = seededShuffle(letters, 90210 + ci * 7717 + attempt * 131);
+    if (dealt.join("") !== word) return dealt;
+  }
+  return [...letters].reverse();
+});
+
+/** The key letter a level banks when it's cleared, or null if it banks none. */
+export function keyLetterOf(index: number): string | null {
+  const ci = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
+  if (ci < 0) return null;
+  const slot = keyLevels(ci).indexOf(index);
+  return slot < 0 ? null : KEY_DEAL[ci % KEY_DEAL.length][slot];
+}
+
+/** Every slot in a chapter's key: the level that fills it, and with what. */
+export function keySlots(chapter: number): { index: number; letter: string }[] {
+  const deal = KEY_DEAL[chapter % KEY_DEAL.length];
+  return keyLevels(chapter).map((index, slot) => ({ index, letter: deal[slot] }));
+}
+
+/**
  * The title of the board actually played at a level — NOT always
  * `LEVELS[index].title`, because the emoji boss substitutes its own board
  * (Game.tsx does the same swap). The level map shows this back to a player who

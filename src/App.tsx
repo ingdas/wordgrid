@@ -13,6 +13,8 @@ import {
   playerRank,
   furthestCleared,
   markSeen,
+  markBanked,
+  keyLockedBoss,
   solveKey,
   MAX_STARS,
   type Progress,
@@ -270,10 +272,10 @@ export default function App() {
     setScreen("levels");
   }, []);
 
-  // The map has finished showing which levels just opened; don't replay those
-  // unlocks on the next visit.
+  // The map has finished showing which levels just opened and which letters
+  // just landed on a chapter's rail; neither replays on the next visit.
   const markLevelsSeen = useCallback(() => {
-    applyProgress(markSeen);
+    applyProgress((p) => markBanked(markSeen(p)));
   }, [applyProgress]);
 
   // A chapter key was spelled: its boss door opens, and the effort pays out in
@@ -538,6 +540,10 @@ export default function App() {
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
 
+  // Is the level after this one a boss still shut behind its chapter key?
+  const nextIsSealed =
+    !endless && !playingDaily && keyLockedBoss(progress, levelIndex + 1);
+
   return (
     <div key={locale} className="contents">
       <div
@@ -643,10 +649,29 @@ export default function App() {
               onWin={endless ? handleEndlessWin : handleWin}
               onLoss={endless ? noop : handleLoss}
               onExit={endless ? exitEndless : playingDaily ? exitToHome : exitToLevels}
+              // "Next level" used to walk straight into the level after this
+              // one — including a boss whose door is still sealed, which made
+              // the chapter key skippable and the door decorative. When the
+              // next level is that boss, the button goes to the map instead,
+              // where the rail and the door are waiting.
               onNext={
-                endless ? nextEndless : playingDaily ? undefined : levelIndex < LEVELS.length - 1 ? nextLevel : undefined
+                endless
+                  ? nextEndless
+                  : playingDaily
+                    ? undefined
+                    : levelIndex >= LEVELS.length - 1
+                      ? undefined
+                      : nextIsSealed
+                        ? exitToLevels
+                        : nextLevel
               }
-              nextLabel={endless || playingDaily ? undefined : nextLevelTeaser(levelIndex + 1)}
+              nextLabel={
+                endless || playingDaily
+                  ? undefined
+                  : nextIsSealed
+                    ? t("end.next.sealed")
+                    : nextLevelTeaser(levelIndex + 1)
+              }
               onHelp={() => setShowHelp(true)}
               onTutorialDone={finishTutorial}
             />

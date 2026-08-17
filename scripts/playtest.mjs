@@ -166,16 +166,22 @@ await p.screenshot({ path: `${SHOT}/r6-win.png` });
 //    banked (63*3 = 189), and a solved level is listed by title while an
 //    unsolved one is not.
 await clickText("button", "Levels");
-// A level that just opened plays its unlock reveal before it can be tapped —
-// wait it out, or every fresh entry reads as still locked.
-await sleep(2500);
+// The map pays out the letter the clear just bought BEFORE it opens anything
+// new, so a fresh entry is still locked for the length of the hand-over plus
+// the unlock reveal. Wait both out or every entry reads as shut.
+await sleep(5500);
 const nodes = await p.$$eval("button[aria-label^='Level ']", (els) =>
   els.map((e) => ({ label: e.getAttribute("aria-label") || "", disabled: e.disabled })),
 );
 log("index entries:", nodes.length, "locked:", nodes.filter((n) => n.disabled).length);
 // Chapters the player can't reach yet are a single teaser line with no entries,
-// so after clearing level 1 only chapter 1 (6 levels) is listed.
-if (nodes.length !== 6) note(`Expected chapter 1's 6 entries, found ${nodes.length}.`);
+// and the boss is the panel at the foot of the chapter rather than an entry —
+// so after clearing level 1 the list is chapter 1's five non-boss levels.
+if (nodes.length !== 5) note(`Expected chapter 1's 5 entries, found ${nodes.length}.`);
+// The letter that level bought is on the chapter's rail, and only that one.
+const rail = await p.$$eval("[aria-label^='Chapter key']", (els) => els[0]?.getAttribute("aria-label") || "");
+log("chapter 1 rail:", rail);
+if (!/1 of 5 letters/i.test(rail)) note(`Clearing level 1 did not bank exactly one letter (${rail}).`);
 if (nodes[0]?.disabled) note("Level 1 should be unlocked after clearing it.");
 if (nodes[3]?.disabled) note("Level 4 should be unlocked after clearing level 1 (lookahead 3).");
 if (!nodes[4]?.disabled) note("Level 5 should still be locked after clearing only level 1.");
@@ -215,7 +221,7 @@ await p.goto(BASE, { waitUntil: "networkidle0" });
 await sleep(400);
 await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(500);
-const bossNode = await p.$("button[aria-label*=', boss,']");
+const bossNode = await p.$("button[aria-label^='Play the boss']");
 if (!bossNode) note("No boss node found for the boss test.");
 else {
   await bossNode.click();
@@ -317,15 +323,26 @@ await p.screenshot({ path: `${SHOT}/r10-loss.png` });
   await clickText("button", "Browse all");
   await sleep(1000);
 
-  const shut = await p.$$eval("button[aria-label^='Level 6']", (els) => els.map((e) => e.disabled));
+  // A sealed door offers no way in at all — there is no boss button to disable.
+  const shut = (await p.$("button[aria-label^='Play the boss']")) == null;
   const before = await bodyText();
-  log("boss shut behind its key:", shut[0] === true);
-  if (shut[0] !== true) note("Chapter 1's boss should be locked until its key is spelled.");
-  if (!/Open the key/i.test(before)) note("Key is ready but the index offers no way to open it.");
-  // The keyword must not be sitting on the page before it's solved.
+  log("boss shut behind its key:", shut);
+  if (!shut) note("Chapter 1's boss should be locked until its key is spelled.");
+  if (!/Unseal/i.test(before)) note("Key is ready but the index offers no way to open it.");
+  // Every letter is on the rail, so the door names the fight — but the keyword
+  // itself must not be sitting on the page before it's spelled.
+  if (!/scrambled tiles/i.test(before)) note("A ready door does not name the boss's twist.");
   if (/\bSPARK\b/.test(before)) note("The index leaks the chapter keyword before it's spelled.");
+  // The rail carries the letters in a jumble; in the answer's order it would
+  // hand over the anagram for free.
+  const railLetters = await p.$$eval("[aria-label^='Chapter key'] .sr-only", (els) =>
+    els.map((e) => (e.textContent.match(/^Letter (\w)$/) || [])[1]).filter(Boolean).join(""),
+  );
+  log("rail letters:", railLetters);
+  if ([...railLetters].sort().join("") !== "AKPRS") note(`The rail is not SPARK's letters: ${railLetters}`);
+  if (railLetters === "SPARK") note("The rail spells the keyword before it's earned.");
 
-  await clickText("button", "Open the key");
+  await clickText("button", "Unseal");
   await sleep(600);
   const panel = await bodyText();
   if (!/chapter key/i.test(panel)) note("Chapter key panel did not open.");
@@ -348,10 +365,14 @@ await p.screenshot({ path: `${SHOT}/r10-loss.png` });
     if (!ok) note(`Could not tap key letter ${ch}.`);
     await sleep(160);
   }
-  await sleep(2600);
-  const opened = await p.$$eval("button[aria-label^='Level 6']", (els) => els.map((e) => e.disabled));
-  log("boss opens once the key is spelled:", opened[0] === false);
-  if (opened[0] !== false) note("Spelling the chapter key did not open the boss.");
+  // The door waits for the key panel to dismiss itself before it swings, so
+  // the reorder and the flash aren't spent under something covering them.
+  await sleep(3600);
+  const opened = (await p.$("button[aria-label^='Play the boss']")) != null;
+  log("boss opens once the key is spelled:", opened);
+  if (!opened) note("Spelling the chapter key did not open the boss.");
+  // …and the jumble settles into the keyword, which is the trophy.
+  if (!/\bSPARK\b/.test(await bodyText())) note("The solved rail does not show the keyword.");
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("wordgrid:progress")).keys);
   if (!saved.includes(0)) note("Solved chapter key was not persisted.");
   await p.screenshot({ path: `${SHOT}/r11-key-open.png` });

@@ -60,7 +60,6 @@ export const es: Record<string, string> = {
   "levels.locked": "Bloqueado",
   "levels.a11y.stats": "Estadísticas y logros",
   "levels.a11y.node": "Nivel {n}",
-  "levels.a11y.boss": ", jefe",
   "levels.a11y.stars": ", {n} de 3 estrellas",
   "levels.a11y.lockedNode": ", bloqueado",
   "levels.a11y.freshNode": ", recién desbloqueado",
@@ -88,14 +87,36 @@ export const es: Record<string, string> = {
   "levels.unlock.more": "+{n} más",
 
   // --- chapter keys -------------------------------------------------------
-  "key.open": "🔑 Abrir la clave",
-  "key.progress": "Clave {done}/{total}",
   "key.chapter": "Capítulo {n} · {name}",
   "key.title": "🔑 La clave del capítulo",
   "key.body": "Cada nivel de aquí soltó una letra. Ordénalas para abrir la puerta del jefe.",
-  "key.bossLocked": "🔑 Escribe la clave del capítulo para abrir a este jefe",
-  "key.a11y.locked": ", bloqueado hasta escribir la clave del capítulo",
   "key.unlocked": "🔑 ¡Clave encontrada! La puerta del jefe está abierta.",
+
+  // El riel de letras que han soltado los niveles del capítulo.
+  "key.rail": "Letras {done}/{total}",
+  "key.rail.ready": "Ya están todas: descifra la clave",
+  "key.rail.solved": "Clave escrita",
+  "key.rail.hint": "Supera un nivel y quédate con su letra",
+  "key.a11y.rail": "Clave del capítulo, {done} de {total} letras guardadas",
+  "key.a11y.rune": "Letra {letter}",
+  "key.a11y.emptyRune": "Hueco de letra vacío",
+  "key.a11y.banked": "El nivel {n} soltó la letra {letter}",
+
+  // --- la puerta del jefe -------------------------------------------------
+  "boss.label": "Jefe",
+  "boss.far": "Bloqueado: sigue superando este capítulo",
+  "boss.sealed": "Sellado por la clave del capítulo",
+  "boss.ready": "La clave está lista",
+  "boss.open": "La puerta está abierta",
+  "boss.beaten": "Derrotado",
+  "boss.cta.key": "🔑 Abrir",
+  "boss.cta.play": "Entrar →",
+  "boss.cta.replay": "Repetir",
+  "boss.a11y.far": "Jefe del capítulo {n}, bloqueado",
+  "boss.a11y.sealed": "Jefe del capítulo {n}, sellado hasta escribir la clave del capítulo",
+  "boss.a11y.ready": "Escribe la clave del capítulo para abrir al jefe del capítulo {n}",
+  "boss.a11y.open": "Jugar contra el jefe del capítulo {n}, nivel {level}",
+  "boss.a11y.beaten": "Jefe del capítulo {n} derrotado, {title}",
 
   // --- in game ------------------------------------------------------------
   "game.level": "Nivel {n}",
@@ -183,6 +204,7 @@ export const es: Record<string, string> = {
   "end.next": "Siguiente nivel →",
   "end.next.chapter": "Siguiente capítulo: {name} →",
   "end.next.boss": "👑 Ahora un jefe · {what} →",
+  "end.next.sealed": "🔑 A la puerta sellada →",
   "end.nextPuzzle": "Siguiente puzle →",
   "end.allDone": "¡Completado! 🎉",
   "end.seeYouTomorrow": "Hasta mañana 👋",

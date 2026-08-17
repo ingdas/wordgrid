@@ -234,6 +234,83 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
+## The boss door, and letters you watch being earned (iteration 27)
+
+Iteration 26 built the chapter key as a *rule*: clear the levels, a counter
+fills, a button appears. The rule was sound and the presentation was a web
+form — five 10px squares, blank on purpose, and a boss that was an 11mm square
+with a crown sticker on it. Nothing on the page looked like the most
+distinctive fight in the game was behind it. This iteration spends the whole
+mechanic on screen.
+
+### One letter per level, and you can see which
+
+`keyLetterOf(index)` / `keySlots(chapter)` in `puzzles.ts` deal the keyword's
+letters out to the chapter's non-boss levels, one each, in a **scrambled**
+order (`KEY_DEAL`, seeded per chapter). Scrambled matters twice over: the rail
+is on screen from the first clear, so a deal in the answer's order would spell
+the key for free, and a jumble that fills in is a better collectible than a
+word slowly typing itself. `npm run validate` and `scripts/progress.test.mts`
+both pin it — the dealt letters must be the keyword's own multiset, and must
+not read as the keyword.
+
+The letters used to be hidden here ("showing them hands over the anagram"),
+which is exactly backwards: the anagram *is* the puzzle, and you can't want a
+collectible you've never seen.
+
+### The hand-over: a level turns into its letter
+
+`progress.banked` is the letters the map has already shown arriving —
+`newlyBanked` / `markBanked`, the same shape as `seen` / `markSeen`, and
+migrated for old saves so a returning player isn't buried in payouts. On the
+map, each owed letter plays in turn: the level's numeral chip **turns over**
+to its letter, holds it up, and throws it down to the chapter's rail, where the
+slot pops. The throw is a fixed-position element flying between two measured
+rects (`chipRefs` → `slotRefs`), so it crosses out of the list and into the
+panel below it.
+
+Two ordering rules that make it read as cause and effect:
+
+- **Letters first, unlocks second.** `bankTime` pushes the lock-pop reveals and
+  the unlock banner out behind the hand-over. You bought the letter by clearing
+  the level; you get paid before the map opens anything new.
+- **A backlog plays faster** (`bankRate`) — a chapter's worth of letters at
+  full pace is a ten-second cutscene. One letter always gets the full
+  performance.
+
+When the last slot fills, the rail **charges**: a gold sweep across it, a
+ring on every rune, an arpeggio, and the door underneath turns from a padlock
+to a crown with the twist named and a gold CTA. That transition only fires on
+the change — a rail that was already full when the page opened has had its
+moment.
+
+### The boss panel
+
+One object per chapter, and the only dark thing on a page of cream: the rail on
+top, the door below it in solid ink with the chapter's colour bleeding up
+through. It reads its state off the rail — `far` (padlock, `? ? ?`, a drawn
+keyhole), `sealed`, `ready` (charged, "Unseal"), `open` ("Enter"), `beaten`
+(title revealed, stars, "Replay"). The twist is revealed one beat before the
+door opens, so finishing the chapter's levels *tells you what you're walking
+into*.
+
+Spelling the key is a modal that dismisses itself, so the panel waits
+`KEY_PANEL_MS` before swinging — otherwise the payoff (jumble reordering into
+the keyword, flash across the door) would play under something covering it.
+
+### Two bugs found on the way
+
+- **"Next level →" walked straight into a sealed boss.** The win card's CTA was
+  `levelIndex + 1` with no gate, so the whole key system was skippable and the
+  door was decorative. When the next level is that boss, the button now goes to
+  the map ("🔑 To the sealed door →") — which is also where the letter you just
+  earned is about to land.
+- **Open level tiles were blank under `prefers-reduced-motion`.** The page's
+  own reduced-motion CSS caps every animation at 0.001ms, which left Framer's
+  numeral stuck on a frame that never painted. Under `reduce` the tile face is
+  now plain markup — nothing to animate, nothing to get stuck. (Pre-existing;
+  reproduced on the old build before fixing.)
+
 ## Chapter keys + per-chapter paper (iteration 26)
 
 Two changes that make a chapter feel like a unit rather than eight arbitrary
