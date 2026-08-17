@@ -178,7 +178,13 @@ hero card) → Level index (8 chapters, boss at each chapter end) → Game.
   deliberately not localized — see the i18n note in the still-open list.
 - `sdk.ts` — defensive CrazyGames v3 wrapper (init, loading, gameplay,
   interstitial, requestRewarded → resolves true offline). Script tag is LIVE in
-  index.html (async, no-ops when absent).
+  index.html (async, no-ops when absent). Off-platform the script *loads* but is
+  disabled for the domain, so every call throws/rejects `sdkDisabled`: the
+  wrapper swallows sync throws *and* promise rejections (no unhandled-rejection
+  noise), latches "unusable" on the first such error so it stops calling, and
+  every rewarded failure path — no SDK, disabled, ad error, no callback within
+  5s — resolves **true**, so watch & continue and hint refills always pay out.
+  Pinned by `scripts/sdk.test.mts`.
 - `audio.ts` — synthesized SFX + ambient music, suspend/resumeAudio.
 - `index.css` — **"The Puzzle Press" theme tokens** via Tailwind v4 `@theme`:
   paper #faf5ea, cream #efe7d3, ink #26221a, ink-soft #6f6757, press #d9482b,

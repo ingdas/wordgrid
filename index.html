@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#faf5ea" />
     <!-- CrazyGames SDK. Loads defensively: src/sdk.ts no-ops every call when the
-         SDK is absent (local play, GitHub Pages), so this is safe everywhere. -->
+         SDK is absent OR present-but-disabled for the domain (local play, GitHub
+         Pages, where every call fails with `sdkDisabled`), and rewarded flows
+         grant the reward anyway — so this is safe everywhere. -->
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js" async></script>
     <link
       rel="icon"
