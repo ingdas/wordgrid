@@ -1378,16 +1378,12 @@ const SPANS: Span[] = (() => {
 //  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
 //              pictures instead of words.
 //  - scramble: every tile is an anagram you must decode before grouping.
-//  - oracle:   the puzzle is turned inside out. You're shown all twelve words
-//              AND the four theme names up front, and must deduce + type the
-//              hidden link FIRST; only then do you group. No timer, free
-//              retries — pure lateral thinking.
 //  - decoy:    three impostor tiles belong to NO group. Include one in a guess
 //              and the group busts; you have to spot the fakes.
 //  - blackout: solved group names and words stay hidden until the reveal, so
 //              you can't lean on what you've already found.
 
-export type BossTwist = "scramble" | "emoji" | "oracle" | "decoy" | "blackout";
+export type BossTwist = "scramble" | "emoji" | "decoy" | "blackout";
 
 // One entry per chapter, and the list is deliberately NOT cycled with a
 // modulo: "emoji" swaps in the one bespoke picture board, so a second emoji
@@ -1395,16 +1391,16 @@ export type BossTwist = "scramble" | "emoji" | "oracle" | "decoy" | "blackout";
 // chapters never repeat a twist either.
 const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
-  "oracle",
+  "decoy",
   "emoji",
   "blackout",
   "decoy",
   "scramble",
-  "oracle",
+  "blackout",
   "decoy",
   "blackout",
   "scramble",
-  "oracle",
+  "decoy",
   "blackout",
 ];
 
@@ -1421,8 +1417,6 @@ const CHAPTER_TWISTS: BossTwist[] = [
  *    PALM, so on a board salted with fakes those three tiles are indistinguishable
  *    from impostors: the twist would be attacking the one group the player has no
  *    way to verify.
- *  - oracle: you must NAME the link before you group anything. A long or
- *    unusual pivot turns that from lateral thinking into a spelling lottery.
  *  - blackout / emoji: nothing about the board fights them (the emoji boss
  *    replaces its board outright), so anything can carry them.
  */
@@ -1433,8 +1427,6 @@ export function suitsTwist(twist: BossTwist, raw: RawPuzzle): boolean {
       return spokes.every((w) => w.length <= 7);
     case "decoy":
       return !hasWordplay(raw) && spokes.filter((w) => w.length >= 9).length <= 1;
-    case "oracle":
-      return raw.pivot.length <= 5;
     default:
       return true;
   }

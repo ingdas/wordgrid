@@ -117,9 +117,7 @@ export default function Game({
   const [solved, setSolved] = useState<Category[]>([]);
   const [mistakes, setMistakes] = useState(0);
   const mistakesRef = useRef(0);
-  // The Oracle boss flips the flow: name the link first (a "guessing" phase up
-  // front), then group. Every other mode starts straight into grouping.
-  const [status, setStatus] = useState<Status>(twist === "oracle" ? "guessing" : "playing");
+  const [status, setStatus] = useState<Status>("playing");
   const [shake, setShake] = useState(0);
   const [burst, setBurst] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -266,8 +264,8 @@ export default function Game({
     [buzz, pushPop]
   );
 
-  // Auto-solve the final pair, then move on. Normally that's the "guess the
-  // link" finale; the Oracle already knows the link, so it wins outright.
+  // Auto-solve the final pair, then move on — normally into the "guess the
+  // link" finale.
   useEffect(() => {
     if (status !== "playing") return;
     if (solved.length === puzzle.categories.length - 1) {
@@ -275,8 +273,8 @@ export default function Game({
       const timer = setTimeout(() => solveCategory(last, solved.length), 600);
       return () => clearTimeout(timer);
     }
-    // A link already named (the Oracle, or a successful early call) means the
-    // finale has nothing left to ask — the last group solved is the win.
+    // A link already named (a successful early call) means the finale has
+    // nothing left to ask — the last group solved is the win.
     if (solved.length === puzzle.categories.length) setStatus(linkGuess != null ? "won" : "guessing");
   }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, linkGuess]);
 
@@ -509,7 +507,7 @@ export default function Game({
     setSelected([]);
     mistakesRef.current = 0;
     setMistakes(0);
-    setStatus(twist === "oracle" ? "guessing" : "playing");
+    setStatus("playing");
     setShake(0);
     setBurst(0);
     setToast(null);
@@ -557,8 +555,8 @@ export default function Game({
       pushPop(early > 0 ? `+${pts}  🔑 early!` : "+250  🔑");
       playStar(2);
       buzz(40);
-      // Link named with groups still open (the Oracle, or an early call) →
-      // back to the board, now knowing the word. Otherwise it's the win.
+      // Link named with groups still open (an early call) → back to the
+      // board, now knowing the word. Otherwise it's the win.
       later(() => {
         setEarlyCall(false);
         setStatus(early > 0 ? "playing" : "won");
@@ -570,7 +568,7 @@ export default function Game({
 
   // One call per level, spent on opening: no free look at the letter count.
   const canCallEarly =
-    status === "playing" && !offering && !earlyCallSpent && coach < 0 && twist !== "oracle" &&
+    status === "playing" && !offering && !earlyCallSpent && coach < 0 &&
     solved.length >= 1 && unsolvedCategories.length >= 2;
   const startEarlyCall = useCallback(() => {
     setEarlyCallSpent(true);
@@ -588,23 +586,19 @@ export default function Game({
     setToast(t("game.early.missed"));
   }, [buzz]);
 
-  // Give up: reveal the word (counts as a miss → costs a star). For the Oracle
-  // this still hands you the link and moves you into the grouping phase.
+  // Give up: reveal the word (counts as a miss → costs a star).
   const revealLinkWord = useCallback(() => {
     setLinkGuess(" "); // a value that never matches
     playWrong();
-    later(() => setStatus(twist === "oracle" ? "playing" : "won"), 700);
-  }, [twist, later]);
+    later(() => setStatus("won"), 700);
+  }, [later]);
 
-  // The Oracle's "name the link first" phase: shown all words + themes, link
-  // still hidden, before any grouping.
-  const oraclePending = twist === "oracle" && status === "guessing" && linkGuess == null;
-  // Both "name it before you've grouped" states keep the tiles on screen —
-  // they're what you're reasoning from.
-  const linkPending = oraclePending || (earlyCall && linkGuess == null);
-  // A win reveals the link; a loss keeps it secret for the replay. The Oracle
-  // also reveals it the moment you've named it (you've earned the sight) — and
-  // debug's peek shows it whenever it's asked to.
+  // The early call keeps the tiles on screen — they're what you're reasoning
+  // from while you name the link.
+  const linkPending = earlyCall && linkGuess == null;
+  // A win reveals the link; a loss keeps it secret for the replay. Naming it
+  // early reveals it the moment you've named it (you've earned the sight) —
+  // and debug's peek shows it whenever it's asked to.
   const revealLink = status === "won" || linkGuess != null || peek;
   const stars = finalStars;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
@@ -700,29 +694,6 @@ export default function Game({
           score={score}
           combo={combo}
         />
-
-        {oraclePending && (
-          <div className="mt-3 rounded-2xl border border-ink/20 bg-press/5 p-3">
-            <div className="text-center text-[0.7rem] font-bold uppercase tracking-widest text-press">
-              The four themes — what single word joins them all?
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {puzzle.categories.map((cat) => {
-                const theme = CATEGORY_THEMES[(indexByName.get(cat.name) ?? 0) % CATEGORY_THEMES.length];
-                return (
-                  <div
-                    key={cat.name}
-                    className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[0.72rem] font-bold"
-                    style={{ background: `${theme.tint}1f`, color: theme.tint }}
-                  >
-                    <span aria-hidden>{theme.shape}</span>
-                    <span className="leading-tight">{cat.name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Solved groups stay on screen with their words — through the finale
             too — so you can see what you've already found. Each banner shrinks a
@@ -830,7 +801,6 @@ export default function Game({
 
         {status === "guessing" && (
           <LinkGuess
-            oracle={twist === "oracle"}
             early={earlyCall}
             onMiss={missEarlyCall}
             resolved={linkGuess != null}

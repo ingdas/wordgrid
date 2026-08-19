@@ -167,9 +167,6 @@ export const es: Record<string, string> = {
   // --- the finale ---------------------------------------------------------
   "finale.title": "¡Los cuatro grupos encontrados!",
   "finale.body": "Toca las letras para escribir la palabra secreta que los une.",
-  "finale.oracle.title": "🔮 Nombra la palabra oculta",
-  "finale.oracle.body":
-    "Lee las palabras y los temas de arriba — toca letras para escribir la que los une.",
   "finale.hintLine": "Toca una ficha — o escribe — para colocarla; cada letra se usa una vez.",
   "finale.wrong": "No es esa palabra — inténtalo otra vez.",
   "finale.undo": "⌫ Deshacer",
@@ -437,18 +434,14 @@ export const es: Record<string, string> = {
   "chapter.12.flavor": "Todo lo que has aprendido.",
   "twist.scramble.label": "Jefe · fichas revueltas",
   "twist.emoji.label": "Jefe · solo emojis",
-  "twist.oracle.label": "Jefe · el oráculo",
   "twist.decoy.label": "Jefe · impostores",
   "twist.blackout.label": "Jefe · apagón",
   "twist.scramble.short": "fichas revueltas",
   "twist.emoji.short": "solo emojis",
-  "twist.oracle.short": "el oráculo",
   "twist.decoy.short": "impostores",
   "twist.blackout.short": "apagón",
   "twist.scramble.intro": "👑 Jefe — las fichas están revueltas. ¡Ordénalas y luego agrúpalas!",
   "twist.emoji.intro": "👑 Jefe — cada ficha es un emoji. ¡Lee los dibujos y luego agrúpalos!",
-  "twist.oracle.intro":
-    "🔮 El Oráculo — todas las palabras y temas a la vista. Nombra primero la palabra oculta y agrupa con calma.",
   "twist.decoy.intro": "👑 Jefe — tres fichas impostoras no son de NINGÚN grupo. ¡Elige con cuidado!",
   "twist.blackout.intro": "👑 Jefe — ¡apagón! Los grupos resueltos quedan ocultos hasta el final.",
 

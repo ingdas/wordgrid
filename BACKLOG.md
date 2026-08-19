@@ -1,6 +1,6 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 30 (debug mode: free hints, auto-solve, a tool tray).
+_Last updated: iteration 31 (the oracle boss is gone; four twists remain).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -56,7 +56,7 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   tutorial ramp) — see iteration 29; CHAPTERS
   (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
   BossTwist type +
-  CHAPTER_TWISTS (scramble/oracle/emoji/blackout/decoy — **no time pressure,
+  CHAPTER_TWISTS (scramble/emoji/blackout/decoy — **no time pressure,
   owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles;
   CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
   see iteration 26; `npm run validate` checks their lengths).
@@ -76,8 +76,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   per-chapter page stain), buildLetterBank + shuffledLetters (the chapter key's
   exact-letters bank), fmtTime. Split out of Game.tsx so Pairs and the
   Logic Grid don't import the game screen to get at a constant.
-- `LinkGuess.tsx` — the spell-the-link panel, serving four callers: the normal
-  finale, the Oracle boss, the **early call** (`early` + `onMiss`: one attempt,
+- `LinkGuess.tsx` — the spell-the-link panel, serving three callers: the normal
+  finale, the **early call** (`early` + `onMiss`: one attempt,
   a miss hands the board back), and the **chapter key** (`bank` for an
   exact-letters bank, `titleKey`/`bodyKey` for its copy, `dismissKey` for a
   panel with no "give up" to offer).
@@ -87,8 +87,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   daily, endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
   onLoss (carry title+score), onNext/onExit. Systems inside: score+combo with
   floating pops; tap-**or-type**-to-spell finale; **early link call** (offered
-  once a group is solved and ≥2 remain, not during the tutorial or on the
-  Oracle; spent on opening; hit = reveal + 250×(1+open groups) and play on,
+  once a group is solved and ≥2 remain, not during the tutorial;
+  spent on opening; hit = reveal + 250×(1+open groups) and play on,
   miss = no mistake, no star, no second try); second-chance rewarded continue
   (+2 tries, once per attempt); tutorial coach (WelcomeOverlay modal at step 0,
   sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
@@ -259,6 +259,69 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
+## The oracle is gone (iteration 31)
+
+**What was removed.** The `"oracle"` boss twist — the inversion that showed you
+all twelve words *and* the four theme names up front and made you name the
+hidden link before grouping anything. Gone from `BossTwist`, `CHAPTER_TWISTS`,
+`suitsTwist`, `Game.tsx` (the up-front `"guessing"` phase, `oraclePending`, the
+theme panel, the `twist !== "oracle"` carve-out on the early call, the
+grouping-phase branch in `revealLinkWord`), `LinkGuess.tsx` (the `oracle` prop
+and its copy), and both locale files (`twist.oracle.*`, `finale.oracle.*`).
+
+**Why it earned its place on the chopping block.** It was the only twist that
+changed the *shape of a round* rather than how the board reads, and it fought
+three other systems for the same moment: it duplicated the early call (naming
+the link before you've grouped), it disabled the early call to avoid the clash,
+and it spent the finale's payoff in the opening ten seconds — a boss whose last
+act was routine grouping with the answer already on screen.
+
+**Re-dealing the twists.** Chapters 2, 7 and 11 lost their boss twist and were
+re-dealt from the survivors, keeping both standing rules — no two adjacent
+chapters share a twist, and `"emoji"` still appears exactly once (it swaps in
+the one bespoke board, so a second would replay a solved puzzle):
+
+    scramble · decoy · emoji · blackout · decoy · scramble ·
+    blackout · decoy · blackout · scramble · decoy · blackout
+
+`npm run validate` re-casts the bosses through `suitsTwist` and passes: the
+extra decoy chapters all found compound-free boards. `npm test` and the
+playtest are clean too.
+
+### Candidate replacements (proposed, not built)
+
+Four twists is thin for twelve chapters — chapter 12's finale currently plays
+the same blackout as chapter 9. These are the candidates for the next pass,
+all of them constrained by the owner's hard rule: **no timers, no time
+pressure**.
+
+- **memory** — the board studies face-up for as long as you like, then a
+  **"Ready"** button flips every tile face-down and you group from memory.
+  Deliberately *not* a study countdown; the player decides when the lights go
+  out. Three peeks in the bank (tap a face-down tile to flip it back for a
+  beat); a solved group stays face-up as its banner. Cheapest real twist left:
+  `displayOf` already remaps tile text per twist, so face-down is a third
+  branch beside `scramble` and `emoji`, plus a `flipped` flag and a peek
+  counter. Board fit: spokes ≤ 8 letters and no two spokes sharing a first
+  letter, so a half-remembered tile is still identifiable. Ordering: never
+  adjacent to **blackout**, which is the same muscle.
+- **cipher** — every tile arrives disemvowelled (CRASH → CRSH, STICK → STCK).
+  Reads as harder than scramble but is fairer: the consonant skeleton keeps
+  word shape, so it's decoding rather than anagramming. Same one-line home in
+  `displayOf`. Board fit: no two spokes may share a skeleton, and spokes with
+  fewer than three consonants are out (ORE → R is not a puzzle).
+- **the brief** — the four theme names are shown up front, and you assign tiles
+  to a *named* group instead of free-grouping. It recycles the oracle's theme
+  panel (the good half of that twist) without the cold-spelling lottery, and it
+  is genuinely harder than it sounds: named themes turn every near-miss into a
+  deliberate choice. Board fit: needs category names that don't leak the pivot —
+  already a validate rule, so any board qualifies.
+- **cascade** — the board re-scrambles after every solved group: the survivors
+  get fresh anagrams and a fresh order. Stops the "I'll park these three for
+  later" strategy that carries most boards, and costs only a re-seed of
+  `displayOf` keyed on `solved.length`. Board fit: the scramble rule (spokes
+  ≤ 7 letters). Ordering: never adjacent to **scramble**.
+
 ## Debug mode: hints, auto-solve, tools (iteration 30)
 
 Owner ask: *"add a debug mode which I can use to get more hints, auto solve
@@ -363,9 +426,9 @@ which nothing used to ask:
   SPIN, i.e. *decode the anagram PIROUETTE*, and chapter 10's to TRIP. Anagrams of
   10-letter words aren't harder, they're a different and worse game. Scramble
   bosses are now `stick`, `crash`, `swing` — nothing over 7 letters.
-- **oracle** makes you name the link cold, so a long or unusual pivot turns
-  lateral thinking into a spelling lottery: pivots are capped at 5 letters
-  (`wave`, `nail`, `spot`).
+- **oracle** made you name the link cold, so a long or unusual pivot turned
+  lateral thinking into a spelling lottery: pivots were capped at 5 letters
+  (`wave`, `nail`, `spot`). *(Twist dropped in iteration 31.)*
 - **decoy** salts the board with impostors, so it refuses **compound-word
   boards**. This one was a genuine fairness bug in the first pass of this
   iteration: it cast `palm` as the decoy boss, where SPRINGS / BEACH / SUNDAY can
@@ -551,7 +614,8 @@ MISCHIEF · PATIENCE · TIGHTROPE · MASTERMIND —
 so the chapter's own name is the clue.
 
 It reuses what the game already teaches: `LinkGuess` is the finale's panel, and
-this is its fourth caller (finale / Oracle / early call / chapter key). It took
+this is its fourth caller (finale / Oracle / early call / chapter key — the
+Oracle was dropped in iteration 31, leaving three). It took
 three new optional props — `bank`, copy overrides, and a `dismissKey` for a
 panel that has no "give up" to offer.
 
@@ -1212,10 +1276,9 @@ N. ✅ **Story/level-map progression** — chapters with flavor text + boss node
      lightning emoji deliberately omitted so the link isn't spoiled); you read
      pictures instead of words.
    - **scramble** — every tile is an anagram you decode before grouping.
-   - **the oracle** — the puzzle turned inside out. You're shown all twelve
-     words *and* the four theme names up front, and must deduce + type the
-     hidden link FIRST; only then do you group. No timer, free retries — a
-     chill, lateral-thinking inversion (kept the game relaxed: no time pressure).
+   - ~~**the oracle**~~ — the puzzle turned inside out: all twelve words *and*
+     the four theme names up front, deduce + type the hidden link FIRST, then
+     group. **Removed in iteration 31** — see that section.
    - **impostors (decoy)** — three trap tiles belong to NO group; include one in
      a guess and the group busts, so you have to spot the fakes (15-tile board).
    - **blackout** — solved group names/words stay hidden until the final reveal,

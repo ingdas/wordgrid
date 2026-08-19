@@ -5,11 +5,10 @@ import { playDeselect, playSelect } from "./audio";
 import { t } from "./i18n";
 
 // The spell-the-link finale: tap (or type) letters from a bank into the
-// answer slots, auto-checked the moment they're full. Also serves the Oracle
-// boss and the early call, which ask the same question before the grouping is
-// done — see the `early` prop.
+// answer slots, auto-checked the moment they're full. Also serves the early
+// call, which asks the same question before the grouping is done — see the
+// `early` prop.
 export function LinkGuess({
-  oracle,
   early = false,
   bank: providedBank,
   titleKey,
@@ -27,7 +26,6 @@ export function LinkGuess({
   onSubmit,
   onReveal,
 }: {
-  oracle: boolean;
   /** An early call: one attempt, and a miss hands the board back. */
   early?: boolean;
   /** Use these tiles instead of a generated bank (the chapter keys pass the
@@ -133,10 +131,10 @@ export function LinkGuess({
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
-        {t(titleKey ?? (oracle ? "finale.oracle.title" : early ? "game.early.title" : "finale.title"))}
+        {t(titleKey ?? (early ? "game.early.title" : "finale.title"))}
       </h3>
       <p className="mt-1 text-sm text-ink-soft">
-        {t(bodyKey ?? (oracle ? "finale.oracle.body" : early ? "game.early.body" : "finale.body"))}
+        {t(bodyKey ?? (early ? "game.early.body" : "finale.body"))}
       </p>
 
       {/* The answer so far. Tapped letters pop into the slots; a wrong word

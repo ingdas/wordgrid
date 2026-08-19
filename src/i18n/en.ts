@@ -168,9 +168,6 @@ export const en: Record<string, string> = {
   // --- the finale ---------------------------------------------------------
   "finale.title": "All four groups found!",
   "finale.body": "Tap the letters to spell the secret word that links them all.",
-  "finale.oracle.title": "🔮 Name the hidden link",
-  "finale.oracle.body":
-    "Read the words and themes above — tap letters to spell the word that joins them.",
   "finale.hintLine": "Tap a tile — or just type — to place it; each letter is used once.",
   "finale.wrong": "Not the word — try again.",
   "finale.undo": "⌫ Undo",
@@ -447,20 +444,16 @@ export const en: Record<string, string> = {
   "chapter.12.flavor": "Everything you've learned.",
   "twist.scramble.label": "Boss · scrambled tiles",
   "twist.emoji.label": "Boss · emoji only",
-  "twist.oracle.label": "Boss · the oracle",
   "twist.decoy.label": "Boss · impostors",
   "twist.blackout.label": "Boss · blackout",
-  // The same five twists as a bare noun phrase, for sentences that already say
+  // The same four twists as a bare noun phrase, for sentences that already say
   // "boss" (the level map's chapter footer and its unlock banner).
   "twist.scramble.short": "scrambled tiles",
   "twist.emoji.short": "emoji only",
-  "twist.oracle.short": "the oracle",
   "twist.decoy.short": "impostors",
   "twist.blackout.short": "blackout",
   "twist.scramble.intro": "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
   "twist.emoji.intro": "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  "twist.oracle.intro":
-    "🔮 The Oracle — every word and theme is laid bare. Name the hidden link first, then group at your leisure.",
   "twist.decoy.intro": "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
   "twist.blackout.intro": "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
 

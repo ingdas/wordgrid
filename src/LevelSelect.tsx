@@ -998,7 +998,6 @@ function ChapterKeyPanel({
           </span>
         </div>
         <LinkGuess
-          oracle={false}
           bank={bank}
           titleKey="key.title"
           bodyKey="key.body"
