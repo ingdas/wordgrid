@@ -11,8 +11,16 @@
 //   - requestRewarded for the hint (ad-for-hint) and the second chance,
 //   - happytime on a win.
 
+/** The SDK's own key/value store — survives storage partitioning in the embed. */
+export interface CrazyData {
+  getItem?: (key: string) => string | null;
+  setItem?: (key: string, value: string) => void;
+  removeItem?: (key: string) => void;
+}
+
 interface CrazySDK {
   init?: () => Promise<void> | void;
+  data?: CrazyData;
   game?: {
     gameplayStart?: () => void;
     gameplayStop?: () => void;
@@ -77,8 +85,43 @@ function guard(fn: () => unknown) {
   }
 }
 
-export function initSdk() {
-  guard(() => sdk()?.init?.());
+/**
+ * Initialise the SDK. Never rejects — the returned promise settles once the
+ * platform has had its say, so callers that need the SDK to be *ready* (the
+ * save mirror below) can wait for it without risking an unhandled rejection.
+ */
+export function initSdk(): Promise<void> {
+  return new Promise((resolve) => {
+    if (unusable) return resolve();
+    try {
+      const out = sdk()?.init?.();
+      if (isThenable(out)) {
+        out.then(
+          () => resolve(),
+          (err) => {
+            noteError(err);
+            resolve();
+          }
+        );
+        return;
+      }
+    } catch (err) {
+      noteError(err);
+    }
+    resolve();
+  });
+}
+
+/**
+ * The platform's own storage, when it's there. CrazyGames serves the game from
+ * an iframe on someone else's domain, where `localStorage` can be partitioned,
+ * emptied between visits, or refused outright — this module is the save that
+ * survives that. Absent everywhere else (local dev, GitHub Pages), so every
+ * caller has to cope with null.
+ */
+export function sdkData(): CrazyData | null {
+  const d = sdk()?.data;
+  return d && typeof d.getItem === "function" && typeof d.setItem === "function" ? d : null;
 }
 
 /** Tell the platform we're loading (call as early as possible). */

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { t } from "./i18n";
+import { useModal } from "./modal";
 import type { BossTwist } from "./puzzles";
 
 // Every boss rewrites a rule of the game, and a name for that rewrite —
@@ -34,14 +34,8 @@ export function BossRules({ twist }: { twist: BossTwist }) {
 }
 
 export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: () => void }) {
-  // Escape closes it, like every other dialog in the game.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape closes it and Tab stays inside it, like every other dialog.
+  const panel = useModal<HTMLDivElement>(onClose);
 
   const name = t(`twist.${twist}.short`);
   return (
@@ -60,6 +54,8 @@ export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: ()
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.92, y: 16 }}
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         // The longest briefing (the Oracle's) is taller than a 720p embed, so
         // the card scrolls rather than pushing its own dismiss button off.

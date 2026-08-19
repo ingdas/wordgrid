@@ -10,17 +10,20 @@ import {
   recordDaily,
   dailyPuzzle,
   pushHistory,
-  playerRank,
   furthestCleared,
   nextLevelIndex,
   markSeen,
   markBanked,
   keyLockedBoss,
   solveKey,
+  todayKey,
   MAX_STARS,
   type Progress,
 } from "./progress";
+import { recordQuest, QUEST_SET_BONUS, COMBO_TARGET, type QuestDef, type QuestEvent } from "./quests";
 import { isDebug, setDebug } from "./debug";
+import { useModal } from "./modal";
+import { readItem, writeItem, removeItem, startSdkMirror } from "./storage";
 import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic, suspendAudio, resumeAudio } from "./audio";
 import {
   initSdk,
@@ -60,40 +63,30 @@ function nextLevelTeaser(index: number): string | undefined {
   return undefined;
 }
 
-const noop = () => {};
-
-/** Close a modal with Escape — keyboard players expect it, and it costs a line. */
-function useEscape(onClose: () => void) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+/** Which of today's quests a finished word board moves along. */
+function winEvents(
+  result: { mistakes: number; linkCorrect: boolean; maxCombo: number },
+  daily: boolean
+): QuestEvent[] {
+  const events: QuestEvent[] = ["solve"];
+  if (result.mistakes === 0) events.push("perfect");
+  if (result.linkCorrect) events.push("link");
+  if (result.maxCombo >= COMBO_TARGET) events.push("combo");
+  if (daily) events.push("daily");
+  return events;
 }
 
+const noop = () => {};
+
 const CALM_KEY = "wordgrid:calm";
-const readCalm = () => {
-  try {
-    return localStorage.getItem(CALM_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
+const readCalm = () => readItem(CALM_KEY) === "1";
 
 export default function App() {
   const systemReduce = useReducedMotion() ?? false;
   const [calm, setCalm] = useState(readCalm);
   const reduce = systemReduce || calm; // calm mode = no confetti / minimal motion
   // The interactive coached tutorial runs once, on the player's first level.
-  const [tutorialPending, setTutorialPending] = useState(() => {
-    try {
-      return !localStorage.getItem("wordgrid:tutorial");
-    } catch {
-      return true;
-    }
-  });
+  const [tutorialPending, setTutorialPending] = useState(() => !readItem("wordgrid:tutorial"));
   // First-ever launch drops straight into the tutorial level rather than the
   // menu, so a new player is playing within seconds.
   const startedInGame = useRef(tutorialPending).current;
@@ -129,6 +122,10 @@ export default function App() {
   // a session that crosses midnight finishes the puzzle it started.
   const [dailyRaw, setDailyRaw] = useState<RawPuzzle | null>(null);
   const [unlockedAch, setUnlockedAch] = useState<{ icon: string; label: string; header?: string } | null>(null);
+  // No durable storage anywhere (no localStorage, no platform data module):
+  // this session's progress dies with the tab, and saying so is the least the
+  // game owes a player about to spend an hour on it.
+  const [storageWarn, setStorageWarn] = useState(false);
 
   useEffect(() => {
     if (!unlockedAch) return;
@@ -138,10 +135,26 @@ export default function App() {
 
   useEffect(() => {
     loadingStart();
-    initSdk();
     // The bundle is already parsed by the time React mounts, so loading is
     // effectively done here — tell the platform we're interactive.
     loadingStop();
+    let stopMirror: (() => void) | undefined;
+    void initSdk().then(() => {
+      // Once the platform is up, reconcile the save with its data module: the
+      // embed's own localStorage can be partitioned away between visits, and
+      // that store is the copy that survives it. See src/storage.ts.
+      stopMirror = startSdkMirror(
+        () => {
+          // A save came back from the platform that this session didn't have.
+          const restored = loadProgress();
+          progressRef.current = restored;
+          setProgress(restored);
+          setUnlockedAch({ icon: "💾", header: t("storage.restored"), label: t("storage.restored.body") });
+        },
+        (durable) => setStorageWarn(!durable)
+      );
+    });
+    return () => stopMirror?.();
   }, []);
 
   // Platform QA: pause the session + audio when the tab/iframe is hidden.
@@ -190,39 +203,57 @@ export default function App() {
     return { prev, next };
   }, []);
 
-  // The lifetime-score ladder ticking over is worth a toast wherever points
-  // come from — a level, an Endless board, a Pairs clear, a logic grid.
-  const celebrateRank = useCallback((before: number, after: number) => {
-    const rank = playerRank(after);
-    if (rank.level > playerRank(before).level) {
+  /** Points earned outside the campaign — Endless, Pairs, the logic grid. */
+  const awardScore = useCallback(
+    (points: number) => {
+      applyProgress((p) => ({ ...p, score: p.score + points }));
+    },
+    [applyProgress]
+  );
+
+  /**
+   * Raise today's quest events for one finished board, and pay out anything
+   * they completed.
+   *
+   * Batched on purpose: a single clean win can satisfy "solve 2", "no
+   * mistakes" and "name the link" at once, and three toasts stacking on top of
+   * the win card would bury the win itself. One toast, the set bonus if it
+   * landed, and the hints go into the bank either way.
+   */
+  const questEvents = useCallback(
+    (events: QuestEvent[]) => {
+      const date = todayKey();
+      let state = progressRef.current.quests;
+      const completed: QuestDef[] = [];
+      let reward = 0;
+      let setDone = false;
+      for (const event of events) {
+        const out = recordQuest(state, event, date);
+        state = out.state;
+        completed.push(...out.completed);
+        reward += out.reward;
+        setDone = setDone || out.setDone;
+      }
+      applyProgress((p) => ({ ...p, quests: state, hints: p.hints + reward }));
+      if (!completed.length) return;
+      const first = completed[0];
+      // After the win card has landed and after any achievement toast (1800ms).
       setTimeout(
         () =>
           setUnlockedAch({
-            icon: "⬆️",
-            header: t("rank.up"),
-            label: t("home.rank", { level: rank.level, title: t(`rank.${rank.titleIndex}`) }),
+            icon: setDone ? "🎁" : first.icon,
+            header: setDone ? t("quest.set") : t("quest.complete"),
+            label: setDone ? t("quest.set.body", { n: QUEST_SET_BONUS }) : t(first.titleKey, { n: first.goal }),
           }),
-        2100
+        3200
       );
-    }
-  }, []);
-
-  /** Points earned outside the campaign: score + rank-up, nothing else. */
-  const awardScore = useCallback(
-    (points: number) => {
-      const { prev, next } = applyProgress((p) => ({ ...p, score: p.score + points }));
-      celebrateRank(prev.score, next.score);
     },
-    [applyProgress, celebrateRank]
+    [applyProgress]
   );
 
   const finishTutorial = useCallback(() => {
     setTutorialPending(false);
-    try {
-      localStorage.setItem("wordgrid:tutorial", "1");
-    } catch {
-      /* ignore */
-    }
+    writeItem("wordgrid:tutorial", "1");
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -245,21 +276,13 @@ export default function App() {
   const toggleCalm = useCallback(() => {
     setCalm((c) => {
       const next = !c;
-      try {
-        localStorage.setItem(CALM_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
+      writeItem(CALM_KEY, next ? "1" : "0");
       return next;
     });
   }, []);
 
   const resetProgress = useCallback(() => {
-    try {
-      localStorage.removeItem("wordgrid:progress");
-    } catch {
-      /* ignore */
-    }
+    removeItem("wordgrid:progress");
     const fresh = loadProgress();
     progressRef.current = fresh; // keep the write path's view in sync
     setProgress(fresh);
@@ -293,7 +316,7 @@ export default function App() {
   }, [applyProgress]);
 
   // A chapter key was spelled: its boss door opens, and the effort pays out in
-  // points (which feed the rank ladder) plus a couple of hints.
+  // points plus a couple of hints.
   const solveChapterKey = useCallback(
     (chapter: number) => {
       const { prev, next } = applyProgress((p) =>
@@ -301,11 +324,10 @@ export default function App() {
       );
       if (next === prev) return;
       happytime();
-      celebrateRank(prev.score, next.score);
       // The keyword itself is the trophy — it is content, not a catalogue key.
       setUnlockedAch({ icon: "🔑", header: t("key.unlocked"), label: chapterKey(chapter) });
     },
-    [applyProgress, celebrateRank]
+    [applyProgress]
   );
 
   const pickLevel = useCallback((index: number) => {
@@ -325,13 +347,21 @@ export default function App() {
   }, []);
 
   const handleWin = useCallback(
-    (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => {
+    (result: {
+      stars: number;
+      linkCorrect: boolean;
+      timeMs: number;
+      mistakes: number;
+      title: string;
+      score: number;
+      maxCombo: number;
+    }) => {
       happytime();
       // The daily plays from its own pool: it feeds streaks/score/history but
       // never writes campaign stars or best times (its ids aren't levels).
       const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
       let unlocked: ReturnType<typeof evaluateUnlocks>["unlocked"] = [];
-      const { prev, next } = applyProgress((p) => {
+      applyProgress((p) => {
         const streak = p.streak + 1;
         const prevBestTime = p.best[id];
         let acc: Progress = {
@@ -366,7 +396,6 @@ export default function App() {
           daily: playingDaily,
         });
       });
-      celebrateRank(prev.score, next.score);
       if (unlocked.length) {
         const top = unlocked[unlocked.length - 1];
         setTimeout(
@@ -374,8 +403,9 @@ export default function App() {
           1800
         );
       }
+      questEvents(winEvents(result, playingDaily));
     },
-    [levelIndex, playingDaily, dailyRaw, applyProgress, celebrateRank]
+    [levelIndex, playingDaily, dailyRaw, applyProgress, questEvents]
   );
 
   // Debug mode plays with an unlimited bank, so a hint spent there costs
@@ -491,13 +521,16 @@ export default function App() {
   }, []);
 
   const handleEndlessWin = useCallback(
-    (result: { score: number }) => {
+    (result: { score: number; mistakes: number; linkCorrect: boolean; maxCombo: number }) => {
       happytime();
       setEndlessSolved((n) => n + 1);
       setEndlessScore((s) => s + result.score);
       awardScore(result.score);
+      // An Endless board is a solved board: it counts for today's quests too,
+      // minus the daily one (it isn't the daily).
+      questEvents(winEvents(result, false));
     },
-    [awardScore]
+    [awardScore, questEvents]
   );
 
   const nextEndless = useCallback(() => {
@@ -544,32 +577,32 @@ export default function App() {
   const handleDeductionSolve = useCallback(
     (id: string) => {
       happytime();
-      const { prev, next } = applyProgress((p) =>
+      applyProgress((p) =>
         p.deductionSolved.includes(id)
           ? p
           : {
               ...p,
               deductionSolved: [...p.deductionSolved, id],
-              score: p.score + 500, // a solved logic grid is worth a chunk of XP
+              score: p.score + 500, // a solved logic grid is worth a chunk of points
             }
       );
-      celebrateRank(prev.score, next.score);
+      questEvents(["logic"]);
     },
-    [applyProgress, celebrateRank]
+    [applyProgress, questEvents]
   );
 
   // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
   const handlePairsFinish = useCallback(
     (result: { moves: number; score: number }) => {
       happytime();
-      const { prev, next } = applyProgress((p) => ({
+      applyProgress((p) => ({
         ...p,
         score: p.score + result.score,
         pairsBest: p.pairsBest === 0 ? result.moves : Math.min(p.pairsBest, result.moves),
       }));
-      celebrateRank(prev.score, next.score);
+      questEvents(["pairs"]);
     },
-    [applyProgress, celebrateRank]
+    [applyProgress, questEvents]
   );
 
   const exitEndless = useCallback(() => {
@@ -799,6 +832,34 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Nothing here will outlive the tab. Said once, quietly, at the bottom —
+          it's a warning, not a modal, and the game plays fine either way. */}
+      <AnimatePresence>
+        {storageWarn && (
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
+            role="status"
+            className="fixed inset-x-0 bottom-3 z-[55] flex justify-center px-4"
+          >
+            <div className="flex max-w-sm items-start gap-3 rounded-2xl border-2 border-press bg-paper px-4 py-3 shadow-2xl">
+              <span className="text-lg" aria-hidden>⚠️</span>
+              <div className="text-left">
+                <div className="text-sm font-bold text-ink">{t("storage.warn.title")}</div>
+                <p className="mt-0.5 text-[0.7rem] leading-snug text-ink-soft">{t("storage.warn.body")}</p>
+              </div>
+              <button
+                onClick={() => setStorageWarn(false)}
+                className="shrink-0 rounded-full border border-ink/30 px-3 py-1 text-[0.65rem] font-bold text-ink transition hover:bg-cream"
+              >
+                {t("common.dismiss")}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -812,7 +873,7 @@ function StatsModal({
   onClose: () => void;
   onHistory: () => void;
 }) {
-  useEscape(onClose);
+  const panel = useModal<HTMLDivElement>(onClose);
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
     [t("stats.score"), `✦ ${progress.score.toLocaleString()}`],
@@ -840,6 +901,8 @@ function StatsModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
@@ -939,7 +1002,7 @@ function relativeTime(at: number): string {
 }
 
 function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
-  useEscape(onClose);
+  const panel = useModal<HTMLDivElement>(onClose);
   const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
   return (
     <motion.div
@@ -957,6 +1020,8 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
@@ -1067,7 +1132,7 @@ function SettingsModal({
   onClose: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
-  useEscape(onClose);
+  const panel = useModal<HTMLDivElement>(onClose);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1084,6 +1149,8 @@ function SettingsModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
       >
@@ -1188,7 +1255,7 @@ const STEPS = [
 ];
 
 function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () => void }) {
-  useEscape(onClose);
+  const panel = useModal<HTMLDivElement>(onClose);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1205,6 +1272,8 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 26 }}
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         // Mid-boss the sheet carries the boss's rules on top of the three
         // steps, which is taller than a phone — so it scrolls.

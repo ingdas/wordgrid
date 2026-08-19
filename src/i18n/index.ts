@@ -11,6 +11,7 @@
 // What a translated UI does unlock today is the **Logic Grid**, which is pure
 // deduction with no vocabulary at all, plus every menu, rule and result screen
 // around the rest.
+import { readItem, writeItem } from "../storage.ts";
 import { en } from "./en.ts";
 import { es } from "./es.ts";
 
@@ -26,7 +27,7 @@ const KEY = "wordgrid:locale";
 
 function detect(): Locale {
   try {
-    const stored = localStorage.getItem(KEY);
+    const stored = readItem(KEY);
     if (stored && LOCALES.some((l) => l.id === stored)) return stored as Locale;
     const tag = (navigator.language || "en").slice(0, 2).toLowerCase();
     if (LOCALES.some((l) => l.id === tag)) return tag as Locale;
@@ -52,8 +53,8 @@ export function getLocale(): Locale {
 export function setLocale(next: Locale) {
   if (!LOCALES.some((l) => l.id === next)) return;
   locale = next;
+  writeItem(KEY, next);
   try {
-    localStorage.setItem(KEY, next);
     document.documentElement.lang = next;
   } catch {
     /* ignore */

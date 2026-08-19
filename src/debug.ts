@@ -15,6 +15,8 @@
 //
 // The flag is cached in module scope so the URL is parsed once per load; the
 // Settings toggle goes through setDebug(), which keeps that cache honest.
+import { readItem, writeItem } from "./storage.ts";
+
 const KEY = "wordgrid:debug";
 
 let cache: boolean | null = null;
@@ -23,8 +25,8 @@ export function isDebug(): boolean {
   if (cache !== null) return cache;
   try {
     const q = new URLSearchParams(window.location.search);
-    if (q.has("debug")) localStorage.setItem(KEY, q.get("debug") === "0" ? "0" : "1");
-    cache = localStorage.getItem(KEY) === "1";
+    if (q.has("debug")) writeItem(KEY, q.get("debug") === "0" ? "0" : "1");
+    cache = readItem(KEY) === "1";
   } catch {
     cache = false;
   }
@@ -34,11 +36,7 @@ export function isDebug(): boolean {
 /** Turn debug mode on or off for the rest of this session, and remember it. */
 export function setDebug(on: boolean): void {
   cache = on;
-  try {
-    localStorage.setItem(KEY, on ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+  writeItem(KEY, on ? "1" : "0");
 }
 
 /** Test seam: forget the cached read so the next isDebug() re-reads storage. */

@@ -1,6 +1,8 @@
 import { CHAPTERS, LEVELS, chapterKey, keyLevels, seededShuffle, type RawPuzzle } from "./puzzles.ts";
 import { DAILY_PUZZLES } from "./dailyPuzzles.ts";
 import { isDebug } from "./debug.ts";
+import { readItem, writeItem } from "./storage.ts";
+import { freshQuests, type QuestState } from "./quests.ts";
 
 // Meta-progression: per-level star ratings (best of), a win streak, and a few
 // lifetime stats. This is the "collect the stars / keep the streak alive" hook
@@ -23,6 +25,7 @@ export interface Progress {
   seen: string[]; // level ids already watched opening on the map (see newlyUnlocked)
   banked: string[]; // level ids already watched handing their key letter over
   keys: number[]; // chapter indices whose key has been spelled (opens that boss)
+  quests: QuestState; // today's three goals, their counts and what they've paid
 }
 
 export const STARTING_HINTS = 3;
@@ -50,7 +53,7 @@ const KEY = "wordgrid:progress";
 
 export function loadProgress(): Progress {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = readItem(KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<Progress>;
       const loaded: Progress = {
@@ -70,6 +73,9 @@ export function loadProgress(): Progress {
         seen: p.seen ?? [],
         banked: p.banked ?? [],
         keys: p.keys ?? [],
+        // A save from before quests existed (or from yesterday) starts the day
+        // clean — todaysQuests() is derived from the date, never stored.
+        quests: p.quests ?? freshQuests(todayKey()),
       };
       // A returning player shouldn't be met by a dozen "just unlocked!" reveals
       // for levels they opened months ago — the first time this field appears,
@@ -102,15 +108,14 @@ export function loadProgress(): Progress {
     seen: LEVELS.slice(0, LOOKAHEAD).map((l) => l.id),
     banked: [],
     keys: [],
+    quests: freshQuests(todayKey()),
   };
 }
 
 export function saveProgress(p: Progress) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(p));
-  } catch {
-    /* ignore */
-  }
+  // storage.ts writes through to every backend that will take it (localStorage,
+  // the CrazyGames data module, memory) and never throws.
+  writeItem(KEY, JSON.stringify(p));
 }
 
 export function starsForMistakes(mistakes: number): number {
@@ -125,40 +130,6 @@ export function totalStars(p: Progress): number {
 
 export function clearedCount(p: Progress): number {
   return Object.values(p.stars).filter((s) => s > 0).length;
-}
-
-// --- Player rank ----------------------------------------------------------
-// A lightweight XP ladder off lifetime score, for a constant sense of growth.
-// Each level costs ~25% more than the last; titles repeat the top once maxed.
-// Nine titles, localized as rank.1 … rank.9 (see src/i18n).
-const RANK_COUNT = 9;
-
-export interface Rank {
-  level: number; // 1-based
-  /** 1-based index into the rank titles — look up `rank.${titleIndex}`. */
-  titleIndex: number;
-  into: number; // XP into the current level
-  span: number; // XP needed to finish the current level
-  pct: number; // 0-100 progress to next level
-}
-
-export function playerRank(score: number): Rank {
-  let level = 0;
-  let acc = 0;
-  let need = 500;
-  while (score >= acc + need && level < 98) {
-    acc += need;
-    level++;
-    need = Math.round(need * 1.25);
-  }
-  const into = score - acc;
-  return {
-    level: level + 1,
-    titleIndex: Math.min(level, RANK_COUNT - 1) + 1,
-    into,
-    span: need,
-    pct: Math.min(100, Math.round((into / need) * 100)),
-  };
 }
 
 // How many levels ahead of your furthest clear stay unlocked.

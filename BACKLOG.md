@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 32 (the oracle boss is gone; memory + cipher are in,
-so six twists cover twelve chapters).
+_Last updated: iteration 33 (the save survives the iframe, daily quests, a link
+mask that counts letters, modal focus — and the XP/rank ladder is gone).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -21,8 +21,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 - Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
   structure + chapter-key lengths + the campaign curve), `npm run audit`
   (ambiguity helper),
-  `npm test` (engine, deduction, **progress/key gating**, **the debug
-  switch**, i18n),
+  `npm test` (engine, deduction, **progress/key gating**, **quests**,
+  **storage**, **the debug switch**, i18n, sdk),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
@@ -80,6 +80,18 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   per-chapter page stain), buildLetterBank + shuffledLetters (the chapter key's
   exact-letters bank), fmtTime. Split out of Game.tsx so Pairs and the
   Logic Grid don't import the game screen to get at a constant.
+- `storage.ts` — **every** persisted read/write (iteration 33). localStorage
+  when it works (probed with a real write), the CrazyGames data module when the
+  SDK is there, memory always; `startSdkMirror()` reconciles the first two in
+  both directions and reports whether anything durable exists. Nothing else in
+  `src/` touches `localStorage` directly — progress, debug, audio, locale, calm
+  and the tutorial flag all go through here.
+- `quests.ts` — the three daily goals (iteration 33): the pool, the
+  date-seeded draw that never repeats yesterday, and `recordQuest`, which counts
+  an event and pays hints once. Pure; the state rides inside `Progress.quests`
+  and the events are raised in `App.tsx`.
+- `modal.ts` — `useModal()`: focus into a dialog, Tab trapped inside it, Escape
+  to close, focus back to the opener. Used by all six dialogs.
 - `LinkGuess.tsx` — the spell-the-link panel, serving three callers: the normal
   finale, the **early call** (`early` + `onMiss`: one attempt,
   a miss hands the board back), and the **chapter key** (`bank` for an
@@ -271,6 +283,118 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## The save that survives the embed, quests, and a mask that counts (iteration 33)
+
+Five changes, four of them from the "what's worth doing next" read at the top of
+this session and one the owner asked for outright.
+
+### 1. Progress can no longer vanish quietly — `src/storage.ts`
+
+The whole meta-game (100 levels of stars, the 🔥 streak, twelve chapter keys,
+the hint bank) was one JSON blob written straight to `localStorage`, inside a
+`try { } catch { /* ignore */ }`. On CrazyGames the game is third-party content:
+Safari's ITP, Firefox's ETP and Chrome's storage partitioning can hand the embed
+an empty or short-lived store, and some embeds refuse the API outright. A wiped
+save looked exactly like a new player, and the catch swallowed the evidence.
+
+Every read and write now goes through `src/storage.ts`, over three backends:
+
+- **`localStorage`** when it genuinely works — probed once with a real *write*,
+  because a partitioned store can hand back an object whose `setItem` throws;
+- **the CrazyGames data module** (`sdkData()` in `sdk.ts`, new), which survives
+  partitioning. The SDK script is `async`, so `startSdkMirror()` polls for it
+  (12 × 700ms) and then reconciles **both ways**: a key only the platform has is
+  adopted back — that's the recovery — and a key only we have is pushed up,
+  which is the insurance for the *next* visit;
+- **memory**, always, so a session with nothing durable is at least coherent
+  while it lasts.
+
+A save in progress is never overwritten by a stale platform copy: adoption only
+happens for a key we have nothing for. When the mirror settles with nothing
+durable anywhere, the game says so in a bottom banner instead of pretending —
+and `initSdk()` now returns a promise that never rejects, so the mirror can wait
+for the platform to be ready.
+
+`scripts/storage.test.mts` (10 cases) pins the lot: a throwing store, a wiped
+store recovered from the platform, a live save that must *not* be overwritten, a
+late-loading SDK, and no storage at all.
+
+### 2. Daily quests
+
+Three goals drawn per day from a pool of seven (`src/quests.ts`), on the home
+screen where the rank bar used to be. Paid in hints — **1 each, +2 for the set**,
+five a day at most against one hint per level cleared — and granted the moment a
+goal is met, so there is no claim button to find.
+
+The draw is a pure function of the date (a seeded Fisher-Yates over the pool),
+so every device shows the same three with nothing stored, and it can look at
+yesterday's draw: an exact repeat of the three you just cleared swaps its first
+quest for the fourth in the shuffle. Events are raised in `App.tsx` from every
+finished board — `solve` / `perfect` / `link` / `combo` (Game now reports
+`maxCombo`, since the live combo says nothing once the board is over) / `daily` /
+`logic` / `pairs` — and batched, so one clean win that satisfies three quests
+raises one toast rather than burying its own win card. `scripts/quests.test.mts`
+(10 cases) pins the payout-once rule, the set bonus, and the midnight rollover.
+
+**Why quests and not a sixth counter:** everything else the game counts
+accumulates forever, so none of it says anything about *today*. These expire,
+and a `pairs`/`logic` draw is the only thing in the game that nudges a campaign
+player into a mode they've never opened.
+
+### 3. The link mask counts letters
+
+`◆ ? ? ?` was fixed at three marks whatever the pivot was. It's now one `?` per
+letter, with an aria-label that says how many. The link stops being a finale
+lottery and becomes a constraint you can carry through the board — four letters
+plus two solved category names is a real deduction — and the early call gets
+something to be confident *about*. Costs the finale a little difficulty; buys
+the middle of every board a lot.
+
+### 4. Modal focus — `src/modal.ts`
+
+Six dialogs (settings, stats, history, how-to-play, the boss briefing, the
+welcome overlay) rendered over a live screen with the whole page still tabbable
+underneath. `useModal()` replaces the old `useEscape()`: focus moves into the
+panel, Tab and Shift-Tab cycle inside it, Escape still closes, and the opener
+gets focus back on close. The close callback is held in a ref so the effect runs
+exactly once — with it in the dependency list, every parent re-render would have
+yanked focus back to the first button.
+
+### 5. The XP/rank ladder is gone (owner call)
+
+Nine titles over a lifetime-score curve, a progress bar on the home screen and a
+"Rank up!" toast — a second progression system layered on top of stars,
+achievement tiers and streaks, feeding on the same events and telling the player
+nothing they couldn't already see. Removed: `playerRank`/`Rank` from
+`progress.ts`, `celebrateRank` from `App.tsx`, the home-screen bar, and the
+`rank.*` / `home.rank` / `home.xp` keys from both catalogues. **`score` stays** —
+it is the in-game combo currency and the stats line; it just no longer pretends
+to be a level.
+
+### Verification
+
+`npm test` (84 across eight suites, two of them new), `npm run validate`, and
+all four headless playtests against a fresh preview build:
+`playtest.mjs`, `pairs.test.mjs`, `debug.playtest.mjs` and the new
+`iteration33.playtest.mjs` — zero issues, zero console errors. The last one
+covers the four changes end to end: the quest card and a quest paying out
+(hints 3 → 9 for one auto-solved board: +1 win, +4 achievement tiers, +1 quest),
+the STAR board showing four marks, 25 Tabs that never leave the settings dialog
+and focus landing back on the gear, and a browser whose `localStorage.setItem`
+throws — the game plays and the banner appears. Home at 1280×720 still fits the
+embed with no overflow.
+
+### Notes for whoever picks this up next
+
+- The storage warning waits ~8s before it appears, on purpose: that is how long
+  the mirror gives the `async` SDK script to turn up, and crying wolf at
+  first paint would be worse than the wait.
+- Quest rewards are hints. If they ever want to be bigger, `QUEST_REWARD` and
+  `QUEST_SET_BONUS` are the two numbers, and the tests read them rather than
+  hard-coding the totals.
+- The `combo` quest asks for `COMBO_TARGET` (3) — a chain of three groups with
+  no miss between them, which is most of a clean board.
 
 ## The oracle is gone; memory and cipher take its place (iteration 32)
 
@@ -1003,23 +1127,21 @@ pre-fix build before it was kept.
 
 ### Still open
 
-1. **[gameplay] Session quests** — 3 rotating dailies ("solve 2 puzzles", "hit
-   a ×3 combo", "guess a link first try") with hint/XP rewards. The best lever
-   on the session-length metric CrazyGames ranks by, and the biggest unbuilt
-   item. Wants an owner call on reward sizes before it goes in.
+1. ✅ **[gameplay] Session quests — shipped (iteration 33).** Three rotating
+   dailies, paid in hints (1 each, +2 for the set). See the iteration-33
+   section.
 2. **[gameplay] The hint token has one shape** (reveal a theme, then reveal a
    letter). A cheaper option — "rule out one tile" — would let a stuck player
    spend less than a whole theme.
-3. **[gameplay] The link mask is always `◆ ? ? ?`** whatever the pivot's
-   length. One `?` per letter would make the link card a live clue you can
-   narrow while grouping. Real difficulty change → owner call (+ README).
+3. ✅ **[gameplay] The link mask counts letters now (iteration 33).**
 4. **[ux] Landscape phones are reachable but cramped.** The game's two-column
    split needs ≥1024px; at 844×390 it's a single scrolling column, which is why
    the rotate hint exists at all. A compact landscape board (smaller tiles, the
    controls rail at `md` + landscape) would make the dismissal a real option
    rather than an escape hatch.
-5. **[a11y] Modals have no focus trap or focus restore.** Escape closes them
-   now, which was the bigger gap. Still never run against a real screen reader.
+5. ✅ **[a11y] Modal focus — done (iteration 33).** `src/modal.ts` traps Tab
+   and restores focus to the opener. Still never run against a real screen
+   reader.
 6. ✅ **[content] Ambiguity pass — done (iteration 23).** All 576 groups across
    144 boards read one board at a time; 30 conflicts found and fixed. See
    "House rules for authoring a board" below for the classes it turned up.
@@ -1034,9 +1156,9 @@ pre-fix build before it was kept.
    translated — so what a locale actually unlocks today is the Logic Grid
    (pure deduction, no vocabulary) plus every menu, rule and result screen.
    Adding a language is now one file plus a line in `LOCALES`.
-8. **[platform] Save-data resilience in iframes** — localStorage can be
-   partitioned in embeds; mirror progress through the CrazyGames data module
-   when present.
+8. ✅ **[platform] Save-data resilience in iframes — done (iteration 33).**
+   `src/storage.ts` mirrors through the CrazyGames data module, recovers a
+   wiped save from it, and warns when nothing durable exists.
 9. **[polish] Recorded SFX set** — the synth blips are serviceable; real
    samples (tile tap, group pop, win sting) would lift perceived quality.
 10. ✅ **[content] Difficulty is hand-graded now (iteration 29).** The length
@@ -1449,25 +1571,46 @@ Focused on the levers that actually drive a casual web game's reach & retention:
 
 ## Still open / honest caveats
 
-1. **[content, high] Ambiguity is hand-reviewed, not solver-proven.** With
-   groups of four the risk is real; a word that fits two themes will feel unfair.
-   `npm run audit` only flags generic/short spokes, not semantic overlap. Wants a
-   real playtest or an LLM-judge pass over all 248 groups. Iteration 20 found
-   concrete cases by hand (`bark`, `block`) — see review-pass item 2.
-2. **[depth] The link finale is still 1-of-4 multiple choice.** Decoys are
-   smarter but a typed-entry mode (with fuzzy match) would be a bigger challenge.
-3. **[balance] Difficulty is a length heuristic**, not true semantic difficulty;
-   the curve is approximate.
-4. **[i18n] Only a handful of strings are externalized.** Most copy is still
-   inline; full extraction + a second locale remains.
-5. **[ads] CrazyGames integration is a shim.** Real ads/analytics only work once
-   embedded on CrazyGames with their SDK script and an approved build.
-6. **[music] Ambient loop is minimal** (random pentatonic pads); a richer,
+Kept honest as of iteration 33 — three entries here had been overtaken by the
+work and were still being read as current by fresh sessions, which is worse than
+having no list at all.
+
+1. **[content, high] Ambiguity is hand-reviewed, not solver-proven.** Every
+   group across all 181 boards has been read by a human (iterations 23 and 28),
+   and `npm run validate` enforces the four structural rules — but semantic
+   overlap can't be scripted, so any new content batch needs the same read. See
+   *House rules for authoring a board*.
+2. **[balance] Difficulty is hand-graded, one number per board** (iteration 29).
+   What's still approximate: a board that's hard because two groups tempt each
+   other scores the same as one that's hard because the pivot hides. A facet
+   split (abstraction / pivot / interference) would let a chapter be built out
+   of one kind of hard.
+3. **[ads] CrazyGames integration is a shim.** Real ads/analytics only work once
+   embedded on CrazyGames with their SDK script and an approved build. The
+   **data module** is now used for real (iteration 33), but likewise can only be
+   verified on-platform — off-platform it is correctly absent.
+4. **[music] Ambient loop is minimal** (random pentatonic pads); a richer,
    layered track with a real volume slider would feel more premium.
-7. **[a11y] Not audited with a real screen reader / keyboard-only run**; tile
-   selection works via Tab+Space but hasn't been formally tested.
+5. **[polish] Recorded SFX set** — the synth blips are serviceable; real samples
+   (tile tap, group pop, win sting) would lift perceived quality.
+6. **[a11y] Not audited with a real screen reader.** Keyboard play is in better
+   shape than it was — Escape closes every dialog, Tab is trapped inside one and
+   handed back to the opener (iteration 33), tile selection works via Tab+Space
+   — but none of it has been run past an actual screen reader.
+7. **[ux] Landscape phones are reachable but cramped.** The two-column split
+   needs ≥1024px; at 844×390 it's a single scrolling column, which is why the
+   rotate hint exists. A compact landscape board would make dismissing that hint
+   a real option rather than an escape hatch.
 8. **[mobile] Tall end-state layouts** (link card + 4 banners + grid) can scroll
    on small phones.
+9. **[gameplay] The hint token has one shape** (reveal a theme, then a letter).
+   A cheaper option — "rule out one tile" — would let a stuck player spend less
+   than a whole theme.
+
+**Corrected here, so it isn't re-read as open:** i18n is done (iteration 23 — a
+full catalogue per locale, English + Spanish, `npm test` fails on a missing key);
+the link finale is not multiple choice (it is tap-or-type spelling, with the
+early call on top); difficulty is no longer a length heuristic.
 
 ## Possible next ideas
 - Leaderboards / cloud save (needs a backend).

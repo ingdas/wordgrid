@@ -16,6 +16,9 @@ const location = { search: "" };
 g.window = { location };
 
 const { isDebug, setDebug, resetDebugCache } = await import("../src/debug.ts");
+// The switch reads through src/storage.ts, which keeps its own in-memory copy
+// of every key — clearing the fake store alone would leave that copy standing.
+const { resetStorageCache } = await import("../src/storage.ts");
 const { isUnlocked, keyLockedBoss, loadProgress } = await import("../src/progress.ts");
 const { CHAPTERS, LEVELS } = await import("../src/puzzles.ts");
 
@@ -29,6 +32,7 @@ function test(name: string, fn: () => void) {
 /** Start each case from a known state: storage empty, no query, no cache. */
 function reset(search = "") {
   store.clear();
+  resetStorageCache();
   location.search = search;
   resetDebugCache();
 }

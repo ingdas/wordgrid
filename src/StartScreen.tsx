@@ -10,9 +10,17 @@ import {
   liveDailyStreak,
   msUntilNextDaily,
   furthestCleared,
-  playerRank,
   type Progress,
 } from "./progress";
+import { todayKey } from "./progress";
+import {
+  todaysQuests,
+  questsFor,
+  questProgress,
+  questDone,
+  QUEST_SET_BONUS,
+  SET_ID,
+} from "./quests";
 import { getLocale, t } from "./i18n";
 
 const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
@@ -66,7 +74,9 @@ export default function StartScreen({
   const returning = stars > 0 || progress.bestStreak > 0;
   const dailyDone = dailyDoneToday(progress);
   const nextLevel = Math.min(furthestCleared(progress) + 2, LEVELS.length);
-  const rank = playerRank(progress.score);
+  const questDate = todayKey(now);
+  const quests = questsFor(progress.quests, questDate);
+  const questList = todaysQuests(questDate);
   const week = dailyWeek(progress, now);
   // A streak only counts while it's still alive (cleared today or yesterday).
   const streakNow = liveDailyStreak(progress, now);
@@ -274,6 +284,10 @@ export default function StartScreen({
       </motion.div>
 
       <div className="flex w-full flex-col items-center lg:col-start-1 lg:row-start-2">
+      {/* Three goals that expire at midnight. Everything else the game counts
+          (stars, tiers, lifetime score) accumulates forever and so says nothing
+          about today; these are the reason to come back, and the nudge that
+          gets a campaign player to open a mode they've never tried. */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -281,20 +295,32 @@ export default function StartScreen({
         className="mt-8 w-full max-w-xs rounded-2xl border border-ink/20 bg-white px-4 py-3 lg:mt-6"
       >
         <div className="flex items-baseline justify-between">
-          <span className="font-display text-sm font-bold text-ink">
-            {t("home.rank", { level: rank.level, title: t(`rank.${rank.titleIndex}`) })}
-          </span>
+          <span className="font-display text-sm font-bold text-ink">{t("quest.title")}</span>
           <span className="text-[0.7rem] font-semibold text-ink-soft">
-            {t("home.xp", { into: rank.into, span: rank.span })}
+            {t("quest.count", { done: questList.filter((d) => questDone(quests, d)).length, total: questList.length })}
           </span>
         </div>
-        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink/10">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${rank.pct}%` }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            className="h-full rounded-full bg-press"
-          />
+        <ul className="mt-2 space-y-1.5">
+          {questList.map((def) => {
+            const done = questDone(quests, def);
+            const at = questProgress(quests, def);
+            return (
+              <li key={def.id} className="flex items-center gap-2">
+                <span className={`text-sm ${done ? "" : "opacity-45"}`} aria-hidden>
+                  {def.icon}
+                </span>
+                <span className={`flex-1 text-left text-[0.72rem] font-semibold leading-tight ${done ? "text-ink-soft line-through" : "text-ink"}`}>
+                  {t(def.titleKey, { n: def.goal })}
+                </span>
+                <span className={`shrink-0 text-[0.7rem] font-bold ${done ? "text-leaf" : "text-ink-soft"}`}>
+                  {done ? "✓" : def.goal > 1 ? `${at}/${def.goal}` : "💡"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-2 border-t border-dashed border-ink/15 pt-1.5 text-left text-[0.65rem] font-semibold text-ink-soft">
+          {quests.claimed.includes(SET_ID) ? t("quest.set.done") : t("quest.set.hint", { n: QUEST_SET_BONUS })}
         </div>
       </motion.div>
 

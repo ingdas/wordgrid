@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
+import { useModal } from "./modal";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
 import { plural, t } from "./i18n";
@@ -58,7 +59,16 @@ interface GameProps {
   onDebugHints?: () => void;
   onUseHint: () => void;
   onRefillHints: () => Promise<boolean>;
-  onWin: (result: { stars: number; linkCorrect: boolean; timeMs: number; mistakes: number; title: string; score: number }) => void;
+  onWin: (result: {
+    stars: number;
+    linkCorrect: boolean;
+    timeMs: number;
+    mistakes: number;
+    title: string;
+    score: number;
+    /** Longest unbroken solve chain — a daily quest asks for a ×3. */
+    maxCombo: number;
+  }) => void;
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
@@ -147,6 +157,9 @@ export default function Game({
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const comboRef = useRef(0);
+  // The combo resets on every miss, so the live value says nothing about the
+  // board once it's over; the quest cares about the best chain of the run.
+  const maxComboRef = useRef(0);
   const [pops, setPops] = useState<{ id: number; text: string }[]>([]);
   const popId = useRef(0);
   // Early call: name the link before the last group is found. Worth a big
@@ -277,6 +290,7 @@ export default function Game({
       // does it on every dev render), which would pay the group twice.
       const nc = comboRef.current + 1;
       comboRef.current = nc;
+      if (nc > maxComboRef.current) maxComboRef.current = nc;
       setCombo(nc);
       const pts = 100 * nc;
       setScore((s) => s + pts);
@@ -327,7 +341,15 @@ export default function Game({
       buzz([0, 40, 60, 40]);
       setAnnounce(t("game.a11y.won", { word: puzzle.pivot, stars: finalStars }));
       for (let i = 0; i < finalStars; i++) setTimeout(() => playStar(i), 450 + i * 200);
-      onWin({ stars: finalStars, linkCorrect, timeMs: elapsed, mistakes, title: puzzle.title, score });
+      onWin({
+        stars: finalStars,
+        linkCorrect,
+        timeMs: elapsed,
+        mistakes,
+        title: puzzle.title,
+        score,
+        maxCombo: maxComboRef.current,
+      });
     } else if (status === "lost") {
       reported.current = true;
       // The link stays secret on a loss so it can still be guessed on a replay.
@@ -560,6 +582,7 @@ export default function Game({
     setMoves(0);
     setScore(0);
     comboRef.current = 0;
+    maxComboRef.current = 0;
     setCombo(0);
     setPops([]);
     setOffering(false);
@@ -1138,7 +1161,16 @@ function SecretLink({
             {word}
           </motion.span>
         ) : (
-          <span className="font-display text-2xl font-bold tracking-[0.3em] text-ink">? ? ?</span>
+          // One ? per letter. The mask used to be a fixed `? ? ?` whatever the
+          // pivot was, which made the link something you could only attack at
+          // the end; its length is the first real constraint on it, and it
+          // turns the card into a clue you can narrow while you group.
+          <span
+            className="font-display text-2xl font-bold tracking-[0.3em] text-ink"
+            aria-label={t("game.secretLink.letters", { n: word.length })}
+          >
+            {"?".repeat(word.length).split("").join(" ")}
+          </span>
         )}
       </div>
     </motion.div>
@@ -1434,6 +1466,10 @@ const WELCOME_RULES = [
 ];
 
 function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  // No Escape here: this one is the first thing a new player sees, and the way
+  // past it is a choice (start, or skip) rather than a dismissal. Tab still
+  // stays inside it.
+  const panel = useModal<HTMLDivElement>();
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1449,6 +1485,8 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.92, y: 16 }}
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        ref={panel}
+        tabIndex={-1}
         className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-2xl"
       >
         <motion.div

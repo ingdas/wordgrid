@@ -219,7 +219,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
     [flip, coupleCard]
   );
 
-  // Report each cleared board up exactly once (score → lifetime XP, best moves).
+  // Report each cleared board up exactly once (score → lifetime points, best moves).
   useEffect(() => {
     if (phase !== "done" || reported.current) return;
     reported.current = true;

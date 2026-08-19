@@ -2,13 +2,10 @@
 // generated with the Web Audio API, so the build stays self-contained and
 // loads instantly inside the CrazyGames iframe.
 
+import { readItem, writeItem } from "./storage.ts";
+
 let ctx: AudioContext | null = null;
-let muted = false;
-try {
-  muted = localStorage.getItem("wordgrid:muted") === "1";
-} catch {
-  /* ignore */
-}
+let muted = readItem("wordgrid:muted") === "1";
 
 /** Create/resume the AudioContext. Must be called from a user gesture. */
 export function initAudio() {
@@ -49,11 +46,7 @@ export function isMuted() {
 
 export function setMuted(m: boolean) {
   muted = m;
-  try {
-    localStorage.setItem("wordgrid:muted", m ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+  writeItem("wordgrid:muted", m ? "1" : "0");
 }
 
 function blip(freq: number, at: number, dur: number, type: OscillatorType = "sine", peak = 0.18) {
@@ -114,12 +107,7 @@ export function playStar(index = 0) {
 // --- Ambient background music (synthesized, independent of the SFX mute) -----
 
 let musicTimer: ReturnType<typeof setInterval> | null = null;
-let musicOn = false;
-try {
-  musicOn = localStorage.getItem("wordgrid:music") === "1";
-} catch {
-  /* ignore */
-}
+let musicOn = readItem("wordgrid:music") === "1";
 
 const PENTATONIC = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25]; // C D E G A C
 
@@ -129,11 +117,7 @@ export function isMusicOn() {
 
 export function setMusicOn(on: boolean) {
   musicOn = on;
-  try {
-    localStorage.setItem("wordgrid:music", on ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+  writeItem("wordgrid:music", on ? "1" : "0");
   if (on) startMusic();
   else stopMusic();
 }

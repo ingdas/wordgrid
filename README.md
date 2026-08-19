@@ -10,7 +10,8 @@ word, then build all four groups of three around it.
 
 ## How to play
 
-1. A board shows **12 words** plus a **masked "secret link"** (`◆ ? ? ?`).
+1. A board shows **12 words** plus a **masked "secret link"** — one `?` per
+   letter, so its length is a clue you can work with from the first move.
 2. Tap **three words that share a theme**, then **Submit** — the hidden link
    joins them into a group of four. Its word stays concealed the whole game.
 3. Find all **four groups** (you get **4 mistakes**), then **spell the secret
@@ -18,6 +19,9 @@ word, then build all four groups of three around it.
 4. Worked it out early? **Call the link** with groups still open — one shot per
    level, and it pays a bonus for every group you hadn't found yet.
 5. Fewer mistakes earn more **stars** (3 max per level).
+6. **Three daily quests** ride along on the home screen — "solve 2 puzzles",
+   "hit a ×3 combo", "clear a Pairs board" — drawn fresh at midnight and paid
+   in hints (1 each, +2 for all three).
 
 There are **100 levels** across twelve chapters, each closing on a **boss** that
 plays by its own rule — and says what that rule is: the door and the up-next
@@ -81,12 +85,25 @@ in **Settings → Developer**. It gives you:
 Nothing about it leaks into a normal save: the tray is only mounted while debug
 is on, and the switch lives in its own localStorage key (`wordgrid:debug`).
 
+### Saving
+
+Progress goes through [`src/storage.ts`](./src/storage.ts), not straight to
+`localStorage`. Inside the CrazyGames iframe the game is third-party content,
+and the browser can partition, empty or refuse that store — so every write also
+goes to the **CrazyGames data module** when it's there, and on load the two are
+reconciled: a save the platform still holds is adopted back, and a local-only
+save is pushed up before the browser can lose it. When *nothing* durable is
+available the session still plays out of memory, and says so in a banner rather
+than pretending it saved.
+
 ### Automated playtest
 
 `scripts/playtest.mjs` drives a headless Chrome through the solve / lose /
 reduced-motion flows and asserts on the DOM (including that the pivot is never
-distinguishable by colour mid-game). See [`BACKLOG.md`](./BACKLOG.md) for how to
-run it and the latest findings.
+distinguishable by colour mid-game). `scripts/pairs.test.mjs`,
+`scripts/debug.playtest.mjs` and `scripts/iteration33.playtest.mjs` (quests,
+the link mask, modal focus, storage-less play) cover the rest. See
+[`BACKLOG.md`](./BACKLOG.md) for how to run them and the latest findings.
 
 ## Hosting on GitHub Pages
 
