@@ -671,7 +671,14 @@ function BossPanel({
       ? t(`twist.${twist}.short`)
       : "? ? ?";
 
-  const label = t(`boss.a11y.${state}`, { n: chapter + 1, level: boss + 1, title: levelTitle(boss) });
+  // …and the name on its own ("impostors", "blackout") is a label, not a rule.
+  // Once the twist is out, the door says what it actually does, so the player
+  // walks in knowing which game they're about to play. A beaten door has
+  // nothing left to warn about — it names the board instead.
+  const doorRule = known && twist && state !== "beaten" ? t(`twist.${twist}.rule`) : null;
+
+  const label = t(`boss.a11y.${state}`, { n: chapter + 1, level: boss + 1, title: levelTitle(boss) })
+    + (doorRule ? `. ${doorRule}` : "");
 
   return (
     <motion.div
@@ -794,6 +801,9 @@ function BossPanel({
           >
             {headline}
           </div>
+          {doorRule && (
+            <div className="text-[0.62rem] font-semibold leading-snug text-paper/75">{doorRule}</div>
+          )}
           <div className="truncate text-[0.6rem] font-semibold text-paper/60">{t(`boss.${state}`)}</div>
         </div>
 
@@ -1062,6 +1072,13 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
             <div className="mt-0.5 text-xs text-ink-soft lg:mt-1 lg:text-sm">
               {twist ? t("levels.boss.twist", { what: t(`twist.${twist}.short`) }) : t("levels.upNext.blurb")}
             </div>
+            {/* The card you actually press Play on says what the boss does,
+                not just what it's called. */}
+            {twist && (
+              <div className="mt-1 text-xs font-semibold leading-snug text-ink lg:text-sm">
+                {t(`twist.${twist}.rule`)}
+              </div>
+            )}
           </div>
           <button
             onClick={onPlay}

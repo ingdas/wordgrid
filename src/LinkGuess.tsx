@@ -11,6 +11,7 @@ import { t } from "./i18n";
 export function LinkGuess({
   early = false,
   bank: providedBank,
+  suspended = false,
   titleKey,
   bodyKey,
   dismissKey,
@@ -31,6 +32,9 @@ export function LinkGuess({
   /** Use these tiles instead of a generated bank (the chapter keys pass the
    *  exact letters the player banked, with no decoys). */
   bank?: string[];
+  /** A dialog is over the board (the boss briefing): ignore the keyboard, or
+   *  reading the rules would type letters into the answer behind it. */
+  suspended?: boolean;
   /** Copy overrides, for callers that aren't the finale. */
   titleKey?: string;
   bodyKey?: string;
@@ -113,7 +117,7 @@ export function LinkGuess({
   // first unused tile bearing it, Backspace undoes. Tapping still works.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (resolved || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (resolved || suspended || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Backspace") {
         e.preventDefault();
         backspace();

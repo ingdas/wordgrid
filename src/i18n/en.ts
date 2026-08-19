@@ -119,6 +119,16 @@ export const en: Record<string, string> = {
   "boss.a11y.open": "Play the boss of chapter {n}, level {level}",
   "boss.a11y.beaten": "Boss of chapter {n} defeated, {title}",
 
+  // The briefing: what this boss actually does to the game, said in full
+  // before the board is playable and reachable from the board afterwards.
+  "boss.brief.eyebrow": "Boss fight",
+  "boss.brief.what": "What changes",
+  "boss.brief.how": "How to play it",
+  "boss.brief.cta": "Got it — bring it on",
+  "boss.brief.a11y": "Boss rules: {what}",
+  "boss.rule.cta": "Rules",
+  "boss.rule.a11y": "Boss rules — {what}: {rule} Open the full briefing.",
+
   // --- in game ------------------------------------------------------------
   "game.level": "Level {n}",
   "game.daily": "Daily",
@@ -258,6 +268,9 @@ export const en: Record<string, string> = {
   "help.step3.title": "Guess the link, earn stars",
   "help.step3.body":
     "Find all four groups (four mistakes allowed), then spell the secret word that links them all. Spot it early? Call it for a bonus — one shot per level.",
+  // Opened mid-boss, the sheet leads with the boss you are actually fighting —
+  // the three ordinary steps are not what a stuck player came here for.
+  "help.boss.eyebrow": "This level is a boss",
   "help.letsPlay": "Let's play",
   "stats.title": "Your stats",
   "stats.score": "Total score",
@@ -463,13 +476,40 @@ export const en: Record<string, string> = {
   "twist.emoji.short": "emoji only",
   "twist.decoy.short": "impostors",
   "twist.blackout.short": "blackout",
-  "twist.scramble.intro": "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
-  "twist.cipher.intro": "👑 Boss fight — the vowels are gone. Read the consonants, then group them!",
-  "twist.memory.intro":
-    "🙈 Boss fight — study the board, then flip it face-down and group from memory. Take all the time you want.",
-  "twist.emoji.intro": "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
-  "twist.decoy.intro": "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
-  "twist.blackout.intro": "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
+  // The rule in one line. This is the string that has to carry the mechanic on
+  // its own: it sits on the boss door, on the board the whole fight, and in the
+  // how-to-play sheet — everywhere a name like "blackout" would say nothing.
+  "twist.scramble.rule": "Every tile is an anagram — unscramble it, then group.",
+  "twist.cipher.rule": "Every tile has lost its vowels — read the consonants, then group.",
+  "twist.memory.rule": "Study the board, flip it face-down, and group from memory.",
+  "twist.emoji.rule": "Every tile is a picture. There are no letters on the board.",
+  "twist.decoy.rule": "Three of the fifteen tiles belong to no group at all.",
+  "twist.blackout.rule": "Groups you solve go dark and stay hidden until the reveal.",
+  // The briefing's two halves: what the twist does to the board, then what the
+  // player is supposed to do about it.
+  "twist.scramble.brief.a":
+    "The twelve words are all still there, but every tile arrives with its letters shuffled.",
+  "twist.scramble.brief.b":
+    "Decode a tile before you use it. Shuffle, hints and your four mistakes work exactly as they always do.",
+  "twist.cipher.brief.a":
+    "The twelve words are all still there, but every tile has had its vowels taken out: CRASH arrives as CRSH.",
+  "twist.cipher.brief.b":
+    "The consonants keep each word's shape, so read a tile back before you use it. Shuffle, hints and your four mistakes are unchanged.",
+  "twist.memory.brief.a":
+    "Nothing starts until you say so: study the twelve words for as long as you like, then flip the board and every tile becomes a numbered card back.",
+  "twist.memory.brief.b":
+    "Group the tiles you remember. Three peeks turn one back over for a moment, and the board can't be shuffled — where a tile sits is yours to keep.",
+  "twist.emoji.brief.a": "This board has no words on it at all — twelve emoji stand in for them.",
+  "twist.emoji.brief.b":
+    "Name each picture yourself, then group the three that share a theme. The secret link is still spelled out at the end.",
+  "twist.decoy.brief.a":
+    "Impostors have been salted onto the board: fifteen tiles, and only twelve of them belong to a group.",
+  "twist.decoy.brief.b":
+    "A group with an impostor in it busts like any wrong guess and costs a mistake, so spot the fakes before you submit.",
+  "twist.blackout.brief.a":
+    "Every group you find is boarded up — its theme and its three words vanish instead of staying on screen.",
+  "twist.blackout.brief.b":
+    "You can't read your own progress back off the board, so keep track of what you have already used.",
 
   // --- achievements -------------------------------------------------------
   "ach.tier.0": "Bronze",

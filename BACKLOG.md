@@ -1,6 +1,6 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 31 (the oracle boss is gone; memory + cipher are in,
+_Last updated: iteration 32 (the oracle boss is gone; memory + cipher are in,
 so six twists cover twelve chapters).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
@@ -58,8 +58,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
   BossTwist type +
   CHAPTER_TWISTS (scramble/cipher/emoji/blackout/decoy/memory — **no time
-  pressure,
-  owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles;
+  pressure, owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle,
+  decoyTiles;
   CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
   see iteration 26; `npm run validate` checks their lengths).
   **Category-name rules enforced by `npm run validate`** (it exits non-zero):
@@ -85,10 +85,15 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   a miss hands the board back), and the **chapter key** (`bank` for an
   exact-letters bank, `titleKey`/`bodyKey` for its copy, `dismissKey` for a
   panel with no "give up" to offer).
+- `BossBriefing.tsx` — the boss's rules: `BossBriefing` (the dialog the game
+  opens on an unbeaten boss and the board's rule strip reopens) and `BossRules`
+  (its what-changes / how-to-play pair, reused by the how-to-play sheet).
+  Copy lives in i18n as `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
 - `EndCard.tsx` — win/loss card, StarRow, RATINGS, share (canvas + Web Share).
 - `Game.tsx` — the in-game screen. Key props: puzzleIndex,
   overrideRaw (play a non-campaign RawPuzzle — daily pool / Endless), twist,
-  daily, endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
+  bossBeaten (a boss with stars doesn't re-open its briefing), daily,
+  endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
   onLoss (carry title+score), onNext/onExit. Systems inside: score+combo with
   floating pops; tap-**or-type**-to-spell finale; **early link call** (offered
   once a group is solved and ≥2 remain, not during the tutorial;
@@ -267,7 +272,7 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
-## The oracle is gone; memory and cipher take its place (iteration 31)
+## The oracle is gone; memory and cipher take its place (iteration 32)
 
 **What was removed.** The `"oracle"` boss twist — the inversion that showed you
 all twelve words *and* the four theme names up front and made you name the
@@ -275,7 +280,10 @@ hidden link before grouping anything. Gone from `BossTwist`, `CHAPTER_TWISTS`,
 `suitsTwist`, `Game.tsx` (the up-front `"guessing"` phase, `oraclePending`, the
 theme panel, the `twist !== "oracle"` carve-out on the early call, the
 grouping-phase branch in `revealLinkWord`), `LinkGuess.tsx` (the `oracle` prop
-and its copy), and both locale files (`twist.oracle.*`, `finale.oracle.*`).
+and its copy), and both locale files (`twist.oracle.*` — including the briefing
+copy iteration 31 had just written for it — plus `finale.oracle.*` and
+`game.oracle.prompt`). `LinkGuess`'s `suspended` prop stays: the rule strip can
+reopen the briefing over an open early call, which is the same keystroke leak.
 
 **Why it earned its place on the chopping block.** It was the only twist that
 changed the *shape of a round* rather than how the board reads, and it fought
@@ -348,7 +356,8 @@ playtest are all clean, and both bosses were played through in a real browser.
 
 - **the brief** — the four theme names are shown up front, and you assign tiles
   to a *named* group instead of free-grouping. It recycles the oracle's theme
-  panel (the good half of that twist) without the cold-spelling lottery, and it
+  panel — the good half of that twist, kept in git history — without the
+  cold-spelling lottery, and it
   is genuinely harder than it sounds: named themes turn every near-miss into a
   deliberate choice. Board fit: needs category names that don't leak the pivot —
   already a validate rule, so any board qualifies.
@@ -357,6 +366,67 @@ playtest are all clean, and both bosses were played through in a real browser.
   later" strategy that carries most boards, and costs only a re-seed of
   `displayOf` keyed on `solved.length`. Board fit: the scramble rule (spokes
   ≤ 7 letters). Ordering: never adjacent to **scramble** or **cipher**.
+
+## The boss briefing — every twist explains itself (iteration 31)
+
+*(Written before iteration 32 dropped the oracle. The briefing system below is
+current; every mention of the oracle in it is history — its rule and briefing
+copy went with the twist, and memory and cipher were written into the same
+`twist.*.rule` / `.brief.a` / `.brief.b` slots.)*
+
+Owner report: *"the individual boss mechanics are not clear to the player."*
+They were right, and the reason was that the game only ever **named** them.
+A boss's rule reached the player through exactly two channels:
+
+- a **1.9-second toast** on entering the level (`twist.*.intro`), fired once,
+  unrecoverable — blink, or come back to the level tomorrow, and the rules of
+  the board you're on are gone;
+- a **two-word noun phrase** — "impostors", "blackout", "the oracle" — on the
+  boss door, the up-next card, the win card's Next button and the top bar.
+  Names, not rules. "Blackout" tells a player nothing about what the board is
+  about to do to them, and the one that *sounds* self-explanatory is the one
+  that misleads: "the oracle" gives no hint that grouping is locked until you
+  spell the link.
+
+Nothing else said a word, including the **?** button — asked for help mid-boss,
+it explained the ordinary game the player was already playing.
+
+### What each twist now says for itself
+
+Every twist gained a **rule** (one line, the mechanic in a sentence) and a
+two-part **briefing** (`brief.a` = what changes, `brief.b` = how to play it),
+in `en` and `es`. `twist.*.intro` is gone — the toast it fed is what failed.
+
+### Where it says it
+
+- **The briefing** (`BossBriefing.tsx`) — a dialog, not a toast: crown, twist
+  name, the rule, then what changes / how to play it. It **opens itself on a
+  boss you haven't beaten** (`bossBeaten` = the level has stars) and waits to be
+  dismissed; a boss you've already cleared doesn't re-brief you.
+- **A rule strip on the board**, under the header, for as long as the rule is in
+  force (it goes at the win/loss card). It states the rule and **reopens the
+  briefing** when tapped — the recall path the toast never had. On lg it drops
+  its own eyebrow, because the top bar names the twist right beside it and the
+  1280×720 embed has no vertical room to spare.
+- **The how-to-play sheet leads with the boss** you're actually fighting, above
+  the three ordinary steps (and now scrolls, because that stack is taller than
+  a phone).
+- **The boss door and the up-next card** carry the rule under the name, so the
+  choice to walk in is made knowing which game is behind it. A *beaten* door
+  still names the board it was — there's nothing left to warn about.
+
+### Fixed on the way through
+
+- The Oracle's "the four themes — what single word joins them all?" prompt was
+  **hard-coded English** in `Game.tsx`; it's `game.oracle.prompt` now.
+- `LinkGuess` takes `suspended`: its window keydown handler would otherwise
+  **type the briefing-reader's keystrokes into the answer** behind the dialog,
+  which the Oracle (whose guess phase is open from the first frame) would hit
+  every time.
+
+`playtest.mjs` covers the new flow (the briefing explains the twist → dismiss →
+the rule survives on the board → tapping it reopens the briefing). All three
+headless suites and `npm test` pass with zero issues.
 
 ## Debug mode: hints, auto-solve, tools (iteration 30)
 
@@ -464,7 +534,7 @@ which nothing used to ask:
   bosses are now `stick`, `crash`, `swing` — nothing over 7 letters.
 - **oracle** made you name the link cold, so a long or unusual pivot turned
   lateral thinking into a spelling lottery: pivots were capped at 5 letters
-  (`wave`, `nail`, `spot`). *(Twist dropped in iteration 31.)*
+  (`wave`, `nail`, `spot`). *(Twist dropped in iteration 32.)*
 - **decoy** salts the board with impostors, so it refuses **compound-word
   boards**. This one was a genuine fairness bug in the first pass of this
   iteration: it cast `palm` as the decoy boss, where SPRINGS / BEACH / SUNDAY can
@@ -651,7 +721,7 @@ so the chapter's own name is the clue.
 
 It reuses what the game already teaches: `LinkGuess` is the finale's panel, and
 this is its fourth caller (finale / Oracle / early call / chapter key — the
-Oracle was dropped in iteration 31, leaving three). It took
+Oracle was dropped in iteration 32, leaving three). It took
 three new optional props — `bank`, copy overrides, and a `dismissKey` for a
 panel that has no "give up" to offer.
 
@@ -1314,7 +1384,7 @@ N. ✅ **Story/level-map progression** — chapters with flavor text + boss node
    - **scramble** — every tile is an anagram you decode before grouping.
    - ~~**the oracle**~~ — the puzzle turned inside out: all twelve words *and*
      the four theme names up front, deduce + type the hidden link FIRST, then
-     group. **Removed in iteration 31** — see that section.
+     group. **Removed in iteration 32** — see that section.
    - **impostors (decoy)** — three trap tiles belong to NO group; include one in
      a guess and the group busts, so you have to spot the fakes (15-tile board).
    - **blackout** — solved group names/words stay hidden until the final reveal,

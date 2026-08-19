@@ -229,10 +229,34 @@ if (!bossNode) note("No boss node found for the boss test.");
 else {
   await bossNode.click();
   await sleep(600);
+  // The briefing opens itself on a boss you haven't beaten, and it has to say
+  // what the twist DOES — a name on its own ("scrambled tiles") is the thing
+  // players couldn't read the mechanic out of.
+  const brief = await bodyText();
+  const briefed = /boss fight/i.test(brief) && /anagram/i.test(brief) && /what changes/i.test(brief);
+  log("boss briefing explains the twist:", briefed);
+  if (!briefed) note("The boss briefing did not explain the scramble twist.");
+  await p.screenshot({ path: `${SHOT}/r9-boss-brief.png` });
+
+  if (!(await clickText("button", "Got it"))) note("The boss briefing has no dismiss button.");
+  await sleep(400);
   const bt = await bodyText();
   log("first boss shows scrambled tiles:", /scrambled/i.test(bt));
   if (!/scrambled/i.test(bt)) note("First boss did not show the scrambled-tiles label.");
+  // …and the rule survives the dismissal, so a player who forgets mid-fight
+  // can still read it (and tap it to get the briefing back).
+  const rule = /unscramble it, then group/i.test(bt);
+  log("boss rule stays on the board:", rule);
+  if (!rule) note("The boss rule strip is not on the board after the briefing.");
   await p.screenshot({ path: `${SHOT}/r9-boss.png` });
+
+  const reopened = await clickText("button", "unscramble it, then group");
+  await sleep(400);
+  const back = /what changes/i.test(await bodyText());
+  log("rule strip reopens the briefing:", reopened && back);
+  if (!(reopened && back)) note("Tapping the boss rule did not reopen the briefing.");
+  await clickText("button", "Got it");
+  await sleep(300);
 }
 
 // 10b. Logic Grid: paint a level's real solution and check the board accepts
