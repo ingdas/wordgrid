@@ -75,6 +75,14 @@ export function scrambleWord(word: string): string {
   return out;
 }
 
+/** A word with its vowels stripped (cipher twist): CRASH → CRSH. Y stays —
+ *  it carries the word's shape — and a word that strips to nothing keeps its
+ *  letters, which `suitsTwist` also refuses to cast in the first place. */
+export function cipherWord(word: string): string {
+  const out = word.replace(/[AEIOU]/g, "");
+  return out.length >= 2 ? out : word;
+}
+
 /**
  * Does the typed guess match the secret link? Accepts the pivot and any
  * author-listed synonyms ("if the categories allow it"), and is forgiving about

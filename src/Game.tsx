@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
-import { computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
+import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
@@ -21,6 +21,10 @@ import {
 } from "./audio";
 
 const MAX_MISTAKES = 4;
+// The memory boss's peek bank: flip one face-down tile back for a moment.
+// Three is enough to rescue a half-remembered board, too few to read it twice.
+const MEMORY_PEEKS = 3;
+const PEEK_MS = 1400;
 
 // Per-twist flavour shown in the top bar and the one-time intro toast.
 const twistLabel = (tw: BossTwist) => t(`twist.${tw}.label`);
@@ -109,6 +113,7 @@ export default function Game({
   const displayOf = useMemo(() => {
     const m = new Map<string, string>();
     if (twist === "scramble") spokeTiles.forEach((w) => m.set(w, scrambleWord(w)));
+    else if (twist === "cipher") spokeTiles.forEach((w) => m.set(w, cipherWord(w)));
     else if (twist === "emoji") spokeTiles.forEach((w) => m.set(w, puzzle.emoji[w] ?? w));
     return (w: string) => m.get(w) ?? w;
   }, [twist, spokeTiles, puzzle.emoji]);
@@ -147,6 +152,13 @@ export default function Game({
   // continue (+2 tries) before the run actually ends.
   const [offering, setOffering] = useState(false);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+  // Memory boss: the board studies face-up until you say you're Ready, then
+  // every tile flips. No countdown — the player decides when the lights go out,
+  // which is what keeps a memory boss chill instead of a reflex test.
+  const [flipped, setFlipped] = useState(false);
+  const [peeks, setPeeks] = useState(MEMORY_PEEKS);
+  const [peekArmed, setPeekArmed] = useState(false);
+  const [peeking, setPeeking] = useState<string | null>(null);
   // Decoys are appended last, so shuffle once up front to scatter the impostors.
   const [order, setOrder] = useState<string[]>(() => (twist === "decoy" ? shuffle(spokeTiles) : spokeTiles));
   const [now, setNow] = useState(Date.now());
@@ -318,6 +330,17 @@ export default function Game({
   const toggleSelect = useCallback(
     (word: string) => {
       if (status !== "playing" || offering) return;
+      // A peek is armed by its own button, so the next tap spends it on that
+      // tile instead of selecting: on a face-down board every tap is a guess
+      // about which tile this is, and one of them has to be the question.
+      if (peekArmed) {
+        setPeekArmed(false);
+        setPeeks((n) => n - 1);
+        setPeeking(word);
+        playSelect();
+        later(() => setPeeking(null), PEEK_MS);
+        return;
+      }
       setSelected((prev) => {
         if (prev.includes(word)) {
           playDeselect();
@@ -328,7 +351,7 @@ export default function Game({
         return [...prev, word];
       });
     },
-    [status, offering]
+    [status, offering, peekArmed, later]
   );
 
   const submit = useCallback(() => {
@@ -405,6 +428,15 @@ export default function Game({
   const shuffleTiles = useCallback(() => {
     playSelect();
     setOrder((o) => shuffle(o));
+  }, []);
+
+  // Ready: flip the memory board. The clock restarts here, so studying for as
+  // long as you like never shows up as a slow round on the win card.
+  const flipBoard = useCallback(() => {
+    playSelect();
+    setFlipped(true);
+    startedAt.current = Date.now();
+    setNow(Date.now());
   }, []);
 
   // The unsolved categories whose theme hasn't been revealed yet.
@@ -525,6 +557,10 @@ export default function Game({
     setSecondChanceUsed(false);
     setEarlyCall(false);
     setEarlyCallSpent(false);
+    setFlipped(false);
+    setPeeks(MEMORY_PEEKS);
+    setPeekArmed(false);
+    setPeeking(null);
     coachMisses.current = 0;
     finaleHinted.current = false;
     setOrder(shuffle(spokeTiles));
@@ -603,6 +639,17 @@ export default function Game({
   const stars = finalStars;
   // Blackout boss: keep solved group names/words hidden until the final reveal.
   const maskSolved = twist === "blackout" && !revealLink;
+  // Memory boss, phase one: the board is readable and nothing else is offered
+  // until Ready flips it.
+  const studying = twist === "memory" && !flipped;
+  // Phase two: tiles stay face-down for as long as the round is live — the
+  // early call keeps them on screen, and a free read of the board is exactly
+  // what the peek bank is there to ration. Only the end of the round turns them
+  // back over, when the board is no use to anyone anyway (a loss still keeps
+  // the link itself secret).
+  const roundOver = status === "won" || status === "lost";
+  const faceDown = (word: string) =>
+    twist === "memory" && flipped && !roundOver && peeking !== word;
   // Show only the groups actually solved (never the unsolved ones on a loss).
   const bannerCats: Category[] = solved;
 
@@ -735,8 +782,13 @@ export default function Game({
                   word={word}
                   display={displayOf(word)}
                   emoji={twist === "emoji"}
+                  // A face-down tile keeps the number it had when the board
+                  // flipped, so "the fourth one" stays a thing you can hold on
+                  // to as its neighbours are solved away.
+                  faceDown={faceDown(word)}
+                  slot={order.indexOf(word) + 1}
                   selected={selected.includes(word)}
-                  disabled={status !== "playing" || offering}
+                  disabled={status !== "playing" || offering || studying}
                   onClick={() => toggleSelect(word)}
                 />
               ))}
@@ -752,17 +804,56 @@ export default function Game({
 
         {/* Right column on wide viewports: stats, controls, finale, end card. */}
         <div className="lg:w-80 lg:shrink-0">
-        {status === "playing" && !offering && (
+        {status === "playing" && !offering && !studying && (
           <div className="mt-4 flex items-center justify-center gap-3 text-xs text-ink-soft">
             <span aria-label={t("game.time")}>⏱ {fmtTime(now - startedAt.current)}</span>
             <span aria-hidden>·</span>
             <span>{plural("common.moves", moves)}</span>
+            {/* Shuffling a face-down board would throw away the one thing the
+                memory boss asks you to keep: where each tile is. */}
+            {twist !== "memory" && (
+              <button
+                onClick={shuffleTiles}
+                className="rounded-full border-2 border-ink px-2.5 py-1 font-semibold text-ink transition hover:bg-cream active:scale-95"
+              >
+                {t("game.shuffle")}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Memory boss: study for as long as you like, then flip. */}
+        {studying && status === "playing" && !offering && (
+          <div className="mt-4 text-center">
             <button
-              onClick={shuffleTiles}
-              className="rounded-full border-2 border-ink px-2.5 py-1 font-semibold text-ink transition hover:bg-cream active:scale-95"
+              onClick={flipBoard}
+              className="w-full rounded-2xl border-2 border-ink bg-gold px-4 py-3 font-display text-lg font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition hover:brightness-105 active:scale-95"
             >
-              {t("game.shuffle")}
+              {t("game.memory.ready")}
             </button>
+            <p className="mt-2 text-xs text-ink-soft">{t("game.memory.study")}</p>
+          </div>
+        )}
+
+        {/* ...and once it's flipped, three peeks to rescue a tile you lost. */}
+        {twist === "memory" && flipped && status === "playing" && !offering && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                if (peeks <= 0) return;
+                setPeekArmed((a) => !a);
+                playSelect();
+              }}
+              disabled={peeks <= 0}
+              className={`rounded-full border-2 px-4 py-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 ${
+                peekArmed ? "border-ink bg-ink text-paper" : "border-dashed border-press/70 text-press hover:bg-press/5"
+              }`}
+            >
+              {t("game.memory.peek", { n: peeks })}
+            </button>
+            <p className="mt-1.5 text-xs text-ink-soft">
+              {peekArmed ? t("game.memory.peekArmed") : t("game.memory.peekHint")}
+            </p>
           </div>
         )}
 
@@ -777,7 +868,7 @@ export default function Game({
           </div>
         )}
 
-        {status === "playing" && !offering && (
+        {status === "playing" && !offering && !studying && (
           <Controls
             mistakes={mistakes}
             max={MAX_MISTAKES}
@@ -1013,6 +1104,8 @@ function WordTile({
   word,
   display,
   emoji,
+  faceDown = false,
+  slot,
   selected,
   disabled,
   onClick,
@@ -1020,12 +1113,17 @@ function WordTile({
   word: string;
   display?: string;
   emoji?: boolean;
+  /** Memory boss: the word is hidden and the tile shows its slot number. */
+  faceDown?: boolean;
+  slot?: number;
   selected: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const shown = display ?? word;
-  const sizeClass = emoji
+  const shown = faceDown ? String(slot ?? "") : (display ?? word);
+  const sizeClass = faceDown
+    ? "font-display text-xl sm:text-2xl"
+    : emoji
     ? "text-3xl sm:text-4xl"
     : shown.length >= 8
       ? "text-[0.7rem] sm:text-xs"
@@ -1033,7 +1131,9 @@ function WordTile({
         ? "text-xs sm:text-sm"
         : "text-sm sm:text-base";
 
-  let look = "border-2 border-ink bg-white text-ink hover:bg-cream";
+  let look = faceDown
+    ? "border-2 border-dashed border-ink/50 bg-cream text-ink-soft hover:bg-white"
+    : "border-2 border-ink bg-white text-ink hover:bg-cream";
   let style: React.CSSProperties | undefined;
   if (selected) {
     look = "bg-ink text-paper";
@@ -1051,7 +1151,9 @@ function WordTile({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={word}
+      // Face-down, the label is the slot — naming the word here would hand the
+      // board to a screen reader the moment the twist hid it.
+      aria-label={faceDown ? t("game.memory.a11y.tile", { n: slot ?? 0 }) : word}
       className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide transition-colors duration-150 ${sizeClass} ${look} disabled:cursor-default`}
       style={style}
     >

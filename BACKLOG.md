@@ -1,6 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 31 (the oracle boss is gone; four twists remain).
+_Last updated: iteration 31 (the oracle boss is gone; memory + cipher are in,
+so six twists cover twelve chapters).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -56,7 +57,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   tutorial ramp) — see iteration 29; CHAPTERS
   (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
   BossTwist type +
-  CHAPTER_TWISTS (scramble/emoji/blackout/decoy — **no time pressure,
+  CHAPTER_TWISTS (scramble/cipher/emoji/blackout/decoy/memory — **no time
+  pressure,
   owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle, decoyTiles;
   CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
   see iteration 26; `npm run validate` checks their lengths).
@@ -67,7 +69,9 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   see iteration 20/21 for what they cost before they were caught.
 - `engine.ts` — pure, unit-tested: evaluateGuess (one-away detection),
   computeStars (mistakes + link-guess), linkMatches (case/plural/synonyms via
-  `accept`), scrambleWord, shuffle, guessKey.
+  `accept`), scrambleWord, cipherWord (vowel-stripping, the cipher boss — and
+  the one value `puzzles.ts` imports back, with an explicit `.ts` extension so
+  the node scripts can load it), shuffle, guessKey.
 - `dailyPuzzles.ts` — the dedicated 80-puzzle DAILY pool (no pivot shared with
   the campaign; plain global-English category names). Also feeds Endless and
   Pairs.
@@ -89,7 +93,11 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   floating pops; tap-**or-type**-to-spell finale; **early link call** (offered
   once a group is solved and ≥2 remain, not during the tutorial;
   spent on opening; hit = reveal + 250×(1+open groups) and play on,
-  miss = no mistake, no star, no second try); second-chance rewarded continue
+  miss = no mistake, no star, no second try); **the memory boss** (study →
+  Ready flips the board to numbered card backs → three armed peeks; the clock
+  restarts at the flip, shuffle is withheld, and the backs stay down through
+  the early call — not to be confused with `Pairs.tsx`, which is its own mode
+  and its own screen); second-chance rewarded continue
   (+2 tries, once per attempt); tutorial coach (WelcomeOverlay modal at step 0,
   sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
   the link (replayable); two-column layout at lg+ (board left, controls rail
@@ -259,7 +267,7 @@ ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
 
-## The oracle is gone (iteration 31)
+## The oracle is gone; memory and cipher take its place (iteration 31)
 
 **What was removed.** The `"oracle"` boss twist — the inversion that showed you
 all twelve words *and* the four theme names up front and made you name the
@@ -281,35 +289,63 @@ re-dealt from the survivors, keeping both standing rules — no two adjacent
 chapters share a twist, and `"emoji"` still appears exactly once (it swaps in
 the one bespoke board, so a second would replay a solved puzzle):
 
-    scramble · decoy · emoji · blackout · decoy · scramble ·
-    blackout · decoy · blackout · scramble · decoy · blackout
+    scramble · cipher · emoji · blackout · decoy · memory ·
+    scramble · blackout · cipher · decoy · blackout · memory
 
-`npm run validate` re-casts the bosses through `suitsTwist` and passes: the
-extra decoy chapters all found compound-free boards. `npm test` and the
-playtest are clean too.
+Two twists replaced it (below), so the deal spreads six across twelve chapters
+with two ordering rules on top of "no adjacent repeats": **memory** never sits
+beside **blackout** (both are "hold what you can no longer see"), and
+**cipher** never beside **scramble** (both are "decode the tile first"). The
+campaign now ends on memory rather than a third blackout.
 
-### Candidate replacements (proposed, not built)
+### memory — the board you can no longer read
 
-Four twists is thin for twelve chapters — chapter 12's finale currently plays
-the same blackout as chapter 9. These are the candidates for the next pass,
-all of them constrained by the owner's hard rule: **no timers, no time
-pressure**.
+(Distinct from `Pairs.tsx`, the standalone 🃏 mode: Pairs is a flip-two
+matching game on the same board, the memory boss is the normal grouping game
+played on a board you can no longer read.)
 
-- **memory** — the board studies face-up for as long as you like, then a
-  **"Ready"** button flips every tile face-down and you group from memory.
-  Deliberately *not* a study countdown; the player decides when the lights go
-  out. Three peeks in the bank (tap a face-down tile to flip it back for a
-  beat); a solved group stays face-up as its banner. Cheapest real twist left:
-  `displayOf` already remaps tile text per twist, so face-down is a third
-  branch beside `scramble` and `emoji`, plus a `flipped` flag and a peek
-  counter. Board fit: spokes ≤ 8 letters and no two spokes sharing a first
-  letter, so a half-remembered tile is still identifiable. Ordering: never
-  adjacent to **blackout**, which is the same muscle.
-- **cipher** — every tile arrives disemvowelled (CRASH → CRSH, STICK → STCK).
-  Reads as harder than scramble but is fairer: the consonant skeleton keeps
-  word shape, so it's decoding rather than anagramming. Same one-line home in
-  `displayOf`. Board fit: no two spokes may share a skeleton, and spokes with
-  fewer than three consonants are out (ORE → R is not a puzzle).
+Study the board face-up for **as long as you like**, press **Ready**, and every
+tile flips to a numbered card back; you group from memory. Deliberately not a
+study countdown — the owner's no-timers rule is not a detail to route around,
+and "the player decides when the lights go out" is a better version of the
+twist anyway. The round's clock only starts at the flip, so a long study is
+never a slow time on the win card.
+
+- **Three peeks.** The peek button arms; the next tile you tap turns over for
+  1.4s instead of selecting. On a face-down board every tap is already a claim
+  about which tile that is, so the question needed its own button.
+- **Numbered backs.** A tile keeps the slot number it had when the board
+  flipped, so "the fourth one" survives its neighbours being solved away. The
+  number is also the tile's aria-label — labelling it with the word would hand
+  the board straight to a screen reader.
+- **No shuffle**, and the board stays face-down through the **early call** (it
+  keeps the tiles on screen, and a free read is exactly what the peek bank is
+  there to ration). Only the end of the round turns them over.
+- **Board fit**: spokes ≤ 8 letters, and no two spokes may share their first
+  two letters. Near-twins are the failure mode — two tiles that start alike are
+  one tile in recall. (The first draft demanded twelve distinct first letters:
+  zero of the hundred boards qualify. The two-letter-prefix rule leaves 27,
+  including grade-5 boards, which is what chapter 12 needs.)
+
+### cipher — the vowels are gone
+
+Every tile arrives stripped: CRASH → CRSH, SPLIT → SPLT. Harder-looking than
+scramble and fairer than it — the consonant skeleton preserves word shape, so
+it's decoding rather than anagramming. `cipherWord` lives in `engine.ts` beside
+`scrambleWord` and is unit-tested.
+
+- **Board fit**: no two spokes may strip to the same skeleton, every skeleton
+  must be at least two letters, and at most three tiles may be two-letter
+  stubs. ICON → CN is readable next to nine fuller tiles and unreadable twelve
+  times over. (Requiring three consonants everywhere left 8 boards, none above
+  grade 4; the stub cap leaves 66 across every grade.)
+
+The cast `npm run validate` produced: cipher on `wave` (ch2) and `snap` (ch9),
+memory on `palm` (ch6) and `mark` (ch12, grade 5). Tests, validate, and the
+playtest are all clean, and both bosses were played through in a real browser.
+
+### Still-open candidates (proposed, not built)
+
 - **the brief** — the four theme names are shown up front, and you assign tiles
   to a *named* group instead of free-grouping. It recycles the oracle's theme
   panel (the good half of that twist) without the cold-spelling lottery, and it
@@ -320,7 +356,7 @@ pressure**.
   get fresh anagrams and a fresh order. Stops the "I'll park these three for
   later" strategy that carries most boards, and costs only a re-seed of
   `displayOf` keyed on `solved.length`. Board fit: the scramble rule (spokes
-  ≤ 7 letters). Ordering: never adjacent to **scramble**.
+  ≤ 7 letters). Ordering: never adjacent to **scramble** or **cipher**.
 
 ## Debug mode: hints, auto-solve, tools (iteration 30)
 

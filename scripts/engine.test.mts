@@ -1,7 +1,7 @@
 // Unit tests for the pure game engine. No test framework needed:
 //   npm test
 import assert from "node:assert/strict";
-import { evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes, linkMatches, scrambleWord } from "../src/engine.ts";
+import { cipherWord, evaluateGuess, guessKey, computeStars, shuffle, starsForMistakes, linkMatches, scrambleWord } from "../src/engine.ts";
 import type { Category } from "../src/puzzles.ts";
 
 const cat = (name: string, spokes: string[]): Category => ({ name, spokes, members: ["LINK", ...spokes] });
@@ -82,6 +82,15 @@ test("scrambleWord is a deterministic anagram that differs from the input", () =
   assert.notEqual(s, w); // reordered
   assert.equal(scrambleWord(w), s); // deterministic
   assert.equal(scrambleWord("A"), "A"); // single letter unchanged
+});
+
+test("cipherWord strips vowels, keeps order, and never empties a tile", () => {
+  assert.equal(cipherWord("CRASH"), "CRSH");
+  assert.equal(cipherWord("SPLIT"), "SPLT");
+  assert.equal(cipherWord("RHYTHM"), "RHYTHM"); // no vowels to take: unchanged
+  assert.equal(cipherWord("IDEA"), "IDEA"); // strips to "D", so the word stands
+  assert.equal(cipherWord("ICON"), "CN"); // a two-letter stub is legal, but
+  // `suitsTwist` caps how many of them a cipher board may carry.
 });
 
 console.log(`\n${passed} engine tests passed ✓`);

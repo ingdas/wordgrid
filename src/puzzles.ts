@@ -6,6 +6,12 @@
 // The pivot is listed in `pivot` and is added to each category's `members` at
 // load time, so the data below stays readable.
 
+// The one value this module borrows: `suitsTwist` has to know what a board
+// looks like once the cipher twist has stripped it. engine.ts only imports a
+// *type* back from here, so nothing circular survives the build. The explicit
+// .ts extension is what lets `npm run validate` load this file under bare node.
+import { cipherWord } from "./engine.ts";
+
 export interface RawCategory {
   /** Human-readable theme revealed once solved. */
   name: string;
@@ -1378,30 +1384,41 @@ const SPANS: Span[] = (() => {
 //  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
 //              pictures instead of words.
 //  - scramble: every tile is an anagram you must decode before grouping.
+//  - cipher:   every tile arrives with its vowels stripped (CRASH → CRSH). The
+//              consonant skeleton keeps the word's shape, so it's decoding
+//              rather than anagramming — harder-looking than scramble, fairer.
 //  - decoy:    three impostor tiles belong to NO group. Include one in a guess
 //              and the group busts; you have to spot the fakes.
+//  - memory:   the board studies face-up for as long as you like; press Ready
+//              and it flips face-down, and you group from memory. Three peeks
+//              in the bank. No countdown — the player decides when the lights
+//              go out, so the game stays chill.
 //  - blackout: solved group names and words stay hidden until the reveal, so
 //              you can't lean on what you've already found.
 
-export type BossTwist = "scramble" | "emoji" | "decoy" | "blackout";
+export type BossTwist = "scramble" | "cipher" | "emoji" | "decoy" | "memory" | "blackout";
 
 // One entry per chapter, and the list is deliberately NOT cycled with a
 // modulo: "emoji" swaps in the one bespoke picture board, so a second emoji
 // chapter would replay a board the player has already solved. Adjacent
 // chapters never repeat a twist either.
+// One entry per chapter. Beyond "no two adjacent chapters repeat", two pairs
+// are kept apart on purpose: `memory` and `blackout` are the same muscle (hold
+// what you can no longer see), and `cipher` and `scramble` are both "decode the
+// tile before you can group it".
 const CHAPTER_TWISTS: BossTwist[] = [
   "scramble",
-  "decoy",
+  "cipher",
   "emoji",
   "blackout",
   "decoy",
+  "memory",
   "scramble",
   "blackout",
+  "cipher",
   "decoy",
   "blackout",
-  "scramble",
-  "decoy",
-  "blackout",
+  "memory",
 ];
 
 /**
@@ -1417,6 +1434,13 @@ const CHAPTER_TWISTS: BossTwist[] = [
  *    PALM, so on a board salted with fakes those three tiles are indistinguishable
  *    from impostors: the twist would be attacking the one group the player has no
  *    way to verify.
+ *  - cipher: the tile keeps its shape but loses its vowels, so the board must
+ *    not lean on words that strip to a two-letter stub (ICON → CN, IDOL → DL).
+ *    A few are readable in context; twelve of them are a different game. Two
+ *    spokes stripping to the same skeleton would also be unguessable.
+ *  - memory: you group tiles you can no longer read, so near-twins are the
+ *    failure mode: two spokes that start alike are one tile in recall. Long
+ *    words go too — recalling ten letters is memorising, not playing.
  *  - blackout / emoji: nothing about the board fights them (the emoji boss
  *    replaces its board outright), so anything can carry them.
  */
@@ -1427,6 +1451,19 @@ export function suitsTwist(twist: BossTwist, raw: RawPuzzle): boolean {
       return spokes.every((w) => w.length <= 7);
     case "decoy":
       return !hasWordplay(raw) && spokes.filter((w) => w.length >= 9).length <= 1;
+    case "cipher": {
+      const skeletons = spokes.map(cipherWord);
+      return (
+        skeletons.every((s) => s.length >= 2) &&
+        skeletons.filter((s) => s.length === 2).length <= 3 &&
+        new Set(skeletons).size === skeletons.length
+      );
+    }
+    case "memory":
+      return (
+        spokes.every((w) => w.length <= 8) &&
+        new Set(spokes.map((w) => w.slice(0, 2))).size === spokes.length
+      );
     default:
       return true;
   }

@@ -144,6 +144,13 @@ export const en: Record<string, string> = {
   "game.wrong": "Those three aren't a group.",
   "game.comboLost": "Combo lost",
   "game.lockedGroup": "Group {n} · locked",
+  // the memory boss
+  "game.memory.ready": "🙈 Ready — flip the board",
+  "game.memory.study": "Take as long as you like. Nothing starts until you flip.",
+  "game.memory.peek": "👁 Peek ({n} left)",
+  "game.memory.peekHint": "Lost a tile? Spend a peek to turn it back over.",
+  "game.memory.peekArmed": "Tap the tile you want to see.",
+  "game.memory.a11y.tile": "Face-down tile {n}",
   "game.lost": "Out of guesses — the link is still a secret. Replay to crack it!",
   "game.a11y.lost": "Out of guesses. Replay the level to discover the secret link.",
   "game.a11y.won": "Solved! The secret link was {word}. {stars} of 3 stars.",
@@ -443,16 +450,23 @@ export const en: Record<string, string> = {
   "chapter.12.name": "The Final Test",
   "chapter.12.flavor": "Everything you've learned.",
   "twist.scramble.label": "Boss · scrambled tiles",
+  "twist.cipher.label": "Boss · no vowels",
+  "twist.memory.label": "Boss · from memory",
   "twist.emoji.label": "Boss · emoji only",
   "twist.decoy.label": "Boss · impostors",
   "twist.blackout.label": "Boss · blackout",
-  // The same four twists as a bare noun phrase, for sentences that already say
+  // The same six twists as a bare noun phrase, for sentences that already say
   // "boss" (the level map's chapter footer and its unlock banner).
   "twist.scramble.short": "scrambled tiles",
+  "twist.cipher.short": "no vowels",
+  "twist.memory.short": "from memory",
   "twist.emoji.short": "emoji only",
   "twist.decoy.short": "impostors",
   "twist.blackout.short": "blackout",
   "twist.scramble.intro": "👑 Boss fight — the tiles are scrambled. Unscramble, then group them!",
+  "twist.cipher.intro": "👑 Boss fight — the vowels are gone. Read the consonants, then group them!",
+  "twist.memory.intro":
+    "🙈 Boss fight — study the board, then flip it face-down and group from memory. Take all the time you want.",
   "twist.emoji.intro": "👑 Boss fight — every tile is an emoji. Read the pictures, then group them!",
   "twist.decoy.intro": "👑 Boss fight — three impostor tiles belong to NO group. Choose carefully!",
   "twist.blackout.intro": "👑 Boss fight — blackout! Solved groups stay hidden until the reveal.",
