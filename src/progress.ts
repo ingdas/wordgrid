@@ -132,6 +132,16 @@ export function clearedCount(p: Progress): number {
   return Object.values(p.stars).filter((s) => s > 0).length;
 }
 
+/**
+ * Endless is what the campaign pays out: no-fail, no chapters, just boards.
+ * It stays shut until every level has at least one star, so finishing the
+ * campaign is the thing that opens it (debug opens it like everything else).
+ */
+export function endlessUnlocked(p: Progress): boolean {
+  if (isDebug()) return true;
+  return clearedCount(p) >= LEVELS.length;
+}
+
 // How many levels ahead of your furthest clear stay unlocked.
 const LOOKAHEAD = 3;
 

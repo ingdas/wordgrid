@@ -10,6 +10,7 @@ import {
   liveDailyStreak,
   msUntilNextDaily,
   furthestCleared,
+  endlessUnlocked,
   type Progress,
 } from "./progress";
 import { todayKey } from "./progress";
@@ -81,6 +82,9 @@ export default function StartScreen({
   // A streak only counts while it's still alive (cleared today or yesterday).
   const streakNow = liveDailyStreak(progress, now);
   const countdown = fmtCountdown(msUntilNextDaily(now));
+  // Endless is the campaign's payoff, so the tile shows as a locked door until
+  // every level is cleared rather than disappearing — you can see what's coming.
+  const endlessOpen = endlessUnlocked(progress);
   const dateLabel = now.toLocaleDateString(getLocale(), { weekday: "short", month: "short", day: "numeric" });
 
   // Portrait keeps a single centred column. On a landscape embed (the 1280×720
@@ -234,28 +238,39 @@ export default function StartScreen({
         <div className="grid w-full grid-cols-3 gap-2">
           {[
             {
-              icon: "🧘",
+              icon: endlessOpen ? "🧘" : "🔒",
               label: t("home.mode.endless"),
-              stat: progress.endlessBest > 0 ? t("home.mode.endless.best", { n: progress.endlessBest }) : t("home.mode.endless.empty"),
+              stat: !endlessOpen
+                ? t("home.mode.endless.locked")
+                : progress.endlessBest > 0
+                  ? t("home.mode.endless.best", { n: progress.endlessBest })
+                  : t("home.mode.endless.empty"),
               onClick: onEndless,
+              locked: !endlessOpen,
             },
             {
               icon: "🃏",
               label: t("home.mode.pairs"),
               stat: progress.pairsBest > 0 ? t("home.mode.pairs.best", { n: progress.pairsBest }) : t("home.mode.pairs.empty"),
               onClick: onPairs,
+              locked: false,
             },
             {
               icon: "🧩",
               label: t("home.mode.logic"),
               stat: t("home.mode.logic.stat", { n: progress.deductionSolved.length, total: DEDUCTION_COUNT }),
               onClick: onDeduction,
+              locked: false,
             },
           ].map((m) => (
             <button
               key={m.label}
-              onClick={m.onClick}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-ink/30 bg-white py-2.5 text-sm font-bold text-ink transition hover:bg-cream active:scale-95"
+              onClick={m.locked ? undefined : m.onClick}
+              disabled={m.locked}
+              aria-label={m.locked ? `${m.label}, ${t("levels.locked")}` : undefined}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-ink/30 bg-white py-2.5 text-sm font-bold text-ink transition ${
+                m.locked ? "cursor-not-allowed opacity-60" : "hover:bg-cream active:scale-95"
+              }`}
             >
               <span className="flex items-center gap-1.5">
                 <span aria-hidden>{m.icon}</span> {m.label}

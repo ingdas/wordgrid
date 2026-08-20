@@ -9,6 +9,7 @@ import {
   bankedLetters,
   isUnlocked,
   bossAwaitingKey,
+  endlessUnlocked,
   keyLockedBoss,
   keyReady,
   keySolved,
@@ -190,6 +191,14 @@ test("Next falls back to the plain next level once nothing is left uncleared", (
   assert.equal(nextLevelIndex(all, 5), 6, "a finished campaign replays in order");
   assert.equal(nextLevelIndex(all, LEVELS.length - 1), null, "…and stops at the end");
   assert.equal(nextLevelIndex(withCleared([LEVELS.length - 1]), LEVELS.length - 1), null);
+});
+
+test("Endless stays locked until the whole campaign is cleared", () => {
+  assert.equal(endlessUnlocked(withCleared([])), false, "a fresh save cannot reach it");
+  const allButOne = withCleared(LEVELS.map((_, i) => i).slice(0, -1));
+  assert.equal(endlessUnlocked(allButOne), false, "one level short is still short");
+  const all = withCleared(LEVELS.map((_, i) => i));
+  assert.equal(endlessUnlocked(all), true, "clearing every level opens it");
 });
 
 console.log(`\n${passed} progress tests passed ✓\n`);

@@ -11,6 +11,7 @@ import {
   dailyPuzzle,
   pushHistory,
   furthestCleared,
+  endlessUnlocked,
   nextLevelIndex,
   markSeen,
   markBanked,
@@ -508,6 +509,9 @@ export default function App() {
   };
 
   const playEndless = useCallback(() => {
+    // The tile is already disabled while the campaign is unfinished; this is the
+    // same rule at the door, so no other caller can slip into Endless early.
+    if (!endlessUnlocked(progress)) return;
     initAudio();
     startMusic();
     endlessQueue.current = shuffleQueue();
@@ -518,7 +522,7 @@ export default function App() {
     setEndless(true);
     setScreen("game");
     gameplayStart();
-  }, []);
+  }, [progress]);
 
   const handleEndlessWin = useCallback(
     (result: { score: number; mistakes: number; linkCorrect: boolean; maxCombo: number }) => {
