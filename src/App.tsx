@@ -818,7 +818,7 @@ export default function App() {
             exit={{ y: -60, opacity: 0 }}
             className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4"
           >
-            <div className="flex items-center gap-3 rounded-2xl border border-gold/60 bg-paper px-4 py-2.5 shadow-2xl">
+            <div className="flex items-center gap-3 rounded-2xl border border-gold/60 bg-paper px-4 py-2.5 shadow-stamp-lg">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold text-lg">
                 {unlockedAch.icon}
               </span>
@@ -844,7 +844,7 @@ export default function App() {
             role="status"
             className="fixed inset-x-0 bottom-3 z-[55] flex justify-center px-4"
           >
-            <div className="flex max-w-sm items-start gap-3 rounded-2xl border-2 border-press bg-paper px-4 py-3 shadow-2xl">
+            <div className="flex max-w-sm items-start gap-3 rounded-2xl border-2 border-press bg-paper px-4 py-3 shadow-stamp-lg">
               <span className="text-lg" aria-hidden>⚠️</span>
               <div className="text-left">
                 <div className="text-sm font-bold text-ink">{t("storage.warn.title")}</div>
@@ -904,7 +904,7 @@ function StatsModal({
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
+        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-stamp-lg"
       >
         <h3 className="font-display text-2xl font-bold text-ink">{t("stats.title")}</h3>
         <dl className="mt-4 divide-y divide-ink/15">
@@ -1023,7 +1023,7 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-sm flex-col rounded-3xl border-2 border-ink bg-paper p-6 shadow-stamp-lg"
       >
         <h3 className="font-display text-2xl font-bold text-ink">{t("history.title")}</h3>
         {progress.history.length === 0 ? (
@@ -1099,7 +1099,7 @@ function ToggleRow({
         className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-leaf" : "bg-ink/15"}`}
       >
         <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? "left-[1.375rem]" : "left-0.5"}`}
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-stamp-sm transition-all ${on ? "left-[1.375rem]" : "left-0.5"}`}
         />
       </button>
     </div>
@@ -1152,7 +1152,7 @@ function SettingsModal({
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
+        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 shadow-stamp-lg"
       >
         <h3 className="font-display text-2xl font-bold text-ink">{t("settings.title")}</h3>
         <div className="mt-3 divide-y divide-ink/15">
@@ -1277,7 +1277,7 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
         onClick={(e) => e.stopPropagation()}
         // Mid-boss the sheet carries the boss's rules on top of the three
         // steps, which is taller than a phone — so it scrolls.
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-2xl"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 shadow-stamp-lg"
       >
         <div className="flex items-center gap-2.5">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-press text-lg text-paper">
@@ -1308,7 +1308,7 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
           {STEPS.map((s) => (
             <div key={s.key} className="flex gap-3 rounded-2xl bg-white p-3">
               <div
-                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${s.grad} text-xl shadow-lg`}
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${s.grad} text-xl shadow-stamp-sm`}
               >
                 <span aria-hidden>{s.icon}</span>
               </div>
@@ -1322,7 +1322,7 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
 
         <button
           onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
+          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-stamp transition hover:scale-[1.02] active:scale-95"
         >
           {t("help.letsPlay")}
         </button>

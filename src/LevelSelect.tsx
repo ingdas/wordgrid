@@ -268,7 +268,7 @@ export default function LevelSelect({
         <button
           onClick={onStats}
           aria-label={t("levels.a11y.stats")}
-          className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-semibold text-ink shadow transition hover:bg-cream active:scale-95"
+          className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           <span>⭐ {stars}/{MAX_STARS}</span>
           {progress.streak >= 2 && <span className="text-gold-deep">🔥 {progress.streak}</span>}
@@ -332,7 +332,7 @@ export default function LevelSelect({
               )}
             </>
           ) : (
-            <div className="mt-5 rounded-3xl border-2 border-ink bg-white p-5 text-center shadow-[3px_3px_0_rgba(38,34,26,0.3)]">
+            <div className="mt-5 rounded-3xl border-2 border-ink bg-white p-5 text-center shadow-stamp">
               <div className="text-3xl" aria-hidden>🏆</div>
               <h3 className="mt-1 font-display text-xl font-bold text-ink">{t("levels.done.title")}</h3>
               <p className="mt-1 text-sm text-ink-soft">{t("levels.done.body")}</p>
@@ -487,7 +487,7 @@ export default function LevelSelect({
           <motion.span
             key="flight"
             aria-hidden
-            className="pointer-events-none fixed z-[80] grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.45)]"
+            className="pointer-events-none fixed z-[80] grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
             style={{
               left: flight.x0 - flight.w / 2,
               top: flight.y0 - flight.h / 2,
@@ -683,7 +683,7 @@ function BossPanel({
   return (
     <motion.div
       ref={panelRef}
-      className="relative mt-3 overflow-hidden rounded-2xl border-2 border-ink shadow-[3px_3px_0_rgba(38,34,26,0.35)]"
+      className="relative mt-3 overflow-hidden rounded-2xl border-2 border-ink shadow-stamp"
       style={{ background: ink.wash, opacity: state === "far" ? 0.9 : 1 }}
       animate={burst && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
       transition={{ duration: 0.5 }}
@@ -812,7 +812,7 @@ function BossPanel({
             onClick={onOpenKey}
             disabled={!canSpell}
             aria-label={label}
-            className="relative shrink-0 rounded-full border-2 border-ink bg-gold px-3.5 py-1.5 text-xs font-extrabold text-ink shadow-[2px_2px_0_rgba(0,0,0,0.45)] transition hover:brightness-105 active:scale-95"
+            className="relative shrink-0 rounded-full border-2 border-ink bg-gold px-3.5 py-1.5 text-xs font-extrabold text-ink shadow-stamp-sm transition hover:brightness-105 active:scale-95"
             animate={reduce ? { scale: 1 } : { scale: [1, 1.055, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
@@ -823,7 +823,7 @@ function BossPanel({
           <motion.button
             onClick={onPlay}
             aria-label={label}
-            className={`relative shrink-0 rounded-full border-2 border-ink px-3.5 py-1.5 text-xs font-extrabold shadow-[2px_2px_0_rgba(0,0,0,0.45)] transition active:scale-95 ${
+            className={`relative shrink-0 rounded-full border-2 border-ink px-3.5 py-1.5 text-xs font-extrabold shadow-stamp-sm transition active:scale-95 ${
               state === "open" ? "bg-press text-paper hover:brightness-110" : "bg-paper text-ink hover:bg-cream"
             }`}
             animate={reduce || state === "beaten" ? { scale: 1 } : { scale: [1, 1.06, 1] }}
@@ -906,7 +906,7 @@ function Rune({
         {filled ? (
           <motion.span
             key="filled"
-            className="absolute inset-0 grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-[2px_2px_0_rgba(38,34,26,0.3)]"
+            className="absolute inset-0 grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
             style={{ background: gold ? "#f0c04a" : ink.fill }}
             initial={reduce ? { opacity: 1 } : { scale: 0.35, rotate: tilt - 22, opacity: 0 }}
             animate={
@@ -997,7 +997,7 @@ function ChapterKeyPanel({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.96, opacity: 0 }}
         transition={{ type: "spring", stiffness: 280, damping: 24 }}
-        className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper px-5 pb-5 pt-4 shadow-[4px_4px_0_rgba(38,34,26,0.5)]"
+        className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper px-5 pb-5 pt-4 shadow-stamp-lg"
       >
         <div className="text-center">
           <span
@@ -1048,7 +1048,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-[3px_3px_0_rgba(38,34,26,0.35)]"
+      className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-stamp"
     >
       <div className="px-4 pb-4 pt-3 lg:px-5 lg:pb-5 lg:pt-4" style={{ background: ink.wash }}>
         <div className="flex items-center justify-between gap-2">
@@ -1082,7 +1082,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
           </div>
           <button
             onClick={onPlay}
-            className="shrink-0 rounded-full bg-press px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95 lg:mt-4 lg:w-full lg:py-3.5 lg:text-base lg:shadow-[4px_4px_0_rgba(38,34,26,0.8)]"
+            className="shrink-0 rounded-full bg-press px-7 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95 lg:mt-4 lg:w-full lg:py-3.5 lg:text-base lg:shadow-stamp-lg"
           >
             {t("levels.play")}
           </button>
@@ -1139,7 +1139,7 @@ function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolea
           // Fixed, not in flow: the page scrolls itself to the chip that's
           // opening, so a banner in the layout would announce the news
           // somewhere the player isn't looking.
-          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-[3px_3px_0_rgba(38,34,26,0.55)] lg:left-[max(1rem,calc((100vw-64rem)/2+1rem))] lg:right-auto lg:mx-0 lg:w-[21rem]"
+          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-stamp lg:left-[max(1rem,calc((100vw-64rem)/2+1rem))] lg:right-auto lg:mx-0 lg:w-[21rem]"
         >
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border-2 border-ink bg-white font-display text-base font-bold">
             {news.icon}
@@ -1306,7 +1306,7 @@ function LevelTile({
   const style: React.CSSProperties = {};
   let face = "border-dashed border-ink/25 bg-cream/60";
   if (showOpen) {
-    face = "border-ink bg-white shadow-[2px_2px_0_rgba(38,34,26,0.3)]";
+    face = "border-ink bg-white shadow-stamp-sm";
     style.color = ink.deep;
   }
 

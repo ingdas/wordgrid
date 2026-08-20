@@ -133,7 +133,7 @@ export default function StartScreen({
             rotate: { type: "spring", stiffness: 200, damping: 14 },
             y: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
           }}
-          className="relative grid h-14 w-14 place-items-center rounded-3xl bg-press text-3xl text-paper shadow-[4px_4px_0_rgba(38,34,26,0.85)] sm:h-20 sm:w-20 sm:text-4xl"
+          className="relative grid h-14 w-14 place-items-center rounded-3xl bg-press text-3xl text-paper shadow-stamp-lg sm:h-20 sm:w-20 sm:text-4xl"
         >
           <span aria-hidden>◆</span>
         </motion.div>
@@ -170,7 +170,7 @@ export default function StartScreen({
         <motion.button
           onClick={onDaily}
           whileTap={{ scale: 0.98 }}
-          className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-[3px_3px_0_rgba(38,34,26,0.25)] transition hover:border-press/60"
+          className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-stamp transition hover:border-press/60"
         >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
@@ -221,7 +221,7 @@ export default function StartScreen({
 
         <button
           onClick={onPlay}
-          className="w-full rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+          className="w-full rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
         >
           {returning ? t("home.continue", { n: nextLevel }) : t("home.play")}
         </button>

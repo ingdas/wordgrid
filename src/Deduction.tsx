@@ -495,7 +495,7 @@ function DeductionBoard({
                 {index < total - 1 && (
                   <button
                     onClick={() => onPick(index + 1)}
-                    className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+                    className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
                   >
                     {t("end.nextPuzzle")}
                   </button>
@@ -512,7 +512,7 @@ function DeductionBoard({
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-[4px_4px_0_rgba(38,34,26,0.4)]"
+            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
           >
             {toast}
           </motion.div>
@@ -643,8 +643,8 @@ function GridTile({
   // is also a box-shadow, and the inline style would silently override it.
   const shadow =
     status === "bad"
-      ? "0 0 0 3px rgba(217,72,43,0.95), 2px 2px 0 rgba(38,34,26,0.25)"
-      : "2px 2px 0 rgba(38,34,26,0.25)";
+      ? "0 0 0 3px rgba(217,72,43,0.95), var(--shadow-stamp-sm)"
+      : "var(--shadow-stamp-sm)";
   return (
     <button
       data-cell={cell}

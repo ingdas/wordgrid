@@ -17,7 +17,7 @@ function StarRow({ stars }: { stars: number }) {
             animate={{ scale: earned ? 1 : 0.8, rotate: 0 }}
             transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.2 + i * 0.2 }}
             style={{ fontSize: 44 }}
-            className={earned ? "drop-shadow-[2px_2px_0_rgba(38,34,26,0.4)]" : "opacity-30 grayscale"}
+            className={earned ? "drop-shadow-stamp" : "opacity-30 grayscale"}
           >
             {earned ? "⭐" : "☆"}
           </motion.div>
@@ -185,14 +185,14 @@ export function EndCard({
           (onNext ? (
             <button
               onClick={onNext}
-              className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+              className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
             >
               {nextLabel ?? t(endless ? "end.nextPuzzle" : "end.next")}
             </button>
           ) : (
             <button
               onClick={onExit}
-              className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+              className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-stamp transition hover:scale-[1.03] active:scale-95"
             >
               {t(daily ? "end.seeYouTomorrow" : "end.allDone")}
             </button>

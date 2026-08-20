@@ -26,11 +26,11 @@ const T = {
 };
 const PAPER_BG = `radial-gradient(90% 70% at 50% 0%,rgba(217,72,43,.05),transparent 60%),radial-gradient(100% 80% at 50% 110%,rgba(38,34,26,.07),transparent 55%),${T.paper}`;
 const logo = (s) =>
-  `<div style="width:${s}px;height:${s}px;border-radius:${Math.round(s * 0.24)}px;display:grid;place-items:center;background:${T.press};box-shadow:${Math.round(s * 0.05)}px ${Math.round(s * 0.05)}px 0 rgba(38,34,26,.85);color:${T.paper};font-size:${Math.round(s * 0.5)}px;line-height:1;">◆</div>`;
+  `<div style="width:${s}px;height:${s}px;border-radius:${Math.round(s * 0.24)}px;display:grid;place-items:center;background:${T.press};box-shadow:${Math.round(s * 0.05)}px ${Math.round(s * 0.05)}px 0 rgba(38,34,26,.5);color:${T.paper};font-size:${Math.round(s * 0.5)}px;line-height:1;">◆</div>`;
 const tile = (t, fs) =>
-  `<div style="padding:${fs * 0.45}px ${fs * 0.7}px;border-radius:${fs * 0.55}px;background:#fff;border:3px solid ${T.ink};box-shadow:4px 4px 0 rgba(38,34,26,.25);font-weight:800;letter-spacing:.06em;color:${T.ink};font-size:${fs}px;font-family:${T.sans};">${t}</div>`;
+  `<div style="padding:${fs * 0.45}px ${fs * 0.7}px;border-radius:${fs * 0.55}px;background:#fff;border:3px solid ${T.ink};box-shadow:4px 4px 0 rgba(38,34,26,.5);font-weight:800;letter-spacing:.06em;color:${T.ink};font-size:${fs}px;font-family:${T.sans};">${t}</div>`;
 const secretTile = (fs) =>
-  `<div style="padding:${fs * 0.45}px ${fs * 0.75}px;border-radius:${fs * 0.55}px;background:${T.press};border:3px solid ${T.ink};box-shadow:4px 4px 0 rgba(38,34,26,.45);font-weight:800;font-size:${fs}px;color:${T.paper};font-family:${T.sans};">◆ ? ? ?</div>`;
+  `<div style="padding:${fs * 0.45}px ${fs * 0.75}px;border-radius:${fs * 0.55}px;background:${T.press};border:3px solid ${T.ink};box-shadow:4px 4px 0 rgba(38,34,26,.5);font-weight:800;font-size:${fs}px;color:${T.paper};font-family:${T.sans};">◆ ? ? ?</div>`;
 
 const cover = (w, h) => {
   const s = Math.min(w, h) / 1080;

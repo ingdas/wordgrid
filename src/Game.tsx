@@ -749,7 +749,7 @@ export default function Game({
         <button
           onClick={() => setBrief(true)}
           aria-label={t("boss.rule.a11y", { what: twistName(twist), rule: twistRule(twist) })}
-          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-left text-paper shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
+          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-left text-paper shadow-stamp transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
         >
           <span aria-hidden className="text-base leading-tight">👑</span>
           <span aria-hidden className="min-w-0 flex-1">
@@ -783,7 +783,7 @@ export default function Game({
                 animate={{ opacity: 1, y: -16, scale: 1 }}
                 exit={{ opacity: 0, y: -40, scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-lg"
+                className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-stamp-sm"
               >
                 {p.text}
               </motion.div>
@@ -890,7 +890,7 @@ export default function Game({
           <div className="mt-4 text-center">
             <button
               onClick={flipBoard}
-              className="w-full rounded-2xl border-2 border-ink bg-gold px-4 py-3 font-display text-lg font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition hover:brightness-105 active:scale-95"
+              className="w-full rounded-2xl border-2 border-ink bg-gold px-4 py-3 font-display text-lg font-bold text-ink shadow-stamp transition hover:brightness-105 active:scale-95"
             >
               {t("game.memory.ready")}
             </button>
@@ -1066,7 +1066,7 @@ export default function Game({
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-[4px_4px_0_rgba(38,34,26,0.4)]"
+            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
           >
             {toast}
           </motion.div>
@@ -1138,7 +1138,7 @@ function SecretLink({
       className={`relative overflow-hidden rounded-2xl border px-4 py-3 text-center ${
         spotlight ? "border-press ring-2 ring-press/60" : "border-ink/25"
       }`}
-      style={{ background: "#fffdf6", border: "2px dashed rgba(38,34,26,0.45)", boxShadow: "3px 3px 0 rgba(38,34,26,0.25)" }}
+      style={{ background: "#fffdf6", border: "2px dashed rgba(38,34,26,0.45)", boxShadow: "var(--shadow-stamp)" }}
     >
       {score > 0 && (
         <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-extrabold text-gold-deep">
@@ -1208,14 +1208,15 @@ function WordTile({
         ? "text-xs sm:text-sm"
         : "text-sm sm:text-base";
 
+  // A tile is a raised chip until you pick it: picking presses it into the page
+  // (it loses the shadow and slides into where the shadow was), which is the
+  // same move as every other pressable surface here. It used to be the other
+  // way round — no shadow until selected, then one — so the board was the one
+  // place where choosing something lifted it off the paper.
   let look = faceDown
-    ? "border-2 border-dashed border-ink/50 bg-cream text-ink-soft hover:bg-white"
-    : "border-2 border-ink bg-white text-ink hover:bg-cream";
-  let style: React.CSSProperties | undefined;
-  if (selected) {
-    look = "bg-ink text-paper";
-    style = { boxShadow: "2px 2px 0 rgba(38,34,26,0.5)" };
-  }
+    ? "border-2 border-dashed border-ink/50 bg-cream text-ink-soft shadow-stamp-sm hover:bg-white"
+    : "border-2 border-ink bg-white text-ink shadow-stamp-sm hover:bg-cream";
+  if (selected) look = "border-2 border-ink bg-ink text-paper translate-x-[2px] translate-y-[2px]";
 
   return (
     <motion.button
@@ -1232,7 +1233,6 @@ function WordTile({
       // board to a screen reader the moment the twist hid it.
       aria-label={faceDown ? t("game.memory.a11y.tile", { n: slot ?? 0 }) : word}
       className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide transition-colors duration-150 ${sizeClass} ${look} disabled:cursor-default`}
-      style={style}
     >
       {shown}
     </motion.button>
@@ -1259,7 +1259,7 @@ function SolvedBanner({
       initial={{ opacity: 0, scale: 0.9, y: -8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className={`flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r ${theme.grad} shadow-lg ${
+      className={`flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r ${theme.grad} shadow-stamp ${
         compact ? "px-3 py-1.5" : "px-4 py-2.5"
       }`}
       style={{ color: theme.ink }}
@@ -1338,7 +1338,7 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
       <button
         onClick={accept}
         disabled={pending}
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
       >
         <span aria-hidden>🎬</span> {t(pending ? "game.continue.loading" : "game.continue.accept")}
       </button>
@@ -1416,7 +1416,7 @@ function Controls({
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="rounded-full bg-ink px-7 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+          className="rounded-full bg-ink px-7 py-2.5 text-sm font-bold text-paper shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
           {t("game.submit")}
         </button>
@@ -1424,7 +1424,7 @@ function Controls({
       {showRefill ? (
         <button
           onClick={onRefill}
-          className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+          className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
         >
           <span className="text-base" aria-hidden>🎬</span>
           {t("game.hint.refill")}
@@ -1433,7 +1433,7 @@ function Controls({
         <button
           onClick={onHint}
           disabled={!canHint}
-          className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+          className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-stamp transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
         >
           <span className="text-base" aria-hidden>💡</span>
           {t("game.hint")}
@@ -1487,13 +1487,13 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
         ref={panel}
         tabIndex={-1}
-        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-2xl"
+        className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-stamp-lg"
       >
         <motion.div
           initial={{ scale: 0, rotate: -25 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
-          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-press text-3xl text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)]"
+          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-press text-3xl text-paper shadow-stamp"
         >
           <span aria-hidden>◆</span>
         </motion.div>
@@ -1520,7 +1520,7 @@ function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () =
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           onClick={onStart}
-          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
+          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-stamp transition hover:scale-[1.02] active:scale-95"
         >
           {t("welcome.start")}
         </motion.button>
@@ -1559,7 +1559,7 @@ function Coach({
       // Sticky: sits in-flow just below the board on tall screens, but pins to
       // the bottom of the viewport on short ones so it's never off-screen.
       // Styled as a sticky note pinned to the puzzle page.
-      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-[3px_4px_0_rgba(38,34,26,0.3)]"
+      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-stamp"
     >
       <div className="flex items-center gap-2">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">

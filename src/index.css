@@ -16,6 +16,23 @@
   --color-gold: #eda820; /* stars, hints */
   --color-gold-deep: #8a5c00; /* gold text on paper */
   --color-leaf: #1c7a4d; /* success green on paper */
+
+  /* Raised surfaces are printed, not lit: one ink, no blur, three offsets.
+     Everything that stands off the page uses one of these — `sm` for tiles,
+     chips and letters, the base for cards, buttons and banners, `lg` for what
+     floats above the page (toasts, dialogs, the logo mark). They live here as
+     theme tokens so a surface can't drift back into its own one-off rgba(),
+     which is how the app ended up with nine different shadows.
+
+     What casts one: anything the page holds — cards, banners, dialogs, word
+     and letter tiles, and the buttons that commit something. What doesn't:
+     chrome. Back arrows, toolbar circles and ghost buttons (Clear, Shuffle)
+     are printed on the page rather than resting on it, so they stay flat. */
+  --shadow-stamp-sm: 2px 2px 0 rgba(38, 34, 26, 0.5);
+  --shadow-stamp: 3px 3px 0 rgba(38, 34, 26, 0.5);
+  --shadow-stamp-lg: 4px 4px 0 rgba(38, 34, 26, 0.5);
+  /* Same ink for glyphs (an emoji has no box to cast one). */
+  --drop-shadow-stamp: 2px 2px 0 rgba(38, 34, 26, 0.5);
 }
 
 :root {

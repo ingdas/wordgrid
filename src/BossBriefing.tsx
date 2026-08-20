@@ -59,13 +59,13 @@ export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: ()
         onClick={(e) => e.stopPropagation()}
         // The longest briefing (the Oracle's) is taller than a 720p embed, so
         // the card scrolls rather than pushing its own dismiss button off.
-        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-2xl"
+        className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-stamp-lg"
       >
         <motion.div
           initial={{ scale: 0, rotate: -25 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
-          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-ink text-3xl text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)]"
+          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-ink text-3xl text-paper shadow-stamp"
         >
           <span aria-hidden>👑</span>
         </motion.div>
@@ -88,7 +88,7 @@ export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: ()
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
           onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.02] active:scale-95"
+          className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-stamp transition hover:scale-[1.02] active:scale-95"
         >
           {t("boss.brief.cta")}
         </motion.button>

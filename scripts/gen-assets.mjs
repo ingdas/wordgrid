@@ -8,7 +8,8 @@ import { launchBrowser } from "./browser.mjs";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
-// Theme tokens, kept in sync with src/index.css.
+// Theme tokens, kept in sync with src/index.css — including the one ink
+// every offset shadow there uses (--shadow-stamp*: rgba(38,34,26,.5)).
 const T = {
   paper: "#faf5ea",
   cream: "#efe7d3",
@@ -24,13 +25,13 @@ const T = {
 const PAPER_BG = `radial-gradient(90% 70% at 50% 0%,rgba(217,72,43,.05),transparent 60%),radial-gradient(100% 80% at 50% 110%,rgba(38,34,26,.07),transparent 55%),${T.paper}`;
 
 const logo = (size) =>
-  `<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.24)}px;display:grid;place-items:center;background:${T.press};box-shadow:${Math.round(size * 0.05)}px ${Math.round(size * 0.05)}px 0 rgba(38,34,26,.85);color:${T.paper};font-size:${Math.round(size * 0.5)}px;line-height:1;">◆</div>`;
+  `<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.24)}px;display:grid;place-items:center;background:${T.press};box-shadow:${Math.round(size * 0.05)}px ${Math.round(size * 0.05)}px 0 rgba(38,34,26,.5);color:${T.paper};font-size:${Math.round(size * 0.5)}px;line-height:1;">◆</div>`;
 
 const tile = (t, fs = 30) =>
-  `<div style="padding:${fs * 0.45}px ${fs * 0.7}px;border-radius:${fs * 0.55}px;background:#fff;border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.25);font-weight:800;letter-spacing:.06em;color:${T.ink};font-size:${fs}px;font-family:${T.sans};">${t}</div>`;
+  `<div style="padding:${fs * 0.45}px ${fs * 0.7}px;border-radius:${fs * 0.55}px;background:#fff;border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.5);font-weight:800;letter-spacing:.06em;color:${T.ink};font-size:${fs}px;font-family:${T.sans};">${t}</div>`;
 
 const secretTile = (fs = 30) =>
-  `<div style="padding:${fs * 0.45}px ${fs * 0.75}px;border-radius:${fs * 0.55}px;background:${T.press};border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.45);font-weight:800;font-size:${fs}px;color:${T.paper};font-family:${T.sans};">◆ ? ? ?</div>`;
+  `<div style="padding:${fs * 0.45}px ${fs * 0.75}px;border-radius:${fs * 0.55}px;background:${T.press};border:2.5px solid ${T.ink};box-shadow:3px 3px 0 rgba(38,34,26,.5);font-weight:800;font-size:${fs}px;color:${T.paper};font-family:${T.sans};">◆ ? ? ?</div>`;
 
 const ogHtml = `<!doctype html><html><body style="margin:0">
 <div style="width:1200px;height:630px;background:${PAPER_BG};color:${T.ink};font-family:${T.serif};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">

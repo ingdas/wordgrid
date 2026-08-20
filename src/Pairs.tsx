@@ -366,7 +366,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
                 </button>
                 <button
                   onClick={newBoard}
-                  className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+                  className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
                 >
                   {t("end.nextPuzzle")}
                 </button>
@@ -382,7 +382,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-[4px_4px_0_rgba(38,34,26,0.4)]"
+            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
           >
             {toast}
           </motion.div>
@@ -455,7 +455,7 @@ function PairCard({
         {/* Back: a Puzzle Press card sleeve */}
         <div
           className="absolute inset-0 grid place-items-center rounded-2xl border-2 border-ink bg-cream text-lg text-ink/30"
-          style={{ backfaceVisibility: "hidden", boxShadow: "2px 2px 0 rgba(38,34,26,0.25)" }}
+          style={{ backfaceVisibility: "hidden", boxShadow: "var(--shadow-stamp-sm)" }}
         >
           <span aria-hidden>◆</span>
         </div>
@@ -474,7 +474,7 @@ function PairCard({
             backfaceVisibility: "hidden",
             rotateY: 180,
             color: matchedTheme?.ink,
-            boxShadow: "2px 2px 0 rgba(38,34,26,0.25)",
+            boxShadow: "var(--shadow-stamp-sm)",
           }}
         >
           <span>
@@ -572,7 +572,7 @@ function LinkSpell({
               className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
                 used
                   ? "border border-ink/10 bg-cream text-ink/15"
-                  : "border-2 border-ink bg-white text-ink hover:bg-cream active:scale-95"
+                  : "border-2 border-ink bg-white text-ink shadow-stamp-sm hover:bg-cream active:scale-95"
               }`}
             >
               {ch}

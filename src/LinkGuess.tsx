@@ -205,7 +205,7 @@ export function LinkGuess({
               className={`grid h-11 w-9 place-items-center rounded-xl text-lg font-extrabold transition ${
                 isUsed
                   ? "border border-ink/10 bg-cream text-ink/15"
-                  : "border-2 border-ink bg-white text-ink hover:bg-cream active:scale-95"
+                  : "border-2 border-ink bg-white text-ink shadow-stamp-sm hover:bg-cream active:scale-95"
               }`}
             >
               {ch}
@@ -225,7 +225,7 @@ export function LinkGuess({
         {hintBank === 0 && !unlimited && !resolved ? (
           <button
             onClick={onRefill}
-            className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+            className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
           >
             {t("finale.refill")}
           </button>

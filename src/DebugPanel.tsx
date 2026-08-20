@@ -30,7 +30,7 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.15 }}
-            className="w-52 rounded-2xl border-2 border-leaf bg-paper p-2 shadow-2xl"
+            className="w-52 rounded-2xl border-2 border-leaf bg-paper p-2 shadow-stamp"
           >
             <div className="px-1.5 pb-1.5 text-[0.6rem] font-bold uppercase tracking-widest text-leaf">
               {t("debug.title")}
@@ -56,7 +56,7 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
         onClick={() => setOpen((o) => !o)}
         aria-label={t("debug.tools")}
         aria-expanded={open}
-        className="grid h-9 w-9 place-items-center rounded-full border-2 border-leaf bg-paper text-base shadow-lg transition hover:bg-cream active:scale-95"
+        className="grid h-9 w-9 place-items-center rounded-full border-2 border-leaf bg-paper text-base shadow-stamp-sm transition hover:bg-cream active:scale-95"
       >
         <span aria-hidden>🛠</span>
       </button>
