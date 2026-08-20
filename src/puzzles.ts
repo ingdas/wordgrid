@@ -1335,6 +1335,91 @@ const hasWordplay = (raw: RawPuzzle) =>
   raw.categories.some((c) => c.name.includes("___") || /after the link/i.test(c.name));
 
 // ---------------------------------------------------------------------------
+// Boss variety. Every chapter's boss plays differently — and these are real
+// changes to how the game plays, not just cosmetics. Twists are assigned in a
+// fixed order so no two adjacent chapters share one.
+//
+//  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
+//              pictures instead of words.
+//  - scramble: every tile is an anagram you must decode before grouping.
+//  - cipher:   every tile arrives with its vowels stripped (CRASH → CRSH). The
+//              consonant skeleton keeps the word's shape, so it's decoding
+//              rather than anagramming — harder-looking than scramble, fairer.
+//  - decoy:    three impostor tiles belong to NO group. Include one in a guess
+//              and the group busts; you have to spot the fakes.
+//  - memory:   the board studies face-up for as long as you like; press Ready
+//              and it flips face-down, and you group from memory. Three peeks
+//              in the bank. No countdown — the player decides when the lights
+//              go out, so the game stays chill.
+//  - blackout: solved group names and words stay hidden until the reveal, so
+//              you can't lean on what you've already found.
+//  - logic:    no word board at all. The fight is a Deduction grid — twelve
+//              blank tiles, four hidden groups of three, and clues that talk
+//              only about the grid. Vocabulary buys you nothing here; the
+//              chain of forced inferences is the whole boss.
+
+export type BossTwist = "scramble" | "cipher" | "emoji" | "decoy" | "memory" | "blackout" | "logic";
+
+// One entry per chapter, and the list is deliberately NOT cycled with a
+// modulo: "emoji" swaps in the one bespoke picture board, so a second emoji
+// chapter would replay a board the player has already solved. Adjacent
+// chapters never repeat a twist either.
+// One entry per chapter. Beyond "no two adjacent chapters repeat", two pairs
+// are kept apart on purpose: `memory` and `blackout` are the same muscle (hold
+// what you can no longer see), and `cipher` and `scramble` are both "decode the
+// tile before you can group it".
+// `logic` appears once, and late: it is the only boss that isn't a word board
+// at all, so it lands in chapter 11 ("No Safety Net") — far enough in that the
+// player has ninety boards behind them, and one chapter short of the finale,
+// which stays a word fight.
+const CHAPTER_TWISTS: BossTwist[] = [
+  "scramble",
+  "cipher",
+  "emoji",
+  "blackout",
+  "decoy",
+  "memory",
+  "scramble",
+  "blackout",
+  "cipher",
+  "decoy",
+  "logic",
+  "memory",
+];
+
+/** The chapter whose boss is the Logic Grid (there is exactly one). */
+const LOGIC_CHAPTER = CHAPTER_TWISTS.indexOf("logic");
+
+/**
+ * The Deduction level the logic boss plays (an id in DEDUCTION_LEVELS).
+ *
+ * Tier 3 — the deepest inference chain the generator measured — but with a
+ * small clue vocabulary and no line banners, because a boss is the only place
+ * this game is ever played: it has to be learnable from its briefing and the
+ * key under the grid in one sitting, and hard on top of that.
+ */
+export const LOGIC_BOSS_GRID = "logic-24";
+
+/**
+ * The logic boss's level slot. It plays no word board — App.tsx routes this
+ * slot to the Logic screen instead of Game — so the board below is empty and
+ * `buildPuzzle` is never called on it. It exists so the boss can own a level
+ * of its own rather than spending one of the hundred hand-written boards,
+ * which the chapter would then never show anybody.
+ */
+const LOGIC_BOSS_RAW: RawPuzzle = {
+  id: "logic-boss",
+  title: "Cold Logic",
+  pivot: "",
+  categories: [
+    { name: "", words: ["", "", ""] },
+    { name: "", words: ["", "", ""] },
+    { name: "", words: ["", "", ""] },
+    { name: "", words: ["", "", ""] },
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // Chapters: a light story-flavoured grouping of the levels. The last level of
 // each chapter is a "boss". The frame is fixed before the levels are placed —
 // the placement pass below fills these spans, so it has to know their shape.
@@ -1356,7 +1441,13 @@ const CHAPTER_COUNT = 12;
 // early map feels less like a wall. Chapters grow as the campaign goes on —
 // by then a player is here for the puzzles, not the ceremony — and the last
 // chapter swallows any remainder.
+// A size counts the WORD BOARDS a chapter holds. Every chapter but one spends
+// its last board on the boss; the logic chapter's boss brings no board, so it
+// gets one slot more than its size — see TOTAL_SLOTS.
 const CHAPTER_SIZES = [6, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10];
+
+/** Slots to fill: one per board, plus the boardless slot the logic boss owns. */
+const TOTAL_SLOTS = PUZZLES.length + 1;
 
 interface Span {
   start: number;
@@ -1367,59 +1458,15 @@ interface Span {
 const SPANS: Span[] = (() => {
   const out: Span[] = [];
   let start = 0;
-  for (let i = 0; i < CHAPTER_COUNT && start < PUZZLES.length; i++) {
+  for (let i = 0; i < CHAPTER_COUNT && start < TOTAL_SLOTS; i++) {
     const last = i === CHAPTER_COUNT - 1;
-    const end = last ? PUZZLES.length : Math.min(start + (CHAPTER_SIZES[i] ?? 8), PUZZLES.length);
+    const size = (CHAPTER_SIZES[i] ?? 8) + (i === LOGIC_CHAPTER ? 1 : 0);
+    const end = last ? TOTAL_SLOTS : Math.min(start + size, TOTAL_SLOTS);
     out.push({ start, end, boss: end - 1 });
     start = end;
   }
   return out;
 })();
-
-// ---------------------------------------------------------------------------
-// Boss variety. Every chapter's boss plays differently — and these are real
-// changes to how the game plays, not just cosmetics. Twists are assigned in a
-// fixed order so no two adjacent chapters share one.
-//
-//  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
-//              pictures instead of words.
-//  - scramble: every tile is an anagram you must decode before grouping.
-//  - cipher:   every tile arrives with its vowels stripped (CRASH → CRSH). The
-//              consonant skeleton keeps the word's shape, so it's decoding
-//              rather than anagramming — harder-looking than scramble, fairer.
-//  - decoy:    three impostor tiles belong to NO group. Include one in a guess
-//              and the group busts; you have to spot the fakes.
-//  - memory:   the board studies face-up for as long as you like; press Ready
-//              and it flips face-down, and you group from memory. Three peeks
-//              in the bank. No countdown — the player decides when the lights
-//              go out, so the game stays chill.
-//  - blackout: solved group names and words stay hidden until the reveal, so
-//              you can't lean on what you've already found.
-
-export type BossTwist = "scramble" | "cipher" | "emoji" | "decoy" | "memory" | "blackout";
-
-// One entry per chapter, and the list is deliberately NOT cycled with a
-// modulo: "emoji" swaps in the one bespoke picture board, so a second emoji
-// chapter would replay a board the player has already solved. Adjacent
-// chapters never repeat a twist either.
-// One entry per chapter. Beyond "no two adjacent chapters repeat", two pairs
-// are kept apart on purpose: `memory` and `blackout` are the same muscle (hold
-// what you can no longer see), and `cipher` and `scramble` are both "decode the
-// tile before you can group it".
-const CHAPTER_TWISTS: BossTwist[] = [
-  "scramble",
-  "cipher",
-  "emoji",
-  "blackout",
-  "decoy",
-  "memory",
-  "scramble",
-  "blackout",
-  "cipher",
-  "decoy",
-  "blackout",
-  "memory",
-];
 
 /**
  * Can this board carry that twist? A twist changes how the board is *read*, so
@@ -1512,6 +1559,10 @@ function dealChapters(): RawPuzzle[][] {
 
     // The emoji chapter's boss is fixed, so it only deals its ordinary levels.
     if (twist === "emoji") return [...head, ...pool.splice(0, slots - 1), byId(EMOJI_TWIN)];
+    // The logic chapter's boss is a grid, not a board. Its slot costs the pool
+    // nothing, so the chapter deals boards into every other slot it has and
+    // takes no spike: the grid is the peak.
+    if (twist === "logic") return [...head, ...pool.splice(0, slots - 1), LOGIC_BOSS_RAW];
 
     const band = pool.splice(0, slots);
     // A boss has to top its own chapter: it's the end of the arc, and on the
@@ -1587,13 +1638,19 @@ function spreadWordplay(rosters: RawPuzzle[][]) {
 }
 
 /**
- * The grade a chapter's boss counts as. The emoji boss is the exception: its own
- * board is never played (EMOJI_BOSS is swapped in), and a board of nothing but
- * pictures is the hardest read in the game whatever its words would have graded.
+ * The grade a chapter's boss counts as. Two bosses never play the board sitting
+ * in their slot — emoji swaps EMOJI_BOSS in, logic plays a grid and holds no
+ * board at all — and both are the hardest thing in their chapter whatever a
+ * word grade would have said, so they count as the top of the scale.
  */
 function bossGrade(rosters: RawPuzzle[][], ci: number): number {
-  if (CHAPTER_TWISTS[ci % CHAPTER_TWISTS.length] === "emoji") return GRADE_BANDS.length;
+  if (boardlessBoss(CHAPTER_TWISTS[ci % CHAPTER_TWISTS.length])) return GRADE_BANDS.length;
   return gradeOf(rosters[ci][rosters[ci].length - 1].id);
+}
+
+/** Does this boss ignore the word board in its slot? (Its grade says nothing.) */
+export function boardlessBoss(twist: BossTwist | null): boolean {
+  return twist === "emoji" || twist === "logic";
 }
 
 /** Re-sort a roster's ordinary levels rising, leaving its boss last. */
@@ -1657,7 +1714,9 @@ const orderedRaw: RawPuzzle[] = (() => {
 // of the sawtooth. Thirds of the campaign land almost exactly on the band edges
 // (grades 1–2 ≈ 30 levels, grade 3 ≈ 33, grades 4–5 ≈ 37).
 export const LEVELS: Level[] = orderedRaw.map((raw) => {
-  const grade = gradeOf(raw.id);
+  // The logic boss has no board to grade, and no hand grade to look up: it is
+  // the hardest thing in its chapter by construction.
+  const grade = raw.id === LOGIC_BOSS_RAW.id ? GRADE_BANDS.length : gradeOf(raw.id);
   return { ...raw, grade, tier: (grade <= 2 ? 1 : grade === 3 ? 2 : 3) as Tier };
 });
 
@@ -1690,6 +1749,14 @@ export function bossTwist(index: number): BossTwist | null {
   return CHAPTER_TWISTS[chapter % CHAPTER_TWISTS.length];
 }
 
+/**
+ * Is this level the Logic Grid boss? It has no word board, so App.tsx sends it
+ * to the Logic screen and Game.tsx never sees it.
+ */
+export function isLogicBoss(index: number): boolean {
+  return bossTwist(index) === "logic";
+}
+
 // ---------------------------------------------------------------------------
 // Chapter keys. Each chapter hides a keyword, and every non-boss level in that
 // chapter banks one of its letters when you clear it. Bank them all and the
@@ -1710,7 +1777,7 @@ export const CHAPTER_KEYS = [
   "UNDERTOW", // 8 Deep Water
   "MISCHIEF", // 9 Sleight of Hand
   "PATIENCE", // 10 The Long Game
-  "TIGHTROPE", // 11 No Safety Net
+  "TIGHTROPES", // 11 No Safety Net — ten letters: the logic boss adds a slot
   "MASTERMIND", // 12 The Final Test
 ];
 

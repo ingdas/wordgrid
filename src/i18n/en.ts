@@ -41,8 +41,6 @@ export const en: Record<string, string> = {
   "home.mode.pairs": "Pairs",
   "home.mode.pairs.best": "{n} moves",
   "home.mode.pairs.empty": "memory",
-  "home.mode.logic": "Logic",
-  "home.mode.logic.stat": "{n}/{total} solved",
   "home.howToPlay": "How to play",
   "home.achievements": "Achievements",
   "home.history": "History",
@@ -337,7 +335,6 @@ export const en: Record<string, string> = {
   "quest.link.title": "Name a secret link",
   "quest.combo.title": "Hit a ×3 combo",
   "quest.daily.title": "Solve today's daily",
-  "quest.logic.title": "Solve a logic grid",
   "quest.pairs.title": "Clear a Pairs board",
   "quest.complete": "Quest complete · +1 💡",
   "quest.set": "All three quests!",
@@ -369,13 +366,8 @@ export const en: Record<string, string> = {
   "pairs.a11y.progress": "Groups completed",
 
   // --- logic grid ---------------------------------------------------------
-  "logic.title": "Logic Grid",
-  "logic.solved": "{n}/{total} solved",
-  "logic.puzzle": "Puzzle {n} / {total}",
   "logic.rules":
     "Four hidden groups of 3 tiles — any shapes, they don't have to touch. Every clue talks about its own tile's group. Deduce and colour all 12.",
-  "logic.a11y.prev": "Previous puzzle",
-  "logic.a11y.next": "Next puzzle",
   "logic.a11y.brush": "Group {n} brush",
   "logic.a11y.eraser": "Eraser",
   "logic.a11y.tile": "Tile",
@@ -385,14 +377,14 @@ export const en: Record<string, string> = {
   "logic.a11y.violated": ", NOT satisfied",
   "logic.a11y.uncoloured": ", uncoloured",
   "logic.a11y.lineClue": "{line} clue: {clue}",
+  "logic.hint": "Fill in a tile",
+  "logic.hint.given": "{at} — filled in for you.",
+  "logic.a11y.stars": "{n} of 3 stars still on offer",
   "logic.sizes": "Each group needs exactly 3 tiles.",
   "logic.notYet": "Not solved yet — check the ✕ clues below.",
   "logic.win.title": "Deduced!",
   "logic.win.body":
     "All four groups placed by pure logic — every clue checks out, and no other colouring fits.",
-  "logic.tier.1": "Easy",
-  "logic.tier.2": "Medium",
-  "logic.tier.3": "Hard",
   "logic.row": "Row",
   "logic.col": "Column",
   "logic.axis.row": "row",
@@ -480,6 +472,7 @@ export const en: Record<string, string> = {
   "twist.emoji.label": "Boss · emoji only",
   "twist.decoy.label": "Boss · impostors",
   "twist.blackout.label": "Boss · blackout",
+  "twist.logic.label": "Boss · pure logic",
   // The same six twists as a bare noun phrase, for sentences that already say
   // "boss" (the level map's chapter footer and its unlock banner).
   "twist.scramble.short": "scrambled tiles",
@@ -488,6 +481,7 @@ export const en: Record<string, string> = {
   "twist.emoji.short": "emoji only",
   "twist.decoy.short": "impostors",
   "twist.blackout.short": "blackout",
+  "twist.logic.short": "pure logic",
   // The rule in one line. This is the string that has to carry the mechanic on
   // its own: it sits on the boss door, on the board the whole fight, and in the
   // how-to-play sheet — everywhere a name like "blackout" would say nothing.
@@ -497,6 +491,7 @@ export const en: Record<string, string> = {
   "twist.emoji.rule": "Every tile is a picture. There are no letters on the board.",
   "twist.decoy.rule": "Three of the fifteen tiles belong to no group at all.",
   "twist.blackout.rule": "Groups you solve go dark and stay hidden until the reveal.",
+  "twist.logic.rule": "No words at all — colour the 12 blank tiles into four groups of three.",
   // The briefing's two halves: what the twist does to the board, then what the
   // player is supposed to do about it.
   "twist.scramble.brief.a":
@@ -522,6 +517,10 @@ export const en: Record<string, string> = {
     "Every group you find is boarded up — its theme and its three words vanish instead of staying on screen.",
   "twist.blackout.brief.b":
     "You can't read your own progress back off the board, so keep track of what you have already used.",
+  "twist.logic.brief.a":
+    "This boss has no words on it. Twelve blank tiles hide four groups of three — any shapes, and they don't have to touch — and the clues on the tiles talk only about the grid.",
+  "twist.logic.brief.b":
+    "Colour every tile with the four brushes. Each clue wears a ✓ or ✕ the moment it can be judged, so follow what the clues force — never guess. Exactly one colouring fits.",
 
   // --- achievements -------------------------------------------------------
   "ach.tier.0": "Bronze",

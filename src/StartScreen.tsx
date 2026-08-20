@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LEVELS } from "./puzzles";
-import { DEDUCTION_LEVELS } from "./deductionLevels";
 import {
   MAX_STARS,
   totalStars,
@@ -23,8 +22,6 @@ import {
 } from "./quests";
 import { getLocale, t } from "./i18n";
 
-const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
-
 function fmtCountdown(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
@@ -38,7 +35,6 @@ export default function StartScreen({
   onDaily,
   onEndless,
   onPairs,
-  onDeduction,
   onHelp,
   onStats,
   onHistory,
@@ -54,7 +50,6 @@ export default function StartScreen({
   onDaily: () => void;
   onEndless: () => void;
   onPairs: () => void;
-  onDeduction: () => void;
   onHelp: () => void;
   onStats: () => void;
   onHistory: () => void;
@@ -231,7 +226,10 @@ export default function StartScreen({
         >
           {t("home.browseLevels", { n: LEVELS.length })}
         </button>
-        <div className="grid w-full grid-cols-3 gap-2">
+        {/* Two side modes. The Logic Grid used to be a third tile here; it is a
+            boss level now (see puzzles.ts), where a player meets it in the run
+            of the campaign instead of having to pick it off a menu. */}
+        <div className="grid w-full grid-cols-2 gap-2">
           {[
             {
               icon: "🧘",
@@ -244,12 +242,6 @@ export default function StartScreen({
               label: t("home.mode.pairs"),
               stat: progress.pairsBest > 0 ? t("home.mode.pairs.best", { n: progress.pairsBest }) : t("home.mode.pairs.empty"),
               onClick: onPairs,
-            },
-            {
-              icon: "🧩",
-              label: t("home.mode.logic"),
-              stat: t("home.mode.logic.stat", { n: progress.deductionSolved.length, total: DEDUCTION_COUNT }),
-              onClick: onDeduction,
             },
           ].map((m) => (
             <button

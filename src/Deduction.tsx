@@ -4,18 +4,21 @@ import {
   DEDUCTION_LEVELS,
   type DeductionAxis,
   type DeductionClue,
-  type DeductionLevel,
   type DeductionLineClue,
 } from "./deductionLevels";
 import { CATEGORY_THEMES } from "./theme";
 import { clueTarget, countScope, grid, samePairsInLine } from "./deductionRules";
+import { starsForMistakes } from "./engine";
+import { fmtTime } from "./format";
 import { t } from "./i18n";
 import Confetti from "./Confetti";
+import { StarRow } from "./EndCard";
+import { BossBriefing } from "./BossBriefing";
 import { DebugPanel } from "./DebugPanel";
 import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
 
 // ---------------------------------------------------------------------------
-// Deduction Grid — a pure-logic mode on the same boards.
+// The Logic Grid boss — the one level in the campaign with no words on it.
 //
 // An abstract grid of 12 tiles, split into 4 hidden groups of 3. Groups can
 // be ANY shapes — they don't have to touch.
@@ -24,66 +27,78 @@ import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio"
 // whether a named neighbour or diagonal does, how many group-mates share the
 // tile's row or column, whether its line holds an odd number of them, how many
 // sit in a corner. Row and column headers carry clues about a whole line — all
-// different, or exactly one matching pair. Every level is solvable by pure
-// forced reasoning from the shown clues — no guessing, no vocabulary, no
-// timer. Deliberately NOT tied to the word boards: the chain is the reward.
+// different, or exactly one matching pair. The level is solvable by pure forced
+// reasoning from the shown clues — no guessing, no vocabulary, no timer.
+//
+// It used to be a mode of its own, paging through thirty of these from the home
+// screen. Almost nobody opened it, and a menu tile is a poor place for the one
+// thing in the game that isn't a word puzzle — so it moved to where the game
+// already promises something different: a boss. The levels it doesn't play stay
+// in `deductionLevels.ts` (LOGIC_BOSS_GRID picks the one that fights).
+//
+// Stars work like the word boards': a colouring that fills the grid and doesn't
+// hold up is this fight's "mistake". Hints spend the same tokens and fill in one
+// true tile, which is what keeps a boss door from becoming a wall.
 // ---------------------------------------------------------------------------
 
-interface DeductionProps {
+/** What a solved boss hands back — the same shape Game.tsx wins with. */
+export interface LogicWin {
+  stars: number;
+  linkCorrect: boolean;
+  timeMs: number;
+  mistakes: number;
+  title: string;
+  score: number;
+  maxCombo: number;
+}
+
+interface LogicBossProps {
+  /** Campaign level index — the heading reads "Level {n}". */
+  levelIndex: number;
+  /** Which Deduction level this boss fights (an id in DEDUCTION_LEVELS). */
+  gridId: string;
+  /** The level's own title, for the win card and the history row. */
+  title: string;
   reduce: boolean;
-  /** Debug mode: the board can paint its own solution. */
+  /** Debug mode: free hints, and the board can paint its own solution. */
   debug?: boolean;
-  solvedIds: string[];
-  onSolve: (id: string) => void;
+  /** A boss you've already beaten doesn't re-open its briefing. */
+  beaten: boolean;
+  bestMs?: number;
+  hintBank: number;
+  onUseHint: () => void;
+  onRefillHints: () => Promise<boolean>;
+  onDebugHints?: () => void;
+  onWin: (result: LogicWin) => void;
   onExit: () => void;
+  onNext?: () => void;
+  /** Overrides "Next level →" when the next one is a boss or a new chapter. */
+  nextLabel?: string;
+  onHelp: () => void;
 }
 
-export default function Deduction({ reduce, debug = false, solvedIds, onSolve, onExit }: DeductionProps) {
-  // Open on the first puzzle you haven't cracked yet, so coming back doesn't
-  // mean paging past everything already solved. (All solved → back to #1.)
-  const [levelIdx, setLevelIdx] = useState(() => {
-    const next = DEDUCTION_LEVELS.findIndex((l) => !solvedIds.includes(l.id));
-    return next < 0 ? 0 : next;
-  });
-  const level = DEDUCTION_LEVELS[levelIdx];
-  return (
-    <DeductionBoard
-      key={level.id}
-      level={level}
-      index={levelIdx}
-      total={DEDUCTION_LEVELS.length}
-      reduce={reduce}
-      debug={debug}
-      solvedIds={solvedIds}
-      onSolve={onSolve}
-      onPick={setLevelIdx}
-      onExit={onExit}
-    />
-  );
-}
-
-function DeductionBoard({
-  level,
-  index,
-  total,
+export default function LogicBoss({
+  levelIndex,
+  gridId,
+  title,
   reduce,
-  debug,
-  solvedIds,
-  onSolve,
-  onPick,
+  debug = false,
+  beaten,
+  bestMs,
+  hintBank,
+  onUseHint,
+  onRefillHints,
+  onDebugHints,
+  onWin,
   onExit,
-}: {
-  level: DeductionLevel;
-  index: number;
-  total: number;
-  reduce: boolean;
-  debug: boolean;
-  solvedIds: string[];
-  onSolve: (id: string) => void;
-  onPick: (i: number) => void;
-  onExit: () => void;
-}) {
-  const alreadySolved = solvedIds.includes(level.id);
+  onNext,
+  nextLabel,
+  onHelp,
+}: LogicBossProps) {
+  const level = useMemo(
+    () => DEDUCTION_LEVELS.find((l) => l.id === gridId) ?? DEDUCTION_LEVELS[0],
+    [gridId]
+  );
   const { rows, cols } = level;
   const N = rows * cols;
 
@@ -115,6 +130,17 @@ function DeductionBoard({
   const [solved, setSolved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [badKey, setBadKey] = useState(0);
+  // The briefing opens itself on a boss you haven't beaten — this is the only
+  // place the game ever explains a grid, so it can't be optional.
+  const [brief, setBrief] = useState(!beaten);
+  // A colouring that filled the grid and didn't hold up: this fight's mistake,
+  // counted once per time the board *becomes* full, so nudging one tile on an
+  // already-wrong grid isn't four more mistakes.
+  const [wrong, setWrong] = useState(0);
+  const wrongRef = useRef(0);
+  const startedAt = useRef(Date.now());
+  const prevBest = useRef(bestMs); // captured once, before this run updates it
+  const [result, setResult] = useState<{ stars: number; score: number; timeMs: number } | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -189,13 +215,26 @@ function DeductionBoard({
   }, [colors, level.clues, level.lines, clueStatus, lineStatus]);
 
   useEffect(() => {
-    if (evalNow.solved && !solved) {
-      setSolved(true);
-      playWin();
-      for (let i = 0; i < 3; i++) setTimeout(() => playStar(i), 400 + i * 200);
-      if (!alreadySolved) onSolve(level.id);
-    }
-  }, [evalNow.solved, solved, alreadySolved, onSolve, level.id]);
+    if (!evalNow.solved || solved) return;
+    setSolved(true);
+    playWin();
+    for (let i = 0; i < 3; i++) setTimeout(() => playStar(i), 400 + i * 200);
+    const stars = starsForMistakes(wrongRef.current);
+    const timeMs = Date.now() - startedAt.current;
+    // Roughly what a clean word board pays (4 groups + the link), so the boss
+    // is worth its place in the campaign's lifetime score.
+    const score = 500 + 250 * stars;
+    setResult({ stars, score, timeMs });
+    onWin({
+      stars,
+      linkCorrect: false,
+      timeMs,
+      mistakes: wrongRef.current,
+      title,
+      score,
+      maxCombo: 0,
+    });
+  }, [evalNow.solved, solved, onWin, title]);
 
   const paint = useCallback(
     (i: number) => {
@@ -251,8 +290,8 @@ function DeductionBoard({
   );
 
   const reset = useCallback(() => {
-    setColors(new Array(N).fill(-1));
-    setSolved(false);
+    colorsRef.current = new Array(N).fill(-1);
+    setColors(colorsRef.current);
     playDeselect();
   }, [N]);
 
@@ -269,10 +308,47 @@ function DeductionBoard({
     );
   }, [evalNow]);
 
+  // A grid can't be "submitted" — it's judged the moment the last tile is
+  // painted — so the mistake is the *transition* into a full board that fails.
+  // Repainting a tile on a board that was already full and wrong is the player
+  // still working on the same wrong answer, and costs nothing more.
+  const wasFull = useRef(false);
   useEffect(() => {
-    if (evalNow.full && !evalNow.solved) checkFull();
+    const full = evalNow.full;
+    const landed = full && !wasFull.current;
+    wasFull.current = full;
+    if (!full || evalNow.solved) return;
+    if (landed) {
+      wrongRef.current += 1;
+      setWrong(wrongRef.current);
+    }
+    checkFull();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colors]);
+
+  // A hint fills in one true tile: the first one still blank, or — on a board
+  // with nothing left to fill — the first one painted wrong. It spends a token
+  // from the same bank the word boards draw on, and costs no stars (a boss door
+  // the player can't open is worse than a boss they bought their way through).
+  const hasHint = debug || hintBank > 0;
+  const canHint = !solved && hasHint;
+  const useHint = useCallback(() => {
+    if (!canHint) return;
+    const blank = colorsRef.current.findIndex((c) => c < 0);
+    const cell = blank >= 0 ? blank : colorsRef.current.findIndex((c, i) => c !== level.solution[i]);
+    if (cell < 0) return;
+    const next = [...colorsRef.current];
+    next[cell] = level.solution[cell];
+    colorsRef.current = next;
+    setColors(next);
+    onUseHint();
+    playStar(1);
+    setToast(t("logic.hint.given", { at: at(cell, cols) }));
+  }, [canHint, level.solution, cols, onUseHint]);
+
+  const refill = useCallback(async () => {
+    if (await onRefillHints()) setToast(t("game.hint.refilled"));
+  }, [onRefillHints]);
 
   const used = (k: number) => colors.filter((c) => c === k).length;
 
@@ -290,55 +366,72 @@ function DeductionBoard({
           onClick={onExit}
           className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
-          <span aria-hidden>‹</span> {t("common.home")}
+          <span aria-hidden>‹</span> {t("common.levels")}
         </button>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 font-display text-lg font-bold leading-none text-ink">
-            <span aria-hidden>🧩</span> {t("logic.title")}
+            {!solved && <span aria-hidden>👑</span>}
+            {t("game.level", { n: levelIndex + 1 })}
           </div>
-          <div className="mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-ink-soft">
-            {t("logic.solved", { n: solvedIds.length, total })}
+          <div
+            className={`mt-0.5 text-[0.7rem] font-bold uppercase tracking-widest ${
+              solved ? "text-ink-soft" : "text-press"
+            }`}
+          >
+            {solved ? title : t("twist.logic.label")}
           </div>
         </div>
         <button
-          onClick={reset}
-          className="rounded-full border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-ink transition hover:bg-cream active:scale-95"
+          onClick={onHelp}
+          aria-label={t("home.howToPlay")}
+          className="grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white text-base font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
-          {t("common.reset")}
+          ?
         </button>
       </div>
 
-      {/* Puzzle stepper (a prev/next pager, not a chip wall) */}
-      <div className="mt-3 flex items-center justify-center gap-3">
+      {/* The boss's rule, in play for as long as the rule is in force — and the
+          way back into the briefing, which is the only lesson this grid gets. */}
+      {!solved && (
         <button
-          onClick={() => onPick((index - 1 + total) % total)}
-          aria-label={t("logic.a11y.prev")}
-          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
+          onClick={() => setBrief(true)}
+          aria-label={t("boss.rule.a11y", { what: t("twist.logic.short"), rule: t("twist.logic.rule") })}
+          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-left text-paper shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
         >
-          ‹
-        </button>
-        <span className="flex min-w-[6.5rem] items-center justify-center gap-1.5 text-center text-sm font-bold text-ink">
-          {t("logic.puzzle", { n: index + 1, total })}
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[0.6rem] font-extrabold uppercase"
-            style={{ background: `${TIER_COLOR[level.tier]}22`, color: TIER_COLOR[level.tier] }}
-          >
-            {t(`logic.tier.${level.tier}`)}
+          <span aria-hidden className="text-base leading-tight">👑</span>
+          <span aria-hidden className="min-w-0 flex-1">
+            <span className="block text-[0.55rem] font-extrabold uppercase tracking-[0.2em] text-paper/60 lg:hidden">
+              {t("twist.logic.short")}
+            </span>
+            <span className="mt-0.5 block text-[0.78rem] font-semibold leading-snug text-paper lg:mt-0">
+              {t("twist.logic.rule")}
+            </span>
           </span>
-          {alreadySolved && <span className="text-leaf">✓</span>}
-        </span>
-        <button
-          onClick={() => onPick((index + 1) % total)}
-          aria-label={t("logic.a11y.next")}
-          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-ink/30 bg-white text-ink transition hover:bg-cream active:scale-95"
-        >
-          ›
+          <span
+            aria-hidden
+            className="mt-0.5 shrink-0 rounded-full border border-paper/40 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-paper/80 lg:mt-0"
+          >
+            {t("boss.rule.cta")}
+          </span>
         </button>
-      </div>
+      )}
 
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-ink-soft">
         {t("logic.rules")}
       </p>
+
+      {/* What the wrong grids have cost so far. Nothing is shown until one has:
+          a boss that opens by counting your failures is a different game. */}
+      {!solved && wrong > 0 && (
+        <div
+          className="mt-1 text-center text-sm tracking-[0.3em]"
+          role="img"
+          aria-label={t("logic.a11y.stars", { n: starsForMistakes(wrong) })}
+        >
+          {"⭐".repeat(starsForMistakes(wrong))}
+          <span className="opacity-30">{"☆".repeat(3 - starsForMistakes(wrong))}</span>
+        </div>
+      )}
 
       <main className="relative mt-4 flex flex-1 flex-col justify-center">
         <motion.div
@@ -474,6 +567,40 @@ function DeductionBoard({
           </div>
         )}
 
+        {/* Wipe the grid, or buy a true tile. Same row, because they're the two
+            things a stuck player reaches for. */}
+        {!solved && (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <button
+              onClick={reset}
+              className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
+            >
+              {t("common.reset")}
+            </button>
+            {hintBank === 0 && !debug ? (
+              <button
+                onClick={refill}
+                className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+              >
+                <span className="text-base" aria-hidden>🎬</span>
+                {t("game.hint.refill")}
+              </button>
+            ) : (
+              <button
+                onClick={useHint}
+                disabled={!canHint}
+                className="flex items-center gap-2 rounded-full border border-gold bg-gold/15 px-5 py-2.5 text-sm font-bold text-gold-deep shadow-[3px_3px_0_rgba(38,34,26,0.35)] transition enabled:hover:bg-gold/25 enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-35"
+              >
+                <span className="text-base" aria-hidden>💡</span>
+                {t("logic.hint")}
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-xs font-extrabold text-ink">
+                  {debug ? "∞" : hintBank}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
         <AnimatePresence>
           {solved && (
             <motion.div
@@ -482,22 +609,42 @@ function DeductionBoard({
               transition={{ type: "spring", stiffness: 280, damping: 24 }}
               className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center"
             >
-              <div className="text-4xl" aria-hidden>🧠</div>
-              <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("logic.win.title")}</h3>
+              <StarRow stars={result?.stars ?? 3} />
+              <h3 className="mt-3 font-display text-2xl font-bold text-ink">{t("logic.win.title")}</h3>
+              <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-press">{title}</p>
               <p className="mt-2 text-sm text-ink-soft">{t("logic.win.body")}</p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-4 py-1.5 text-base font-extrabold text-gold-deep">
+                <span aria-hidden>✦</span> {t("end.points", { n: (result?.score ?? 0).toLocaleString() })}
+                {result?.stars === 3 && <span className="text-sm font-bold text-press">{t("end.fullCombo")}</span>}
+              </div>
+              <div className="mt-2 text-xs text-ink-soft">
+                ⏱ {fmtTime(result?.timeMs ?? 0)}
+                {prevBest.current != null && result != null && result.timeMs >= prevBest.current ? (
+                  <span className="ml-1">{t("end.bestTime", { time: fmtTime(prevBest.current) })}</span>
+                ) : (
+                  <span className="ml-1 font-semibold text-leaf">{t("end.newBestTime")}</span>
+                )}
+              </div>
               <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <button
                   onClick={onExit}
                   className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
                 >
-                  {t("common.home")}
+                  {t("common.levels")}
                 </button>
-                {index < total - 1 && (
+                {onNext ? (
                   <button
-                    onClick={() => onPick(index + 1)}
+                    onClick={onNext}
                     className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
                   >
-                    {t("end.nextPuzzle")}
+                    {nextLabel ?? t("end.next")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={onExit}
+                    className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-[3px_3px_0_rgba(38,34,26,0.8)] transition hover:scale-[1.03] active:scale-95"
+                  >
+                    {t("end.allDone")}
                   </button>
                 )}
               </div>
@@ -520,16 +667,23 @@ function DeductionBoard({
       </AnimatePresence>
       <div className="sr-only" role="status" aria-live="polite">{toast}</div>
 
+      <AnimatePresence>
+        {brief && !solved && <BossBriefing twist="logic" onClose={() => setBrief(false)} />}
+      </AnimatePresence>
+
       {debug && (
-        <DebugPanel tools={[{ key: "debug.solveGrid", onClick: debugSolve, disabled: solved }]} />
+        <DebugPanel
+          tools={[
+            { key: "debug.solveGrid", onClick: debugSolve, disabled: solved },
+            { key: "debug.hints", onClick: () => onDebugHints?.(), disabled: !onDebugHints },
+          ]}
+        />
       )}
 
       {solved && !reduce && <Confetti count={90} />}
     </div>
   );
 }
-
-const TIER_COLOR: Record<number, string> = { 1: "#1c7a4d", 2: "#8a5c00", 3: "#d9482b" };
 
 const DIR_ARROW: Record<string, string> = {
   up: "↑", down: "↓", left: "←", right: "→",

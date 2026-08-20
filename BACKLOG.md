@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 33 (the save survives the iframe, daily quests, a link
-mask that counts letters, modal focus — and the XP/rank ladder is gone).
+_Last updated: iteration 34 (the Logic Grid left the home screen and became a
+boss level — chapter 11 now closes on a grid, and the campaign is 101 levels).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -32,14 +32,14 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   `BASE=http://localhost:<port>/ node scripts/pairs.test.mjs` (Pairs mode:
   a full run, plus the two iteration-24 timer/stale-state repros), and
   `BASE=http://localhost:<port>/ node scripts/debug.playtest.mjs` (debug mode:
-  the tool tray, free hints, auto-solve, the index/Logic-Grid tools).
+  the tool tray, free hints, auto-solve, the index and logic-boss tools).
 - **Debug mode** (iteration 30): three ways in — `?debug` in the URL (remembered
   afterwards; `?debug=0` turns it off), the **Settings → Developer** toggle, or
   `localStorage["wordgrid:debug"]="1"` (what the headless scripts do). It opens
   every level and boss door, makes hints free, and mounts a 🛠 tool tray:
   solve a group / auto-solve the level / reveal all themes / peek at the link /
   +5 hints / force a loss in the game, clear-next-level and +10 hints on the
-  index, auto-solve on the Logic Grid.
+  index, auto-solve on the Logic Grid boss.
 - Commit style: imperative summary + short body; end with
   `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
   session's `Claude-Session:` URL trailer. Never mention the model id in code.
@@ -57,9 +57,12 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   tutorial ramp) — see iteration 29; CHAPTERS
   (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
   BossTwist type +
-  CHAPTER_TWISTS (scramble/cipher/emoji/blackout/decoy/memory — **no time
-  pressure, owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle,
-  decoyTiles;
+  CHAPTER_TWISTS (scramble/cipher/emoji/blackout/decoy/memory/**logic** — **no
+  time pressure, owner insists the game stays chill**), EMOJI_BOSS bespoke
+  puzzle, decoyTiles; **the logic boss** (iteration 34): LOGIC_BOSS_GRID names
+  the Deduction level it fights, LOGIC_BOSS_RAW is its boardless level slot
+  (TOTAL_SLOTS = PUZZLES.length + 1, so it costs the campaign no word board),
+  isLogicBoss/boardlessBoss;
   CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
   see iteration 26; `npm run validate` checks their lengths).
   **Category-name rules enforced by `npm run validate`** (it exits non-zero):
@@ -119,7 +122,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
   the link (replayable); two-column layout at lg+ (board left, controls rail
   right, fits 1280×720 above the fold).
-- `App.tsx` — screen router (home/levels/game/pairs), progress state. **All
+- `App.tsx` — screen router (home/levels/game/pairs; the logic boss renders in
+  place of Game on its own level — see `logicBoss`), progress state. **All
   progress writes go through `applyProgress(mutate)`** — a ref holds the live
   value so side effects (save, achievements, toasts) run in the handler, not
   inside a React updater (StrictMode double-invokes those in dev);
@@ -139,8 +143,11 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   +100. Fewest moves = pairsBest (wrong couples inflate it); cleared boards feed
   lifetime score. Face-down cards never leak their word (aria-label "Face-down
   card").
-- `Deduction.tsx` + `deductionLevels.ts` — 🧩 Logic Grid: a pure-logic mode,
-  **30 abstract levels** (ids logic-1…30). **Deliberately NOT tied to the word
+- `Deduction.tsx` + `deductionLevels.ts` — 🧩 the Logic Grid, which is **a boss
+  level** since iteration 34 (`LogicBoss`, one grid, campaign stars) rather than
+  a mode of its own. `deductionLevels.ts` still ships **30 abstract levels**
+  (ids logic-1…30); LOGIC_BOSS_GRID picks the one that fights, and the rest are
+  the bench the generator keeps stocked. **Deliberately NOT tied to the word
   boards** (owner call: the word reveal added nothing) — a level is a 3×4/4×3
   grid split into 4 hidden groups of 3; **groups can be ANY shapes (no
   connectivity requirement)**, so the layout space is 15,400 partitions.
@@ -181,8 +188,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
 - `StartScreen.tsx` — Daily hero card (7-day streak strip, countdown,
   Solve CTA — the streak shown is `liveDailyStreak`, not the stored one),
   Continue·L{n} which **plays that level** (the map is the "Browse all N
-  levels" link under it), an Endless · Pairs · Logic mode row (each stat
-  carries its unit), rank/XP bar. Two-column grid at `lg` so it fits a
+  levels" link under it), an Endless · Pairs mode row (each stat carries its
+  unit — the Logic tile left in iteration 34, when the grid became a boss). Two-column grid at `lg` so it fits a
   1280×720 embed above the fold.
 - `LevelSelect.tsx` — the level **index** (not a map/grid — see iteration 25).
   An **Up next** card on top, then eight chapter sections in their own
@@ -283,6 +290,95 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## The Logic Grid became a boss (iteration 34)
+
+Two changes, both asked for by the owner: **put one of the logic puzzles in as a
+boss level, and take the mode off the main menu.**
+
+### What the Logic Grid was, and why it moved
+
+It was the third tile in the home screen's mode row — thirty pure-deduction
+grids behind a 🧩 button, paged with a prev/next stepper. Nothing about it was
+broken. It was just somewhere a player had to *choose* to go, for the one thing
+in the game that isn't a word puzzle, against a Daily card and a hundred-level
+campaign that both ask for the same tap. A boss is where the game already
+promises "this one plays differently", and where a player arrives without
+having to pick.
+
+So chapter 11 ("No Safety Net") closes on **`twist: "logic"`** — level 90, *Cold
+Logic*. The rule strip, the briefing, the boss door, the chapter key
+(TIGHTROPE**S** — one letter longer, see below), the stars, the ⭐ total, the
+history row: all of it is the campaign's, unchanged. Only the board is
+different, because there isn't one.
+
+### It costs the campaign no word board — `puzzles.ts`
+
+The emoji boss swaps `EMOJI_BOSS` into its slot, so the board sitting there
+(`bolt`) is played, just in pictures. A logic boss has nothing to swap: whatever
+board landed in its slot would simply never be seen. With a hundred hand-written
+boards that were graded, ambiguity-read and placed on a curve, quietly dropping
+one is not a rounding error.
+
+So the logic boss brings **its own slot**. `TOTAL_SLOTS = PUZZLES.length + 1`,
+the logic chapter is dealt one slot more than its size, and `dealChapters` fills
+that last slot with `LOGIC_BOSS_RAW` — a level with an id, a title and no board
+at all. The campaign is **101 levels over 100 boards**; `npm run validate`
+checks exactly that, and that the grid id the boss names really exists.
+
+Everything that reads a boss's *grade* now asks `boardlessBoss(twist)` instead
+of `twist === "emoji"`: the grid, like the picture board, is the hardest thing
+in its chapter whatever a word grade would have said, and it neither has to beat
+the last chapter's boss nor sets the bar for the next one. The chapter's key
+grew a letter (its non-boss level count went up by one, and the key is one
+letter per non-boss level), which `validate` also pins.
+
+### The fight — `Deduction.tsx` (now `LogicBoss`)
+
+Same grid, same clue vocabulary, same live ✓/✕ badges and plain-words problem
+panel. What's new is everything a boss needs:
+
+- **The briefing** opens on an unbeaten boss and the rule strip brings it back.
+  This is the *only* place the game ever explains a grid, so it isn't optional
+  copy — `twist.logic.brief.a/b` say what the board is and how to attack it.
+- **Stars**, from `starsForMistakes` like any board. The mistake is a colouring
+  that filled the grid and didn't hold up, counted once per time the board
+  *becomes* full — nudging one tile on an already-wrong grid is the player still
+  working on the same wrong answer, not four more mistakes. A stars strip
+  appears under the rules once one has been spent, and never before.
+- **Hints**, from the same token bank: one spends a token and fills in one true
+  tile (the first blank, or the first wrong one). A boss door nobody can open is
+  worse than a boss somebody bought their way through — and the rewarded refill
+  is offered on an empty bank, exactly as on a word board.
+- **The win card** is the word game's: three stars, the board's name, points
+  (500 + 250×stars ≈ a clean word board), the clock, and the same Next-level
+  button with its chapter/boss teaser.
+
+The multi-level stepper, the "{n}/{total} solved" counter and the mode's own
+copy are gone. `progress.deductionSolved` stays — the boss writes its grid id
+into it — so old saves migrate untouched.
+
+### The menu, and the quest that went with it
+
+`StartScreen`'s mode row is two tiles now (Endless · Pairs). The `deduction`
+screen and its route are gone from `App.tsx`; the help sheet drops its three
+word-board steps when the twist is `logic`, since they'd answer a question the
+player didn't ask.
+
+The **"solve a logic grid" daily quest** left with the mode. Every quest in the
+pool has to be doable today, from the home screen, by a player anywhere in the
+campaign — and that one now lives behind a boss door at level 90. A daily goal
+nobody can reach is worse than one fewer goal, so the pool is six.
+
+### Verified
+
+`npm test` (84 unit tests), `npm run validate` (181 puzzles, 12 keys, the
+101-level curve), and all four headless playtests with zero issues — including
+a new one that opens the boss door, reads the briefing, paints the grid's real
+solution and checks the win lands as a **campaign clear** (stars on the level
+id, not a mode's own list). Screenshots on a 390×844 phone and the 1280×720
+CrazyGames embed: the grid, its legend, the palette and both buttons sit above
+the fold with no overflow.
 
 ## The save that survives the embed, quests, and a mask that counts (iteration 33)
 
@@ -1153,7 +1249,7 @@ pre-fix build before it was kept.
    key, or a lost `{placeholder}`. Locale comes from `navigator.language`,
    is overridable in Settings, and persists. **The word puzzles stay English**
    — a board of English words can only be rewritten per language, not
-   translated — so what a locale actually unlocks today is the Logic Grid
+   translated — so what a locale actually unlocks today is the Logic Grid boss
    (pure deduction, no vocabulary) plus every menu, rule and result screen.
    Adding a language is now one file plus a line in `LOCALES`.
 8. ✅ **[platform] Save-data resilience in iframes — done (iteration 33).**

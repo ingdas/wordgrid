@@ -10,7 +10,7 @@
 //   2. the in-game tools: reveal every theme, peek at the link, auto-solve
 //   3. hints are free (the bank reads ∞ and never goes down)
 //   4. the index tool clears the next level for real (stars are persisted)
-//   5. the Logic Grid paints its own solution
+//   5. the Logic Grid boss paints its own solution (behind its boss door)
 import { launchBrowser } from "./browser.mjs";
 
 const BASE = process.env.BASE || "http://localhost:4173/";
@@ -195,22 +195,33 @@ async function freshDebugSave(hints = 3) {
   if (SHOT) await p.screenshot({ path: `${SHOT}/debug-index.png` });
 }
 
-// 5. The Logic Grid solves itself.
+// 5. The Logic Grid boss solves itself. (It lives behind a boss door now, not
+//    on the home screen — debug is what opens the door.)
 {
+  const { CHAPTERS, bossTwist } = await import("../src/puzzles.ts");
+  const ci = CHAPTERS.findIndex((c) => bossTwist(c.boss) === "logic");
   await freshDebugSave();
-  if (!(await clickText("button", "Logic"))) note("Home has no Logic Grid button.");
-  await sleep(700);
-  await useTool("Auto-solve grid");
-  await sleep(800);
-  const grid = await bodyText();
-  log("logic grid auto-solved:", /deduced/i.test(grid));
-  if (!/deduced/i.test(grid)) note("'Auto-solve grid' did not solve the grid.");
-  const solvedIds = await p.evaluate(
-    () => (JSON.parse(localStorage.getItem("wordgrid:progress") || "{}").deductionSolved || []).length
-  );
-  log("logic solve recorded:", solvedIds);
-  if (solvedIds < 1) note("A debug-solved grid was not recorded as solved.");
-  if (SHOT) await p.screenshot({ path: `${SHOT}/debug-logic.png` });
+  await clickText("button", "Browse all");
+  await sleep(500);
+  const door = await p.$(`button[aria-label^="Play the boss of chapter ${ci + 1}"]`);
+  if (!door) note(`No boss door found for chapter ${ci + 1} (the logic boss).`);
+  else {
+    await door.click();
+    await sleep(700);
+    await clickText("button", "Got it"); // the briefing opens on an unbeaten boss
+    await sleep(400);
+    await useTool("Auto-solve grid");
+    await sleep(800);
+    const grid = await bodyText();
+    log("logic grid auto-solved:", /deduced/i.test(grid));
+    if (!/deduced/i.test(grid)) note("'Auto-solve grid' did not solve the grid.");
+    const solvedIds = await p.evaluate(
+      () => (JSON.parse(localStorage.getItem("wordgrid:progress") || "{}").deductionSolved || []).length
+    );
+    log("logic solve recorded:", solvedIds);
+    if (solvedIds < 1) note("A debug-solved grid was not recorded as solved.");
+    if (SHOT) await p.screenshot({ path: `${SHOT}/debug-logic.png` });
+  }
 }
 
 await b.close();

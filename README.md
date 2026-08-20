@@ -23,7 +23,7 @@ word, then build all four groups of three around it.
    "hit a ×3 combo", "clear a Pairs board" — drawn fresh at midnight and paid
    in hints (1 each, +2 for all three).
 
-There are **100 levels** across twelve chapters, each closing on a **boss** that
+There are **101 levels** across twelve chapters, each closing on a **boss** that
 plays by its own rule — and says what that rule is: the door and the up-next
 card carry it in a line, a **briefing** opens on any boss you haven't beaten,
 and the rule stays on the board (tap it for the briefing again) for the whole
@@ -35,6 +35,11 @@ solved gets an index line naming the board you beat (`Bank On It ··· ⭐⭐�
 while the ones ahead are a strip of plain numbered tiles — a title hints at the
 link, so an unplayed level never gets one. Whatever you play next is a card at
 the top of the page.
+One boss plays by no word rule at all: chapter 11 closes on the **Logic Grid** —
+twelve blank tiles, four hidden groups of three, and clues that talk only about
+the grid. It's pure deduction, it has a level of its own (no word board is spent
+on it), and it's the only place in the game you'll meet one.
+
 Clearing a level opens another: the index **shows** the lock come off it, once,
 and says what it is — a plain level, a boss and its twist, or a new chapter.
 Each chapter also hides a **key**: every level in it gives up one letter, and
@@ -46,8 +51,9 @@ Chase the ⭐ total and your 🔥 streak.
 The interface is localized (`src/i18n/`): English and Spanish, picked up from
 `navigator.language` and switchable in Settings. The **word puzzles stay
 English** — a board of English words can't be translated, only rewritten — so
-a translated UI fully unlocks the Logic Grid (pure deduction, no vocabulary)
-and makes every menu, rule and result screen readable around the rest. Adding
+a translated UI fully unlocks the Logic Grid boss (pure deduction, no
+vocabulary) and makes every menu, rule and result screen readable around the
+rest. Adding
 a language is one catalogue file plus a line in `LOCALES`; `npm test` fails on
 a missing key or a dropped `{placeholder}`.
 
@@ -79,8 +85,8 @@ in **Settings → Developer**. It gives you:
 - a **🛠 tool tray** in the bottom-left corner: *solve a group*, *auto-solve
   level* (which wins it outright, stars and all), *reveal all themes*, *peek at
   the link*, *+5 hints* and *force a loss*;
-- on the level index, *clear next level* and *+10 hints*; on the Logic Grid,
-  *auto-solve grid*.
+- on the level index, *clear next level* and *+10 hints*; on the Logic Grid
+  boss, *auto-solve grid*.
 
 Nothing about it leaks into a normal save: the tray is only mounted while debug
 is on, and the switch lives in its own localStorage key (`wordgrid:debug`).

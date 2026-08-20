@@ -5,7 +5,8 @@ import { renderShareCard, type ShareCardData } from "./sharecard";
 
 const RATING_COUNT = 5; // end.rating.0 … end.rating.4 (see src/i18n)
 
-function StarRow({ stars }: { stars: number }) {
+/** Three stars, filled to the rating. Shared with the Logic Grid boss's card. */
+export function StarRow({ stars }: { stars: number }) {
   return (
     <div className="flex justify-center gap-2">
       {[0, 1, 2].map((i) => {

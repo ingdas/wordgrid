@@ -42,8 +42,6 @@ export const es: Record<string, string> = {
   "home.mode.pairs": "Parejas",
   "home.mode.pairs.best": "{n} mov.",
   "home.mode.pairs.empty": "memoria",
-  "home.mode.logic": "Lógica",
-  "home.mode.logic.stat": "{n}/{total} resueltos",
   "home.howToPlay": "Cómo jugar",
   "home.achievements": "Logros",
   "home.history": "Historial",
@@ -328,7 +326,6 @@ export const es: Record<string, string> = {
   "quest.link.title": "Acierta una palabra secreta",
   "quest.combo.title": "Consigue un combo ×3",
   "quest.daily.title": "Resuelve el reto diario",
-  "quest.logic.title": "Resuelve una cuadrícula lógica",
   "quest.pairs.title": "Completa un tablero de Parejas",
   "quest.complete": "Misión cumplida · +1 💡",
   "quest.set": "¡Las tres misiones!",
@@ -360,13 +357,8 @@ export const es: Record<string, string> = {
   "pairs.a11y.progress": "Grupos completados",
 
   // --- logic grid ---------------------------------------------------------
-  "logic.title": "Cuadrícula lógica",
-  "logic.solved": "{n}/{total} resueltos",
-  "logic.puzzle": "Puzle {n} / {total}",
   "logic.rules":
     "Cuatro grupos ocultos de 3 casillas — de cualquier forma, no tienen que tocarse. Cada pista habla del grupo de su propia casilla. Deduce y colorea las 12.",
-  "logic.a11y.prev": "Puzle anterior",
-  "logic.a11y.next": "Puzle siguiente",
   "logic.a11y.brush": "Pincel del grupo {n}",
   "logic.a11y.eraser": "Borrador",
   "logic.a11y.tile": "Casilla",
@@ -376,14 +368,14 @@ export const es: Record<string, string> = {
   "logic.a11y.violated": ", NO cumplida",
   "logic.a11y.uncoloured": ", sin color",
   "logic.a11y.lineClue": "Pista de {line}: {clue}",
+  "logic.hint": "Rellenar una casilla",
+  "logic.hint.given": "{at} — rellenada para ti.",
+  "logic.a11y.stars": "{n} de 3 estrellas aún en juego",
   "logic.sizes": "Cada grupo necesita exactamente 3 casillas.",
   "logic.notYet": "Aún no está — revisa las pistas con ✕ de abajo.",
   "logic.win.title": "¡Deducido!",
   "logic.win.body":
     "Los cuatro grupos colocados con pura lógica — todas las pistas cuadran y ningún otro coloreado encaja.",
-  "logic.tier.1": "Fácil",
-  "logic.tier.2": "Media",
-  "logic.tier.3": "Difícil",
   "logic.row": "Fila",
   "logic.col": "Columna",
   "logic.axis.row": "fila",
@@ -468,18 +460,21 @@ export const es: Record<string, string> = {
   "twist.emoji.label": "Jefe · solo emojis",
   "twist.decoy.label": "Jefe · impostores",
   "twist.blackout.label": "Jefe · apagón",
+  "twist.logic.label": "Jefe · lógica pura",
   "twist.scramble.short": "fichas revueltas",
   "twist.cipher.short": "sin vocales",
   "twist.memory.short": "de memoria",
   "twist.emoji.short": "solo emojis",
   "twist.decoy.short": "impostores",
   "twist.blackout.short": "apagón",
+  "twist.logic.short": "lógica pura",
   "twist.scramble.rule": "Cada ficha es un anagrama: ordénala y luego agrupa.",
   "twist.cipher.rule": "Cada ficha ha perdido las vocales: lee las consonantes y luego agrupa.",
   "twist.memory.rule": "Estudia el tablero, dale la vuelta y agrupa de memoria.",
   "twist.emoji.rule": "Cada ficha es un dibujo. En el tablero no hay ni una letra.",
   "twist.decoy.rule": "Tres de las quince fichas no pertenecen a ningún grupo.",
   "twist.blackout.rule": "Los grupos que resuelvas se apagan y siguen ocultos hasta el final.",
+  "twist.logic.rule": "Sin palabras: colorea las 12 casillas en cuatro grupos de tres.",
   "twist.scramble.brief.a":
     "Las doce palabras siguen ahí, pero cada ficha llega con sus letras desordenadas.",
   "twist.scramble.brief.b":
@@ -503,6 +498,10 @@ export const es: Record<string, string> = {
     "Cada grupo que encuentras se tapa: su tema y sus tres palabras desaparecen en vez de quedarse en pantalla.",
   "twist.blackout.brief.b":
     "No puedes releer tu propio avance en el tablero, así que lleva tú la cuenta de lo que ya has usado.",
+  "twist.logic.brief.a":
+    "Este jefe no tiene ni una palabra. Doce casillas en blanco esconden cuatro grupos de tres — de cualquier forma, y no tienen que tocarse — y las pistas de las casillas solo hablan de la cuadrícula.",
+  "twist.logic.brief.b":
+    "Colorea las doce con los cuatro pinceles. Cada pista se marca con ✓ o ✕ en cuanto se puede juzgar, así que sigue lo que las pistas obligan: nunca adivines. Solo encaja un coloreado.",
 
   // --- achievements -------------------------------------------------------
   "ach.tier.0": "Bronce",

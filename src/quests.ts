@@ -15,7 +15,7 @@
 // App.tsx wherever a board finishes.
 
 /** Everything a quest can be counting. Raised by App.tsx on a finished board. */
-export type QuestEvent = "solve" | "perfect" | "link" | "combo" | "daily" | "logic" | "pairs";
+export type QuestEvent = "solve" | "perfect" | "link" | "combo" | "daily" | "pairs";
 
 export interface QuestDef {
   id: string;
@@ -27,14 +27,20 @@ export interface QuestDef {
   titleKey: string;
 }
 
-/** The pool. Three of these are drawn per day; see `todaysQuests`. */
+/**
+ * The pool. Three of these are drawn per day; see `todaysQuests`.
+ *
+ * Every quest here has to be doable *today*, from the home screen, by a player
+ * at any point in the campaign — which is why "solve a logic grid" left with the
+ * Logic Grid mode: it now lives behind one boss door at level 90, and a daily
+ * goal nobody can reach is worse than one fewer goal.
+ */
 export const QUEST_POOL: QuestDef[] = [
   { id: "solve2", icon: "🧩", event: "solve", goal: 2, titleKey: "quest.solve.title" },
   { id: "perfect", icon: "⭐", event: "perfect", goal: 1, titleKey: "quest.perfect.title" },
   { id: "link", icon: "🔑", event: "link", goal: 1, titleKey: "quest.link.title" },
   { id: "combo", icon: "🔥", event: "combo", goal: 1, titleKey: "quest.combo.title" },
   { id: "daily", icon: "📅", event: "daily", goal: 1, titleKey: "quest.daily.title" },
-  { id: "logic", icon: "🧠", event: "logic", goal: 1, titleKey: "quest.logic.title" },
   { id: "pairs", icon: "🃏", event: "pairs", goal: 1, titleKey: "quest.pairs.title" },
 ];
 

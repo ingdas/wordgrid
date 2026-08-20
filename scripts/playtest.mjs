@@ -259,32 +259,64 @@ else {
   await sleep(300);
 }
 
-// 10b. Logic Grid: paint a level's real solution and check the board accepts
-//      it. The clue semantics are unit-tested in scripts/deduction.test.mts;
-//      this covers the component actually wiring them up.
+// 10b. The Logic Grid boss: one chapter closes on a grid instead of a board.
+//      Open its door (debug unlocks every one), read the briefing, paint the
+//      level's real solution, and check the win lands as a campaign clear —
+//      stars on the level id, like any other boss. The clue semantics are
+//      unit-tested in scripts/deduction.test.mts; this covers the wiring.
 {
   const { DEDUCTION_LEVELS } = await import("../src/deductionLevels.ts");
-  const lv = DEDUCTION_LEVELS[0];
+  const { CHAPTERS, LEVELS, LOGIC_BOSS_GRID, bossTwist } = await import("../src/puzzles.ts");
+  const ci = CHAPTERS.findIndex((c) => bossTwist(c.boss) === "logic");
+  const bossId = LEVELS[CHAPTERS[ci].boss].id;
+  const lv = DEDUCTION_LEVELS.find((l) => l.id === LOGIC_BOSS_GRID);
   await p.goto(BASE, { waitUntil: "networkidle0" });
-  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("wordgrid:tutorial", "1"); });
+  await p.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem("wordgrid:tutorial", "1");
+    localStorage.setItem("wordgrid:debug", "1"); // every door open, hints free
+  });
   await p.reload({ waitUntil: "networkidle0" });
+  await sleep(600);
+  await clickText("button", "Browse all");
   await sleep(500);
-  await clickText("button", "Logic");
-  await sleep(500);
-  for (let k = 0; k < 4; k++) {
-    const brush = await p.$(`button[aria-label="Group ${k + 1} brush"]`);
-    if (!brush) { note("Logic Grid brush palette missing."); break; }
-    await brush.click();
-    for (let cell = 0; cell < lv.solution.length; cell++) {
-      if (lv.solution[cell] !== k) continue;
-      await (await p.$(`[data-cell="${cell}"]`)).click();
+  const door = await p.$(`button[aria-label^="Play the boss of chapter ${ci + 1}"]`);
+  if (!door) note(`No boss door found for chapter ${ci + 1} (the logic boss).`);
+  else {
+    await door.click();
+    await sleep(600);
+    // The grid is nobody's second nature, and this boss is the only place the
+    // game ever shows one — so the briefing has to teach it, not name it.
+    const brief = await bodyText();
+    const briefed = /boss fight/i.test(brief) && /blank tiles/i.test(brief) && /what changes/i.test(brief);
+    log("logic boss briefing explains the grid:", briefed);
+    if (!briefed) note("The logic boss briefing did not explain the grid.");
+    await p.screenshot({ path: `${SHOT}/r10-logic-brief.png` });
+    if (!(await clickText("button", "Got it"))) note("The logic boss briefing has no dismiss button.");
+    await sleep(900); // the briefing fades out over the board — let it clear
+
+    for (let k = 0; k < 4; k++) {
+      const brush = await p.$(`button[aria-label="Group ${k + 1} brush"]`);
+      if (!brush) { note("Logic Grid brush palette missing."); break; }
+      await brush.click();
+      for (let cell = 0; cell < lv.solution.length; cell++) {
+        if (lv.solution[cell] !== k) continue;
+        await (await p.$(`[data-cell="${cell}"]`)).click();
+      }
     }
+    await sleep(700);
+    const solvedIt = /Deduced!/.test(await bodyText());
+    log("logic boss accepts the solution it ships with:", solvedIt);
+    if (!solvedIt) note("The logic boss rejected the solution it ships with.");
+    const stars = await p.evaluate(
+      (id) => (JSON.parse(localStorage.getItem("wordgrid:progress") || "{}").stars || {})[id] ?? 0,
+      bossId
+    );
+    log("logic boss cleared the campaign level:", `${bossId} → ${stars}★`);
+    if (!(stars > 0)) note("Beating the logic boss did not clear its campaign level.");
+    await p.screenshot({ path: `${SHOT}/r10-logic.png` });
   }
-  await sleep(500);
-  const solvedIt = /Deduced!/.test(await bodyText());
-  log("logic grid accepts its own solution:", solvedIt);
-  if (!solvedIt) note("Logic Grid rejected the solution it ships with.");
-  await p.screenshot({ path: `${SHOT}/r10-logic.png` });
+  await p.evaluate(() => localStorage.removeItem("wordgrid:debug"));
 }
 
 // 11. On a loss, the secret link must STAY hidden (so it can be guessed on replay)

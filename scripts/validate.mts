@@ -10,13 +10,17 @@ import {
   LEVELS,
   buildPuzzle,
   bossTwist,
+  boardlessBoss,
   chapterKey,
+  isLogicBoss,
+  LOGIC_BOSS_GRID,
   gradeOf,
   keyLevels,
   keySlots,
   suitsTwist,
 } from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
+import { DEDUCTION_LEVELS } from "../src/deductionLevels.ts";
 
 const ALL = [...PUZZLES, EMOJI_BOSS, ...DAILY_PUZZLES];
 const normalize = (s: string) => s.toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -145,10 +149,18 @@ PUZZLES.forEach((p) => {
   }
 });
 
-// Every board is played exactly once.
-if (LEVELS.length !== PUZZLES.length || new Set(LEVELS.map((l) => l.id)).size !== PUZZLES.length) {
+// Every board is played exactly once, and the logic boss owns the one slot on
+// top of them (it plays a grid, so it spends no board).
+const boardSlots = LEVELS.filter((_, i) => !isLogicBoss(i));
+if (
+  LEVELS.length !== PUZZLES.length + 1 ||
+  new Set(boardSlots.map((l) => l.id)).size !== PUZZLES.length ||
+  LEVELS.length - boardSlots.length !== 1
+) {
   bad++;
-  console.log(`✗ curve: ${LEVELS.length} levels over ${PUZZLES.length} puzzles — the order lost or repeated a board`);
+  console.log(
+    `✗ curve: ${LEVELS.length} levels over ${PUZZLES.length} puzzles + 1 logic boss — the order lost or repeated a board`,
+  );
 }
 
 // The tutorial is level 1: the coach copy is derived from this board's own first
@@ -159,12 +171,17 @@ if (LEVELS[0].id !== "star") {
 }
 
 // The rules the placement pass exists to keep.
-const spokesOf = (i: number) => new Set(LEVELS[i].categories.flatMap((c) => c.words));
-for (let i = 1; i < LEVELS.length; i++) {
-  const shared = [...spokesOf(i)].filter((w) => spokesOf(i - 1).has(w));
+// The logic boss holds no words, so it neither clashes nor separates the two
+// boards either side of it — they are read as neighbours across it.
+const boards = LEVELS.map((l, i) => ({ l, i })).filter(({ i }) => !isLogicBoss(i));
+const spokesOf = (l: (typeof LEVELS)[number]) => new Set(l.categories.flatMap((c) => c.words));
+for (let n = 1; n < boards.length; n++) {
+  const { l, i } = boards[n];
+  const prev = boards[n - 1];
+  const shared = [...spokesOf(l)].filter((w) => spokesOf(prev.l).has(w));
   if (shared.length) {
     bad++;
-    console.log(`✗ curve: levels ${i} and ${i + 1} (${LEVELS[i - 1].id}/${LEVELS[i].id}) both show ${shared.join(", ")}`);
+    console.log(`✗ curve: levels ${prev.i + 1} and ${i + 1} (${prev.l.id}/${l.id}) both show ${shared.join(", ")}`);
   }
 }
 let lastBossGrade = 0;
@@ -172,27 +189,28 @@ CHAPTERS.forEach((c, ci) => {
   const rows = LEVELS.slice(c.start, c.end);
   const twist = bossTwist(c.boss)!;
   const boss = LEVELS[c.boss];
-  // The emoji boss never plays its own board (EMOJI_BOSS is swapped in), so its
-  // grade says nothing about the fight and is exempt from both rules below.
-  const emoji = twist === "emoji";
-  const bossGrade = emoji ? GRADE_BAND_IDS.length : gradeOf(boss.id);
+  // A boardless boss never plays the board in its slot — emoji swaps EMOJI_BOSS
+  // in, logic plays a grid — so its grade says nothing about the fight and is
+  // exempt from both rules below.
+  const boardless = boardlessBoss(twist);
+  const bossGrade = boardless ? GRADE_BAND_IDS.length : gradeOf(boss.id);
   const peak = Math.max(...rows.slice(0, -1).map((l) => gradeOf(l.id)));
   if (bossGrade < peak) {
     bad++;
     console.log(`✗ curve: chapter ${ci + 1}'s boss (${boss.id}, grade ${bossGrade}) is milder than a level it follows (grade ${peak})`);
   }
-  // Boss grades climb across the campaign — but the emoji chapter sits outside
-  // that chain entirely: a picture board is a different kind of hard, not a
-  // point on the word curve, so it neither has to beat the last boss nor sets
-  // the bar for the next one.
-  if (!emoji) {
+  // Boss grades climb across the campaign — but a boardless chapter sits outside
+  // that chain entirely: a picture board (or a logic grid) is a different kind of
+  // hard, not a point on the word curve, so it neither has to beat the last boss
+  // nor sets the bar for the next one.
+  if (!boardless) {
     if (bossGrade < lastBossGrade) {
       bad++;
       console.log(`✗ curve: chapter ${ci + 1}'s boss drops to grade ${bossGrade} after an earlier chapter's grade ${lastBossGrade}`);
     }
     lastBossGrade = bossGrade;
   }
-  if (!emoji && !suitsTwist(twist, boss)) {
+  if (!boardless && !suitsTwist(twist, boss)) {
     bad++;
     console.log(`✗ curve: chapter ${ci + 1}'s boss ${boss.id} can't carry its "${twist}" twist`);
   }
@@ -202,6 +220,13 @@ CHAPTERS.forEach((c, ci) => {
     console.log(`✗ curve: chapter ${ci + 1} holds ${wordplay.length} compound-word boards (${wordplay.map((l) => l.id).join(", ")})`);
   }
 });
+
+// The logic boss plays a grid by id: a typo there is a boss level that can't
+// draw a board at all, and nothing else in the build would notice.
+if (!DEDUCTION_LEVELS.some((l) => l.id === LOGIC_BOSS_GRID)) {
+  bad++;
+  console.log(`✗ curve: the logic boss plays "${LOGIC_BOSS_GRID}", which is not a Deduction level`);
+}
 
 console.log(
   `\n${ALL.length} puzzles checked (${PUZZLES.length} campaign + 1 boss + ${DAILY_PUZZLES.length} daily) + ${CHAPTER_KEYS.length} chapter keys + the ${LEVELS.length}-level curve — ${bad === 0 ? "all valid ✓" : `${bad} invalid ✗`}`,

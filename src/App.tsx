@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type BossTwist, type RawPuzzle } from "./puzzles";
+import {
+  LEVELS,
+  CHAPTERS,
+  LOGIC_BOSS_GRID,
+  bossTwist,
+  chapterKey,
+  chapterOfLevel,
+  isLogicBoss,
+  levelTitle,
+  type BossTwist,
+  type RawPuzzle,
+} from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
   loadProgress,
@@ -43,9 +54,9 @@ import LevelSelect from "./LevelSelect";
 import Game from "./Game";
 import { BossRules } from "./BossBriefing";
 import Pairs from "./Pairs";
-import Deduction from "./Deduction";
+import LogicBoss, { type LogicWin } from "./Deduction";
 
-type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
+type Screen = "home" | "levels" | "game" | "pairs";
 
 /**
  * What the win card's "Next" button should say. Most players never open the
@@ -560,35 +571,20 @@ export default function App() {
     setScreen("home");
   }, []);
 
-  // --- Deduction Grid mode -------------------------------------------------
-  const playDeduction = useCallback(() => {
-    initAudio();
-    startMusic();
-    setPlayingDaily(false);
-    setScreen("deduction");
-    gameplayStart();
-  }, []);
-
-  const exitDeduction = useCallback(() => {
-    gameplayStop();
-    setScreen("home");
-  }, []);
-
-  const handleDeductionSolve = useCallback(
-    (id: string) => {
-      happytime();
+  // --- The Logic Grid boss --------------------------------------------------
+  // It clears a campaign level like any other boss (handleWin does the stars,
+  // the streak, the chapter key), and also records the grid it beat — the one
+  // Deduction level this save has ever solved.
+  const handleLogicWin = useCallback(
+    (result: LogicWin) => {
       applyProgress((p) =>
-        p.deductionSolved.includes(id)
+        p.deductionSolved.includes(LOGIC_BOSS_GRID)
           ? p
-          : {
-              ...p,
-              deductionSolved: [...p.deductionSolved, id],
-              score: p.score + 500, // a solved logic grid is worth a chunk of points
-            }
+          : { ...p, deductionSolved: [...p.deductionSolved, LOGIC_BOSS_GRID] }
       );
-      questEvents(["logic"]);
+      handleWin(result);
     },
-    [applyProgress, questEvents]
+    [applyProgress, handleWin]
   );
 
   // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
@@ -619,6 +615,11 @@ export default function App() {
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
 
+  // The one campaign level that isn't a word board. Endless and the daily play
+  // out of their own pools, so a boss index left over from the campaign must
+  // not pull them onto the grid.
+  const logicBoss = screen === "game" && !playingDaily && !endless && isLogicBoss(levelIndex);
+
   // Is the level Next would take you to a boss still shut behind its chapter key?
   const nextIsSealed =
     !endless && !playingDaily && nextIndex !== null && keyLockedBoss(progress, nextIndex);
@@ -645,7 +646,6 @@ export default function App() {
               onDaily={playDaily}
               onEndless={playEndless}
               onPairs={playPairs}
-              onDeduction={playDeduction}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -694,19 +694,42 @@ export default function App() {
           </ScreenWrap>
         )}
 
-        {screen === "deduction" && (
-          <ScreenWrap key="deduction">
-            <Deduction
+        {/* The logic boss has no word board, so it never reaches Game.tsx: the
+            grid is the level. Everything around it — the door, the key, the
+            stars, the chapter paper — is the campaign's, unchanged. */}
+        {logicBoss && (
+          <ScreenWrap key="logic">
+            <LogicBoss
+              levelIndex={levelIndex}
+              gridId={LOGIC_BOSS_GRID}
+              title={levelTitle(levelIndex)}
               reduce={reduce}
               debug={debug}
-              solvedIds={progress.deductionSolved}
-              onSolve={handleDeductionSolve}
-              onExit={exitDeduction}
+              beaten={(progress.stars[LEVELS[levelIndex].id] ?? 0) > 0}
+              bestMs={progress.best[LEVELS[levelIndex].id]}
+              hintBank={progress.hints}
+              onUseHint={useHintToken}
+              onRefillHints={refillHints}
+              onDebugHints={() => grantHints(5)}
+              onWin={handleLogicWin}
+              onExit={exitToLevels}
+              onNext={
+                nextIndex === null ? undefined : nextIsSealed ? exitToLevels : nextLevel
+              }
+              nextLabel={
+                nextIndex === null
+                  ? undefined
+                  : nextIsSealed
+                    ? t("end.next.sealed")
+                    : nextLevelTeaser(nextIndex) ??
+                      (nextIndex > levelIndex + 1 ? t("end.next.resume", { n: nextIndex + 1 }) : undefined)
+              }
+              onHelp={() => setShowHelp(true)}
             />
           </ScreenWrap>
         )}
 
-        {screen === "game" && (
+        {screen === "game" && !logicBoss && (
           <ScreenWrap key="game">
             <Game
               key={endless ? `e${endlessPos}` : playingDaily ? `d-${dailyRaw?.id}` : levelIndex}
@@ -1304,6 +1327,10 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
           </div>
         )}
 
+        {/* The three steps are the word board's. The logic boss has no words on
+            it, so they'd be answering a question the player didn't ask — its
+            rules panel above is the whole sheet. */}
+        {twist !== "logic" && (
         <div className="mt-5 space-y-3">
           {STEPS.map((s) => (
             <div key={s.key} className="flex gap-3 rounded-2xl bg-white p-3">
@@ -1319,6 +1346,7 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
             </div>
           ))}
         </div>
+        )}
 
         <button
           onClick={onClose}
