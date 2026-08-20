@@ -527,7 +527,7 @@ export const en: Record<string, string> = {
   "twist.scramble.rule": "Every tile is an anagram — unscramble it, then group.",
   "twist.cipher.rule": "Every tile has lost its vowels — read the consonants, then group.",
   "twist.memory.rule": "Study the board, flip it face-down, and group from memory.",
-  "twist.emoji.rule": "Every tile is a picture. There are no letters on the board.",
+  "twist.emoji.rule": "Every tile is a picture — and the first word you think of is rarely the right one.",
   "twist.decoy.rule": "Three of the fifteen tiles belong to no group at all.",
   "twist.blackout.rule": "Groups you solve go dark and stay hidden until the reveal.",
   // The briefing's two halves: what the twist does to the board, then what the
@@ -544,9 +544,10 @@ export const en: Record<string, string> = {
     "Nothing starts until you say so: study the twelve words for as long as you like, then flip the board and every tile becomes a numbered card back.",
   "twist.memory.brief.b":
     "Group the tiles you remember. Three peeks turn one back over for a moment, and the board can't be shuffled — where a tile sits is yours to keep.",
-  "twist.emoji.brief.a": "This board has no words on it at all — twelve emoji stand in for them.",
+  "twist.emoji.brief.a":
+    "This board has no words on it at all — twelve pictures stand in for them, and most of them answer to more than one name.",
   "twist.emoji.brief.b":
-    "Name each picture yourself, then group the three that share a theme. The secret link is still spelled out at the end.",
+    "Sorting by what the pictures look like will not work — the groups are built from what each one is called. If a tile fits nowhere, it is waiting on a second name.",
   "twist.decoy.brief.a":
     "Impostors have been salted onto the board: fifteen tiles, and only twelve of them belong to a group.",
   "twist.decoy.brief.b":

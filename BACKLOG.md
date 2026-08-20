@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 34 (level tracking: how many people solve each level,
-and what its win rate is — off by default, and offline-proof).
+_Last updated: iteration 35 (the emoji boss stopped being a sorting exercise:
+the pictures lie, and the solved banner names them).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -371,6 +371,69 @@ server, plays level 1 offline, comes back online and checks the level reads
 1 solver / 2 attempts / 1 win after a second install loses the same board.
 
 ---
+
+## The emoji boss stopped being a sorting exercise (iteration 35)
+
+Owner's note: *"the emoji boss level is nice, but very easy."* It was, and the
+board was the reason. The old EMOJI_BOSS dealt three fast animals (🏃 🐆 🐎),
+three grey tools (🔧 ⚙️ 🔩), three blue weather icons (🌧️ ☁️ 🌬️) and three door
+things (🔒 🔑 🚪). Every group was a *visual* family, so the pictures sorted
+themselves: you could clear the boss without naming a single tile, which is the
+one thing the twist exists to make you do.
+
+### The board is built the other way round now
+
+The picture is the misdirection; the **name** is the answer. Twelve tiles, and
+ten of them have an obvious reading that is wrong and a second reading that is a
+sense of BOLT:
+
+| | | |
+|---|---|---|
+| **Fasteners from a toolbox drawer** | 💅 NAIL · 🥜 NUT · 📌 PIN | a manicure, a snack, a map marker |
+| **To leave in a hurry** | 🏃 RUN · 💨 DASH · ✂️ SPLIT | the foothold, a puff of wind, a pair of scissors |
+| **The electric side of a storm** | ✨ SPARK · ⚾ STRIKE · ☕ JOLT | a glitter of sparkles, a ball game, a coffee |
+| **To shut something tight** | 🔒 LOCK · 🍫 BAR · 🦭 SEAL | the foothold, a chocolate bar, an animal |
+
+Two rules hold it up:
+
+- **Nothing clusters by look.** The three food pictures (🥜 🍫 ☕) sit in three
+  different groups, and so do the two desk-drawer ones (📌 ✂️). Sorting by what
+  the images *are* actively loses, which is what the old board rewarded.
+- **One foothold per half, no gimmes.** 🏃 RUN and 🔒 LOCK read straight off the
+  tile — that is where a player starts. The other ten have to be renamed, and
+  the group is what tells you which name was meant.
+- **The doubt is in the picture, never in the word.** House rule: read a tile
+  alone and it must join exactly one group. 💨 might be read as WIND, but the
+  *tile* is DASH, and DASH is only ever "leave in a hurry". The first draft of
+  this board used 📸 FLASH in the storm group, which breaks that rule outright —
+  FLASH is a storm word *and* a fast one, so a player whose read was right would
+  have eaten a mistake. SPARK does the same job with only one home. ⚡ and the
+  literal 🔩 stay banned: either would hand over the link.
+
+The pivot is still BOLT, so `EMOJI_TWIN = "bolt"` and the whole placement pass
+are untouched — same four ideas (fasteners, running off, the storm, shutting a
+door), read through pictures instead of words.
+
+### The solved banner names the picture
+
+`SolvedBanner` takes a `pictures` map on this boss and prints **💅 NAIL** rather
+than **NAIL**. On a board whose difficulty *is* the naming, the banner is the
+punchline: the misreading you just talked yourself out of goes up on screen next
+to the word it turned out to be. Nothing else uses it (a blackout banner still
+masks everything), and the title on the win card is now *A Bolt from the Blue*.
+
+### Copy and guard rails
+
+- `twist.emoji.rule` (the line that sits on the boss door, on the board and in
+  the help sheet) promises the new fight: *"Every tile is a picture — and the
+  first word you think of is rarely the right one."* The briefing's two halves
+  say the pictures answer to more than one name, and that sorting by looks will
+  not work. EN + ES.
+- `npm run validate` now checks any board carrying an `emoji` map: every tile has
+  a picture, no picture is used twice, no picture belongs to a word that isn't a
+  tile (a missing entry silently falls back to showing the *word* — a free tile
+  on the one board meant to hide them all), and no glyph on the ⚡ / 🔩 / 🌩
+  spoiler list.
 
 ## The save that survives the embed, quests, and a mask that counts (iteration 33)
 
@@ -1588,9 +1651,10 @@ M. **Adaptive difficulty** — tune board difficulty to the player's win rate.
 N. ✅ **Story/level-map progression** — chapters with flavor text + boss nodes.
    **Every boss now plays differently** — and these are real changes to how the
    game plays, not just cosmetics. One twist per chapter, no two adjacent alike:
-   - **emoji** — a bespoke picture-only board (pivot BOLT, concrete-noun spokes,
-     lightning emoji deliberately omitted so the link isn't spoiled); you read
-     pictures instead of words.
+   - **emoji** — a bespoke picture-only board (pivot BOLT, lightning emoji
+     deliberately omitted so the link isn't spoiled). Each tile's obvious
+     reading is the wrong one; you have to find the second name (see iteration
+     34).
    - **scramble** — every tile is an anagram you decode before grouping.
    - ~~**the oracle**~~ — the puzzle turned inside out: all twelve words *and*
      the four theme names up front, deduce + type the hidden link FIRST, then

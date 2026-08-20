@@ -25,6 +25,8 @@ const refersTo = (nameWord: string, tile: string) =>
   nameWord === tile || nameWord === `${tile}S` || nameWord === `${tile}ES` || `${nameWord}S` === tile;
 let bad = 0;
 const seenIds = new Set<string>();
+// Pictures that name the link outright on the one board made of pictures.
+const SPOILER_GLYPHS = ["\u26a1", "\ud83d\udd29", "\ud83c\udf29"];
 
 // Daily pivots must be fresh content — never a campaign pivot re-used.
 const campaignPivots = new Set(PUZZLES.map((p) => p.pivot.toUpperCase()));
@@ -79,6 +81,26 @@ for (const raw of ALL) {
     }
   }
   if (p.words.filter((w) => w === p.pivot).length !== 1) problems.push("pivot is not exactly one tile");
+
+  // A picture board (the emoji boss) is only fair if every tile has a picture
+  // and no two tiles share one — a missing entry silently falls back to showing
+  // the word, which hands over a tile on the one board that is meant to hide
+  // them all. The board's difficulty now lives in *naming* the pictures, so a
+  // glyph that spells the link out (⚡ or the literal 🔩 on a BOLT board) would
+  // end the fight before it starts.
+  if (Object.keys(p.emoji).length) {
+    const spokes = p.categories.flatMap((c) => c.spokes);
+    const missing = spokes.filter((w) => !p.emoji[w]);
+    if (missing.length) problems.push(`no picture for ${missing.join(", ")}`);
+    const stray = Object.keys(p.emoji).filter((w) => !spokes.includes(w));
+    if (stray.length) problems.push(`picture for ${stray.join(", ")}, which is not a tile`);
+    const pics = spokes.map((w) => p.emoji[w]).filter(Boolean);
+    const twice = pics.filter((e, i) => pics.indexOf(e) !== i);
+    if (twice.length) problems.push(`the same picture is used twice: ${[...new Set(twice)].join(" ")}`);
+    for (const [w, e] of Object.entries(p.emoji)) {
+      if (SPOILER_GLYPHS.some((g) => e.includes(g))) problems.push(`${w}'s picture ${e} gives the link away`);
+    }
+  }
 
   if (problems.length) {
     bad++;

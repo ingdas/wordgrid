@@ -510,7 +510,7 @@ export const es: Record<string, string> = {
   "twist.scramble.rule": "Cada ficha es un anagrama: ordénala y luego agrupa.",
   "twist.cipher.rule": "Cada ficha ha perdido las vocales: lee las consonantes y luego agrupa.",
   "twist.memory.rule": "Estudia el tablero, dale la vuelta y agrupa de memoria.",
-  "twist.emoji.rule": "Cada ficha es un dibujo. En el tablero no hay ni una letra.",
+  "twist.emoji.rule": "Cada ficha es un dibujo, y la primera palabra que se te ocurre casi nunca es la buena.",
   "twist.decoy.rule": "Tres de las quince fichas no pertenecen a ningún grupo.",
   "twist.blackout.rule": "Los grupos que resuelvas se apagan y siguen ocultos hasta el final.",
   "twist.scramble.brief.a":
@@ -525,9 +525,10 @@ export const es: Record<string, string> = {
     "Nada empieza hasta que tú lo digas: estudia las doce palabras el tiempo que quieras y luego gira el tablero, donde cada ficha pasa a ser un dorso numerado.",
   "twist.memory.brief.b":
     "Agrupa las fichas que recuerdes. Tres vistazos giran una de vuelta un instante, y el tablero no se puede barajar: el sitio de cada ficha es tuyo.",
-  "twist.emoji.brief.a": "Este tablero no tiene ninguna palabra: doce emojis ocupan su lugar.",
+  "twist.emoji.brief.a":
+    "Este tablero no tiene ninguna palabra: doce dibujos ocupan su lugar, y casi todos responden a más de un nombre.",
   "twist.emoji.brief.b":
-    "Pon tú el nombre a cada dibujo y agrupa los tres que comparten tema. La palabra oculta se sigue deletreando al final.",
+    "Agruparlos por lo que parecen no funciona: los grupos salen de cómo se llama cada dibujo. Si una ficha no encaja en ningún sitio, es que le falta su segundo nombre.",
   "twist.decoy.brief.a":
     "Han colado impostoras en el tablero: quince fichas, y solo doce pertenecen a un grupo.",
   "twist.decoy.brief.b":

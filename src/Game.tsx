@@ -831,6 +831,10 @@ export default function Game({
                   cat={cat}
                   themeIndex={indexByName.get(cat.name) ?? 0}
                   masked={maskSolved}
+                  // On the picture board the banner is the punchline: it puts
+                  // each emoji next to the word it turned out to be, so the
+                  // misreading you just talked yourself out of is on screen.
+                  pictures={twist === "emoji" ? puzzle.emoji : undefined}
                   compact={status === "guessing"}
                   order={i}
                 />
@@ -1257,12 +1261,15 @@ function SolvedBanner({
   cat,
   themeIndex,
   masked,
+  pictures,
   compact,
   order,
 }: {
   cat: Category;
   themeIndex: number;
   masked: boolean;
+  /** Emoji boss: the picture each word was hiding behind, shown beside it. */
+  pictures?: Record<string, string>;
   compact?: boolean;
   order: number;
 }) {
@@ -1289,7 +1296,7 @@ function SolvedBanner({
             className={`rounded-md ${compact ? "px-1.5 py-0.5" : "px-2 py-0.5"}`}
             style={{ background: "rgba(255,255,255,0.45)" }}
           >
-            {masked ? "•••" : w}
+            {masked ? "•••" : pictures?.[w] ? `${pictures[w]} ${w}` : w}
           </span>
         ))}
       </span>

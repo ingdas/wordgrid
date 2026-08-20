@@ -1135,26 +1135,50 @@ export const PUZZLES: RawPuzzle[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Dedicated emoji boss. Every spoke is shown as an emoji only — no letters —
-// so you have to read the pictures, group them, then guess the link (BOLT).
-// The lightning emoji is deliberately avoided so the link isn't spoiled.
+// Dedicated emoji boss. Every spoke is shown as a picture only — no letters —
+// so you have to name each one yourself before you can group it.
+//
+// The first version of this board was a sorting exercise, not a puzzle: three
+// fast animals, three grey tools, three blue weather icons, three door things.
+// The pictures grouped themselves by *look*, and a player who never named a
+// single tile still cleared it in a minute.
+//
+// So the board is built the other way round now: the picture is the misdirection
+// and the *name* is the answer. Every tile has an obvious reading that is wrong
+// (a manicure, a bag of peanuts, a coffee, a seal) and a second reading that is
+// a sense of BOLT (nail, nut, jolt, seal-it-shut). Two rules keep it honest:
+//
+//  - **Nothing clusters by look.** The three food pictures (🥜 🍫 ☕) sit in three
+//    different groups; so do the two "desk drawer" ones (📌 ✂️). Sorting by
+//    colour or category of image actively loses.
+//  - **One foothold, no gimmes.** 🏃 RUN and 🔒 LOCK read straight off the tile,
+//    which is where a player starts. The other ten have to be renamed, and the
+//    group is what tells you which name was meant.
+//
+// What the board does NOT do is break the house rule the campaign lives by: read
+// any tile's *word* on its own and it joins exactly one group. The doubt is in
+// the picture, never in the word — 💨 might be read as WIND, but the tile is
+// DASH, and DASH is only ever "leave in a hurry". (An earlier draft used 📸
+// FLASH here, which reads as both a storm word and a fast one; SPARK does the
+// same job with only one home.) The lightning emoji and the literal 🔩 stay
+// banned: either would hand the link over.
 
 export const EMOJI_BOSS: RawPuzzle = {
   id: "emoji-bolt",
-  title: "The Lightning Bolt",
+  title: "A Bolt from the Blue",
   pivot: "BOLT",
   categories: [
-    { name: "Quick on their feet", words: ["SPRINTER", "CHEETAH", "HORSE"] },
-    { name: "In the toolbox", words: ["WRENCH", "GEAR", "SCREW"] },
-    { name: "Stormy weather", words: ["RAIN", "CLOUD", "WIND"] },
-    { name: "Keeping it shut", words: ["LOCK", "KEY", "DOOR"] },
+    { name: "Fasteners from a toolbox drawer", words: ["NAIL", "NUT", "PIN"] },
+    { name: "To leave in a hurry", words: ["RUN", "DASH", "SPLIT"] },
+    { name: "The electric side of a storm", words: ["SPARK", "STRIKE", "JOLT"] },
+    { name: "To shut something tight", words: ["LOCK", "BAR", "SEAL"] },
   ],
   accept: ["LIGHTNING"],
   emoji: {
-    SPRINTER: "🏃", CHEETAH: "🐆", HORSE: "🐎",
-    WRENCH: "🔧", GEAR: "⚙️", SCREW: "🔩",
-    RAIN: "🌧️", CLOUD: "☁️", WIND: "🌬️",
-    LOCK: "🔒", KEY: "🔑", DOOR: "🚪",
+    NAIL: "💅", NUT: "🥜", PIN: "📌",
+    RUN: "🏃", DASH: "💨", SPLIT: "✂️",
+    SPARK: "✨", STRIKE: "⚾", JOLT: "☕",
+    LOCK: "🔒", BAR: "🍫", SEAL: "🦭",
   },
 };
 
@@ -1381,8 +1405,9 @@ const SPANS: Span[] = (() => {
 // changes to how the game plays, not just cosmetics. Twists are assigned in a
 // fixed order so no two adjacent chapters share one.
 //
-//  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content) — you read
-//              pictures instead of words.
+//  - emoji:    a bespoke picture-only board (the EMOJI_BOSS content). The tiles
+//              are pictures, and each one's obvious reading is the wrong one —
+//              you have to find the second name before the group appears.
 //  - scramble: every tile is an anagram you must decode before grouping.
 //  - cipher:   every tile arrives with its vowels stripped (CRASH → CRSH). The
 //              consonant skeleton keeps the word's shape, so it's decoding
