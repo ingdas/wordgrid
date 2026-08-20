@@ -1143,25 +1143,25 @@ export const PUZZLES: RawPuzzle[] = [
 // The pictures grouped themselves by *look*, and a player who never named a
 // single tile still cleared it in a minute.
 //
-// So the board is built the other way round now: the picture is the misdirection
-// and the *name* is the answer. Every tile has an obvious reading that is wrong
-// (a manicure, a bag of peanuts, a coffee, a seal) and a second reading that is
-// a sense of BOLT (nail, nut, jolt, seal-it-shut). Two rules keep it honest:
+// The board is built the other way round now: the picture is the misdirection
+// and the *name* is the answer. Three rules keep it fair.
 //
-//  - **Nothing clusters by look.** The three food pictures (🥜 🍫 ☕) sit in three
-//    different groups; so do the two "desk drawer" ones (📌 ✂️). Sorting by
-//    colour or category of image actively loses.
-//  - **One foothold, no gimmes.** 🏃 RUN and 🔒 LOCK read straight off the tile,
-//    which is where a player starts. The other ten have to be renamed, and the
-//    group is what tells you which name was meant.
+//  - **The tile's word is the picture's own name.** 💅 is a NAIL, 🦭 is a SEAL,
+//    🍫 is a BAR. Where the name is longer than the word, the word is its stem
+//    and nothing else: nail polish → NAIL, a kick scooter → SCOOT, a flashlight
+//    → FLASH. What moves is the *sense*, never the noun: the seal you know is
+//    an animal, and the group wants the one on an envelope. A tile you have to
+//    call something it isn't called is a guessing game, not a puzzle — the
+//    second draft of this board asked a coffee to be a JOLT and a baseball to
+//    be a STRIKE, and both groups read as noise next to the honest ones.
+//  - **Nothing clusters by look.** The two animals (🦆 🦭), the two foods
+//    (🥜 🍫) and the two people (🏃 😱) all sit in different groups, so sorting
+//    by what the images *are* actively loses.
+//  - **The doubt is in the picture, never in the word.** House rule for every
+//    board in the game: read a tile's word on its own and it joins exactly one
+//    group. DUCK is only ever a way to leave; SPARK is only ever electric.
 //
-// What the board does NOT do is break the house rule the campaign lives by: read
-// any tile's *word* on its own and it joins exactly one group. The doubt is in
-// the picture, never in the word — 💨 might be read as WIND, but the tile is
-// DASH, and DASH is only ever "leave in a hurry". (An earlier draft used 📸
-// FLASH here, which reads as both a storm word and a fast one; SPARK does the
-// same job with only one home.) The lightning emoji and the literal 🔩 stay
-// banned: either would hand the link over.
+// ⚡ and the literal 🔩 stay banned: either would hand the link over.
 
 export const EMOJI_BOSS: RawPuzzle = {
   id: "emoji-bolt",
@@ -1169,15 +1169,15 @@ export const EMOJI_BOSS: RawPuzzle = {
   pivot: "BOLT",
   categories: [
     { name: "Fasteners from a toolbox drawer", words: ["NAIL", "NUT", "PIN"] },
-    { name: "To leave in a hurry", words: ["RUN", "DASH", "SPLIT"] },
-    { name: "The electric side of a storm", words: ["SPARK", "STRIKE", "JOLT"] },
+    { name: "To leave in a hurry", words: ["RUN", "DUCK", "SCOOT"] },
+    { name: "Comes off a live wire", words: ["FLASH", "SPARK", "SHOCK"] },
     { name: "To shut something tight", words: ["LOCK", "BAR", "SEAL"] },
   ],
   accept: ["LIGHTNING"],
   emoji: {
     NAIL: "💅", NUT: "🥜", PIN: "📌",
-    RUN: "🏃", DASH: "💨", SPLIT: "✂️",
-    SPARK: "✨", STRIKE: "⚾", JOLT: "☕",
+    RUN: "🏃", DUCK: "🦆", SCOOT: "🛴",
+    FLASH: "🔦", SPARK: "✨", SHOCK: "😱",
     LOCK: "🔒", BAR: "🍫", SEAL: "🦭",
   },
 };

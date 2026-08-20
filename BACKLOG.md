@@ -383,36 +383,36 @@ one thing the twist exists to make you do.
 
 ### The board is built the other way round now
 
-The picture is the misdirection; the **name** is the answer. Twelve tiles, and
-ten of them have an obvious reading that is wrong and a second reading that is a
-sense of BOLT:
+The picture is the misdirection; the **name** is the answer.
 
-| | | |
+| Group | Tiles | What they look like |
 |---|---|---|
 | **Fasteners from a toolbox drawer** | 💅 NAIL · 🥜 NUT · 📌 PIN | a manicure, a snack, a map marker |
-| **To leave in a hurry** | 🏃 RUN · 💨 DASH · ✂️ SPLIT | the foothold, a puff of wind, a pair of scissors |
-| **The electric side of a storm** | ✨ SPARK · ⚾ STRIKE · ☕ JOLT | a glitter of sparkles, a ball game, a coffee |
-| **To shut something tight** | 🔒 LOCK · 🍫 BAR · 🦭 SEAL | the foothold, a chocolate bar, an animal |
+| **To leave in a hurry** | 🏃 RUN · 🦆 DUCK · 🛴 SCOOT | a jogger, a bird, a toy |
+| **Comes off a live wire** | 🔦 FLASH · ✨ SPARK · 😱 SHOCK | a torch, some glitter, a face |
+| **To shut something tight** | 🔒 LOCK · 🍫 BAR · 🦭 SEAL | a padlock, chocolate, an animal |
 
-Two rules hold it up:
+Three rules hold it up. The first is the one the second draft got wrong:
 
-- **Nothing clusters by look.** The three food pictures (🥜 🍫 ☕) sit in three
-  different groups, and so do the two desk-drawer ones (📌 ✂️). Sorting by what
-  the images *are* actively loses, which is what the old board rewarded.
-- **One foothold per half, no gimmes.** 🏃 RUN and 🔒 LOCK read straight off the
-  tile — that is where a player starts. The other ten have to be renamed, and
-  the group is what tells you which name was meant.
-- **The doubt is in the picture, never in the word.** House rule: read a tile
-  alone and it must join exactly one group. 💨 might be read as WIND, but the
-  *tile* is DASH, and DASH is only ever "leave in a hurry". The first draft of
-  this board used 📸 FLASH in the storm group, which breaks that rule outright —
-  FLASH is a storm word *and* a fast one, so a player whose read was right would
-  have eaten a mistake. SPARK does the same job with only one home. ⚡ and the
-  literal 🔩 stay banned: either would hand over the link.
+- **The tile's word is the picture's own name.** 💅 *is* a nail, 🦭 *is* a seal,
+  🍫 *is* a bar. Where the name is longer than the word, the word is its stem
+  and nothing more: nail polish → NAIL, a kick scooter → SCOOT, a flashlight →
+  FLASH. What moves is the **sense**, never the noun — the seal you know is an
+  animal, and the group wants the one on an envelope. The second draft broke
+  this in two groups (☕ was supposed to be read as JOLT, ⚾ as STRIKE, ✂️ as
+  SPLIT, 💨 as DASH) and the owner called both unclear on sight: a picture you
+  have to call something it is not called is a guessing game, not a puzzle.
+- **Nothing clusters by look.** The two animals (🦆 🦭), the two foods (🥜 🍫)
+  and the two people (🏃 😱) sit in different groups, so sorting by what the
+  images *are* actively loses — which is precisely what the old board rewarded.
+- **The doubt is in the picture, never in the word.** The campaign house rule:
+  read a tile's word alone and it joins exactly one group. DUCK is only ever a
+  way to leave, SPARK only ever electric. ⚡ and the literal 🔩 stay banned:
+  either would hand over the link.
 
 The pivot is still BOLT, so `EMOJI_TWIN = "bolt"` and the whole placement pass
-are untouched — same four ideas (fasteners, running off, the storm, shutting a
-door), read through pictures instead of words.
+are untouched — a bolt is a fastener, to bolt is to run, a bolt comes off a live
+wire, and you bolt a door.
 
 ### The solved banner names the picture
 
