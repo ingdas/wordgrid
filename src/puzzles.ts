@@ -39,7 +39,7 @@ export const PUZZLES: RawPuzzle[] = [
     categories: [
       { name: "Words for a celebrity", words: ["ICON", "LEGEND", "IDOL"] },
       { name: "Seen in the night sky", words: ["MOON", "COMET", "PLANET"] },
-      { name: "___ + FISH", words: ["JELLY", "CAT", "SWORD"] },
+      { name: "Rewards for good work", words: ["MEDAL", "TROPHY", "RIBBON"] },
       { name: "Symbols & shapes", words: ["HEART", "ARROW", "CROSS"] },
     ],
   },
@@ -1330,7 +1330,7 @@ function difficultyKey(raw: RawPuzzle): number {
   return gradeOf(raw.id) * 100 + lexicalLoad(raw);
 }
 
-/** Does the board carry a compound-word group ("___ + FISH", "A ___ of ice")? */
+/** Does the board carry a compound-word group ("___ + HOUSE", "Comes after the link")? */
 const hasWordplay = (raw: RawPuzzle) =>
   raw.categories.some((c) => c.name.includes("___") || /after the link/i.test(c.name));
 
@@ -1544,15 +1544,18 @@ function dealChapters(): RawPuzzle[][] {
 /**
  * One compound-word board per chapter, where supply allows.
  *
- * The "___ + FISH" / "A ___ of ice" groups are the only beat on the board that
- * asks for a different kind of thinking, and there are almost exactly twelve of
- * them — one per chapter, if they're spread. Sorting by difficulty has no reason
- * to spread them: it used to put two in chapter 2 and none in 5, 9 or 12. So a
- * chapter holding a spare trades it to the nearest chapter with none, for the
- * board closest to it in difficulty.
+ * The "___ + HOUSE" groups are the only beat on the board that asks for a
+ * different kind of thinking, and there are almost exactly twelve of them — one
+ * per chapter, if they're spread. Sorting by difficulty has no reason to spread
+ * them: it used to put two in chapter 2 and none in 5, 9 or 12. So a chapter
+ * holding a spare trades it to the nearest chapter with none, for the board
+ * closest to it in difficulty.
  *
  * Bosses never move (they were chosen for the twist), and neither does the
- * opening — so chapter 1 keeps STAR's ___ + FISH and takes no part in the trade.
+ * opening — so chapter 1 is out of the trade in both directions. It ends up with
+ * no compound board at all, which is the point: spelling out a word one tile at
+ * a time is a second puzzle on top of the one the tutorial is teaching, so the
+ * player meets it from chapter 2, not on level 1.
  */
 function spreadWordplay(rosters: RawPuzzle[][]) {
   const movable = (ci: number) => (ci === 0 ? [] : rosters[ci].slice(0, -1));

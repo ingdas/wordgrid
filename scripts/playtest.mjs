@@ -18,7 +18,7 @@ const note = (s) => { issues.push(s); log("ISSUE:", s); };
 const GROUPS = [
   ["ICON", "LEGEND", "IDOL"],
   ["MOON", "COMET", "PLANET"],
-  ["JELLY", "CAT", "SWORD"],
+  ["MEDAL", "TROPHY", "RIBBON"],
   ["HEART", "ARROW", "CROSS"],
 ];
 
@@ -300,9 +300,9 @@ await (await p.$("button[aria-label^='Level 1,']")).click();
 await sleep(500);
 // Four distinct non-groups → four mistakes → loss (each spans multiple groups).
 const WRONG = [
-  ["ICON", "MOON", "JELLY"],
+  ["ICON", "MOON", "MEDAL"],
   ["ICON", "MOON", "HEART"],
-  ["ICON", "COMET", "JELLY"],
+  ["ICON", "COMET", "MEDAL"],
   ["ICON", "COMET", "HEART"],
 ];
 for (const g of WRONG) {

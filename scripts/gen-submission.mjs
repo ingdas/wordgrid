@@ -42,7 +42,7 @@ const cover = (w, h) => {
   <div style="display:flex;gap:${26 * s}px;margin-top:${16 * s}px;align-items:center;flex-wrap:wrap;justify-content:center;">
     ${tile("ICON", 46 * s)}${tile("MOON", 46 * s)}
     ${secretTile(46 * s)}
-    ${tile("JELLY", 46 * s)}${tile("HEART", 46 * s)}
+    ${tile("MEDAL", 46 * s)}${tile("HEART", 46 * s)}
   </div>
   <div style="font-family:${T.sans};font-size:${34 * s}px;font-weight:700;color:${T.press};letter-spacing:.14em;text-transform:uppercase;">A daily word puzzle</div>
 </div></body></html>`;
@@ -78,7 +78,7 @@ const seedProgress = () => {
 const GROUPS = [
   ["ICON", "LEGEND", "IDOL"],
   ["MOON", "COMET", "PLANET"],
-  ["JELLY", "CAT", "SWORD"],
+  ["MEDAL", "TROPHY", "RIBBON"],
 ];
 
 const browser = await launchBrowser();

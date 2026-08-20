@@ -40,7 +40,7 @@ const ogHtml = `<!doctype html><html><body style="margin:0">
   <div style="display:flex;gap:16px;margin-top:12px;align-items:center;">
     ${tile("ICON")}${tile("MOON")}
     ${secretTile()}
-    ${tile("JELLY")}${tile("HEART")}
+    ${tile("MEDAL")}${tile("HEART")}
   </div>
 </div></body></html>`;
 
