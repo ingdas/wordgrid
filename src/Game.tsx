@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
+import { trackStart } from "./stats";
 import { useModal } from "./modal";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
@@ -192,6 +193,19 @@ export default function Game({
   const isTutorialRun = useRef(tutorial).current;
   const coachMisses = useRef(0);
   const finaleHinted = useRef(false);
+
+  // The board was dealt: that's one attempt at this level. Raised here rather
+  // than at the five places that push the player into a game, so it can't
+  // drift out of step with what's actually on screen — and skipped for Endless
+  // (no loss state, so no rate to measure) and for debug play (a tool that
+  // auto-solves a board is not evidence of anything). See src/stats.ts; with
+  // no endpoint configured this is a no-op.
+  const trackedStart = useRef(false);
+  useEffect(() => {
+    if (endless || debug || trackedStart.current) return;
+    trackedStart.current = true;
+    trackStart({ id: levelRaw.id, level: daily ? 0 : puzzleIndex + 1, mode: daily ? "daily" : "campaign" });
+  }, [endless, debug, daily, puzzleIndex, levelRaw.id]);
 
   // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {

@@ -32,6 +32,11 @@ export const KEYS = [
   "wordgrid:muted",
   "wordgrid:music",
   "wordgrid:locale",
+  // The anonymous telemetry id (src/stats.ts). Mirrored for the same reason
+  // the save is: a partitioned localStorage would otherwise turn one returning
+  // player into a new "person" on every visit, and the level stats count
+  // people.
+  "wordgrid:player",
 ] as const;
 
 const PROBE = "wordgrid:probe";

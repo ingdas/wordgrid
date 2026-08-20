@@ -96,13 +96,54 @@ save is pushed up before the browser can lose it. When *nothing* durable is
 available the session still plays out of memory, and says so in a banner rather
 than pretending it saved.
 
+### Level tracking
+
+How many people have solved a level, and how often an attempt on it ends in a
+win. Off by default and inert until an endpoint is configured — the game is a
+static bundle, so the counting happens somewhere else:
+
+- the client is [`src/stats.ts`](./src/stats.ts): one small event when a board
+  is dealt and one when it ends, plus the aggregate read back for display;
+- the server is [`server/stats-server.mjs`](./server/stats-server.mjs) — a
+  dependency-free Node + SQLite reference implementation of the two endpoints
+  (`POST /events`, `GET /levels`, plus `/levels.csv` for a spreadsheet).
+
+Switch it on either way round:
+
+```bash
+node server/stats-server.mjs                      # :8787, ./stats.db
+VITE_STATS_URL=https://stats.example.com npm run build
+```
+
+or, without rebuilding, point the `<meta name="wordgrid:stats">` tag in
+`index.html` / `docs/index.html` at the same URL.
+
+Where it shows up: the **up-next card** on the level index carries "62% of
+players clear this one" once enough people have finished a board, and
+**Settings → Developer → Level tracking** is the author's view — solve counts
+and win rates for every level, sorted by level or hardest-first, with the state
+of the queue and the last sync.
+
+What is collected is one random per-install id (so the counts are people rather
+than plays), the level, the outcome, the mistakes and the clock. No account, no
+IP kept by the reference server, nothing a player typed. Debug play and Endless
+are never counted — a board that auto-solves or can't be lost isn't evidence.
+
+**Offline is a first-class case.** With no network the game plays exactly as it
+does with one: events queue in the same storage the save uses and go out on the
+next connection, the last aggregate stays on the device (dated, so it can say
+how stale it is), and a missing, dead or nonsense server is never shown to the
+player. `scripts/stats.playtest.mjs` plays a whole level in a browser with the
+network cut to prove it.
+
 ### Automated playtest
 
 `scripts/playtest.mjs` drives a headless Chrome through the solve / lose /
 reduced-motion flows and asserts on the DOM (including that the pivot is never
 distinguishable by colour mid-game). `scripts/pairs.test.mjs`,
-`scripts/debug.playtest.mjs` and `scripts/iteration33.playtest.mjs` (quests,
-the link mask, modal focus, storage-less play) cover the rest. See
+`scripts/debug.playtest.mjs`, `scripts/iteration33.playtest.mjs` (quests,
+the link mask, modal focus, storage-less play) and `scripts/stats.playtest.mjs`
+(level tracking against a live server, played offline) cover the rest. See
 [`BACKLOG.md`](./BACKLOG.md) for how to run them and the latest findings.
 
 ## Hosting on GitHub Pages

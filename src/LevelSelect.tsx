@@ -17,6 +17,8 @@ import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { shuffledLetters } from "./letters";
 import { DebugPanel } from "./DebugPanel";
+import { useCommunityStats } from "./LevelStats";
+import { successRate } from "./stats";
 import {
   isUnlocked,
   MAX_STARS,
@@ -1042,6 +1044,10 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
   const chapter = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
   const ink = chapterInk(Math.max(chapter, 0));
   const twist = bossTwist(index);
+  // How the rest of the world does on this board. Absent unless level tracking
+  // is configured AND enough people have finished it to mean anything — a
+  // clear rate drawn from three attempts would be a lie with a % sign on it.
+  const rate = successRate(useCommunityStats()?.levels[LEVELS[index].id]);
 
   return (
     <motion.div
@@ -1077,6 +1083,11 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
             {twist && (
               <div className="mt-1 text-xs font-semibold leading-snug text-ink lg:text-sm">
                 {t(`twist.${twist}.rule`)}
+              </div>
+            )}
+            {rate !== null && (
+              <div className="mt-1 text-[0.65rem] font-semibold text-ink-soft lg:text-xs">
+                {t("levels.clearRate", { pct: Math.round(rate * 100) })}
               </div>
             )}
           </div>

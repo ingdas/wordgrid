@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 33 (the save survives the iframe, daily quests, a link
-mask that counts letters, modal focus — and the XP/rank ladder is gone).
+_Last updated: iteration 34 (level tracking: how many people solve each level,
+and what its win rate is — off by default, and offline-proof).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -22,7 +22,7 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   structure + chapter-key lengths + the campaign curve), `npm run audit`
   (ambiguity helper),
   `npm test` (engine, deduction, **progress/key gating**, **quests**,
-  **storage**, **the debug switch**, i18n, sdk),
+  **storage**, **the debug switch**, i18n, sdk, **level tracking**),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
@@ -32,7 +32,10 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   `BASE=http://localhost:<port>/ node scripts/pairs.test.mjs` (Pairs mode:
   a full run, plus the two iteration-24 timer/stale-state repros), and
   `BASE=http://localhost:<port>/ node scripts/debug.playtest.mjs` (debug mode:
-  the tool tray, free hints, auto-solve, the index/Logic-Grid tools).
+  the tool tray, free hints, auto-solve, the index/Logic-Grid tools), and
+  `node scripts/stats.playtest.mjs` (level tracking against a live stats
+  server — it serves `docs/` and runs the server itself, so it needs no
+  preview; a whole level is played with the network cut).
 - **Debug mode** (iteration 30): three ways in — `?debug` in the URL (remembered
   afterwards; `?debug=0` turns it off), the **Settings → Developer** toggle, or
   `localStorage["wordgrid:debug"]="1"` (what the headless scripts do). It opens
@@ -67,6 +70,15 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   from another group on the board — singular or plural — and no tile may
   contain the pivot as a substring. All four are spoilers or misdirection;
   see iteration 20/21 for what they cost before they were caught.
+- `stats.ts` — **level tracking** (iteration 34): a start event when a board is
+  dealt and a win/loss event when it ends, queued in storage and flushed to a
+  configurable endpoint; the aggregate (`players/solvers/plays/wins` per level
+  id) read back, cached for 6h and validated before it is rendered. Off unless
+  `VITE_STATS_URL` or the `<meta name="wordgrid:stats">` tag is set, and every
+  path degrades to a no-op — see `scripts/stats.test.mts`.
+- `LevelStats.tsx` — the author's dashboard (Settings → Developer → Level
+  tracking) plus `useCommunityStats()`, which the level index's up-next card
+  uses for its "62% of players clear this one" line.
 - `engine.ts` — pure, unit-tested: evaluateGuess (one-away detection),
   computeStars (mistakes + link-guess), linkMatches (case/plural/synonyms via
   `accept`), scrambleWord, cipherWord (vowel-stripping, the cipher boss — and
@@ -283,6 +295,82 @@ The test to apply to every tile: *read it alone, with no category names, and
 ask which groups on this board it could join.* If the answer isn't exactly one,
 change the tile — not the category name, which the player can't see while
 guessing.
+
+## Level tracking: who clears what, and how often (iteration 34)
+
+The owner asked for two numbers per level — how many people have solved it, and
+what its success rate is — with one hard condition: **the game still plays
+offline**. The game is a static bundle on GitHub Pages and inside the
+CrazyGames iframe, so those numbers can only be counted somewhere else; the
+work is a client that can lose that somewhere-else at any moment without the
+player ever finding out.
+
+### What was built
+
+- **`src/stats.ts`** — the client. One event when a board is dealt (`start`,
+  the denominator) and one when it ends (`win`/`loss`), each carrying a
+  client-generated `uid`, a random per-install `player` id, the level, the
+  mistakes and the clock. Events queue under `wordgrid:stats-queue` and flush in
+  batches; the aggregate comes back from `GET /levels` and is cached under
+  `wordgrid:stats-cache` for six hours.
+- **`server/stats-server.mjs`** — the other half, so the feature is runnable
+  rather than theoretical: Node's own `node:http` + `node:sqlite`, zero
+  dependencies, ~200 lines. `POST /events`, `GET /levels`, `GET /levels.csv`
+  (for a spreadsheet), `GET /health`. Aggregation is one `GROUP BY` over the
+  events with a 30s memo, so a schema question is a query change rather than a
+  migration.
+- **`src/LevelStats.tsx`** — Settings → Developer → **Level tracking**: the
+  totals, then every level with its solver count and win rate, sorted by level
+  or hardest-first, over a bar that reads red (a wall) to green (a breather).
+  It also reports the pipe itself — endpoint, queue depth, last error, how old
+  the numbers are — because "no data" and "not collecting" are different
+  problems.
+- **The up-next card** on the level index gained one line: "62% of players
+  clear this one", and only once a board has enough finished attempts
+  (`MIN_SAMPLE`) for that to be true.
+
+### The decisions worth keeping
+
+1. **Off by default.** No endpoint configured — every fork, every local
+   checkout, the committed `docs/` build as it stands — and the module does
+   nothing at all: no requests, no queue, no keys written. Two ways to switch
+   it on, because the two deploys differ: `VITE_STATS_URL` at build time, or
+   the `<meta name="wordgrid:stats">` tag in `index.html`, which lets the
+   committed build be pointed at a server without rebuilding.
+2. **Offline is normal, not an error.** Events raised with the network down
+   keep in the same storage the save uses and go out on the next connection;
+   `navigator.onLine === false` skips the attempt rather than burning a
+   timeout. The last aggregate stays on the device, dated, so the numbers are
+   still there on a plane. `scripts/stats.playtest.mjs` plays a whole level
+   through the service worker with the network cut and asserts the queue drains
+   afterwards with the right counts.
+3. **Anonymous by construction.** A random install id is what makes "12 people
+   solved this" different from "12 plays by one person" — and it is the only
+   identifier there is. No account, no IP kept by the server, nothing a player
+   typed. The id is mirrored to the CrazyGames data module (`storage.ts` KEYS)
+   for the same reason the save is: a partitioned `localStorage` would
+   otherwise turn one returning player into a new person every visit.
+4. **Debug and Endless are never counted.** A board that can be auto-solved
+   from a tool tray, or one that has no loss state, is not evidence about
+   difficulty.
+5. **The server's answer is not trusted.** `parseLevels()` clamps, drops and
+   sanity-checks everything before it reaches the UI (more wins than plays,
+   negative counts, junk keys) — it is the one thing the game renders that came
+   from outside it.
+6. **A thin sample gets no percentage.** Under `MIN_SAMPLE` finished attempts a
+   level shows a dash, in the dashboard and on the up-next card alike: a "33%
+   clear rate" drawn from three attempts is a lie with a % sign on it.
+
+### Verified
+
+`npm test` (10 new cases in `scripts/stats.test.mts`: off-by-default, offline
+queue-and-drain, dead server, queue cap, cached aggregate outliving the network,
+untrusted payloads, no-DOM/no-fetch), `npm run validate`, and the four browser
+playtests plus the new `scripts/stats.playtest.mjs` — which runs the real
+server, plays level 1 offline, comes back online and checks the level reads
+1 solver / 2 attempts / 1 win after a second install loses the same board.
+
+---
 
 ## The save that survives the embed, quests, and a mask that counts (iteration 33)
 
@@ -1613,7 +1701,8 @@ the link finale is not multiple choice (it is tap-or-type spelling, with the
 early call on top); difficulty is no longer a length heuristic.
 
 ## Possible next ideas
-- Leaderboards / cloud save (needs a backend).
+- Leaderboards / cloud save (needs a backend — `server/stats-server.mjs` from
+  iteration 34 is one, and could grow a leaderboard table).
 - Achievements (perfect streaks, all-Easy 3-stars, daily streak milestones).
 - Theme/colour settings; larger-text mode.
 - A puzzle-authoring tool that runs the ambiguity check as you write.

@@ -17,6 +17,13 @@
       name="description"
       content="Four hidden groups. One secret word links them all. Can you find it? A free daily word puzzle."
     />
+    <!-- Level tracking (src/stats.ts). Empty = off: no requests, no data
+         collected, and the game plays exactly the same. Point it at a stats
+         server — see server/stats-server.mjs — to start counting who clears
+         which level. Build-time `VITE_STATS_URL` wins over this tag; the tag
+         exists so the committed docs/ build can be switched on without one.
+         Anonymous either way: a random per-install id, the level, the outcome. -->
+    <meta name="wordgrid:stats" content="" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -43,8 +50,8 @@
     <meta name="twitter:image" content="https://ingdas.github.io/wordgrid/og-image.png" />
 
     <title>WordGrid — Find the Four</title>
-    <script type="module" crossorigin src="./assets/index-CpnBew7c.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CUyMjGVM.css">
+    <script type="module" crossorigin src="./assets/index-DxfHszsI.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CTIkeovL.css">
   </head>
   <body>
     <div id="root"></div>

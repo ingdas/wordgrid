@@ -7,3 +7,7 @@ dist
 # NOTE: /docs is intentionally committed — it is the GitHub Pages build.
 
 *.tsbuildinfo
+
+# The stats server's SQLite file, if it is run from the repo root.
+stats.db
+stats.db-*

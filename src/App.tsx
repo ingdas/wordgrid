@@ -36,6 +36,8 @@ import {
   showInterstitial,
   requestRewarded,
 } from "./sdk";
+import { startStats, trackFinish } from "./stats";
+import { LevelStatsModal } from "./LevelStats";
 import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
 import { chapterPage } from "./theme";
 import { LOCALES, getLocale, setLocale, t, type Locale } from "./i18n";
@@ -118,6 +120,9 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // The level-tracking dashboard (Settings → Developer): solve counts and
+  // success rates per level. An author's view, not a player's.
+  const [showTracking, setShowTracking] = useState(false);
   const [playingDaily, setPlayingDaily] = useState(false);
   // Today's puzzle from the dedicated daily pool, captured when Play is hit so
   // a session that crosses midnight finishes the puzzle it started.
@@ -139,6 +144,10 @@ export default function App() {
     // The bundle is already parsed by the time React mounts, so loading is
     // effectively done here — tell the platform we're interactive.
     loadingStop();
+    // Level tracking: drain anything a previous (offline) session queued and
+    // pull the community numbers. Off entirely unless an endpoint is
+    // configured, and never on the path of anything the player is waiting for.
+    const stopStats = startStats();
     let stopMirror: (() => void) | undefined;
     void initSdk().then(() => {
       // Once the platform is up, reconcile the save with its data module: the
@@ -155,7 +164,10 @@ export default function App() {
         (durable) => setStorageWarn(!durable)
       );
     });
-    return () => stopMirror?.();
+    return () => {
+      stopMirror?.();
+      stopStats();
+    };
   }, []);
 
   // Platform QA: pause the session + audio when the tab/iframe is hidden.
@@ -361,6 +373,17 @@ export default function App() {
       // The daily plays from its own pool: it feeds streaks/score/history but
       // never writes campaign stars or best times (its ids aren't levels).
       const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
+      if (!debug) {
+        trackFinish({
+          id,
+          level: playingDaily ? 0 : levelIndex + 1,
+          mode: playingDaily ? "daily" : "campaign",
+          won: true,
+          mistakes: result.mistakes,
+          timeMs: result.timeMs,
+          stars: result.stars,
+        });
+      }
       let unlocked: ReturnType<typeof evaluateUnlocks>["unlocked"] = [];
       applyProgress((p) => {
         const streak = p.streak + 1;
@@ -406,7 +429,7 @@ export default function App() {
       }
       questEvents(winEvents(result, playingDaily));
     },
-    [levelIndex, playingDaily, dailyRaw, applyProgress, questEvents]
+    [levelIndex, playingDaily, dailyRaw, applyProgress, questEvents, debug]
   );
 
   // Debug mode plays with an unlimited bank, so a hint spent there costs
@@ -448,6 +471,16 @@ export default function App() {
 
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
+      if (!debug) {
+        trackFinish({
+          id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
+          level: playingDaily ? 0 : levelIndex + 1,
+          mode: playingDaily ? "daily" : "campaign",
+          won: false,
+          mistakes: result.mistakes,
+          timeMs: result.timeMs,
+        });
+      }
       applyProgress((p) =>
         pushHistory({ ...p, streak: 0 }, {
           at: Date.now(),
@@ -463,7 +496,7 @@ export default function App() {
         })
       );
     },
-    [levelIndex, playingDaily, dailyRaw, applyProgress]
+    [levelIndex, playingDaily, dailyRaw, applyProgress, debug]
   );
 
   // Where "Next" leads from the campaign level being played. Read from live
@@ -797,6 +830,7 @@ export default function App() {
           />
         )}
         {showHistory && <HistoryModal progress={progress} onClose={() => setShowHistory(false)} />}
+        {showTracking && <LevelStatsModal progress={progress} onClose={() => setShowTracking(false)} />}
         {showSettings && (
           <SettingsModal
             muted={muted}
@@ -807,6 +841,10 @@ export default function App() {
             onToggleMusic={toggleMusic}
             onToggleCalm={toggleCalm}
             onToggleDebug={toggleDebug}
+            onTracking={() => {
+              setShowSettings(false);
+              setShowTracking(true);
+            }}
             onLocale={changeLocale}
             onReset={resetProgress}
             onClose={() => setShowSettings(false)}
@@ -1119,6 +1157,7 @@ function SettingsModal({
   onToggleMusic,
   onToggleCalm,
   onToggleDebug,
+  onTracking,
   onLocale,
   onReset,
   onClose,
@@ -1131,6 +1170,8 @@ function SettingsModal({
   onToggleMusic: () => void;
   onToggleCalm: () => void;
   onToggleDebug: () => void;
+  /** Open the level-tracking dashboard. */
+  onTracking: () => void;
   onLocale: (l: Locale) => void;
   onReset: () => void;
   onClose: () => void;
@@ -1196,6 +1237,15 @@ function SettingsModal({
             on={debug}
             onToggle={onToggleDebug}
           />
+          {/* How the campaign is actually landing: solve counts and success
+              rates per level, straight from the players who have tried them. */}
+          <button
+            onClick={onTracking}
+            className="w-full border-t border-ink/15 py-3 text-left transition hover:bg-cream"
+          >
+            <div className="text-sm font-bold text-ink">{t("settings.tracking")}</div>
+            <div className="text-[0.7rem] text-ink-soft">{t("settings.tracking.hint")}</div>
+          </button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">
