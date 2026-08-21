@@ -68,6 +68,27 @@ npm run validate  # structurally check every puzzle (13 unique tiles, link fits)
 npm run audit     # flag spokes that may be ambiguous, for human review
 ```
 
+### Submission pack
+
+Everything a store listing needs lives in [`assets/submission/`](./assets/submission)
+and is generated, not hand-made — so it can't drift from the game it is
+advertising. [`SUBMISSION.md`](./assets/submission/SUBMISSION.md) holds the copy
+(title, descriptions, instructions, tags, technical answers, and the Spanish
+versions); beside it are seven covers, twelve screenshots and a 26-second
+gameplay clip.
+
+```bash
+npm run build && npm run preview  # the pack is captured from the real build
+npm run submission                # covers + screenshots (COVERS=1 for art only)
+npm run clip                      # gameplay.webm
+```
+
+The covers are rendered from branded HTML in `scripts/submission-art.mjs`, one
+composition per aspect ratio. The screenshots and the clip are a scripted
+playthrough of the built app against a seeded save, and both take their boards
+straight from `src/puzzles.ts`, so re-ordering the campaign can't leave them
+clicking words that have moved.
+
 ### Debug mode
 
 For playtesting and QA. Turn it on by appending **`?debug`** to the URL (it's

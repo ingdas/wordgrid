@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "submission": "node scripts/gen-submission.mjs",
+    "clip": "node scripts/gen-clip.mjs",
     "validate": "node --experimental-strip-types scripts/validate.mts",
     "audit": "node --experimental-strip-types scripts/audit.mts",
     "gen:deduction": "node --experimental-strip-types scripts/gen-deduction.mts",

@@ -1337,10 +1337,21 @@ combined the content.
   overlap.
 - ✅ **#8 Submission assets** — `scripts/gen-assets.mjs` rewritten to Puzzle
   Press (og-image + PWA icons regenerated); `scripts/gen-submission.mjs`
-  renders covers (1920×1080 + 1080×1080) and captures 5 real gameplay
-  screenshots into `assets/submission/`. Shared launcher `scripts/browser.mjs`
-  (puppeteer → puppeteer-core + system Chromium fallback). Remaining: the
-  short gameplay **clip** needs a manual screen recording.
+  renders covers and captures real gameplay screenshots into
+  `assets/submission/`. Shared launcher `scripts/browser.mjs` (puppeteer →
+  puppeteer-core + system Chromium fallback).
+  **Finished in iteration 34**: seven covers, one per aspect the portal asks
+  for (16:9 at three sizes, 1:1 at two, 4:3, 9:16), each composed for its own
+  shape by `scripts/submission-art.mjs` in the game's embedded fonts; twelve
+  screenshots covering home, the level index, a board mid-move, the finale, the
+  win card, a boss briefing and its board, the Logic Grid, Pairs, and three
+  phone shots at 2×; and the gameplay **clip** (`npm run clip`,
+  `scripts/gen-clip.mjs`) — a DevTools screencast resampled onto a fixed frame
+  rate and encoded to VP8/WebM, so no manual screen recording is needed. Boards
+  and solutions are imported from `src/puzzles.ts` rather than pasted in, so a
+  content change can't leave the script clicking words that have moved. The
+  written half — titles, both descriptions at three lengths, instructions, tags,
+  technical answers and Spanish copy — is `assets/submission/SUBMISSION.md`.
 - ✅ **#9 Global-English copy pass** — idiom-only titles renamed (Bark and
   Bite, Bolt Away, A Blank Sheet, Fry Day, Plot Twist, One Pound, Swing the
   Bat, Top Deck, The Lightning Bolt), chapter names/flavor simplified (Rare
@@ -1388,9 +1399,9 @@ impact on the platform:
    session-length metric CrazyGames ranks by.
 7. **Leaderboard on the daily** via the CrazyGames user/data SDK (their
    platform accounts remove the need for our own backend).
-8. ◐ **Submission assets** — covers, screenshots and the og-image/icons are
-   done (see SHIPPED above); only the short gameplay clip is left (manual
-   screen recording).
+8. ✅ **Submission assets** — covers, screenshots, the og-image/icons, the
+   gameplay clip and the written copy pack are all generated from the live
+   game (see SHIPPED above). Nothing here is manual any more.
 9. ✅ **Global-English copy pass** — shipped (see SHIPPED above).
 10. **Save-data resilience in iframes** — localStorage can be partitioned or
     blocked in embeds; mirror progress through the CrazyGames data module when
