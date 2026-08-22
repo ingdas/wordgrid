@@ -83,10 +83,14 @@ npm run submission                # covers + screenshots (COVERS=1 for art only)
 npm run clip                      # gameplay.webm
 ```
 
-The covers are rendered from branded HTML in `scripts/submission-art.mjs`, one
-composition per aspect ratio. The screenshots and the clip are a scripted
-playthrough of the built app against a seeded save, and both take their boards
-straight from `src/puzzles.ts`, so re-ordering the campaign can't leave them
+The covers are rendered from branded HTML in `scripts/submission-art.mjs`. Every
+one of them shows the same picture: four words, one from each group of a real
+board, all pointing at the masked link they share — a riddle the viewer can
+solve before they click, and an honest diagram of the mechanic. No tagline, no
+badge; the only text is the game's own words and the title. The screenshots and
+the clip are a scripted playthrough of the built app against a seeded save.
+Boards, words and solutions all come straight from `src/puzzles.ts`, so
+re-ordering the campaign can't leave the art quietly lying or the capture
 clicking words that have moved.
 
 ### Debug mode

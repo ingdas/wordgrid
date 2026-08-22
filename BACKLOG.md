@@ -1342,7 +1342,14 @@ combined the content.
   puppeteer-core + system Chromium fallback).
   **Finished in iteration 34**: seven covers, one per aspect the portal asks
   for (16:9 at three sizes, 1:1 at two, 4:3, 9:16), each composed for its own
-  shape by `scripts/submission-art.mjs` in the game's embedded fonts; twelve
+  shape by `scripts/submission-art.mjs` in the game's embedded fonts. The cover
+  picture is the pivot mechanic itself — four words, one per group of a real
+  board (NUT / DASH / FLASH / LOCK), fanning into the masked link they share, so
+  a viewer can solve it before clicking. No tagline, badge or marketing line
+  anywhere in the set; the title rides above the picture as a masthead, sized to
+  stay readable at the ~300px a portal grid actually renders. The chosen words
+  are checked against `src/puzzles.ts` at render time, so rewriting that board
+  fails the build rather than shipping a cover that lies. Twelve
   screenshots covering home, the level index, a board mid-move, the finale, the
   win card, a boss briefing and its board, the Logic Grid, Pairs, and three
   phone shots at 2×; and the gameplay **clip** (`npm run clip`,

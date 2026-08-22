@@ -142,9 +142,21 @@ against a seeded save — nothing here is a mock-up.
 | `thumbnail-400x300.png` | 400×300 (4:3) | 4:3 thumbnail slot |
 | `cover-1080x1920.png` | 1080×1920 (9:16) | portrait / story placements |
 
-Each shape is composed for itself rather than scaled from one master: the 16:9
-covers set the masthead against a live board, and the two small formats drop the
-board entirely, because twelve words are unreadable at 400px wide.
+**What the cover shows.** Four words — `NUT`, `DASH`, `FLASH`, `LOCK` — one
+taken from each group of one of the game's real boards, all pointing at the masked
+link they share. It is solvable in a couple of seconds, so the viewer gets the
+game's payoff before they click, and it is an honest diagram of the mechanic
+rather than a claim about it. The answer is never printed on the art.
+
+There is no tagline, no feature badge and no marketing sentence anywhere in the
+set: only the game's own words, the masked link, and the title. The title is set
+as a masthead over the picture rather than tucked in a corner, because at the
+size a portal actually renders a thumbnail it still has to be read at a glance.
+
+Landscape lays the four words out in a row; every squarer or taller format folds
+them into a 2×2. Both are the same picture, composed for their own shape rather
+than scaled from one master — including the two small formats, which carry the
+whole riddle rather than falling back to a logo.
 
 ### Screenshots
 
@@ -166,7 +178,9 @@ shots are a 390×844 phone viewport captured at 2×.
 | `screen-11-board-780x1688.png` | mid-board, on a phone |
 | `screen-12-finale-780x1688.png` | the spelling finale, on a phone |
 
-**If only five slots are available**, use 3 · 4 · 2 · 7 · 5 — the loop, its
+Use `cover-1280x720.png` as the primary thumbnail.
+
+**If only five screenshot slots are available**, use 3 · 4 · 2 · 7 · 5 — the loop, its
 payoff, the map that shows how much game there is, a boss that proves the rules
 move, and the reward screen.
 
