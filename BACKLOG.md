@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 35 (the emoji boss stopped being a sorting exercise:
-the pictures lie, and the solved banner names them).
+_Last updated: iteration 36 (the audio pass: a real mixer, sounds for the
+moments that had none, music that follows the screen, and a volume for each).
 This file is the single source of truth — a fresh session should be able to
 continue from here without any prior chat context._
 
@@ -22,7 +22,7 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   structure + chapter-key lengths + the campaign curve), `npm run audit`
   (ambiguity helper),
   `npm test` (engine, deduction, **progress/key gating**, **quests**,
-  **storage**, **the debug switch**, i18n, sdk, **level tracking**),
+  **storage**, **the debug switch**, i18n, sdk, **level tracking**, **audio**),
   `node scripts/gen-assets.mjs` (og-image + icons → public/).
 - **Playtest** (must pass with zero issues before any push):
   `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
@@ -140,7 +140,8 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   level 0), daily (playingDaily → dailyPuzzle() from the dedicated pool via
   overrideRaw), Endless mode (shuffled queue over campaign+daily pool,
   no-fail, endlessBest), Pairs routing (handlePairsFinish → score+pairsBest),
-  settings modal (sound/music/calm/reset), stats/history modals,
+  settings modal (sound + level / music + level / calm / reset), music scene
+  follows the screen, stats/history modals,
   visibilitychange pause, rewarded refillHints (+3).
 - `Pairs.tsx` — 🃏 memory mode on the same boards. Phases: **matching** (12
   face-down cards, flip two, they match when they share a theme) → **coupling**
@@ -241,7 +242,18 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   every rewarded failure path — no SDK, disabled, ad error, no callback within
   5s — resolves **true**, so watch & continue and hint refills always pay out.
   Pinned by `scripts/sdk.test.mts`.
-- `audio.ts` — synthesized SFX + ambient music, suspend/resumeAudio.
+- `audio.ts` — the whole soundtrack, synthesized at runtime (no audio files).
+  A real mixer: **sfx** and **music** buses under a make-up gain and a limiter,
+  one shared generated-impulse **reverb** on a send, and stings that **duck**
+  the music. Voices are FM bells, filtered oscillators and filtered noise, with
+  a voice budget and a per-sound rate gate. **Music** is a four-bar loop
+  scheduled ahead of the audio clock (never `setInterval`-per-note), in three
+  scenes sharing one key — `menu`, `play`, `boss` — swapped at the next bar by
+  `setMusicScene()`, which `App` drives off the current screen. Each channel has
+  a switch **and** a level (`wordgrid:sfxvol` / `wordgrid:musicvol`, sliders in
+  Settings). Nothing is scheduled while the tab is hidden — the clock is frozen
+  there, so a sting queued then would fire all at once on return.
+  Pinned by `scripts/audio.test.mts`.
 - `index.css` — **"The Puzzle Press" theme tokens** via Tailwind v4 `@theme`:
   paper #faf5ea, cream #efe7d3, ink #26221a, ink-soft #6f6757, press #d9482b,
   press-deep #a93318, gold #eda820, gold-deep #8a5c00, leaf #1c7a4d. Hard
@@ -371,6 +383,97 @@ server, plays level 1 offline, comes back online and checks the level reads
 1 solver / 2 attempts / 1 win after a second install loses the same board.
 
 ---
+
+## The audio pass (iteration 36)
+
+The sound was a stack of `OscillatorNode`s wired straight to `destination`: one
+`blip()` shape for everything, no mixer, no headroom, and a volume you could
+only have by turning it off. Six sounds covered thirty-odd moments, so the tile
+tap did duty as a hint, an unlock, a shuffle and a peek. What follows is what
+changed and, where it matters, why.
+
+### There is a mixer now
+
+```
+voices ─┬─► sfxBus   ─┐
+        ├─► musicDuck ─► musicBus ─┐
+        └─► verbBus ─► convolver ──┴─► master ─► limiter ─► destination
+```
+
+- **Two buses, each with a switch and a level.** "Too loud" and "off" are
+  different complaints and only one of them used to have an answer. The levels
+  live in `wordgrid:sfxvol` / `wordgrid:musicvol` (mirrored like every other
+  key) and appear as sliders under their switch in Settings — the slider only
+  exists while that channel is on, because a slider under a dead switch is a
+  puzzle rather than a control.
+- **A limiter after a make-up gain.** Every voice is written quiet enough to be
+  stacked; the level is made up once, at the end, where the limiter can catch a
+  pile-up. Solving a group mid-arpeggio with the music playing used to be a
+  dozen oscillators summing onto `destination`.
+- **One shared reverb**, from a generated impulse (noise under a decay curve),
+  on a send so each sound picks its own wetness. This is most of what separates
+  a bell from a beep.
+- **Stings duck the music** instead of fighting it: the win fanfare dips
+  `musicDuck` for two seconds and rides back up.
+- **A voice budget and a per-sound rate gate**, so dragging across the logic
+  grid or holding a tile can't ask a phone for sixty overlapping oscillators.
+
+### Sounds for the moments that had none
+
+The primitives are FM bells (a sine whose frequency is wobbled by a second sine
+that dies away fast — the cheapest thing that sounds *struck*), filtered
+oscillators with real envelopes, and filtered noise for transients and whooshes.
+On top of the six that existed:
+
+| Sound | Where it was missing |
+|---|---|
+| `playNearMiss` | three of the four — the board said "one away", the ear didn't |
+| `playLose` | running out of tries was **silent** |
+| `playWarn` | one try left, half a beat after the wrong-guess thud |
+| `playHint` | spending a token sounded exactly like tapping a tile |
+| `playUnlock` | a level tile popping its lock off borrowed the star chime |
+| `playCollect` | a key letter landing in the chapter rail |
+| `playWhoosh` | shuffles, card flips, memory-boss peeks |
+| `playConfirm` / `playUi` | the home screen made no sound at all |
+
+`playSelect(step)` also takes a step now, so filling a selection, spelling the
+link and painting the logic grid are little rising figures rather than the same
+blip N times — and each logic-grid brush has its own pitch.
+
+### The music is a loop, not a random walk
+
+Three four-bar scenes — `menu`, `play`, `boss` — sharing one key, so a screen
+change is a modulation and not a record being swapped. Each bar carries a pad
+chord, a bass note, an optional brush tick and a sparse melody drawn from the
+bar's own chord. `App` sets the scene from the current screen (a boss door turns
+it minor); the change lands on the next bar line.
+
+The notes are scheduled **ahead of the audio clock** — a timer decides, the
+clock plays — because a `setInterval` firing one note at a time drifts, and
+drifts audibly once notes are meant to line up. Music still defaults to off.
+
+### What "hidden tab" means
+
+The old code suspended the `AudioContext` on `visibilitychange` and left the
+play functions alone. Anything they scheduled then landed on a *frozen* clock
+and fired at once on the way back — a win sting hitting the tab you returned to.
+The engine now refuses to schedule while backgrounded, and the scheduler
+re-syncs to the clock rather than trying to catch up.
+
+### How it was checked
+
+`scripts/audio.test.mts` (in `npm test`) pins the rules against a recording fake
+context: muted means *no oscillator*, a hidden tab schedules nothing, every
+event lands in the future, the voice budget comes back down, volumes clamp and
+persist, and the scheduler runs, stays ahead and stops.
+
+Levels were measured rather than guessed: every sound was rendered through an
+`OfflineAudioContext` in a real browser and its peak read off. Taps land near
+0.09, a solved group 0.2, the win sting 0.5, and *everything at once* — win,
+four stars, a solve, an unlock, a hint and the music — 0.59, so the mix never
+clips. That pass is what caught the whoosh rendering at 0.004 (a bandpass so
+narrow it threw the sound away) and an `AudioContext.resume()` rejection nobody
+was catching.
 
 ## The emoji boss stopped being a sorting exercise (iteration 35)
 
@@ -1310,8 +1413,14 @@ pre-fix build before it was kept.
 8. ✅ **[platform] Save-data resilience in iframes — done (iteration 33).**
    `src/storage.ts` mirrors through the CrazyGames data module, recovers a
    wiped save from it, and warns when nothing durable exists.
-9. **[polish] Recorded SFX set** — the synth blips are serviceable; real
-   samples (tile tap, group pop, win sting) would lift perceived quality.
+9. ✅ **[polish] Sound pass — done (iteration 36).** Not samples: the synthesis
+   itself was rebuilt (bus mixer, limiter, shared reverb, FM bells, ducking) and
+   the game learned the sounds it was missing — one-away, losing, hints,
+   unlocks, whooshes, menu clicks, a last-try warning — plus per-channel volume
+   sliders and music that follows the screen. Levels were checked by rendering
+   every sound through an OfflineAudioContext: taps peak ~0.09, the win sting
+   ~0.5, and everything-at-once ~0.6, so nothing clips. Real samples remain an
+   option; they are no longer the obvious next win.
 10. ✅ **[content] Difficulty is hand-graded now (iteration 29).** The length
     heuristic is demoted to a tiebreak and the order is a sawtooth, not a sort.
     What's still approximate: the grades are one number per board, so a board
@@ -1419,8 +1528,8 @@ impact on the platform:
     calls gameplayStop(); on return it resumes audio and re-opens the gameplay
     session if a level is active.
 12. ✅ **First-5-levels curve** — shipped (see SHIPPED above).
-13. **Sound polish** — the synth blips are serviceable; a small recorded SFX set
-    (tile tap, group pop, win sting) would lift perceived quality a lot.
+13. ✅ **Sound polish** — done in iteration 36 (see owner priority #9): the
+    engine was rebuilt around a proper mixer rather than replaced with samples.
 14. ✅ **Interstitial pacing guard** — `showInterstitial()` now enforces a 60s
     minimum gap and skips the first minute of a session (iteration 20).
 
@@ -1761,10 +1870,17 @@ having no list at all.
    embedded on CrazyGames with their SDK script and an approved build. The
    **data module** is now used for real (iteration 33), but likewise can only be
    verified on-platform — off-platform it is correctly absent.
-4. **[music] Ambient loop is minimal** (random pentatonic pads); a richer,
-   layered track with a real volume slider would feel more premium.
-5. **[polish] Recorded SFX set** — the synth blips are serviceable; real samples
-   (tile tap, group pop, win sting) would lift perceived quality.
+4. **[music] The loop is written, not composed.** Iteration 36 replaced the
+   random pentatonic pads with three four-bar scenes (menu / play / boss) —
+   pad, bass, brush and a probabilistic melody, scheduled against the audio
+   clock — and gave music its own volume. What it still is not is a *tune*: the
+   melody is chosen at random inside the bar's chord, so it never develops and
+   never resolves. It defaults to off, which is the honest setting for a loop
+   that has to survive an hour.
+5. **[polish] Still no recorded samples.** The synthesis is now good enough that
+   this is a taste call rather than a gap: FM bells, filtered noise and a shared
+   reverb, mixed through a limiter. A recorded set would add character; it would
+   also add the first fetch this game has ever needed.
 6. **[a11y] Not audited with a real screen reader.** Keyboard play is in better
    shape than it was — Escape closes every dialog, Tab is trapped inside one and
    handed back to the opener (iteration 33), tile selection works via Tab+Space

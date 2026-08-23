@@ -25,7 +25,24 @@ import { recordQuest, QUEST_SET_BONUS, COMBO_TARGET, type QuestDef, type QuestEv
 import { isDebug, setDebug } from "./debug";
 import { useModal } from "./modal";
 import { readItem, writeItem, removeItem, startSdkMirror } from "./storage";
-import { initAudio, isMuted, setMuted, isMusicOn, setMusicOn, startMusic, suspendAudio, resumeAudio } from "./audio";
+import {
+  initAudio,
+  isMuted,
+  setMuted,
+  isMusicOn,
+  setMusicOn,
+  startMusic,
+  suspendAudio,
+  resumeAudio,
+  setMusicScene,
+  getSfxVolume,
+  setSfxVolume,
+  getMusicVolume,
+  setMusicVolume,
+  playUi,
+  playStar,
+  playSelect,
+} from "./audio";
 import {
   initSdk,
   loadingStart,
@@ -116,6 +133,10 @@ export default function App() {
   }, []);
   const [muted, setMutedState] = useState(() => isMuted());
   const [musicOn, setMusicOnState] = useState(() => isMusicOn());
+  // Both channels have a level as well as a switch: "too loud" and "off" are
+  // different complaints, and only one of them used to have an answer.
+  const [sfxVol, setSfxVolState] = useState(() => getSfxVolume());
+  const [musicVol, setMusicVolState] = useState(() => getMusicVolume());
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -273,7 +294,12 @@ export default function App() {
     setMutedState((m) => {
       const next = !m;
       setMuted(next);
-      if (!next) initAudio();
+      // Unmuting says so out loud — a switch you can't hear leaves you
+      // wondering whether it took.
+      if (!next) {
+        initAudio();
+        playStar(0);
+      }
       return next;
     });
   }, []);
@@ -281,12 +307,26 @@ export default function App() {
   const toggleMusic = useCallback(() => {
     setMusicOnState((m) => {
       const next = !m;
-      setMusicOn(next); // also starts/stops the loop
+      initAudio();
+      setMusicOn(next); // also starts/stops the loop (with a fade either way)
       return next;
     });
   }, []);
 
+  const changeSfxVol = useCallback((v: number) => {
+    initAudio();
+    setSfxVolume(v);
+    setSfxVolState(v);
+  }, []);
+
+  const changeMusicVol = useCallback((v: number) => {
+    initAudio();
+    setMusicVolume(v);
+    setMusicVolState(v);
+  }, []);
+
   const toggleCalm = useCallback(() => {
+    playUi();
     setCalm((c) => {
       const next = !c;
       writeItem(CALM_KEY, next ? "1" : "0");
@@ -656,6 +696,16 @@ export default function App() {
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
 
+  // The loop follows the player rather than the navigation handlers: menus get
+  // the warm bed, any board gets the one with a pulse, and a boss door turns it
+  // minor. All three share a key, so a change lands as a modulation on the next
+  // bar and not as a record being swapped.
+  const onBoard = screen === "game" || screen === "pairs" || screen === "deduction";
+  const onBoss = screen === "game" && !endless && !playingDaily && bossTwist(levelIndex) !== null;
+  useEffect(() => {
+    setMusicScene(onBoss ? "boss" : onBoard ? "play" : "menu");
+  }, [onBoard, onBoss]);
+
   // Is the level Next would take you to a boss still shut behind its chapter key?
   const nextIsSealed =
     !endless && !playingDaily && nextIndex !== null && keyLockedBoss(progress, nextIndex);
@@ -835,6 +885,10 @@ export default function App() {
           <SettingsModal
             muted={muted}
             musicOn={musicOn}
+            sfxVol={sfxVol}
+            musicVol={musicVol}
+            onSfxVol={changeSfxVol}
+            onMusicVol={changeMusicVol}
             calm={calm}
             debug={debug}
             onToggleMute={toggleMute}
@@ -1116,6 +1170,42 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
   );
 }
 
+/**
+ * A level, under the switch it belongs to. It only exists while that channel
+ * is on — a slider under a dead switch is a puzzle, not a control.
+ */
+function VolumeRow({
+  label,
+  value,
+  onChange,
+  onPreview,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  /** Played when the drag ends, so you hear what you just set. */
+  onPreview?: () => void;
+}) {
+  const pct = Math.round(value * 100);
+  return (
+    <div className="flex items-center gap-3 pb-3">
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={pct}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        onPointerUp={onPreview}
+        onKeyUp={onPreview}
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-ink/15 accent-leaf"
+      />
+      <span className="w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums text-ink-soft">{pct}%</span>
+    </div>
+  );
+}
+
 function ToggleRow({
   label,
   hint,
@@ -1151,6 +1241,10 @@ function ToggleRow({
 function SettingsModal({
   muted,
   musicOn,
+  sfxVol,
+  musicVol,
+  onSfxVol,
+  onMusicVol,
   calm,
   debug,
   onToggleMute,
@@ -1164,6 +1258,10 @@ function SettingsModal({
 }: {
   muted: boolean;
   musicOn: boolean;
+  sfxVol: number;
+  musicVol: number;
+  onSfxVol: (v: number) => void;
+  onMusicVol: (v: number) => void;
   calm: boolean;
   debug: boolean;
   onToggleMute: () => void;
@@ -1201,8 +1299,16 @@ function SettingsModal({
       >
         <h3 className="font-display text-2xl font-bold text-ink">{t("settings.title")}</h3>
         <div className="mt-3 divide-y divide-ink/15">
-          <ToggleRow label={t("settings.sfx")} hint={t("settings.sfx.hint")} on={!muted} onToggle={onToggleMute} />
-          <ToggleRow label={t("settings.music")} hint={t("settings.music.hint")} on={musicOn} onToggle={onToggleMusic} />
+          <div>
+            <ToggleRow label={t("settings.sfx")} hint={t("settings.sfx.hint")} on={!muted} onToggle={onToggleMute} />
+            {!muted && (
+              <VolumeRow label={t("settings.sfx.level")} value={sfxVol} onChange={onSfxVol} onPreview={() => playSelect(2)} />
+            )}
+          </div>
+          <div>
+            <ToggleRow label={t("settings.music")} hint={t("settings.music.hint")} on={musicOn} onToggle={onToggleMusic} />
+            {musicOn && <VolumeRow label={t("settings.music.level")} value={musicVol} onChange={onMusicVol} />}
+          </div>
           <ToggleRow label={t("settings.calm")} hint={t("settings.calm.hint")} on={calm} onToggle={onToggleCalm} />
           <div className="py-3">
             <div className="text-sm font-bold text-ink">{t("settings.language")}</div>

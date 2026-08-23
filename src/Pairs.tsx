@@ -8,7 +8,7 @@ import { linkMatches } from "./engine";
 import { plural, t } from "./i18n";
 import { showInterstitial } from "./sdk";
 import Confetti from "./Confetti";
-import { playSelect, playDeselect, playCorrect, playWrong, playWin, playStar } from "./audio";
+import { playSelect, playDeselect, playCorrect, playWrong, playWin, playStar, playWhoosh } from "./audio";
 
 // ---------------------------------------------------------------------------
 // Pairs — a cozy memory mode on the same boards as the main game.
@@ -139,7 +139,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       const word = order[index];
       const held = flippedRef.current;
       if (matchedRef.current.has(word) || held.includes(index) || held.length >= 2) return;
-      playSelect();
+      playSelect(held.length * 2);
       const pair = [...held, index];
       setFlips(pair);
       if (pair.length < 2) return;
@@ -162,6 +162,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
           // the player must couple each into its group (the coupling phase).
           if (next.size === 8) later(() => { playStar(1); goPhase("coupling"); }, 450);
         } else {
+          playWhoosh(true); // both cards turn back over
           playDeselect();
         }
         setFlips([]);
@@ -564,7 +565,7 @@ function LinkSpell({
               onClick={() => {
                 if (used || resolved || full) return;
                 setWrong(false);
-                playSelect();
+                playSelect(taps.length); // spelling it out climbs, letter by letter
                 setTaps((prev) => [...prev, i]);
               }}
               disabled={used || resolved || full}

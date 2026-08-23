@@ -31,6 +31,8 @@ export const KEYS = [
   "wordgrid:debug",
   "wordgrid:muted",
   "wordgrid:music",
+  "wordgrid:sfxvol",
+  "wordgrid:musicvol",
   "wordgrid:locale",
   // The anonymous telemetry id (src/stats.ts). Mirrored for the same reason
   // the save is: a partitioned localStorage would otherwise turn one returning

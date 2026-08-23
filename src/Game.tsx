@@ -18,9 +18,15 @@ import {
   playDeselect,
   playClear,
   playWrong,
+  playNearMiss,
   playCorrect,
   playWin,
+  playLose,
   playStar,
+  playHint,
+  playWarn,
+  playWhoosh,
+  playUi,
 } from "./audio";
 
 const MAX_MISTAKES = 4;
@@ -366,6 +372,7 @@ export default function Game({
       });
     } else if (status === "lost") {
       reported.current = true;
+      playLose();
       // The link stays secret on a loss so it can still be guessed on a replay.
       setAnnounce(t("game.a11y.lost"));
       onLoss({ timeMs: Date.now() - startedAt.current, mistakes, title: puzzle.title });
@@ -382,7 +389,7 @@ export default function Game({
         setPeekArmed(false);
         setPeeks((n) => n - 1);
         setPeeking(word);
-        playSelect();
+        playWhoosh();
         later(() => setPeeking(null), PEEK_MS);
         return;
       }
@@ -392,7 +399,7 @@ export default function Game({
           return prev.filter((w) => w !== word);
         }
         if (prev.length >= 3) return prev; // a group is three spokes
-        playSelect();
+        playSelect(prev.length); // the pitch climbs as the group fills
         return [...prev, word];
       });
     },
@@ -412,7 +419,8 @@ export default function Game({
       setShake((s) => s + 1);
       return;
     }
-    playWrong();
+    if (result.oneAway) playNearMiss();
+    else playWrong();
     buzz([0, 50, 30, 50]);
     setShake((s) => s + 1);
     // During the guided tutorial a wrong guess never costs anything — just nudge
@@ -442,6 +450,8 @@ export default function Game({
     const next = mistakesRef.current + 1;
     mistakesRef.current = next;
     setMistakes(next);
+    // One try left: the counter says so on screen, and now in the ear too.
+    if (next === maxMistakes - 1) playWarn(0.34);
     if (next >= maxMistakes) {
       setSelected([]);
       // Offer a one-time rewarded continue before ending the run.
@@ -471,7 +481,7 @@ export default function Game({
   }, []);
 
   const shuffleTiles = useCallback(() => {
-    playSelect();
+    playWhoosh();
     setOrder((o) => shuffle(o));
   }, []);
 
@@ -502,7 +512,7 @@ export default function Game({
     setRevealedHints((prev) => new Set(prev).add(cat.name));
     setToast(t("game.hint.given", { theme: cat.name }));
     onUseHint();
-    playSelect();
+    playHint();
   }, [canHint, hintableCategories, onUseHint]);
 
   // Finale hint: spend a token to reveal the next letter of the secret link.
@@ -511,7 +521,7 @@ export default function Game({
     if (!hasHint) return;
     setRevealedLetters((n) => Math.min(n + 1, puzzle.pivot.length));
     onUseHint();
-    playSelect();
+    playHint();
   }, [hasHint, puzzle.pivot.length, onUseHint]);
 
   // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
@@ -558,7 +568,7 @@ export default function Game({
   /** Reveal every category's theme at once (the hint, four times over). */
   const debugRevealThemes = useCallback(() => {
     setRevealedHints(new Set(puzzle.categories.map((c) => c.name)));
-    playSelect();
+    playHint();
   }, [puzzle]);
 
   /** Show/hide the link word on its card, without resolving the finale. */
@@ -923,7 +933,7 @@ export default function Game({
               onClick={() => {
                 if (peeks <= 0) return;
                 setPeekArmed((a) => !a);
-                playSelect();
+                playUi();
               }}
               disabled={peeks <= 0}
               className={`rounded-full border-2 px-4 py-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 ${

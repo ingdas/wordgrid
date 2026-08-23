@@ -23,6 +23,7 @@ import {
   SET_ID,
 } from "./quests";
 import { getLocale, t } from "./i18n";
+import { playConfirm, playUi } from "./audio";
 
 const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
 
@@ -95,7 +96,7 @@ export default function StartScreen({
   return (
     <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center px-6 pb-10 pt-12 text-center sm:pt-20 lg:grid lg:min-h-screen lg:max-w-4xl lg:grid-cols-2 lg:content-center lg:items-center lg:gap-x-12 lg:pt-12">
       <button
-        onClick={onSettings}
+        onClick={() => { playUi(); onSettings(); }}
         aria-label={t("a11y.settings")}
         className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
       >
@@ -172,7 +173,7 @@ export default function StartScreen({
       >
         {/* Daily Challenge — the hero. A shared puzzle each day with a streak. */}
         <motion.button
-          onClick={onDaily}
+          onClick={() => { playConfirm(); onDaily(); }}
           whileTap={{ scale: 0.98 }}
           className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-stamp transition hover:border-press/60"
         >
@@ -224,13 +225,13 @@ export default function StartScreen({
         </motion.button>
 
         <button
-          onClick={onPlay}
+          onClick={() => { playConfirm(); onPlay(); }}
           className="w-full rounded-2xl bg-press py-3.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
         >
           {returning ? t("home.continue", { n: nextLevel }) : t("home.play")}
         </button>
         <button
-          onClick={onLevels}
+          onClick={() => { playUi(); onLevels(); }}
           className="-mt-1 text-xs font-semibold text-ink-soft underline-offset-4 transition hover:text-ink hover:underline"
         >
           {t("home.browseLevels", { n: LEVELS.length })}
@@ -265,7 +266,7 @@ export default function StartScreen({
           ].map((m) => (
             <button
               key={m.label}
-              onClick={m.locked ? undefined : m.onClick}
+              onClick={m.locked ? undefined : () => { playConfirm(); m.onClick(); }}
               disabled={m.locked}
               aria-label={m.locked ? `${m.label}, ${t("levels.locked")}` : undefined}
               className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-ink/30 bg-white py-2.5 text-sm font-bold text-ink transition ${
@@ -288,7 +289,7 @@ export default function StartScreen({
           ].map((b) => (
             <button
               key={b.label}
-              onClick={b.onClick}
+              onClick={() => { playUi(); b.onClick(); }}
               className="flex flex-col items-center gap-1 rounded-2xl border-2 border-ink bg-white py-3 text-xs font-semibold text-ink transition hover:bg-cream active:scale-95"
             >
               <span className="text-lg" aria-hidden>{b.icon}</span>

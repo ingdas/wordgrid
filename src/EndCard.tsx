@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { fmtTime } from "./format";
 import { t } from "./i18n";
 import { renderShareCard, type ShareCardData } from "./sharecard";
+import { playConfirm, playUi } from "./audio";
 
 const RATING_COUNT = 5; // end.rating.0 … end.rating.4 (see src/i18n)
 
@@ -170,13 +171,13 @@ export function EndCard({
       )}
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         <button
-          onClick={onExit}
+          onClick={() => { playUi(); onExit(); }}
           className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
           {t(endless ? "common.endRun" : "common.levels")}
         </button>
         <button
-          onClick={won ? share : onRestart}
+          onClick={() => { playUi(); (won ? share : onRestart)(); }}
           className="rounded-full border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-cream"
         >
           {t(won ? "common.share" : "common.tryAgain")}
@@ -184,14 +185,14 @@ export function EndCard({
         {won &&
           (onNext ? (
             <button
-              onClick={onNext}
+              onClick={() => { playConfirm(); onNext(); }}
               className="rounded-full bg-press px-6 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
             >
               {nextLabel ?? t(endless ? "end.nextPuzzle" : "end.next")}
             </button>
           ) : (
             <button
-              onClick={onExit}
+              onClick={() => { playConfirm(); onExit(); }}
               className="rounded-full bg-gold px-6 py-2.5 text-sm font-bold text-ink shadow-stamp transition hover:scale-[1.03] active:scale-95"
             >
               {t(daily ? "end.seeYouTomorrow" : "end.allDone")}

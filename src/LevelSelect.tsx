@@ -12,7 +12,7 @@ import {
   levelTitle,
 } from "./puzzles";
 import { chapterInk, type ChapterInk } from "./theme";
-import { playCorrect, playClear, playStar, playWin } from "./audio";
+import { playCorrect, playCollect, playWin, playUnlock, playWhoosh } from "./audio";
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { shuffledLetters } from "./letters";
@@ -177,7 +177,7 @@ export default function LevelSelect({
         const id = pending[n];
         if (dead) return;
         setFlipping(id);
-        playStar(n % 5);
+        playWhoosh();
         await wait(FLIP_HOLD * rate, timers);
         if (dead) return;
 
@@ -205,7 +205,7 @@ export default function LevelSelect({
         setFlipping(null);
         setLanded((prev) => new Set(prev).add(id));
         setSaid(t("key.a11y.banked", { n: index + 1, letter: keyLetterOf(index) ?? "" }));
-        playClear();
+        playCollect(n);
         await wait(LAND_HOLD * rate, timers);
       }
     })();
@@ -1308,7 +1308,7 @@ function LevelTile({
     if (revealDelay == null) return;
     const id = setTimeout(() => {
       setOpened(true);
-      playStar(index % 5);
+      playUnlock();
     }, reduce ? 0 : revealDelay);
     return () => clearTimeout(id);
   }, [revealDelay, reduce, index]);

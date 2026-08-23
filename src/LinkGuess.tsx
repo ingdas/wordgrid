@@ -103,7 +103,7 @@ export function LinkGuess({
   const tap = (i: number) => {
     if (resolved || used.has(i) || full) return;
     setWrong(false);
-    playSelect();
+    playSelect(taps.length); // spelling it out climbs, letter by letter
     setTaps((prev) => [...prev, i]);
   };
   const backspace = () => {

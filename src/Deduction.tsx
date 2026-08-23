@@ -12,7 +12,7 @@ import { clueTarget, countScope, grid, samePairsInLine } from "./deductionRules"
 import { t } from "./i18n";
 import Confetti from "./Confetti";
 import { DebugPanel } from "./DebugPanel";
-import { playSelect, playDeselect, playWrong, playWin, playStar } from "./audio";
+import { playSelect, playDeselect, playWrong, playWin, playStar, playClear } from "./audio";
 
 // ---------------------------------------------------------------------------
 // Deduction Grid — a pure-logic mode on the same boards.
@@ -204,7 +204,7 @@ function DeductionBoard({
       // the click sound stay out of the updater — dragging across a tile can
       // otherwise re-run it and blip twice for one stroke.
       if (colorsRef.current[i] === brush) return;
-      if (brush >= 0) playSelect(); else playDeselect();
+      if (brush >= 0) playSelect(brush * 2); else playDeselect();
       const next = [...colorsRef.current];
       next[i] = brush;
       colorsRef.current = next;
@@ -253,7 +253,7 @@ function DeductionBoard({
   const reset = useCallback(() => {
     setColors(new Array(N).fill(-1));
     setSolved(false);
-    playDeselect();
+    playClear();
   }, [N]);
 
   // Nudge only once the board is full but wrong (never mid-solve → stays chill).
@@ -449,7 +449,7 @@ function DeductionBoard({
             {CATEGORY_THEMES.map((th, k) => (
               <button
                 key={k}
-                onClick={() => { setBrush(k); playSelect(); }}
+                onClick={() => { setBrush(k); playSelect(k * 2); }}
                 aria-label={t("logic.a11y.brush", { n: k + 1 })}
                 className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 bg-gradient-to-br ${th.grad} text-lg font-bold transition ${
                   brush === k ? "border-ink ring-2 ring-ink" : "border-ink/30"
