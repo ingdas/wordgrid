@@ -2,7 +2,7 @@
 // pack that used to need a manual screen recording.
 //
 //   npm run build && npm run preview        # serve docs/ on :4173
-//   npm run clip                            # → assets/submission/gameplay.webm
+//   npm run clip                            # → public/art/gameplay.webm
 //
 // Frames come from the DevTools screencast (the same source Chrome's own
 // recorder uses), each one stamped with the moment it was painted. They are
@@ -22,7 +22,7 @@ import { launchBrowser } from "./browser.mjs";
 import { LEVELS } from "../src/puzzles.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = join(HERE, "..", "assets", "submission");
+const OUT = join(HERE, "..", "public", "art");
 const WORK = join(HERE, "..", "node_modules", ".cache", "wordgrid-clip");
 mkdirSync(OUT, { recursive: true });
 rmSync(WORK, { recursive: true, force: true });

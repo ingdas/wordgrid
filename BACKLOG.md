@@ -1338,7 +1338,7 @@ combined the content.
 - ✅ **#8 Submission assets** — `scripts/gen-assets.mjs` rewritten to Puzzle
   Press (og-image + PWA icons regenerated); `scripts/gen-submission.mjs`
   renders covers and captures real gameplay screenshots into
-  `assets/submission/`. Shared launcher `scripts/browser.mjs` (puppeteer →
+  `public/art/`. Shared launcher `scripts/browser.mjs` (puppeteer →
   puppeteer-core + system Chromium fallback).
   **Finished in iteration 34**: seven covers, one per aspect the portal asks
   for (16:9 at three sizes, 1:1 at two, 4:3, 9:16), each composed for its own
@@ -1357,8 +1357,10 @@ combined the content.
   rate and encoded to VP8/WebM, so no manual screen recording is needed. Boards
   and solutions are imported from `src/puzzles.ts` rather than pasted in, so a
   content change can't leave the script clicking words that have moved. The
-  written half — titles, both descriptions at three lengths, instructions, tags,
-  technical answers and Spanish copy — is `assets/submission/SUBMISSION.md`.
+  written half — titles, both descriptions at several lengths, instructions,
+  tags, technical answers and Spanish copy — is `public/art/index.html`, a
+  browsable page with a copy button per field that ships with the build and
+  serves at `<site>/art/`.
 - ✅ **#9 Global-English copy pass** — idiom-only titles renamed (Bark and
   Bite, Bolt Away, A Blank Sheet, Fry Day, Plot Twist, One Pound, Swing the
   Bat, Top Deck, The Lightning Bolt), chapter names/flavor simplified (Rare

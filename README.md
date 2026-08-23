@@ -70,12 +70,15 @@ npm run audit     # flag spokes that may be ambiguous, for human review
 
 ### Submission pack
 
-Everything a store listing needs lives in [`assets/submission/`](./assets/submission)
-and is generated, not hand-made — so it can't drift from the game it is
-advertising. [`SUBMISSION.md`](./assets/submission/SUBMISSION.md) holds the copy
-(title, descriptions, instructions, tags, technical answers, and the Spanish
-versions); beside it are seven covers, twelve screenshots and a 26-second
-gameplay clip.
+Everything a store listing needs lives in [`public/art/`](./public/art) and ships
+with the build, so the whole pack is browsable at **`<site>/art/`** next to the
+game — [wordgrid on GitHub Pages](https://ingdas.github.io/wordgrid/art/).
+[`public/art/index.html`](./public/art/index.html) is the page: every field the
+portal asks for with a copy-to-clipboard button (title, descriptions at several
+lengths, instructions, tags, technical answers, and the Spanish versions), plus
+the gallery — seven covers, twelve screenshots and a 26-second gameplay clip.
+The images are generated, not hand-made, so they can't drift from the game they
+advertise.
 
 ```bash
 npm run build && npm run preview  # the pack is captured from the real build

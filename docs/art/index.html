@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WordGrid — submission pack</title>
+    <meta
+      name="description"
+      content="Every field, image and clip needed to submit WordGrid to a game portal, in one page."
+    />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="../icon-192.png" />
+    <style>
+      /* The Puzzle Press identity, same tokens as src/index.css. */
+      @font-face {
+        font-family: "Fraunces";
+        font-weight: 100 900;
+        font-display: swap;
+        src: url("fonts/fraunces.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "InterV";
+        font-weight: 100 900;
+        font-display: swap;
+        src: url("fonts/inter.woff2") format("woff2");
+      }
+
+      :root {
+        --paper: #faf5ea;
+        --cream: #efe7d3;
+        --card: #fffdf7;
+        --ink: #26221a;
+        --ink-soft: #6f6757;
+        --press: #d9482b;
+        --press-deep: #a93318;
+        --gold: #eda820;
+        --leaf: #1c7a4d;
+        --rule: rgba(38, 34, 26, 0.16);
+        --stamp: 3px 3px 0 rgba(38, 34, 26, 0.5);
+        --stamp-sm: 2px 2px 0 rgba(38, 34, 26, 0.5);
+        --serif: "Fraunces", Georgia, "Times New Roman", serif;
+        --sans: "InterV", system-ui, -apple-system, sans-serif;
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        color: var(--ink);
+        background:
+          radial-gradient(90% 60% at 50% 0%, rgba(217, 72, 43, 0.05), transparent 60%),
+          var(--paper);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 0 20px 96px;
+      }
+
+      /* --- masthead --- */
+      header.top {
+        border-bottom: 3px solid var(--ink);
+        margin-bottom: 40px;
+        padding: 40px 0 26px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(160deg, var(--press), var(--press-deep));
+        color: var(--paper);
+        font-size: 21px;
+        box-shadow: var(--stamp);
+        flex: 0 0 auto;
+      }
+      h1 {
+        font-family: var(--serif);
+        font-size: clamp(30px, 5vw, 46px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0;
+        line-height: 1;
+      }
+      .kicker {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--press);
+        margin: 0 0 8px;
+      }
+      .lede {
+        color: var(--ink-soft);
+        max-width: 66ch;
+        margin: 18px 0 0;
+      }
+      nav.jump {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 22px;
+      }
+      nav.jump a {
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        color: var(--ink);
+        background: var(--card);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        padding: 5px 14px;
+        box-shadow: var(--stamp-sm);
+      }
+      nav.jump a:hover {
+        background: var(--gold);
+      }
+
+      /* --- sections --- */
+      section {
+        margin: 0 0 56px;
+        scroll-margin-top: 20px;
+      }
+      h2 {
+        font-family: var(--serif);
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 6px;
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 2px;
+        background: var(--rule);
+      }
+      .note {
+        color: var(--ink-soft);
+        font-size: 14px;
+        max-width: 72ch;
+        margin: 0 0 22px;
+      }
+      h3 {
+        font-family: var(--serif);
+        font-size: 19px;
+        margin: 30px 0 12px;
+      }
+
+      /* --- a pasteable field --- */
+      .field {
+        background: var(--card);
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        box-shadow: var(--stamp);
+        margin: 0 0 16px;
+        overflow: hidden;
+      }
+      .field__head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 14px;
+        background: var(--cream);
+        border-bottom: 2px solid var(--ink);
+      }
+      .field__name {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .field__count {
+        font-size: 12px;
+        color: var(--ink-soft);
+        font-variant-numeric: tabular-nums;
+      }
+      .field__copy {
+        margin-left: auto;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        background: var(--press);
+        color: var(--paper);
+        padding: 3px 14px;
+        box-shadow: var(--stamp-sm);
+      }
+      .field__copy:hover {
+        background: var(--press-deep);
+      }
+      .field__copy[data-done="1"] {
+        background: var(--leaf);
+      }
+      .field__body {
+        padding: 16px 18px;
+        white-space: pre-wrap;
+      }
+      .field__body p {
+        margin: 0 0 12px;
+      }
+      .field__body p:last-child {
+        margin-bottom: 0;
+      }
+      .field__body strong {
+        font-weight: 700;
+      }
+
+      /* --- art --- */
+      /* align-items:start so a tall portrait card doesn't stretch every other
+         card in its row to match. */
+      .covers {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        align-items: start;
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 20px;
+        align-items: start;
+      }
+      figure {
+        margin: 0;
+        background: var(--card);
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        box-shadow: var(--stamp);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      figure img,
+      figure video {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: var(--cream);
+        border-bottom: 2px solid var(--ink);
+      }
+      figure.tall img {
+        max-height: 420px;
+        object-fit: contain;
+        object-position: center;
+      }
+      figcaption {
+        padding: 10px 13px;
+        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex: 1;
+      }
+      figcaption .file {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12px;
+        word-break: break-all;
+      }
+      figcaption .use {
+        color: var(--ink-soft);
+      }
+      figcaption a {
+        color: var(--press);
+        font-weight: 700;
+        text-decoration: none;
+        margin-top: auto;
+        padding-top: 6px;
+      }
+      figcaption a:hover {
+        text-decoration: underline;
+      }
+      .primary {
+        outline: 3px solid var(--gold);
+        outline-offset: 3px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--press);
+      }
+
+      /* --- plain prose blocks --- */
+      .prose {
+        max-width: 78ch;
+      }
+      .prose ul {
+        padding-left: 20px;
+      }
+      .prose li {
+        margin-bottom: 9px;
+      }
+      code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.88em;
+        background: var(--cream);
+        border-radius: 5px;
+        padding: 1px 5px;
+      }
+      pre {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 13px 16px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+      pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+      }
+      footer.end {
+        border-top: 3px solid var(--ink);
+        padding-top: 22px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+      a.plain {
+        color: var(--press);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <p class="kicker">Submission pack</p>
+        <div class="brand">
+          <div class="mark" aria-hidden="true">◆</div>
+          <h1>WordGrid</h1>
+        </div>
+        <p class="lede">
+          Everything a game portal asks for, in one page: the copy to paste into each field, the art
+          that goes with it, and the technical answers a reviewer tends to ask. Every image and the
+          clip are generated from the live game, so nothing here can drift from what a player
+          actually sees.
+        </p>
+        <nav class="jump">
+          <a href="#copy">Copy</a>
+          <a href="#tags">Tags</a>
+          <a href="#covers">Covers</a>
+          <a href="#screens">Screenshots</a>
+          <a href="#clip">Clip</a>
+          <a href="#tech">Technical</a>
+          <a href="#es">Español</a>
+          <a href="../">Play the game →</a>
+        </nav>
+      </header>
+
+      <!-- ================= COPY ================= -->
+      <section id="copy">
+        <h2>Copy</h2>
+        <p class="note">
+          Field names follow the portal's own labels where they are stable. Where a platform limit
+          isn't published, each block is given at several lengths — longest first — so a tighter
+          field is already covered. The Copy button puts plain text on the clipboard: no asterisks,
+          no markdown.
+        </p>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Title</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">WordGrid</div>
+        </div>
+        <p class="note">
+          Alternates, if the name is taken on the platform: <em>WordGrid: The Secret Link</em> ·
+          <em>WordGrid — Four Groups, One Word</em>
+        </p>
+
+        <h3>Short description</h3>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Short · long form</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">Twelve words hide four groups of three — and one secret word belongs to every group at once. Find the groups, then spell the link. 100 levels, 12 bosses that break the rules, and a new puzzle daily.</div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Short · medium</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">Twelve words, four hidden groups, and one secret word that belongs to all of them. Find the groups, then name the link. New puzzle daily.</div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Short · tagline</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">Four hidden groups. One secret word links them all. Can you find it?</div>
+        </div>
+
+        <h3>Long description</h3>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Long · full</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body"><p><strong>WordGrid is a word puzzle about the one word you can't see.</strong></p><p>Every board deals twelve words that split into four groups of three — and a masked secret link at the top, one ? per letter, so you know its length from the first move. That hidden word belongs to all four groups at once.</p><p>Pick three words that share a theme and hit Submit; the secret link joins them to make a group of four. Clear all four groups without spending your four mistakes, then spell the link to win. Spotted it early? Call it with groups still open — one shot per level, and it pays a bonus for every group you hadn't found yet.</p><p>100 levels across twelve chapters, and the difficulty isn't a straight climb: every chapter opens on a breather, works up, and finishes on a boss that changes the rules and tells you exactly how. One scrambles every tile into an anagram. One takes the vowels out. One turns the board face-down and makes you group from memory. One replaces all twelve words with pictures, where the first name you think of is rarely the right one. One salts in impostor tiles that belong to no group at all. One boards up each group you solve so you can't read your own progress back.</p><p>Every chapter also hides a key: each level in it gives up one letter, and spelling the word those letters make is what opens that chapter's boss door.</p><p>Come back tomorrow for the Daily Challenge — its own pool of puzzles, its own streak — plus three quests drawn fresh at midnight and paid in hints. When you want a different kind of thinking there's Pairs, a memory mode played on the same boards, and the Logic Grid: thirty pure-deduction puzzles with no vocabulary in them at all. Clear the campaign and Endless opens up.</p><p>No account, no install. Chase the stars, keep the streak alive, and find out what links them all.</p></div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Long · short version</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body"><p>Twelve words hide four groups of three, and one secret word belongs to all four. Pick three words that share a theme; the hidden link joins them into a group. Clear four groups on four mistakes, then spell the link to win.</p><p>100 levels across twelve chapters, each closing on a boss that rewrites the rules — scrambled tiles, missing vowels, a board played from memory, twelve pictures instead of words, impostor tiles, a blackout. Plus a Daily Challenge with its own streak, daily quests, a memory mode, and thirty logic-grid puzzles. No account needed.</p></div>
+        </div>
+
+        <h3>Instructions / controls</h3>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Instructions</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body"><p>Mouse or touch is all you need.</p><p>• Tap or click three words that share a theme, then press Submit group.
+• Four groups to find, four mistakes to spend. Shuffle re-deals the board; a hint names one group's theme.
+• Once all four groups are out, tap the letter tiles to spell the secret word — or just type it.
+• Think you know the link early? Use Call it for a one-shot bonus.</p><p>Keyboard: Enter submits the three selected words, Esc clears the selection, and in the final spelling step you can type the word and use Backspace to undo.</p></div>
+        </div>
+      </section>
+
+      <!-- ================= TAGS ================= -->
+      <section id="tags">
+        <h2>Categories, tags, rating</h2>
+        <div class="prose">
+          <ul>
+            <li><strong>Primary category:</strong> Puzzle</li>
+            <li><strong>Also fits:</strong> Casual · Brain / Thinking · Word</li>
+            <li><strong>Players:</strong> 1 &nbsp;·&nbsp; <strong>Input:</strong> mouse, touch, keyboard (optional)</li>
+            <li>
+              <strong>Age rating:</strong> suitable for everyone — no violence, no chat, no
+              user-generated content, no purchases.
+            </li>
+          </ul>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Tags</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">word game, words, puzzle, brain, logic, deduction, daily, vocabulary, connections, casual, singleplayer, 1 player, mouse, touch, mobile friendly, no download, offline</div>
+        </div>
+
+        <h3>Languages</h3>
+        <div class="prose">
+          <p>
+            Interface in <strong>English</strong> and <strong>Spanish</strong>, picked up from the
+            browser and switchable in Settings. The word puzzles themselves stay English — a board of
+            English words can only be rewritten, not translated — but a translated interface makes
+            every menu, boss rule and result screen readable, and it fully unlocks the Logic Grid,
+            which is pure deduction with no vocabulary in it. Spanish store copy is
+            <a class="plain" href="#es">at the bottom of this page</a>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= COVERS ================= -->
+      <section id="covers">
+        <h2>Covers</h2>
+        <p class="note">
+          Every cover shows the same picture, and it is the mechanic rather than a claim about it:
+          four words — NUT, DASH, FLASH, LOCK — one taken from each group of a real board, all
+          pointing at the masked link they share. It is solvable in a couple of seconds, so the
+          payoff lands before the click. The answer is never printed on the art. There is no
+          tagline, badge or marketing sentence anywhere in the set: only the game's own words, the
+          masked link, and the title — set as a masthead, sized to stay readable at the ~300px a
+          portal grid actually renders. Landscape lays the four out in a row; squarer and taller
+          formats fold them into a 2×2.
+        </p>
+        <div class="covers">
+          <figure class="primary">
+            <img src="cover-1280x720.png" alt="WordGrid cover, 1280 by 720" loading="lazy" />
+            <figcaption>
+              <span class="badge">Primary thumbnail</span>
+              <span class="file">cover-1280x720.png</span>
+              <span class="use">1280×720 · 16:9</span>
+              <a href="cover-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="cover-1920x1080.png" alt="WordGrid cover, 1920 by 1080" loading="lazy" />
+            <figcaption>
+              <span class="file">cover-1920x1080.png</span>
+              <span class="use">1920×1080 · 16:9 · hero / large placements</span>
+              <a href="cover-1920x1080.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="cover-800x450.png" alt="WordGrid cover, 800 by 450" loading="lazy" />
+            <figcaption>
+              <span class="file">cover-800x450.png</span>
+              <span class="use">800×450 · 16:9 · small thumbnail</span>
+              <a href="cover-800x450.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="cover-1080x1080.png" alt="WordGrid square cover" loading="lazy" />
+            <figcaption>
+              <span class="file">cover-1080x1080.png</span>
+              <span class="use">1080×1080 · 1:1 · square placements, social</span>
+              <a href="cover-1080x1080.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="cover-512x512.png" alt="WordGrid small square cover" loading="lazy" />
+            <figcaption>
+              <span class="file">cover-512x512.png</span>
+              <span class="use">512×512 · 1:1 · app icon / small square</span>
+              <a href="cover-512x512.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="thumbnail-400x300.png" alt="WordGrid 4:3 thumbnail" loading="lazy" />
+            <figcaption>
+              <span class="file">thumbnail-400x300.png</span>
+              <span class="use">400×300 · 4:3 · 4:3 thumbnail slot</span>
+              <a href="thumbnail-400x300.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure class="tall">
+            <img src="cover-1080x1920.png" alt="WordGrid portrait cover" loading="lazy" />
+            <figcaption>
+              <span class="file">cover-1080x1920.png</span>
+              <span class="use">1080×1920 · 9:16 · portrait / story placements</span>
+              <a href="cover-1080x1920.png" download>Download</a>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ================= SCREENSHOTS ================= -->
+      <section id="screens">
+        <h2>Screenshots</h2>
+        <p class="note">
+          Captured from the built app, mid-play, against a seeded save — nothing here is a mock-up.
+          Landscape shots are 1280×720, the embed size most desktop players get; portrait shots are a
+          390×844 phone viewport captured at 2×. <strong>If only five slots are available</strong>,
+          use 3 · 4 · 2 · 7 · 5 — the loop, its payoff, the map that shows how much game there is, a
+          boss that proves the rules move, and the reward screen.
+        </p>
+        <div class="shots">
+          <figure>
+            <img src="screen-3-board-1280x720.png" alt="A board mid-move" loading="lazy" />
+            <figcaption>
+              <span class="badge">Pick 1</span>
+              <span class="file">screen-3-board-1280x720.png</span>
+              <span class="use">Mid-board — one group solved, three words picked, Submit live</span>
+              <a href="screen-3-board-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-4-finale-1280x720.png" alt="Spelling the secret link" loading="lazy" />
+            <figcaption>
+              <span class="badge">Pick 2</span>
+              <span class="file">screen-4-finale-1280x720.png</span>
+              <span class="use">All four groups out, spelling the link from the letter bank</span>
+              <a href="screen-4-finale-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-2-collection-1280x720.png" alt="The level index" loading="lazy" />
+            <figcaption>
+              <span class="badge">Pick 3</span>
+              <span class="file">screen-2-collection-1280x720.png</span>
+              <span class="use">The level index: chapters, stars, a chapter key, a beaten boss</span>
+              <a href="screen-2-collection-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-7-boss-board-1280x720.png" alt="The emoji boss board" loading="lazy" />
+            <figcaption>
+              <span class="badge">Pick 4</span>
+              <span class="file">screen-7-boss-board-1280x720.png</span>
+              <span class="use">The emoji boss: twelve pictures, no words</span>
+              <a href="screen-7-boss-board-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-5-win-1280x720.png" alt="The win card" loading="lazy" />
+            <figcaption>
+              <span class="badge">Pick 5</span>
+              <span class="file">screen-5-win-1280x720.png</span>
+              <span class="use">The win card: stars, streak, score, the link revealed</span>
+              <a href="screen-5-win-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-1-home-1280x720.png" alt="The home screen" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-1-home-1280x720.png</span>
+              <span class="use">Home: daily challenge and streak, modes, today's quests</span>
+              <a href="screen-1-home-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-6-boss-briefing-1280x720.png" alt="A boss briefing" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-6-boss-briefing-1280x720.png</span>
+              <span class="use">A boss briefing — the rule stated in full before the board is live</span>
+              <a href="screen-6-boss-briefing-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-8-logic-1280x720.png" alt="The Logic Grid" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-8-logic-1280x720.png</span>
+              <span class="use">The Logic Grid, part-deduced</span>
+              <a href="screen-8-logic-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="screen-9-pairs-1280x720.png" alt="Pairs" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-9-pairs-1280x720.png</span>
+              <span class="use">Pairs, part-matched</span>
+              <a href="screen-9-pairs-1280x720.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure class="tall">
+            <img src="screen-10-home-780x1688.png" alt="Home on a phone" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-10-home-780x1688.png</span>
+              <span class="use">Home, on a phone</span>
+              <a href="screen-10-home-780x1688.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure class="tall">
+            <img src="screen-11-board-780x1688.png" alt="A board on a phone" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-11-board-780x1688.png</span>
+              <span class="use">Mid-board, on a phone</span>
+              <a href="screen-11-board-780x1688.png" download>Download</a>
+            </figcaption>
+          </figure>
+          <figure class="tall">
+            <img src="screen-12-finale-780x1688.png" alt="The finale on a phone" loading="lazy" />
+            <figcaption>
+              <span class="file">screen-12-finale-780x1688.png</span>
+              <span class="use">The spelling finale, on a phone</span>
+              <a href="screen-12-finale-780x1688.png" download>Download</a>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ================= CLIP ================= -->
+      <section id="clip">
+        <h2>Gameplay clip</h2>
+        <div class="covers">
+          <figure style="grid-column: span 2">
+            <video src="gameplay.webm" controls preload="metadata" playsinline></video>
+            <figcaption>
+              <span class="file">gameplay.webm</span>
+              <span class="use">
+                26 seconds · 1280×720 · VP8/WebM · no audio. Home → the level index → a board solved
+                group by group → spelling the secret link → the win.
+              </span>
+              <a href="gameplay.webm" download>Download</a>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="prose">
+          <p style="margin-top: 22px">
+            If the portal requires H.264, transcode on any machine with an x264-enabled ffmpeg (the
+            build bundled with the project's tooling is a stripped VP8-only one):
+          </p>
+          <pre><code>ffmpeg -i gameplay.webm -c:v libx264 -pix_fmt yuv420p -crf 20 gameplay.mp4</code></pre>
+        </div>
+      </section>
+
+      <!-- ================= TECHNICAL ================= -->
+      <section id="tech">
+        <h2>Technical answers</h2>
+        <div class="prose">
+          <ul>
+            <li>
+              <strong>Build:</strong> HTML5, no plugins. React 19 + TypeScript, bundled by Vite to a
+              static folder. ~600 KB of JS (187 KB gzipped) plus fonts; no server needed.
+            </li>
+            <li>
+              <strong>Embedding:</strong> designed for the iframe. At a 1280×720 landscape embed the
+              whole game sits above the fold with no page scrolling, and the layout reflows to a
+              single column on phones.
+            </li>
+            <li>
+              <strong>SDK:</strong> CrazyGames SDK v3 is wired up — <code>loadingStart</code> /
+              <code>loadingStop</code> around boot, <code>gameplayStart</code> /
+              <code>gameplayStop</code> around every level (including on tab blur, which also
+              suspends audio), <code>happytime</code> on a win, a midgame interstitial between
+              levels, and <code>requestAd("rewarded")</code> behind two opt-in offers: refilling an
+              empty hint bank, and a second chance after a loss. Every call is guarded, so the game
+              plays identically off-platform where the SDK never loads.
+            </li>
+            <li>
+              <strong>Saving:</strong> progress is written to <code>localStorage</code>
+              <em>and</em> mirrored through the CrazyGames data module, and the two are reconciled on
+              load — so a save survives a browser that partitions or clears third-party storage
+              inside the iframe. When neither store is available the session still plays, out of
+              memory, and says so in a banner rather than pretending it saved.
+            </li>
+            <li>
+              <strong>Offline:</strong> a service worker caches the shell, so the game keeps playing
+              after the first load with no network.
+            </li>
+            <li>
+              <strong>Accounts / data:</strong> none. No login, no third-party analytics, no personal
+              data collected, nothing a player types leaves the device. (There is an optional,
+              off-by-default level-tracking endpoint for the developer's own difficulty tuning; it is
+              inert unless a URL is configured, and never records anything a player typed.)
+            </li>
+            <li>
+              <strong>Accessibility:</strong> full keyboard play, ARIA labels throughout, and a Calm
+              mode that dials back motion and confetti (<code>prefers-reduced-motion</code> is
+              honoured automatically).
+            </li>
+            <li>
+              <strong>Content:</strong> no violence, no gambling, no chat, no user-generated content,
+              no external links out of the game.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================= SPANISH ================= -->
+      <section id="es">
+        <h2>Español</h2>
+        <p class="note">
+          The interface already speaks Spanish, so the store listing can too.
+        </p>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Descripción corta</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">Doce palabras esconden cuatro grupos de tres, y una palabra secreta pertenece a todos los grupos a la vez. Encuentra los grupos y escribe la palabra. 100 niveles, 12 jefes que rompen las reglas y un puzle nuevo cada día.</div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Descripción larga</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body"><p><strong>WordGrid es un juego de palabras sobre la palabra que no puedes ver.</strong></p><p>Cada tablero reparte doce palabras que se dividen en cuatro grupos de tres, y arriba queda una palabra secreta oculta: una ? por letra, así que conoces su longitud desde el primer movimiento. Esa palabra pertenece a los cuatro grupos.</p><p>Elige tres palabras que compartan un tema y pulsa Enviar: la palabra secreta se une a ellas y completa el grupo. Encuentra los cuatro grupos sin gastar tus cuatro fallos y escribe la palabra secreta para ganar. ¿La has visto pronto? Anúnciala con grupos aún abiertos: un solo intento por nivel, con bonificación por cada grupo que te quedaba.</p><p>100 niveles en doce capítulos, y la dificultad no sube en línea recta: cada capítulo empieza suave, aprieta y termina en un jefe que cambia las reglas y te dice exactamente cómo. Uno mezcla las letras de cada ficha. Otro quita todas las vocales. Otro pone el tablero boca abajo y te hace agrupar de memoria. Otro sustituye las doce palabras por imágenes, donde el primer nombre que se te ocurre casi nunca es el bueno. Otro cuela fichas impostoras que no son de ningún grupo. Otro tapa cada grupo que resuelves para que no puedas repasar tu propio avance.</p><p>Cada capítulo esconde además una llave: cada nivel entrega una letra, y ordenarlas es lo que abre la puerta del jefe.</p><p>Vuelve mañana por el Reto diario, con su propia racha, y por las tres misiones que se sortean a medianoche y se pagan en pistas. Si te apetece otro tipo de reto están Parejas, un modo de memoria sobre los mismos tableros, y la Cuadrícula lógica: treinta puzles de pura deducción, sin vocabulario. Termina la campaña y se abre el modo Sin fin.</p><p>Sin cuenta y sin instalar. Persigue las estrellas, mantén viva la racha y descubre qué las une a todas.</p></div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__name">Instrucciones</span>
+            <span class="field__count"></span>
+            <button class="field__copy" type="button">Copy</button>
+          </div>
+          <div class="field__body">Solo necesitas el ratón o el dedo: toca tres palabras que compartan un tema y pulsa Enviar grupo. Cuatro grupos por encontrar y cuatro fallos disponibles. Cuando salgan los cuatro grupos, toca las letras para escribir la palabra secreta — o escríbela con el teclado. Enter envía el grupo seleccionado, Esc lo borra.</div>
+        </div>
+      </section>
+
+      <footer class="end">
+        <p>
+          The images and the clip are generated, not hand-made:
+          <code>npm run submission</code> rebuilds the covers and screenshots,
+          <code>npm run clip</code> rebuilds the video. Both drive the real build, and take their
+          boards straight from <code>src/puzzles.ts</code> — so re-ordering the campaign can't leave
+          the art quietly lying about the game. This page is
+          <code>public/art/index.html</code>; edit the copy there.
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      // Every pasteable block copies its own visible text, so what you read is
+      // exactly what lands on the clipboard — no markdown, no stray asterisks.
+      for (const field of document.querySelectorAll(".field")) {
+        const body = field.querySelector(".field__body");
+        const button = field.querySelector(".field__copy");
+        const count = field.querySelector(".field__count");
+        const text = () => body.innerText.replace(/\n{3,}/g, "\n\n").trim();
+
+        count.textContent = text().length + " chars";
+
+        button.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(text());
+          } catch {
+            // Clipboard permission can be refused; fall back to a selection the
+            // reader can copy by hand rather than silently doing nothing.
+            const range = document.createRange();
+            range.selectNodeContents(body);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            button.textContent = "Press ⌘/Ctrl+C";
+            setTimeout(() => (button.textContent = "Copy"), 2400);
+            return;
+          }
+          button.textContent = "Copied";
+          button.dataset.done = "1";
+          setTimeout(() => {
+            button.textContent = "Copy";
+            delete button.dataset.done;
+          }, 1600);
+        });
+      }
+    </script>
+  </body>
+</html>

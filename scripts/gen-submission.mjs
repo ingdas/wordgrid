@@ -1,13 +1,15 @@
 // CrazyGames submission pack: cover art in every aspect the portal asks for,
 // plus real gameplay screenshots captured from the built app. Everything lands
-// in assets/submission/ — none of it ships inside the game bundle.
+// in public/art/, which the build copies to docs/art/ — so the whole pack is
+// browsable at <site>/art/ alongside the game, next to the page that holds the
+// copy for every field (public/art/index.html).
 //
 //   npm run build && npm run preview        # serve docs/ on :4173
 //   npm run submission                      # (BASE=… to override the URL)
 //   COVERS=1 npm run submission             # just the cover art, no browser play
 //
-// The written half of the pack (titles, descriptions, tags) lives beside the
-// images in assets/submission/SUBMISSION.md.
+// The written half of the pack (titles, descriptions, tags, the technical
+// answers) lives beside the images in public/art/index.html.
 //
 // The board data comes from src/puzzles.ts rather than a copy pasted in here,
 // so re-ordering the campaign or rewriting a level can't leave this script
@@ -21,7 +23,7 @@ import { CHAPTERS, LEVELS } from "../src/puzzles.ts";
 import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
 import { DEDUCTION_LEVELS } from "../src/deductionLevels.ts";
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "assets", "submission");
+const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "art");
 mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE || "http://localhost:4173/";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
