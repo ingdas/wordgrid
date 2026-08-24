@@ -1,13 +1,16 @@
-// The whole soundtrack, synthesized at runtime. No audio files — every tap,
-// solve, sting and bar of music is built out of Web Audio nodes, so the build
-// stays a few hundred KB and the first sound is ready the instant the player
-// touches the screen (no fetch inside the CrazyGames iframe, no decode stall).
+// The whole soundtrack, synthesized at runtime. Every tap, solve and sting is
+// built out of Web Audio nodes, so the build stays a few hundred KB and the
+// first sound is ready the instant the player touches the screen (no fetch
+// inside the CrazyGames iframe, no decode stall). The background music is
+// synthesized too — until an mp3 is dropped into `public/music/`, which takes
+// that scene over; see "recorded music" further down.
 //
 // The shape of it:
 //
 //   voices ─┬─► sfxBus   ─┐
 //           ├─► musicDuck ─► musicBus ─┐
 //           └─► verbBus ─► convolver ──┴─► master ─► limiter ─► destination
+//   mp3 ──────► musicDuck
 //
 //   • Two buses so "sound effects" and "music" are genuinely independent —
 //     each has its own switch *and* its own volume, and both ramp rather than
@@ -19,6 +22,8 @@
 //     the music is playing used to stack a dozen oscillators straight onto
 //     `destination` and clip; now the peaks are caught.
 //   • Stings duck the music (`musicDuck`) instead of fighting it.
+//   • A recorded track, where one exists, hangs off that same `musicDuck`, so
+//     it inherits the switch, the volume and the ducking for free.
 //
 // Everything a caller schedules is placed on the audio clock in one go, from a
 // single `now()` read — a chain of `setTimeout`s drifts, an arpeggio written
@@ -707,7 +712,10 @@ const SCENES: Record<Scene, SceneDef> = {
   },
 };
 
-let musicTimer: ReturnType<typeof setInterval> | null = null;
+let synthTimer: ReturnType<typeof setInterval> | null = null;
+/** The transport: true between startMusic() and stopMusic(), whatever is
+ *  actually making the sound — a file or the synth loop. */
+let musicPlaying = false;
 let scene: Scene = "menu";
 let pendingScene: Scene | null = null;
 let step = 0; // sixteenths, 0…63 (four bars)
@@ -715,6 +723,198 @@ let nextNoteTime = 0;
 
 const LOOKAHEAD = 0.15; // seconds of audio scheduled in advance
 const TICK_MS = 25;
+
+// --------------------------------------------------------- recorded music ---
+//
+// Placeholders, wired end to end. Drop an mp3 into `public/music/` under one of
+// the names below and that scene plays the file instead of the synth loop — no
+// code change, no import, no build step:
+//
+//   public/music/menu.mp3   home, level select, results
+//   public/music/play.mp3   any board
+//   public/music/boss.mp3   boss doors
+//
+// Until a file is there — and if it ever 404s, or a browser can't decode it —
+// the synth loop keeps playing, so the game is never silent and shipping a
+// track is a one-file commit. Tracks can also land one at a time: a scene with
+// a file uses it, a scene without one falls back, in the same session.
+//
+// Files are decoded into a buffer rather than streamed through an <audio>
+// element: a buffer loops sample-accurately (an <audio> loop has an audible
+// seam at the wrap) and it feeds the same musicDuck → musicBus chain as the
+// synth, so the music switch, the music volume and the sting ducking keep
+// working untouched. Keep tracks short and loopable — a two-minute 128 kbps mp3
+// is ~2 MB on the wire but ~20 MB decoded, and the decoded size is the one that
+// matters on a phone.
+//
+// Nothing is fetched until the player turns music on, so a player who never
+// does downloads none of it.
+
+type TrackDef = {
+  /** Path under `public/`, resolved against the app's base URL. */
+  file: string;
+  /** Trim, 0…1. Recorded stems arrive at wildly different levels; this is where
+   *  a track is matched to the rest of the mix instead of being re-exported. */
+  gain: number;
+  /** Optional loop window, in seconds into the file. Leave both out to loop the
+   *  whole thing; set them to skip a one-shot intro or trim a decay tail. */
+  loopStart?: number;
+  loopEnd?: number;
+};
+
+const TRACKS: Record<Scene, TrackDef> = {
+  menu: { file: "music/menu.mp3", gain: 0.9 },
+  play: { file: "music/play.mp3", gain: 0.9 },
+  boss: { file: "music/boss.mp3", gain: 0.9 },
+};
+
+/** Crossfade between two tracks, or between a track and the synth loop. */
+const TRACK_FADE = 1.2;
+
+/** Cover a scene that has no file with the synth loop. Turn this off once every
+ *  scene has a track and the loop is just weight in the bundle. */
+const SYNTH_FALLBACK = true;
+
+type TrackState = "idle" | "loading" | "ready" | "missing";
+const trackState: Record<Scene, TrackState> = { menu: "idle", play: "idle", boss: "idle" };
+const trackBuffers = new Map<Scene, AudioBuffer>();
+
+let trackSource: AudioBufferSourceNode | null = null;
+let trackGain: GainNode | null = null;
+/** Which scene's file is currently playing, if any. */
+let trackScene: Scene | null = null;
+
+/** What the loader found for each scene — for the debug panel and the tests. */
+export function musicTrackStates(): Record<Scene, TrackState> {
+  return { ...trackState };
+}
+
+/** What is making the music right now. `synth` means the scene has no file. */
+export function musicSource(): "track" | "synth" | "off" {
+  if (!musicPlaying) return "off";
+  if (trackScene) return "track";
+  return synthTimer ? "synth" : "off";
+}
+
+function trackUrl(file: string) {
+  const base =
+    (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.BASE_URL ?? "./";
+  return `${base.endsWith("/") ? base : `${base}/`}${file}`;
+}
+
+/** Promise or callback form — Safari only grew the promise late. */
+function decode(c: AudioContext, bytes: ArrayBuffer) {
+  return new Promise<AudioBuffer>((resolve, reject) => {
+    const p = c.decodeAudioData(bytes, resolve, reject);
+    if (p && typeof p.then === "function") p.then(resolve, reject);
+  });
+}
+
+/**
+ * Fetch and decode one scene's file. Runs at most once per scene per session:
+ * a missing file is remembered as missing, so an empty `public/music/` costs
+ * one 404 rather than one per screen change.
+ */
+async function loadTrack(s: Scene) {
+  const c = ctx;
+  if (!c || trackState[s] !== "idle") return;
+  trackState[s] = "loading";
+  try {
+    const res = await fetch(trackUrl(TRACKS[s].file));
+    // A dev server that answers every path with index.html is the usual way a
+    // missing file arrives as a 200 — the decode rejects on it either way.
+    if (!res.ok) throw new Error(String(res.status));
+    trackBuffers.set(s, await decode(c, await res.arrayBuffer()));
+    trackState[s] = "ready";
+  } catch {
+    trackState[s] = "missing";
+    return;
+  }
+  // The decode may have taken long enough that the player moved on, or turned
+  // the music off. If they didn't, this is the hand-over from the synth loop.
+  if (musicPlaying && s === scene) applyScene(s);
+}
+
+function startTrack(s: Scene, fade: number) {
+  const c = ctx;
+  const buf = trackBuffers.get(s);
+  if (!c || !buf || !musicDuck) return false;
+  stopTrack(fade); // the outgoing one fades down while this one comes up
+  const t = c.currentTime;
+
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(TRACKS[s].gain, t + fade);
+  g.connect(musicDuck);
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const { loopStart, loopEnd } = TRACKS[s];
+  if (loopStart != null) src.loopStart = loopStart;
+  if (loopEnd != null) src.loopEnd = loopEnd;
+  src.connect(g);
+  src.start(t);
+
+  trackSource = src;
+  trackGain = g;
+  trackScene = s;
+  return true;
+}
+
+function stopTrack(fade: number) {
+  const c = ctx;
+  const src = trackSource;
+  const g = trackGain;
+  trackSource = null;
+  trackGain = null;
+  trackScene = null;
+  if (!c || !src) return;
+  const t = c.currentTime;
+  src.onended = () => {
+    try {
+      src.disconnect();
+      g?.disconnect();
+    } catch {
+      /* already gone */
+    }
+  };
+  try {
+    if (g) {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0.0001, t + fade);
+    }
+    src.stop(t + fade + 0.05);
+  } catch {
+    try {
+      src.stop();
+    } catch {
+      /* already stopped */
+    }
+  }
+}
+
+/**
+ * Point the music at a scene: its file if there is one, the synth loop while
+ * there isn't. Safe to call repeatedly — already playing the right thing is a
+ * no-op, which is what lets the loader call it back.
+ */
+function applyScene(s: Scene, fade = TRACK_FADE) {
+  if (!ctx || !musicPlaying) return;
+  if (trackState[s] === "idle") void loadTrack(s);
+  // `startTrack` can still say no — the buffer is gone, or the graph isn't
+  // built — and stopping the loop for a track that never started would be a
+  // silence, so the hand-over only happens once it has actually begun.
+  if (trackState[s] === "ready" && (trackScene === s || startTrack(s, fade))) {
+    stopSynth();
+    return;
+  }
+  stopTrack(fade);
+  if (SYNTH_FALLBACK) startSynth();
+}
+
+// --------------------------------------------------------- the transport ---
 
 export function setMusicOn(on: boolean) {
   musicOn = on;
@@ -724,14 +924,22 @@ export function setMusicOn(on: boolean) {
 }
 
 /**
- * Which loop is playing. Called on every screen change; a repeat is free, and
- * a real change lands on the next bar line rather than mid-chord.
+ * Which scene the music follows. Called on every screen change; a repeat is
+ * free. A file swap crossfades straight away; the synth loop instead waits for
+ * the next bar line, so a change lands as a modulation and not as a cut.
  */
 export function setMusicScene(next: Scene) {
   if (next === scene && !pendingScene) return;
-  if (!musicTimer) {
+  if (!musicPlaying) {
     scene = next;
     pendingScene = null;
+    return;
+  }
+  if (trackState[next] === "idle") void loadTrack(next);
+  if (trackState[next] === "ready" || trackScene !== null) {
+    scene = next;
+    pendingScene = null;
+    applyScene(next);
     return;
   }
   pendingScene = next;
@@ -739,21 +947,35 @@ export function setMusicScene(next: Scene) {
 
 export function startMusic() {
   initAudio();
-  if (!ctx || !musicOn || musicTimer) return;
-  step = 0;
-  nextNoteTime = 0;
+  if (!ctx || !musicOn || musicPlaying) return;
+  musicPlaying = true;
   rampBus(musicBus, musicVolume, 1.6); // fade in — never punch in at full level
-  musicTimer = setInterval(schedule, TICK_MS);
-  schedule();
+  applyScene(scene, 0.8);
 }
 
 export function stopMusic() {
-  if (!musicTimer) return;
-  clearInterval(musicTimer);
-  musicTimer = null;
-  // The notes already on the clock aren't cancelled — they fade out with the
-  // bus, which is what makes stopping sound like an ending and not a cut.
+  if (!musicPlaying) return;
+  musicPlaying = false;
+  pendingScene = null;
+  stopSynth();
+  stopTrack(0.7);
+  // What is already on the clock isn't cancelled — it fades out with the bus,
+  // which is what makes stopping sound like an ending and not a cut.
   rampBus(musicBus, 0, 0.7);
+}
+
+function startSynth() {
+  if (!ctx || synthTimer) return;
+  step = 0;
+  nextNoteTime = 0;
+  synthTimer = setInterval(schedule, TICK_MS);
+  schedule();
+}
+
+function stopSynth() {
+  if (!synthTimer) return;
+  clearInterval(synthTimer);
+  synthTimer = null;
 }
 
 function schedule() {
@@ -762,15 +984,20 @@ function schedule() {
   const spStep = 60 / SCENES[scene].bpm / 4; // one sixteenth
   // First tick, or the clock froze under us while the tab was hidden.
   if (nextNoteTime < c.currentTime) nextNoteTime = c.currentTime + 0.06;
+  let switched = false;
   while (nextNoteTime < c.currentTime + LOOKAHEAD) {
     emit(step, nextNoteTime);
     step = (step + 1) % 64;
     if (step === 0 && pendingScene) {
       scene = pendingScene;
       pendingScene = null;
+      switched = true;
     }
     nextNoteTime += spStep;
   }
+  // The bar line came round. If the new scene has a file — or one finished
+  // loading while we played the old scene out — this is where it takes over.
+  if (switched) applyScene(scene);
 }
 
 /** One sixteenth of the loop. */

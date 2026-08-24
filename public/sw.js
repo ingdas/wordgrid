@@ -19,6 +19,26 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
+
+  // Music is the one thing here that is big and unhashed: cache-first, with a
+  // refresh in the background, so a few MB of mp3 doesn't come down the wire on
+  // every visit and a replaced track still lands by the next one.
+  if (/\/music\/[^/]+\.(mp3|ogg|m4a)$/i.test(new URL(req.url).pathname)) {
+    e.respondWith(
+      caches.match(req).then((hit) => {
+        const fresh = fetch(req)
+          .then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+            return res;
+          })
+          .catch(() => hit);
+        return hit || fresh;
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     fetch(req)
       .then((res) => {

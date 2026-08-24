@@ -12,8 +12,11 @@
 //   • the volumes have to survive a reload, and refuse nonsense
 //   • the music scheduler has to keep running, keep ahead of the clock, and
 //     actually stop when it's stopped
+//   • `public/music/` is allowed to be empty, half-full, or full of files that
+//     don't decode — every one of those has to end with music playing
 //
-// It runs against a fake AudioContext that records what was built.
+// It runs against a fake AudioContext that records what was built, and a fake
+// `public/music/` that decides which mp3s "exist".
 import assert from "node:assert/strict";
 
 let passed = 0;
@@ -25,12 +28,13 @@ async function test(name: string, fn: () => Promise<void> | void) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Started = { at: number; kind: "osc" | "noise" };
+type Started = { at: number; kind: "osc" | "noise"; loop: boolean; track: boolean };
 
 /** A recording stand-in for the bits of Web Audio the game uses. */
 function fakeAudio() {
   const started: Started[] = [];
   let live = 0;
+  let made: { currentTime: number } | null = null;
   const param = (value = 0) => ({
     value,
     setValueAtTime() {},
@@ -47,6 +51,9 @@ function fakeAudio() {
     destination = connectable();
     resumed = 0;
     suspended = 0;
+    constructor() {
+      made = this;
+    }
     resume() {
       this.state = "running";
       this.resumed++;
@@ -89,6 +96,13 @@ function fakeAudio() {
     createBufferSource() {
       return { ...this.source("noise"), buffer: null as unknown, loop: false };
     }
+    /** Anything under 1 KB stands in for a file that isn't really audio — a
+     *  404 page served with a 200, or a truncated upload. */
+    decodeAudioData(bytes: ArrayBuffer) {
+      return bytes.byteLength >= 1024
+        ? Promise.resolve({ duration: 32, sampleRate: 44100, numberOfChannels: 2 })
+        : Promise.reject(new Error("EncodingError"));
+    }
     private source(kind: "osc" | "noise") {
       const self = this;
       return {
@@ -98,7 +112,11 @@ function fakeAudio() {
         detune: param(0),
         onended: null as null | (() => void),
         start(at: number) {
-          started.push({ at, kind });
+          const self = this as { loop?: boolean; buffer?: { duration?: number } };
+          // Only a decoded music file has a duration: the synth's brush ticks
+          // loop a generated noise buffer, and mustn't be counted as a track.
+          const loop = self.loop === true;
+          started.push({ at, kind, loop, track: loop && self.buffer?.duration != null });
           live++;
         },
         stop() {
@@ -112,12 +130,38 @@ function fakeAudio() {
       };
     }
   }
-  return { FakeCtx, started, voices: () => live };
+  // Move the audio clock. The scheduler only ever works a fraction of a second
+  // ahead, so without this a frozen clock hides whether it is still running.
+  const advance = (seconds: number) => {
+    if (made) made.currentTime += seconds;
+  };
+  return { FakeCtx, started, voices: () => live, advance };
 }
 
-/** Fresh module, fresh context, fresh storage. */
+/**
+ * A stand-in for `public/music/`. A name in `files` is a track that exists;
+ * "junk" is one that downloads but isn't decodable audio (the shape a missing
+ * file takes on a dev server that answers every path with index.html).
+ */
+function fakeMusicDir(files: Record<string, "ok" | "junk">) {
+  const calls: string[] = [];
+  async function fetchFile(url: unknown) {
+    const href = String(url);
+    calls.push(href);
+    const kind = files[href.split("/").pop() ?? ""];
+    if (!kind) return { ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) };
+    return {
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new ArrayBuffer(kind === "ok" ? 4096 : 64),
+    };
+  }
+  return { fetchFile, calls };
+}
+
+/** Fresh module, fresh context, fresh storage, fresh music folder. */
 let caseId = 0;
-async function load(seed: Record<string, string> = {}) {
+async function load(seed: Record<string, string> = {}, files: Record<string, "ok" | "junk"> = {}) {
   const map = new Map(Object.entries(seed));
   const g = globalThis as Record<string, unknown>;
   g.localStorage = {
@@ -126,11 +170,16 @@ async function load(seed: Record<string, string> = {}) {
     removeItem: (k: string) => void map.delete(k),
   };
   const fake = fakeAudio();
+  const dir = fakeMusicDir(files);
   g.window = { AudioContext: fake.FakeCtx };
+  g.fetch = dir.fetchFile;
   const audio = await import(`../src/audio.ts?case=${caseId++}`);
   audio.initAudio();
-  return { audio, ...fake, store: map };
+  return { audio, ...fake, store: map, fetched: dir.calls };
 }
+
+/** Let a fetch + decode + hand-over settle. */
+const settle = () => sleep(10);
 
 await test("muted means silent — not one oscillator gets built", async () => {
   const a = await load({ "wordgrid:muted": "1" });
@@ -252,6 +301,105 @@ await test("a scene change is accepted whether or not the loop is running", asyn
   await sleep(60);
   a.audio.stopMusic();
   assert.ok(a.started.length > 0, "the loop survives being re-pointed mid-bar");
+});
+
+// --- recorded music: the drop-in mp3 slot ----------------------------------
+//
+// The point of these is that the folder is allowed to be empty. Every one of
+// them is a state the game has to survive between "the code is ready" and "the
+// tracks are finished".
+
+await test("no files in public/music: the synth loop covers every scene", async () => {
+  const a = await load({ "wordgrid:music": "1" }, {});
+  a.audio.startMusic();
+  await settle();
+  assert.equal(a.audio.musicTrackStates().menu, "missing");
+  assert.equal(a.audio.musicSource(), "synth");
+  assert.ok(a.started.length > 0, "the game is never silent because a file is absent");
+  assert.ok(a.started.every((s) => !s.track), "no file is playing — there are none");
+  a.audio.stopMusic();
+  assert.equal(a.audio.musicSource(), "off");
+});
+
+await test("a missing file is asked for once, not once per screen", async () => {
+  const a = await load({ "wordgrid:music": "1" }, {});
+  a.audio.startMusic();
+  await settle();
+  a.audio.stopMusic();
+  a.audio.startMusic();
+  a.audio.setMusicScene("play");
+  a.audio.setMusicScene("menu");
+  await settle();
+  const menu = a.fetched.filter((u) => u.endsWith("menu.mp3"));
+  assert.equal(menu.length, 1, `a 404 is remembered (asked ${menu.length}×)`);
+  a.audio.stopMusic();
+});
+
+await test("dropping in an mp3 takes the scene over from the synth loop", async () => {
+  const a = await load({ "wordgrid:music": "1" }, { "menu.mp3": "ok" });
+  a.audio.startMusic();
+  // The file is still in flight: the synth covers the gap rather than a silence.
+  assert.ok(a.started.some((s) => !s.track), "the loop plays while the track loads");
+
+  await settle();
+  assert.equal(a.audio.musicTrackStates().menu, "ready");
+  assert.equal(a.audio.musicSource(), "track");
+  assert.ok(a.started.some((s) => s.track), "the file plays, looped");
+
+  const atHandover = a.started.length;
+  a.advance(1);
+  await sleep(60);
+  assert.equal(a.started.length, atHandover, "the synth scheduler stops once the file has it");
+  a.audio.stopMusic();
+});
+
+await test("scenes take their files one at a time — a half-full folder is fine", async () => {
+  const a = await load({ "wordgrid:music": "1" }, { "menu.mp3": "ok" });
+  a.audio.startMusic();
+  await settle();
+  const loops = a.started.filter((s) => s.track).length;
+  assert.equal(loops, 1);
+
+  a.audio.setMusicScene("play"); // no play.mp3 yet
+  await settle();
+  assert.equal(a.audio.musicTrackStates().play, "missing");
+  assert.equal(a.started.filter((s) => s.track).length, loops, "no second track started");
+  assert.equal(a.audio.musicSource(), "synth", "the loop picks up a scene the folder has no file for");
+  a.audio.stopMusic();
+});
+
+await test("a second file crossfades in on a scene change", async () => {
+  const a = await load({ "wordgrid:music": "1" }, { "menu.mp3": "ok", "boss.mp3": "ok" });
+  a.audio.startMusic();
+  await settle();
+  a.audio.setMusicScene("boss");
+  await settle();
+  assert.equal(a.audio.musicTrackStates().boss, "ready");
+  assert.equal(a.audio.musicSource(), "track");
+  assert.equal(a.started.filter((s) => s.track).length, 2, "the boss track started");
+  a.audio.stopMusic();
+});
+
+await test("a file that isn't decodable audio counts as missing", async () => {
+  const a = await load({ "wordgrid:music": "1" }, { "menu.mp3": "junk" });
+  a.audio.startMusic();
+  await settle();
+  assert.equal(a.audio.musicTrackStates().menu, "missing");
+  assert.equal(a.audio.musicSource(), "synth");
+  assert.ok(a.started.length > 0 && a.started.every((s) => !s.track), "the loop carries on");
+  a.audio.stopMusic();
+});
+
+await test("music off downloads nothing at all", async () => {
+  // Explicitly off: storage keeps an in-memory copy of every key it has seen,
+  // so an *absent* key here would inherit the switch from an earlier case.
+  const a = await load({ "wordgrid:music": "0" }, { "menu.mp3": "ok", "play.mp3": "ok" });
+  a.audio.startMusic();
+  a.audio.setMusicScene("play");
+  await settle();
+  assert.equal(a.audio.musicSource(), "off");
+  assert.equal(a.fetched.length, 0, "a player who never turns music on pays nothing for it");
+  assert.equal(a.audio.musicTrackStates().play, "idle");
 });
 
 console.log(`\n${passed} audio tests passed ✓\n`);

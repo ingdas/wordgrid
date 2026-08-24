@@ -1,9 +1,9 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 36 (the audio pass: a real mixer, sounds for the
-moments that had none, music that follows the screen, and a volume for each).
-This file is the single source of truth — a fresh session should be able to
-continue from here without any prior chat context._
+_Last updated: iteration 37 (the music slot: `public/music/*.mp3` is loaded,
+looped and crossfaded per scene, with the synthesized loop as the fallback for
+anything not dropped in yet). This file is the single source of truth — a fresh
+session should be able to continue from here without any prior chat context._
 
 ## What this is
 
@@ -242,14 +242,24 @@ hero card) → Level index (12 chapters, boss at each chapter end) → Game.
   every rewarded failure path — no SDK, disabled, ad error, no callback within
   5s — resolves **true**, so watch & continue and hint refills always pay out.
   Pinned by `scripts/sdk.test.mts`.
-- `audio.ts` — the whole soundtrack, synthesized at runtime (no audio files).
+- `audio.ts` — the whole soundtrack, synthesized at runtime, plus a **drop-in
+  slot for recorded music** (iteration 37): an mp3 in `public/music/`
+  (`menu.mp3` / `play.mp3` / `boss.mp3`) is fetched, decoded and looped through
+  the same music bus, and takes that scene over from the synth loop — no code
+  change. Anything absent (or that 404s, or won't decode) falls back to the
+  loop, so the folder may be empty or half-full; nothing is fetched at all
+  until the player turns music on. Per-track `gain` / `loopStart` / `loopEnd`
+  live in `TRACKS`, and `public/music/README.md` is the note for whoever adds
+  the files.
   A real mixer: **sfx** and **music** buses under a make-up gain and a limiter,
   one shared generated-impulse **reverb** on a send, and stings that **duck**
   the music. Voices are FM bells, filtered oscillators and filtered noise, with
   a voice budget and a per-sound rate gate. **Music** is a four-bar loop
   scheduled ahead of the audio clock (never `setInterval`-per-note), in three
   scenes sharing one key — `menu`, `play`, `boss` — swapped at the next bar by
-  `setMusicScene()`, which `App` drives off the current screen. Each channel has
+  `setMusicScene()`, which `App` drives off the current screen (a *file* swap
+  crossfades straight away instead; `musicSource()` says which of the two is
+  playing). Each channel has
   a switch **and** a level (`wordgrid:sfxvol` / `wordgrid:musicvol`, sliders in
   Settings). Nothing is scheduled while the tab is hidden — the clock is frozen
   there, so a sting queued then would fire all at once on return.
@@ -1870,17 +1880,22 @@ having no list at all.
    embedded on CrazyGames with their SDK script and an approved build. The
    **data module** is now used for real (iteration 33), but likewise can only be
    verified on-platform — off-platform it is correctly absent.
-4. **[music] The loop is written, not composed.** Iteration 36 replaced the
+4. **[music] The loop is written, not composed** — and it is now the *fallback*
+   rather than the plan (see 5). Iteration 36 replaced the
    random pentatonic pads with three four-bar scenes (menu / play / boss) —
    pad, bass, brush and a probabilistic melody, scheduled against the audio
    clock — and gave music its own volume. What it still is not is a *tune*: the
    melody is chosen at random inside the bar's chord, so it never develops and
    never resolves. It defaults to off, which is the honest setting for a loop
    that has to survive an hour.
-5. **[polish] Still no recorded samples.** The synthesis is now good enough that
-   this is a taste call rather than a gap: FM bells, filtered noise and a shared
-   reverb, mixed through a limiter. A recorded set would add character; it would
-   also add the first fetch this game has ever needed.
+5. **[polish] Still no recorded samples — but the slot for them is wired.**
+   Iteration 37 put the loader in: drop `menu.mp3` / `play.mp3` / `boss.mp3`
+   into `public/music/` and each takes its scene over from the synth loop, with
+   a crossfade, the same volume/switch/ducking, and a fall back to the loop for
+   anything not there yet. What is still missing is the music itself — the
+   folder ships with only its README. Sound *effects* are still synthesized and
+   that remains a taste call: FM bells, filtered noise and a shared reverb,
+   mixed through a limiter.
 6. **[a11y] Not audited with a real screen reader.** Keyboard play is in better
    shape than it was — Escape closes every dialog, Tab is trapped inside one and
    handed back to the opener (iteration 33), tile selection works via Tab+Space
