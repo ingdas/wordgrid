@@ -1,1908 +1,514 @@
 # WordGrid — Project State & Backlog
 
-_Last updated: iteration 36 (the audio pass: a real mixer, sounds for the
-moments that had none, music that follows the screen, and a volume for each).
-This file is the single source of truth — a fresh session should be able to
-continue from here without any prior chat context._
+_Last updated 2026-08-26, after iteration 37 (GSAP replaces Framer Motion;
+one animation library, −41 kB gzip)._
+
+This file is the bootstrap for a fresh session: how to work on the repo, what
+is where, the rules that must hold, the decisions that must not be quietly
+reversed, and what is still open. It is deliberately short. Two other places
+hold the detail:
+
+- **`README.md`** — the player-facing description, the motion system, level
+  tracking, the submission pack, debug mode, saving.
+- **`git log`** — every iteration's long-form write-up is in its commit body.
+  The iteration essays that used to live in this file (iterations 7–36,
+  ~1,800 lines) are in its history: `git log -p -- BACKLOG.md`, last long
+  version at `a6f89ee`.
 
 ## What this is
 
-A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board of
-12 words that sort into 4 themed groups of three, all joined by one **hidden
-link word** (the "pivot", e.g. STAR) revealed by tapping letters at the end.
-Flow: first launch → straight into a guided tutorial; afterwards Home (Daily
-hero card) → Level index (12 chapters, boss at each chapter end) → Game.
+A casual word puzzle for **CrazyGames / GitHub Pages**. Each level is a board
+of 12 words that sort into 4 themed groups of three, all joined by one hidden
+**link word** (the "pivot", e.g. STAR) that is spelled at the end. Flow: first
+launch → straight into the guided tutorial; afterwards Home (Daily hero card,
+quests, mode row) → Level index (100 levels, 12 chapters, a boss with its own
+twist closing each) → Game. Side modes on the same boards: **Pairs** (memory
+matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
+(unlocked by finishing the campaign).
 
-## How to work on this repo (session bootstrap)
+## Session bootstrap
 
-- **Push directly to `main`** (owner's standing instruction). Build output goes
-  to `docs/` (GitHub Pages). Always run `npm run build` before committing so
-  `docs/` stays in sync.
-- Commands: `npm run build` (tsc + vite → docs/), `npm run validate` (puzzle
-  structure + chapter-key lengths + the campaign curve), `npm run audit`
-  (ambiguity helper),
-  `npm test` (engine, deduction, **progress/key gating**, **quests**,
-  **storage**, **the debug switch**, i18n, sdk, **level tracking**, **audio**),
-  `node scripts/gen-assets.mjs` (og-image + icons → public/).
-- **Playtest** (must pass with zero issues before any push):
-  `npm install --no-save puppeteer` (it gets pruned by any `npm install`), then
-  `npx vite preview --port <fresh port>` (previews die between turns — always a
-  NEW port, never `pkill`), then
-  `BASE=http://localhost:<port>/ SHOT=/tmp node scripts/playtest.mjs`, and
-  `BASE=http://localhost:<port>/ node scripts/pairs.test.mjs` (Pairs mode:
-  a full run, plus the two iteration-24 timer/stale-state repros), and
-  `BASE=http://localhost:<port>/ node scripts/debug.playtest.mjs` (debug mode:
-  the tool tray, free hints, auto-solve, the index/Logic-Grid tools), and
-  `node scripts/stats.playtest.mjs` (level tracking against a live stats
-  server — it serves `docs/` and runs the server itself, so it needs no
-  preview; a whole level is played with the network cut).
-- **Debug mode** (iteration 30): three ways in — `?debug` in the URL (remembered
-  afterwards; `?debug=0` turns it off), the **Settings → Developer** toggle, or
-  `localStorage["wordgrid:debug"]="1"` (what the headless scripts do). It opens
-  every level and boss door, makes hints free, and mounts a 🛠 tool tray:
-  solve a group / auto-solve the level / reveal all themes / peek at the link /
-  +5 hints / force a loss in the game, clear-next-level and +10 hints on the
-  index, auto-solve on the Logic Grid.
-- Commit style: imperative summary + short body; end with
+- **Commit every change immediately, directly on `main`, and push** (owner's
+  standing instruction — no branches, no waiting for review). The production
+  build is committed in `docs/` (GitHub Pages), so any change that touches the
+  app needs `npm run build` before its commit to keep `docs/` in sync.
+- **Commands**: `npm run build` (tsc + vite → `docs/`), `npm test` (ten unit
+  suites: engine, deduction, progress/key gating, quests, storage, debug,
+  i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
+  category-name spoilers, chapter-key lengths, the campaign curve, emoji
+  board), `npm run audit` (ambiguity report for a human), `npm run
+  gen:deduction` (regenerate Logic Grid levels), `node scripts/gen-assets.mjs`
+  (og-image + icons), `npm run submission` / `npm run clip` (store art — see
+  README).
+- **Headless playtests — all five must pass with zero issues before a push.**
+  They need Chrome: either `npm install --no-save puppeteer` (pruned by any
+  later `npm install`) or a system Chrome, which `scripts/browser.mjs` finds
+  on its own (`CHROME_PATH` if it lives somewhere unusual). Serve the build
+  with `npx vite preview --port <fresh port>` — previews die between turns, so
+  always a new port, never `pkill` — then:
+  - `BASE=http://localhost:<port>/ SHOT=<dir> node scripts/playtest.mjs` — the
+    full flow: tutorial, boss briefing, keys, loss path, unlock reveal, the
+    720p embed fitting without page scroll, unsolved titles never shown, the
+    pivot never distinguishable by colour.
+  - `BASE=… node scripts/pairs.test.mjs` — a Pairs run plus the two
+    iteration-24 timer/stale-state repros.
+  - `BASE=… node scripts/debug.playtest.mjs` — the tool tray, free hints,
+    auto-solve, the index and Logic Grid tools.
+  - `BASE=… node scripts/iteration33.playtest.mjs` — quests paying out, the
+    letter-counting link mask, Tab trapped in a dialog, play with a throwing
+    `localStorage`.
+  - `node scripts/stats.playtest.mjs` — level tracking against the real
+    reference server, a level played offline; it serves `docs/` and runs the
+    server itself, so it needs no preview.
+- **Debug mode**: `?debug` in the URL (remembered; `?debug=0` clears it),
+  **Settings → Developer**, or `localStorage["wordgrid:debug"]="1"` (what the
+  scripts do). Everything unlocked, free hints, the 🛠 tool tray. Full list in
+  README.
+- **Commit style**: imperative summary + a body that says why; end with
   `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
-  session's `Claude-Session:` URL trailer. Never mention the model id in code.
-- Verify visually with puppeteer screenshots (viewport 390×844 for phone,
-  1280×720 for the CrazyGames embed). Screenshot API rejects very large images —
-  use deviceScaleFactor 1 or JPEG clips.
+  session's `Claude-Session:` URL trailer. Never put a model id in code.
+- **Verify visually** with puppeteer screenshots: 390×844 (phone) and
+  1280×720 (the CrazyGames embed). Use `deviceScaleFactor: 1` or JPEG clips —
+  the screenshot API rejects very large images.
 
-## Architecture map (src/)
+## Architecture map
 
-- `puzzles.ts` — 100 campaign RawPuzzles (pivot + 4×3 spokes), buildPuzzle,
-  seededShuffle; **the campaign curve** — hand grades (`GRADE_BANDS`, 1–5),
-  `lexicalLoad` as a tiebreak only, `suitsTwist`, and the placement pass
-  (`dealChapters` → `spreadWordplay` → `spaceOutRepeats`) that deals them into a
-  rising sawtooth, with hand-pinned OPENING = star,trunk,ring,bug,bank (the
-  tutorial ramp) — see iteration 29; CHAPTERS
-  (sizes [6,7,7,8,8,8,8,9,9,9,10] + remainder, boss = last of chapter),
-  BossTwist type +
-  CHAPTER_TWISTS (scramble/cipher/emoji/blackout/decoy/memory — **no time
-  pressure, owner insists the game stays chill**), EMOJI_BOSS bespoke puzzle,
-  decoyTiles;
-  CHAPTER_KEYS + chapterKey/keyLevels/chapterOfLevel (the boss-door keywords —
-  see iteration 26; `npm run validate` checks their lengths).
-  **Category-name rules enforced by `npm run validate`** (it exits non-zero):
-  a name may not spell the pivot, name one of its own tiles, or name a tile
-  from another group on the board — singular or plural — and no tile may
-  contain the pivot as a substring. All four are spoilers or misdirection;
-  see iteration 20/21 for what they cost before they were caught.
-- `stats.ts` — **level tracking** (iteration 34): a start event when a board is
-  dealt and a win/loss event when it ends, queued in storage and flushed to a
-  configurable endpoint; the aggregate (`players/solvers/plays/wins` per level
-  id) read back, cached for 6h and validated before it is rendered. Off unless
-  `VITE_STATS_URL` or the `<meta name="wordgrid:stats">` tag is set, and every
-  path degrades to a no-op — see `scripts/stats.test.mts`.
-- `LevelStats.tsx` — the author's dashboard (Settings → Developer → Level
-  tracking) plus `useCommunityStats()`, which the level index's up-next card
-  uses for its "62% of players clear this one" line.
-- `engine.ts` — pure, unit-tested: evaluateGuess (one-away detection),
-  computeStars (mistakes + link-guess), linkMatches (case/plural/synonyms via
-  `accept`), scrambleWord, cipherWord (vowel-stripping, the cipher boss — and
-  the one value `puzzles.ts` imports back, with an explicit `.ts` extension so
-  the node scripts can load it), shuffle, guessKey.
-- `dailyPuzzles.ts` — the dedicated 80-puzzle DAILY pool (no pivot shared with
-  the campaign; plain global-English category names). Also feeds Endless and
-  Pairs.
-- `theme.ts` / `letters.ts` / `format.ts` — CATEGORY_THEMES (the four group
-  colours), CHAPTER_INKS (one flat print ink per chapter) + CHAPTER_PAGES (the
-  per-chapter page stain), buildLetterBank + shuffledLetters (the chapter key's
-  exact-letters bank), fmtTime. Split out of Game.tsx so Pairs and the
-  Logic Grid don't import the game screen to get at a constant.
-- `storage.ts` — **every** persisted read/write (iteration 33). localStorage
-  when it works (probed with a real write), the CrazyGames data module when the
-  SDK is there, memory always; `startSdkMirror()` reconciles the first two in
-  both directions and reports whether anything durable exists. Nothing else in
-  `src/` touches `localStorage` directly — progress, debug, audio, locale, calm
-  and the tutorial flag all go through here.
-- `quests.ts` — the three daily goals (iteration 33): the pool, the
-  date-seeded draw that never repeats yesterday, and `recordQuest`, which counts
-  an event and pays hints once. Pure; the state rides inside `Progress.quests`
-  and the events are raised in `App.tsx`.
-- `modal.ts` — `useModal()`: focus into a dialog, Tab trapped inside it, Escape
-  to close, focus back to the opener. Used by all six dialogs.
-- `LinkGuess.tsx` — the spell-the-link panel, serving three callers: the normal
-  finale, the **early call** (`early` + `onMiss`: one attempt,
-  a miss hands the board back), and the **chapter key** (`bank` for an
-  exact-letters bank, `titleKey`/`bodyKey` for its copy, `dismissKey` for a
-  panel with no "give up" to offer).
-- `BossBriefing.tsx` — the boss's rules: `BossBriefing` (the dialog the game
-  opens on an unbeaten boss and the board's rule strip reopens) and `BossRules`
-  (its what-changes / how-to-play pair, reused by the how-to-play sheet).
-  Copy lives in i18n as `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
-- `EndCard.tsx` — win/loss card, StarRow, RATINGS, share (canvas + Web Share).
-- `Game.tsx` — the in-game screen. Key props: puzzleIndex,
-  overrideRaw (play a non-campaign RawPuzzle — daily pool / Endless), twist,
-  bossBeaten (a boss with stars doesn't re-open its briefing), daily,
-  endless(+endlessInfo), hintBank, onUseHint, onRefillHints, onWin/
-  onLoss (carry title+score), onNext/onExit. Systems inside: score+combo with
-  floating pops; tap-**or-type**-to-spell finale; **early link call** (offered
-  once a group is solved and ≥2 remain, not during the tutorial;
-  spent on opening; hit = reveal + 250×(1+open groups) and play on,
-  miss = no mistake, no star, no second try); **the memory boss** (study →
-  Ready flips the board to numbered card backs → three armed peeks; the clock
-  restarts at the flip, shuffle is withheld, and the backs stay down through
-  the early call — not to be confused with `Pairs.tsx`, which is its own mode
-  and its own screen); second-chance rewarded continue
-  (+2 tries, once per attempt); tutorial coach (WelcomeOverlay modal at step 0,
-  sticky-note Coach steps 1–2, escalating no-cost nudges); loss NEVER reveals
-  the link (replayable); two-column layout at lg+ (board left, controls rail
-  right, fits 1280×720 above the fold).
-- `App.tsx` — screen router (home/levels/game/pairs), progress state. **All
-  progress writes go through `applyProgress(mutate)`** — a ref holds the live
-  value so side effects (save, achievements, toasts) run in the handler, not
-  inside a React updater (StrictMode double-invokes those in dev);
-  `celebrateRank`/`awardScore` are shared by every scoring path. handleWin (stars/streak/best/hints+1/score, achievements, rank-up toast,
-  history; daily wins never write campaign stars/best — history id = daily id,
-  level 0), daily (playingDaily → dailyPuzzle() from the dedicated pool via
-  overrideRaw), Endless mode (shuffled queue over campaign+daily pool,
-  no-fail, endlessBest), Pairs routing (handlePairsFinish → score+pairsBest),
-  settings modal (sound + level / music + level / calm / reset), music scene
-  follows the screen, stats/history modals,
-  visibilitychange pause, rewarded refillHints (+3).
-- `Pairs.tsx` — 🃏 memory mode on the same boards. Phases: **matching** (12
-  face-down cards, flip two, they match when they share a theme) → **coupling**
-  (the 4 leftovers — one per category — flip face up unplaced; the player picks
-  one up and taps a card from the group it joins; right slots it in, **wrong
-  flashes red and you keep the card in hand to retry** — a wrong try still costs
-  a move) → **spell** the link (tap-to-spell, +300) → done. Each pair/couple is
-  +100. Fewest moves = pairsBest (wrong couples inflate it); cleared boards feed
-  lifetime score. Face-down cards never leak their word (aria-label "Face-down
-  card").
-- `Deduction.tsx` + `deductionLevels.ts` — 🧩 Logic Grid: a pure-logic mode,
-  **30 abstract levels** (ids logic-1…30). **Deliberately NOT tied to the word
-  boards** (owner call: the word reveal added nothing) — a level is a 3×4/4×3
-  grid split into 4 hidden groups of 3; **groups can be ANY shapes (no
-  connectivity requirement)**, so the layout space is 15,400 partitions.
-  **Eight clue kinds.** Tile clues talk about their own tile's group
-  ("group-mates" = the other two): `deg` n of my 4 neighbours, `dir` a named
-  neighbour is (not) mine, `diag` the same for ↖↗↙↘, `line` n group-mates in my
-  row/column, `parity` counting me my row/column holds an odd number of my
-  group, `corners` n group-mates in the grid's four corners. **Line clues** sit
-  in a row/column header and talk about the whole line: `rainbow` (all
-  different) and `onepair` (exactly one matching pair). One clue per tile at
-  most; the rest are blank.
-  Each clue draws as an **icon + value** (`✛2`, `→=`, `↘≠`, `↔1`, `↕ODD`,
-  `◱0`, header `≠` / `1=`) with a **key under the grid listing only the icons
-  that board actually uses** — the full sentence survives in the aria-label and
-  the problem panel. Paint with a 4-colour brush, tap or **drag**
-  (elementFromPoint from the grid — touch pointers stay captured by their start
-  tile). Feedback: every clue wears a **live ✓/✕ badge** the moment everything
-  it talks about is painted; a violated clue gets a thick red outline (drawn in
-  the inline boxShadow — Tailwind's ring is also a box-shadow and gets
-  overridden there); and a full-but-wrong board shakes and opens a
-  **plain-words problem panel** ("Column 2 must hold exactly one matching pair
-  — your colouring has 0"). A prev/next stepper pages the 30 (tier chip).
-  Pre-generated by `scripts/gen-deduction.mjs` (`npm run gen:deduction`).
-  **How the generator stays fair:** it rolls one clue kind per tile (biased
-  toward the kinds a board hasn't used yet), keeps only boards a **human-style
-  relation solver** cracks — same/different pair tracking with a general
-  "exactly one of these counts" rule, the one-pair line rule, and transitivity,
-  propagating **only forced conclusions, never a guess** — then greedily
-  minimises the clue set, pads easier tiers, and asserts clue-truth,
-  human-solvability and uniqueness (brute force over all 15,400 partitions).
-  **Play order is a vocabulary ramp**: `BANDS` in the generator introduces one
-  new clue kind at a time (levels 1–4 speak only `deg`/`dir`, banners arrive at
-  21), while the **tier chip reports measured inference depth** — how many
-  propagation rounds the solver needs — not clue count, since one rainbow line
-  is worth six deductions. Adding a clue kind means: a `countScope` entry (or a
-  pair/line rule) in BOTH the generator and `Deduction.tsx`, wording in
-  `clueText`/`violationText`, a `LEGEND` row, and a `BANDS` slot.
-- `StartScreen.tsx` — Daily hero card (7-day streak strip, countdown,
-  Solve CTA — the streak shown is `liveDailyStreak`, not the stored one),
-  Continue·L{n} which **plays that level** (the map is the "Browse all N
-  levels" link under it), an Endless · Pairs · Logic mode row (each stat
-  carries its unit), rank/XP bar. Two-column grid at `lg` so it fits a
-  1280×720 embed above the fold.
-- `LevelSelect.tsx` — the level **index** (not a map/grid — see iteration 25).
-  An **Up next** card on top, then eight chapter sections in their own
-  `CHAPTER_INKS` colour, each split into two registers: `LevelRow` (solved —
-  numeral, `levelTitle(i)`, dotted leader, stars, all in aligned columns) and
-  `LevelTile` (unsolved — a uniform 44px square, dashed when locked), plus a
-  boss caption and, for unreached chapters, a single named teaser line.
-  **A solved level's title is shown; an unsolved level's never is** — a title
-  hints at the link. A freshly unlocked tile starts locked and pops open on a
-  timer (see `newlyUnlocked` below) under a fixed banner naming what opened.
-- `progress.ts` — Progress schema (stars, streak, bestStreak, linksGuessed,
-  best, daily{lastDate,streak}, achievements, hints, history, score,
-  endlessBest, pairsBest, seen, keys), loadProgress/save, isUnlocked (lookahead
-  3 + isDebug (from `debug.ts`) + the chapter-key boss gate), the key helpers
-  (bankedLetters/keyReady/keySolved/solveKey/keyLockedBoss/bossAwaitingKey —
-  rules pinned in `scripts/progress.test.mts`),
-  unlockedIds/newlyUnlocked/markSeen (what the map still owes the
-  player an unlock reveal for — debug-blind, and migrated so old saves and
-  fresh ones both start with nothing pending), dailyPuzzle() (fixed seeded tour of DAILY_PUZZLES — deterministic,
-  shared, no repeat within an 80-day cycle), dailyWeek/msUntilNextDaily,
-  playerRank ladder.
-- `debug.ts` — the debug switch and nothing else: isDebug (URL / storage,
-  cached per load), setDebug (the Settings toggle, live), resetDebugCache (the
-  test seam). Rules pinned in `scripts/debug.test.mts`.
-- `DebugPanel.tsx` — the 🛠 tool tray. Collapsed to one button, pinned
-  bottom-left (the one corner the toast and the coach card don't claim), and
-  mounted only in debug mode; each screen passes its own tools.
+### Content and pure logic (`src/`)
+
+- `puzzles.ts` — 100 campaign `RawPuzzle`s (pivot + 4×3 spokes) and the
+  bespoke `EMOJI_BOSS`; `buildPuzzle`, `seededShuffle`. **The campaign
+  curve**: hand grades `GRADE_BANDS` (1–5, lists of ids), `lexicalLoad` as a
+  tiebreak only, `suitsTwist` (can a board carry a twist — rules below), and
+  the placement pass `dealChapters → spreadWordplay → spaceOutRepeats` that
+  deals a rising sawtooth (`SPIKE = 4` grades past a chapter's band for its
+  boss). `OPENING = star,trunk,ring,bug,bank` is hand-pinned (the tutorial
+  ramp); `EMOJI_TWIN = "bolt"` pins the BOLT board to the emoji slot.
+  `CHAPTER_SIZES = [6,7,7,8,8,8,8,9,9,9,10]` + remainder → 12 chapters, boss =
+  last level; `CHAPTER_TWISTS` (one per chapter, no adjacent repeats):
+  scramble · cipher · emoji · blackout · decoy · memory · scramble · blackout ·
+  cipher · decoy · blackout · memory. `CHAPTER_KEYS` (SPARK … MASTERMIND),
+  `KEY_DEAL` (letters dealt to a chapter's non-boss levels in a seeded
+  scramble), `keyLetterOf`/`keySlots`/`chapterKey`/`chapterOfLevel`, and
+  `levelTitle(index)` — use it, not `LEVELS[i].title`, because the emoji slot
+  substitutes its board.
+- `dailyPuzzles.ts` — the 80-puzzle daily-only pool (no pivot shared with the
+  campaign). Also feeds Endless and Pairs.
+- `deductionLevels.ts` / `deductionRules.ts` — the 30 pre-generated Logic Grid
+  levels (`logic-1…30`) and the clue rules shared by the generator and the
+  screen.
+- `engine.ts` — pure, unit-tested: `evaluateGuess` (one-away), `computeStars`,
+  `linkMatches` (case/plural/synonyms via `accept`), `scrambleWord`,
+  `cipherWord` (vowel-stripping; imported back by `puzzles.ts` with an
+  explicit `.ts` extension so node scripts can load it), `shuffle`, `guessKey`.
+- `progress.ts` — `Progress` schema: `stars`, `streak`, `bestStreak`,
+  `linksGuessed`, `best`, `daily{lastDate,streak}`, `achievements`, `hints`,
+  `history`, `score`, `endlessBest`, `pairsBest`, `deductionSolved`, `seen`,
+  `banked`, `keys`, `quests`. `isUnlocked` (`LOOKAHEAD = 3` + debug + the
+  chapter-key boss gate), `endlessUnlocked` (every campaign level cleared, or
+  debug), the key helpers (`bankedLetters`/`keyReady`/`keySolved`/`solveKey`/
+  `keyLockedBoss`/`bossAwaitingKey`), `newlyUnlocked`/`markSeen` and
+  `newlyBanked`/`markBanked` (what the index still owes a reveal for — both
+  debug-blind, both migrated), `dailyPuzzle()` (fixed seeded tour, same for
+  everyone, no repeat in 80 days), `liveDailyStreak` (only a run cleared today
+  or yesterday counts). Rules pinned in `scripts/progress.test.mts`.
+- `quests.ts` — `QUEST_POOL` (7), `QUESTS_PER_DAY = 3`, a date-seeded draw that
+  never exactly repeats yesterday's, `recordQuest` pays once. `QUEST_REWARD =
+  1` hint, `QUEST_SET_BONUS = 2`, `COMBO_TARGET = 3`. State rides in
+  `Progress.quests`; events are raised in `App.tsx`.
+- `storage.ts` — **every** persisted read/write. `localStorage` when a real
+  probe write works, the CrazyGames data module when the SDK is there
+  (`startSdkMirror` polls `MIRROR_TRIES = 12` × `MIRROR_GAP_MS = 700`, then
+  reconciles both ways — adopts a key only the platform has, pushes up a key
+  only we have), memory always. `KEYS` lists the mirrored keys. Nothing else
+  in `src/` touches `localStorage`.
+- `stats.ts` — level tracking client: `start` on deal, `win`/`loss` on end,
+  queued under `wordgrid:stats-queue`, aggregate cached 6 h; `MIN_SAMPLE = 5`
+  finished attempts before a percentage is shown; `parseLevels` sanitises the
+  server's answer. Off unless `VITE_STATS_URL` or the `<meta
+  name="wordgrid:stats">` tag is set. Debug and Endless are never counted.
+- `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
+  `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
 - `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
-- `i18n/` — `index.ts` (locale detection + persistence, `t("key", {params})`,
-  `plural()`), `en.ts` (source of truth, ~290 keys), `es.ts`. Components never
-  hold user-visible copy: chapter names, rank titles, tier labels, achievement
-  titles, boss twists and every Logic clue sentence are catalogue keys, so
-  `puzzles.ts`/`achievements.ts`/`progress.ts` carry `nameKey`/`titleKey`/
-  `titleIndex` rather than English. Switching locale re-keys the App subtree to
-  force a re-render. Puzzle *content* (board words, category names) is
-  deliberately not localized — see the i18n note in the still-open list.
-- `sdk.ts` — defensive CrazyGames v3 wrapper (init, loading, gameplay,
-  interstitial, requestRewarded → resolves true offline). Script tag is LIVE in
-  index.html (async, no-ops when absent). Off-platform the script *loads* but is
-  disabled for the domain, so every call throws/rejects `sdkDisabled`: the
-  wrapper swallows sync throws *and* promise rejections (no unhandled-rejection
-  noise), latches "unusable" on the first such error so it stops calling, and
-  every rewarded failure path — no SDK, disabled, ad error, no callback within
-  5s — resolves **true**, so watch & continue and hint refills always pay out.
-  Pinned by `scripts/sdk.test.mts`.
-- `audio.ts` — the whole soundtrack, synthesized at runtime (no audio files).
-  A real mixer: **sfx** and **music** buses under a make-up gain and a limiter,
-  one shared generated-impulse **reverb** on a send, and stings that **duck**
-  the music. Voices are FM bells, filtered oscillators and filtered noise, with
-  a voice budget and a per-sound rate gate. **Music** is a four-bar loop
-  scheduled ahead of the audio clock (never `setInterval`-per-note), in three
-  scenes sharing one key — `menu`, `play`, `boss` — swapped at the next bar by
-  `setMusicScene()`, which `App` drives off the current screen. Each channel has
-  a switch **and** a level (`wordgrid:sfxvol` / `wordgrid:musicvol`, sliders in
-  Settings). Nothing is scheduled while the tab is hidden — the clock is frozen
-  there, so a sting queued then would fire all at once on return.
-  Pinned by `scripts/audio.test.mts`.
-- `index.css` — **"The Puzzle Press" theme tokens** via Tailwind v4 `@theme`:
-  paper #faf5ea, cream #efe7d3, ink #26221a, ink-soft #6f6757, press #d9482b,
-  press-deep #a93318, gold #eda820, gold-deep #8a5c00, leaf #1c7a4d. Hard
-  offset shadows `shadow-[3px_3px_0_rgba(38,34,26,…)]`, no gradients/glass.
-  Rotate-to-portrait hint for short landscape phones.
+- `i18n/` — `index.ts` (detect, persist, `t()`, `plural()`), `en.ts` (source
+  of truth, ~460 keys), `es.ts`. Components never hold copy: chapter names,
+  tier labels, achievement titles, boss rules/briefings and every Logic clue
+  sentence are keys. Puzzle *content* stays English on purpose (see
+  Decisions). `scripts/i18n.test.mts` fails on a missing/stray key or a lost
+  `{placeholder}`.
+- `sdk.ts` — defensive CrazyGames v3 wrapper. Off-platform the script loads
+  but is disabled, so every call throws/rejects `sdkDisabled`: the wrapper
+  swallows both, latches "unusable", and every rewarded failure path (no SDK,
+  disabled, ad error, no callback in `AD_CALLBACK_TIMEOUT_MS = 5 s`) resolves
+  **true** so watch-&-continue and hint refills always pay out.
+  `MIN_AD_GAP_MS = 60 s` between interstitials, none in a session's first
+  minute. `sdkData()` is the data module `storage.ts` mirrors through.
+- `audio.ts` — everything synthesized, no files. Mixer: sfx and music buses
+  under a make-up gain and limiter, one shared generated reverb on a send,
+  stings duck the music, a voice budget and per-sound rate gate. Music is
+  three four-bar scenes (`menu`/`play`/`boss`) in one key, scheduled ahead of
+  the audio clock, swapped at the bar by `setMusicScene()` (App drives it off
+  the screen). Each bus has a switch and a level (`wordgrid:sfxvol` /
+  `wordgrid:musicvol`). Nothing is scheduled while the tab is hidden. Pinned
+  by `scripts/audio.test.mts`.
+- `anim.ts` — all motion, GSAP. `EASE` (incl. the hand-authored stamp
+  `CustomEase`), `setReduceMotion`/`motionOn` (one module flag, kept in step
+  with the system preference and the Calm switch by App), hooks
+  `usePresence` (holds a leaving node mounted **and carries a payload frozen
+  at its last present value**), `useSwitch` (one screen at a time),
+  `useGsap`, `useOdometer` (score count-up written straight to the DOM),
+  `useElementMap`; exits `fadeOut`/`dropOut`/`sinkOut`/`riseOut`/`screenOut`;
+  `dialogIn`/`dialogOut` shared by every dialog (parts marked with
+  `data-panel`/`data-dialog-mark`/`data-dialog-row`/`data-dialog-cta`);
+  beats `stampIn`, `dealIn`, `rattle`, `punch`, `floatPop`, `breathe`,
+  `inkFlash`, `pressDown`/`release`; the solve flight
+  (`captureGhosts`/`flyGhosts`), the Flip shuffle (`captureOrder`/`playOrder`)
+  and `confetti()` (punched-paper chads).
+- `theme.ts` / `letters.ts` / `format.ts` — `CATEGORY_THEMES` (the four group
+  colours — load-bearing for gameplay), `CHAPTER_INKS` (twelve spot colours)
+  + `CHAPTER_PAGES` (per-chapter page stain), `buildLetterBank` /
+  `shuffledLetters`, `fmtTime`.
+- `modal.ts` — `useModal()`: focus into the dialog, Tab trapped, Escape
+  closes, focus returns to the opener. The close callback is held in a ref so
+  the effect runs once.
 
-## Owner preferences (hard requirements)
+### Screens (`src/`)
 
-1. **No time pressure** — chill game; Time Attack was built and removed.
-2. **Never the "AI default" theme** — keep the Puzzle Press print identity.
-3. Tutorial must be hands-on but never give the answer away; skippable.
-4. Loss must not reveal the secret link.
-5. Solved groups keep showing their words (incl. during the finale).
-6. Push to main; verify with the playtest + screenshots before pushing.
+- `App.tsx` — screen router (home / levels / game / pairs / deduction) and
+  progress state. **All progress writes go through `applyProgress(mutate)`**;
+  side effects (save, achievements, toasts, quest events) run in the handler,
+  never inside a React updater. `handleWin` (stars/streak/best/+1 hint/score,
+  achievements, history; a daily win never writes campaign stars — history id
+  = daily id, level 0). Daily via `overrideRaw`; Endless (campaign + daily
+  pool, no-fail, `endlessBest`, gated on a finished campaign); Pairs and
+  Logic routing; the sheets (settings: sound + level, music + level, calm,
+  locale, Developer → debug toggle + level tracking, reset; stats; history;
+  how-to-play); the storage banner; music scene; `visibilitychange` pause;
+  rewarded `refillHints` (+3).
+- `StartScreen.tsx` — Daily hero (7-day streak strip, countdown, Solve CTA),
+  the quests card, Continue · L{n} (plays that level; the index is the link
+  under it), mode row (Endless — a locked door until the campaign is done ·
+  Pairs · Logic), each stat with its unit. Two columns at `lg`.
+- `LevelSelect.tsx` — the level **index**: an Up-next card (chapter, tier,
+  boss rule, community clear rate, Play), then twelve chapter sections in
+  their own ink, each split into `LevelRow` (solved: numeral · title · dotted
+  leader · stars in aligned columns) and `LevelTile` (unsolved: uniform 44 px
+  square, dashed when locked). Per chapter: the key rail (letters handed over
+  from cleared levels — chip turns over, throws its letter to the rail) and
+  the boss panel (`far`/`sealed`/`ready`/`open`/`beaten`); `KEY_PANEL_MS`
+  waits for the key modal before the door swings. Unlocks play once (lock
+  pops, fixed banner names what opened). At `lg` the collection scrolls in
+  its own pane so the page never scrolls at 1280×720.
+- `Game.tsx` — the board. Props: `puzzleIndex`, `overrideRaw`, `twist`,
+  `bossBeaten`, `daily`, `endless`, hint bank callbacks, `onWin`/`onLoss`/
+  `onNext`/`onExit`. Inside: score + combo with floating pops; the rule strip
+  for a boss (reopens the briefing); tap-**or**-type finale; the **early
+  call** (once a group is solved and ≥2 remain, not in the tutorial; spent on
+  opening; hit = reveal + 250 × (1 + open groups) and play on; miss = no
+  mistake, no star, no retry); the **memory boss** (study as long as you
+  like → Ready flips to numbered backs → three armed peeks; clock starts at
+  the flip; no shuffle; backs stay down through the early call); rewarded
+  second chance (+2 tries, once); tutorial coach (welcome modal, sticky-note
+  steps, escalating nudges that never give the group away); `SolvedBanner`
+  prints the picture beside the word on the emoji boss; two columns at `lg`.
+- `LinkGuess.tsx` — the spell-the-link panel, three callers: finale, early
+  call (`early` + `onMiss`), chapter key (`bank`, copy keys, `dismissKey`).
+  `suspended` stops its window keydown handler typing under an open dialog.
+- `BossBriefing.tsx` — `BossBriefing` (opens itself on an unbeaten boss; the
+  rule strip reopens it) and `BossRules` (reused by how-to-play). Copy:
+  `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
+- `EndCard.tsx` — win/loss card, stars, ratings, share.
+- `Pairs.tsx` — 🃏 matching → coupling (the four leftovers; a wrong couple
+  flashes red and stays in hand, still costs a move) → spell the link.
+  Fewest moves = `pairsBest`. All timers go through a cancellable `later()`;
+  tap guards read refs, not closure state. Face-down cards never leak their
+  word.
+- `Deduction.tsx` — 🧩 Logic Grid. A 3×4/4×3 grid, four hidden groups of
+  three in any shape (15,400 partitions); eight clue kinds drawn as icon +
+  value with a per-board key (`deg`, `dir`, `diag`, `line`, `parity`,
+  `corners` on tiles; `rainbow`, `onepair` on row/column headers). Paint by
+  tap or drag; live ✓/✕ badge per clue; a full wrong board shakes and opens a
+  plain-words problem panel. Generator (`scripts/gen-deduction.mts`) keeps
+  only boards a human-style forced-inference solver cracks, minimises clues,
+  proves uniqueness by brute force, and orders levels as a vocabulary ramp
+  (`BANDS`); the tier chip reports measured inference depth. **Adding a clue
+  kind**: a `countScope` entry (or pair/line rule) in `deductionRules.ts`
+  (shared by the generator, the screen and `scripts/deduction.test.mts`),
+  wording in `clueText`/`violationText` and a `LEGEND` row in
+  `Deduction.tsx`, a `BANDS` slot in `scripts/gen-deduction.mts`, then
+  `npm run gen:deduction`.
+- `LevelStats.tsx` — Settings → Developer → Level tracking dashboard, plus
+  `useCommunityStats()` for the Up-next card's clear-rate line.
+- `DebugPanel.tsx` — the 🛠 tray, bottom-left, mounted only in debug mode;
+  each screen passes its own tools.
+- `Toast.tsx` — one component, mounted unconditionally with `text | null`;
+  owns its own entrance and exit. `Confetti.tsx` — the chads.
+- `index.css` — "The Puzzle Press" tokens (Tailwind v4 `@theme`): paper
+  `#faf5ea`, cream `#efe7d3`, ink `#26221a`, ink-soft `#6f6757`, press
+  `#d9482b` / `#a93318`, gold `#eda820` / `#8a5c00`, leaf `#1c7a4d`. Hard
+  offset shadows on one three-step scale, no gradients or glass. Reduced-
+  motion CSS; the rotate-to-portrait hint for short landscape phones.
 
----
+### Elsewhere
 
-## House rules for authoring a board
+- `scripts/` — `validate.mts`, `audit.mts`, `gen-deduction.mts`, the ten
+  `*.test.mts` unit suites, the five `*.playtest.mjs` / `pairs.test.mjs`
+  browser suites, `browser.mjs` (Chrome launcher), `gen-assets.mjs`,
+  `gen-submission.mjs` + `submission-art.mjs`, `gen-clip.mjs`.
+- `server/stats-server.mjs` — dependency-free Node + SQLite reference server
+  for level tracking (`POST /events`, `GET /levels`, `/levels.csv`,
+  `/health`).
+- `public/art/` — the submission pack, served at `<site>/art/`.
 
-Distilled from the iteration-23 ambiguity pass (every group on all 144 boards
-read by hand, 30 conflicts fixed). `npm run validate` enforces the structural
-rules and fails the build on them; the rest need a human read, because a script
-can't tell that a FLEECE is clothing.
+## Hard requirements (owner)
 
-**Enforced by `validate`** (it exits non-zero):
+1. **No time pressure.** Chill game. Time Attack was built and removed; the
+   memory boss has no study countdown for the same reason.
+2. **Never the "AI default" look.** Keep the Puzzle Press print identity.
+3. Tutorial is hands-on but never gives the answer away; skippable.
+4. A loss never reveals the link (and history hides a lost level's title).
+5. Solved groups keep showing their words, including through the finale.
+6. Push to main; playtests green and screenshots checked before pushing.
+7. **One progression system.** The XP/rank ladder was removed (iteration 33)
+   as a second ladder over stars, tiers and streaks. `score` stays as combo
+   currency and a stats line — it is not a level.
+8. **A boss's rule is explained on screen**, not named: the door, the up-next
+   card, a briefing on an unbeaten boss, and a rule strip on the board.
+9. **Emoji boss tiles are the picture's own name** (💅 NAIL, 🦭 SEAL). What
+   moves is the sense, never the noun; a picture you must call something it
+   isn't called is a guessing game.
+
+## Engineering rules
+
+- Persisted state goes through `storage.ts`; copy goes through `i18n/`;
+  progress writes go through `applyProgress`. Grep before adding an exception.
+- **No side effects inside React state updaters** (StrictMode double-invokes
+  them). Compute from a ref, act in the handler.
+- **Every deferred beat is cancellable** and cleared on new board / unmount.
+- **Never park a hidden face in the DOM.** An `opacity: 0` letter is a
+  chapter key readable off the page. Both faces exist only for the turn.
+- **`immediateRender: false` on any delayed `fromTo`**, or the element sits
+  in its "from" pose through the delay (this once broke the 720p fit by 6 px).
+- The pivot must never be distinguishable by colour, order or markup
+  mid-game; unsolved level titles are never rendered; face-down cards and
+  memory-boss backs carry no word in any attribute. The playtest asserts all
+  of it.
+- Debug never leaks into a normal save (its own key, tray mounted only while
+  on); debug and Endless are never counted by level tracking.
+- `npm run validate` is the gate for content: a new board that fails it
+  doesn't build.
+
+## Authoring a board
+
+Every group on every campaign and daily board has been read by a human;
+`validate` catches the structural leaks, `audit` reports the likely ones, and
+the rest needs the same read for any new batch.
+
+**Enforced by `validate` (build fails):**
 1. A category name may not spell the pivot — the 💡 hint prints that name.
 2. A category name may not name one of its own tiles, singular or plural.
 3. A category name may not name a tile from another group on the board.
 4. No tile may contain the pivot as a substring (SLIGHT on a LIGHT board).
-
-**Reported by `npm run audit`, for a human to judge:**
-5. Two tiles on one board sharing a 5-letter stem (CRACK next to CRACKER).
-6. Two groups on different boards sharing 2 of 3 words.
-7. Tiles reused across three or more boards, and very short tiles.
-
-**Only a human catches these** — the four classes the pass actually found:
-8. **A tile that belongs to another group's category.** FIELD sitting in
-   "Baseball venues" next to "Green spaces"; FLEECE in "An animal's covering"
-   next to "Winter clothing"; CHICKEN in "Meats" next to "Water birds"; SWING
-   in "To move back and forth" next to "Music genres". The commonest class by
-   far, and the most unfair: the player's read is correct and the game says no.
-9. **A tile that is a synonym of a tile in another group.** SWELL vs SURGE on
-   `wave`; PAIR vs COUPLE on `match`; SLING vs "to throw" on `cast`; TRAINER vs
-   "to teach" on `coach`; RANK vs "quality levels" on `grade`.
-10. **A tile that is a synonym of the pivot itself.** A wedding RING on a BAND
-    board hands over the link. Rule 4 only catches the spelling.
-11. **A category name that is factually wrong.** "Armored vehicles" over
-    JEEP/HUMVEE/CHOPPER — none of them armoured.
-
-The test to apply to every tile: *read it alone, with no category names, and
-ask which groups on this board it could join.* If the answer isn't exactly one,
-change the tile — not the category name, which the player can't see while
-guessing.
-
-## Level tracking: who clears what, and how often (iteration 34)
-
-The owner asked for two numbers per level — how many people have solved it, and
-what its success rate is — with one hard condition: **the game still plays
-offline**. The game is a static bundle on GitHub Pages and inside the
-CrazyGames iframe, so those numbers can only be counted somewhere else; the
-work is a client that can lose that somewhere-else at any moment without the
-player ever finding out.
-
-### What was built
-
-- **`src/stats.ts`** — the client. One event when a board is dealt (`start`,
-  the denominator) and one when it ends (`win`/`loss`), each carrying a
-  client-generated `uid`, a random per-install `player` id, the level, the
-  mistakes and the clock. Events queue under `wordgrid:stats-queue` and flush in
-  batches; the aggregate comes back from `GET /levels` and is cached under
-  `wordgrid:stats-cache` for six hours.
-- **`server/stats-server.mjs`** — the other half, so the feature is runnable
-  rather than theoretical: Node's own `node:http` + `node:sqlite`, zero
-  dependencies, ~200 lines. `POST /events`, `GET /levels`, `GET /levels.csv`
-  (for a spreadsheet), `GET /health`. Aggregation is one `GROUP BY` over the
-  events with a 30s memo, so a schema question is a query change rather than a
-  migration.
-- **`src/LevelStats.tsx`** — Settings → Developer → **Level tracking**: the
-  totals, then every level with its solver count and win rate, sorted by level
-  or hardest-first, over a bar that reads red (a wall) to green (a breather).
-  It also reports the pipe itself — endpoint, queue depth, last error, how old
-  the numbers are — because "no data" and "not collecting" are different
-  problems.
-- **The up-next card** on the level index gained one line: "62% of players
-  clear this one", and only once a board has enough finished attempts
-  (`MIN_SAMPLE`) for that to be true.
-
-### The decisions worth keeping
-
-1. **Off by default.** No endpoint configured — every fork, every local
-   checkout, the committed `docs/` build as it stands — and the module does
-   nothing at all: no requests, no queue, no keys written. Two ways to switch
-   it on, because the two deploys differ: `VITE_STATS_URL` at build time, or
-   the `<meta name="wordgrid:stats">` tag in `index.html`, which lets the
-   committed build be pointed at a server without rebuilding.
-2. **Offline is normal, not an error.** Events raised with the network down
-   keep in the same storage the save uses and go out on the next connection;
-   `navigator.onLine === false` skips the attempt rather than burning a
-   timeout. The last aggregate stays on the device, dated, so the numbers are
-   still there on a plane. `scripts/stats.playtest.mjs` plays a whole level
-   through the service worker with the network cut and asserts the queue drains
-   afterwards with the right counts.
-3. **Anonymous by construction.** A random install id is what makes "12 people
-   solved this" different from "12 plays by one person" — and it is the only
-   identifier there is. No account, no IP kept by the server, nothing a player
-   typed. The id is mirrored to the CrazyGames data module (`storage.ts` KEYS)
-   for the same reason the save is: a partitioned `localStorage` would
-   otherwise turn one returning player into a new person every visit.
-4. **Debug and Endless are never counted.** A board that can be auto-solved
-   from a tool tray, or one that has no loss state, is not evidence about
-   difficulty.
-5. **The server's answer is not trusted.** `parseLevels()` clamps, drops and
-   sanity-checks everything before it reaches the UI (more wins than plays,
-   negative counts, junk keys) — it is the one thing the game renders that came
-   from outside it.
-6. **A thin sample gets no percentage.** Under `MIN_SAMPLE` finished attempts a
-   level shows a dash, in the dashboard and on the up-next card alike: a "33%
-   clear rate" drawn from three attempts is a lie with a % sign on it.
-
-### Verified
-
-`npm test` (10 new cases in `scripts/stats.test.mts`: off-by-default, offline
-queue-and-drain, dead server, queue cap, cached aggregate outliving the network,
-untrusted payloads, no-DOM/no-fetch), `npm run validate`, and the four browser
-playtests plus the new `scripts/stats.playtest.mjs` — which runs the real
-server, plays level 1 offline, comes back online and checks the level reads
-1 solver / 2 attempts / 1 win after a second install loses the same board.
-
----
-
-## The audio pass (iteration 36)
-
-The sound was a stack of `OscillatorNode`s wired straight to `destination`: one
-`blip()` shape for everything, no mixer, no headroom, and a volume you could
-only have by turning it off. Six sounds covered thirty-odd moments, so the tile
-tap did duty as a hint, an unlock, a shuffle and a peek. What follows is what
-changed and, where it matters, why.
-
-### There is a mixer now
-
-```
-voices ─┬─► sfxBus   ─┐
-        ├─► musicDuck ─► musicBus ─┐
-        └─► verbBus ─► convolver ──┴─► master ─► limiter ─► destination
-```
-
-- **Two buses, each with a switch and a level.** "Too loud" and "off" are
-  different complaints and only one of them used to have an answer. The levels
-  live in `wordgrid:sfxvol` / `wordgrid:musicvol` (mirrored like every other
-  key) and appear as sliders under their switch in Settings — the slider only
-  exists while that channel is on, because a slider under a dead switch is a
-  puzzle rather than a control.
-- **A limiter after a make-up gain.** Every voice is written quiet enough to be
-  stacked; the level is made up once, at the end, where the limiter can catch a
-  pile-up. Solving a group mid-arpeggio with the music playing used to be a
-  dozen oscillators summing onto `destination`.
-- **One shared reverb**, from a generated impulse (noise under a decay curve),
-  on a send so each sound picks its own wetness. This is most of what separates
-  a bell from a beep.
-- **Stings duck the music** instead of fighting it: the win fanfare dips
-  `musicDuck` for two seconds and rides back up.
-- **A voice budget and a per-sound rate gate**, so dragging across the logic
-  grid or holding a tile can't ask a phone for sixty overlapping oscillators.
-
-### Sounds for the moments that had none
-
-The primitives are FM bells (a sine whose frequency is wobbled by a second sine
-that dies away fast — the cheapest thing that sounds *struck*), filtered
-oscillators with real envelopes, and filtered noise for transients and whooshes.
-On top of the six that existed:
-
-| Sound | Where it was missing |
-|---|---|
-| `playNearMiss` | three of the four — the board said "one away", the ear didn't |
-| `playLose` | running out of tries was **silent** |
-| `playWarn` | one try left, half a beat after the wrong-guess thud |
-| `playHint` | spending a token sounded exactly like tapping a tile |
-| `playUnlock` | a level tile popping its lock off borrowed the star chime |
-| `playCollect` | a key letter landing in the chapter rail |
-| `playWhoosh` | shuffles, card flips, memory-boss peeks |
-| `playConfirm` / `playUi` | the home screen made no sound at all |
-
-`playSelect(step)` also takes a step now, so filling a selection, spelling the
-link and painting the logic grid are little rising figures rather than the same
-blip N times — and each logic-grid brush has its own pitch.
-
-### The music is a loop, not a random walk
-
-Three four-bar scenes — `menu`, `play`, `boss` — sharing one key, so a screen
-change is a modulation and not a record being swapped. Each bar carries a pad
-chord, a bass note, an optional brush tick and a sparse melody drawn from the
-bar's own chord. `App` sets the scene from the current screen (a boss door turns
-it minor); the change lands on the next bar line.
-
-The notes are scheduled **ahead of the audio clock** — a timer decides, the
-clock plays — because a `setInterval` firing one note at a time drifts, and
-drifts audibly once notes are meant to line up. Music still defaults to off.
-
-### What "hidden tab" means
-
-The old code suspended the `AudioContext` on `visibilitychange` and left the
-play functions alone. Anything they scheduled then landed on a *frozen* clock
-and fired at once on the way back — a win sting hitting the tab you returned to.
-The engine now refuses to schedule while backgrounded, and the scheduler
-re-syncs to the clock rather than trying to catch up.
-
-### How it was checked
-
-`scripts/audio.test.mts` (in `npm test`) pins the rules against a recording fake
-context: muted means *no oscillator*, a hidden tab schedules nothing, every
-event lands in the future, the voice budget comes back down, volumes clamp and
-persist, and the scheduler runs, stays ahead and stops.
-
-Levels were measured rather than guessed: every sound was rendered through an
-`OfflineAudioContext` in a real browser and its peak read off. Taps land near
-0.09, a solved group 0.2, the win sting 0.5, and *everything at once* — win,
-four stars, a solve, an unlock, a hint and the music — 0.59, so the mix never
-clips. That pass is what caught the whoosh rendering at 0.004 (a bandpass so
-narrow it threw the sound away) and an `AudioContext.resume()` rejection nobody
-was catching.
-
-## The emoji boss stopped being a sorting exercise (iteration 35)
-
-Owner's note: *"the emoji boss level is nice, but very easy."* It was, and the
-board was the reason. The old EMOJI_BOSS dealt three fast animals (🏃 🐆 🐎),
-three grey tools (🔧 ⚙️ 🔩), three blue weather icons (🌧️ ☁️ 🌬️) and three door
-things (🔒 🔑 🚪). Every group was a *visual* family, so the pictures sorted
-themselves: you could clear the boss without naming a single tile, which is the
-one thing the twist exists to make you do.
-
-### The board is built the other way round now
-
-The picture is the misdirection; the **name** is the answer.
-
-| Group | Tiles | What they look like |
-|---|---|---|
-| **Fasteners from a toolbox drawer** | 💅 NAIL · 🥜 NUT · 📌 PIN | a manicure, a snack, a map marker |
-| **To leave in a hurry** | 🏃 RUN · 🦆 DUCK · 🛴 SCOOT | a jogger, a bird, a toy |
-| **Comes off a live wire** | 🔦 FLASH · ✨ SPARK · 😱 SHOCK | a torch, some glitter, a face |
-| **To shut something tight** | 🔒 LOCK · 🍫 BAR · 🦭 SEAL | a padlock, chocolate, an animal |
-
-Three rules hold it up. The first is the one the second draft got wrong:
-
-- **The tile's word is the picture's own name.** 💅 *is* a nail, 🦭 *is* a seal,
-  🍫 *is* a bar. Where the name is longer than the word, the word is its stem
-  and nothing more: nail polish → NAIL, a kick scooter → SCOOT, a flashlight →
-  FLASH. What moves is the **sense**, never the noun — the seal you know is an
-  animal, and the group wants the one on an envelope. The second draft broke
-  this in two groups (☕ was supposed to be read as JOLT, ⚾ as STRIKE, ✂️ as
-  SPLIT, 💨 as DASH) and the owner called both unclear on sight: a picture you
-  have to call something it is not called is a guessing game, not a puzzle.
-- **Nothing clusters by look.** The two animals (🦆 🦭), the two foods (🥜 🍫)
-  and the two people (🏃 😱) sit in different groups, so sorting by what the
-  images *are* actively loses — which is precisely what the old board rewarded.
-- **The doubt is in the picture, never in the word.** The campaign house rule:
-  read a tile's word alone and it joins exactly one group. DUCK is only ever a
-  way to leave, SPARK only ever electric. ⚡ and the literal 🔩 stay banned:
-  either would hand over the link.
-
-The pivot is still BOLT, so `EMOJI_TWIN = "bolt"` and the whole placement pass
-are untouched — a bolt is a fastener, to bolt is to run, a bolt comes off a live
-wire, and you bolt a door.
-
-### The solved banner names the picture
-
-`SolvedBanner` takes a `pictures` map on this boss and prints **💅 NAIL** rather
-than **NAIL**. On a board whose difficulty *is* the naming, the banner is the
-punchline: the misreading you just talked yourself out of goes up on screen next
-to the word it turned out to be. Nothing else uses it (a blackout banner still
-masks everything), and the title on the win card is now *A Bolt from the Blue*.
-
-### Copy and guard rails
-
-- `twist.emoji.rule` (the line that sits on the boss door, on the board and in
-  the help sheet) promises the new fight: *"Every tile is a picture — and the
-  first word you think of is rarely the right one."* The briefing's two halves
-  say the pictures answer to more than one name, and that sorting by looks will
-  not work. EN + ES.
-- `npm run validate` now checks any board carrying an `emoji` map: every tile has
-  a picture, no picture is used twice, no picture belongs to a word that isn't a
-  tile (a missing entry silently falls back to showing the *word* — a free tile
-  on the one board meant to hide them all), and no glyph on the ⚡ / 🔩 / 🌩
-  spoiler list.
-
-## The save that survives the embed, quests, and a mask that counts (iteration 33)
-
-Five changes, four of them from the "what's worth doing next" read at the top of
-this session and one the owner asked for outright.
-
-### 1. Progress can no longer vanish quietly — `src/storage.ts`
-
-The whole meta-game (100 levels of stars, the 🔥 streak, twelve chapter keys,
-the hint bank) was one JSON blob written straight to `localStorage`, inside a
-`try { } catch { /* ignore */ }`. On CrazyGames the game is third-party content:
-Safari's ITP, Firefox's ETP and Chrome's storage partitioning can hand the embed
-an empty or short-lived store, and some embeds refuse the API outright. A wiped
-save looked exactly like a new player, and the catch swallowed the evidence.
-
-Every read and write now goes through `src/storage.ts`, over three backends:
-
-- **`localStorage`** when it genuinely works — probed once with a real *write*,
-  because a partitioned store can hand back an object whose `setItem` throws;
-- **the CrazyGames data module** (`sdkData()` in `sdk.ts`, new), which survives
-  partitioning. The SDK script is `async`, so `startSdkMirror()` polls for it
-  (12 × 700ms) and then reconciles **both ways**: a key only the platform has is
-  adopted back — that's the recovery — and a key only we have is pushed up,
-  which is the insurance for the *next* visit;
-- **memory**, always, so a session with nothing durable is at least coherent
-  while it lasts.
-
-A save in progress is never overwritten by a stale platform copy: adoption only
-happens for a key we have nothing for. When the mirror settles with nothing
-durable anywhere, the game says so in a bottom banner instead of pretending —
-and `initSdk()` now returns a promise that never rejects, so the mirror can wait
-for the platform to be ready.
-
-`scripts/storage.test.mts` (10 cases) pins the lot: a throwing store, a wiped
-store recovered from the platform, a live save that must *not* be overwritten, a
-late-loading SDK, and no storage at all.
-
-### 2. Daily quests
-
-Three goals drawn per day from a pool of seven (`src/quests.ts`), on the home
-screen where the rank bar used to be. Paid in hints — **1 each, +2 for the set**,
-five a day at most against one hint per level cleared — and granted the moment a
-goal is met, so there is no claim button to find.
-
-The draw is a pure function of the date (a seeded Fisher-Yates over the pool),
-so every device shows the same three with nothing stored, and it can look at
-yesterday's draw: an exact repeat of the three you just cleared swaps its first
-quest for the fourth in the shuffle. Events are raised in `App.tsx` from every
-finished board — `solve` / `perfect` / `link` / `combo` (Game now reports
-`maxCombo`, since the live combo says nothing once the board is over) / `daily` /
-`logic` / `pairs` — and batched, so one clean win that satisfies three quests
-raises one toast rather than burying its own win card. `scripts/quests.test.mts`
-(10 cases) pins the payout-once rule, the set bonus, and the midnight rollover.
-
-**Why quests and not a sixth counter:** everything else the game counts
-accumulates forever, so none of it says anything about *today*. These expire,
-and a `pairs`/`logic` draw is the only thing in the game that nudges a campaign
-player into a mode they've never opened.
-
-### 3. The link mask counts letters
-
-`◆ ? ? ?` was fixed at three marks whatever the pivot was. It's now one `?` per
-letter, with an aria-label that says how many. The link stops being a finale
-lottery and becomes a constraint you can carry through the board — four letters
-plus two solved category names is a real deduction — and the early call gets
-something to be confident *about*. Costs the finale a little difficulty; buys
-the middle of every board a lot.
-
-### 4. Modal focus — `src/modal.ts`
-
-Six dialogs (settings, stats, history, how-to-play, the boss briefing, the
-welcome overlay) rendered over a live screen with the whole page still tabbable
-underneath. `useModal()` replaces the old `useEscape()`: focus moves into the
-panel, Tab and Shift-Tab cycle inside it, Escape still closes, and the opener
-gets focus back on close. The close callback is held in a ref so the effect runs
-exactly once — with it in the dependency list, every parent re-render would have
-yanked focus back to the first button.
-
-### 5. The XP/rank ladder is gone (owner call)
-
-Nine titles over a lifetime-score curve, a progress bar on the home screen and a
-"Rank up!" toast — a second progression system layered on top of stars,
-achievement tiers and streaks, feeding on the same events and telling the player
-nothing they couldn't already see. Removed: `playerRank`/`Rank` from
-`progress.ts`, `celebrateRank` from `App.tsx`, the home-screen bar, and the
-`rank.*` / `home.rank` / `home.xp` keys from both catalogues. **`score` stays** —
-it is the in-game combo currency and the stats line; it just no longer pretends
-to be a level.
-
-### Verification
-
-`npm test` (84 across eight suites, two of them new), `npm run validate`, and
-all four headless playtests against a fresh preview build:
-`playtest.mjs`, `pairs.test.mjs`, `debug.playtest.mjs` and the new
-`iteration33.playtest.mjs` — zero issues, zero console errors. The last one
-covers the four changes end to end: the quest card and a quest paying out
-(hints 3 → 9 for one auto-solved board: +1 win, +4 achievement tiers, +1 quest),
-the STAR board showing four marks, 25 Tabs that never leave the settings dialog
-and focus landing back on the gear, and a browser whose `localStorage.setItem`
-throws — the game plays and the banner appears. Home at 1280×720 still fits the
-embed with no overflow.
-
-### Notes for whoever picks this up next
-
-- The storage warning waits ~8s before it appears, on purpose: that is how long
-  the mirror gives the `async` SDK script to turn up, and crying wolf at
-  first paint would be worse than the wait.
-- Quest rewards are hints. If they ever want to be bigger, `QUEST_REWARD` and
-  `QUEST_SET_BONUS` are the two numbers, and the tests read them rather than
-  hard-coding the totals.
-- The `combo` quest asks for `COMBO_TARGET` (3) — a chain of three groups with
-  no miss between them, which is most of a clean board.
-
-## The oracle is gone; memory and cipher take its place (iteration 32)
-
-**What was removed.** The `"oracle"` boss twist — the inversion that showed you
-all twelve words *and* the four theme names up front and made you name the
-hidden link before grouping anything. Gone from `BossTwist`, `CHAPTER_TWISTS`,
-`suitsTwist`, `Game.tsx` (the up-front `"guessing"` phase, `oraclePending`, the
-theme panel, the `twist !== "oracle"` carve-out on the early call, the
-grouping-phase branch in `revealLinkWord`), `LinkGuess.tsx` (the `oracle` prop
-and its copy), and both locale files (`twist.oracle.*` — including the briefing
-copy iteration 31 had just written for it — plus `finale.oracle.*` and
-`game.oracle.prompt`). `LinkGuess`'s `suspended` prop stays: the rule strip can
-reopen the briefing over an open early call, which is the same keystroke leak.
-
-**Why it earned its place on the chopping block.** It was the only twist that
-changed the *shape of a round* rather than how the board reads, and it fought
-three other systems for the same moment: it duplicated the early call (naming
-the link before you've grouped), it disabled the early call to avoid the clash,
-and it spent the finale's payoff in the opening ten seconds — a boss whose last
-act was routine grouping with the answer already on screen.
-
-**Re-dealing the twists.** Chapters 2, 7 and 11 lost their boss twist and were
-re-dealt from the survivors, keeping both standing rules — no two adjacent
-chapters share a twist, and `"emoji"` still appears exactly once (it swaps in
-the one bespoke board, so a second would replay a solved puzzle):
-
-    scramble · cipher · emoji · blackout · decoy · memory ·
-    scramble · blackout · cipher · decoy · blackout · memory
-
-Two twists replaced it (below), so the deal spreads six across twelve chapters
-with two ordering rules on top of "no adjacent repeats": **memory** never sits
-beside **blackout** (both are "hold what you can no longer see"), and
-**cipher** never beside **scramble** (both are "decode the tile first"). The
-campaign now ends on memory rather than a third blackout.
-
-### memory — the board you can no longer read
-
-(Distinct from `Pairs.tsx`, the standalone 🃏 mode: Pairs is a flip-two
-matching game on the same board, the memory boss is the normal grouping game
-played on a board you can no longer read.)
-
-Study the board face-up for **as long as you like**, press **Ready**, and every
-tile flips to a numbered card back; you group from memory. Deliberately not a
-study countdown — the owner's no-timers rule is not a detail to route around,
-and "the player decides when the lights go out" is a better version of the
-twist anyway. The round's clock only starts at the flip, so a long study is
-never a slow time on the win card.
-
-- **Three peeks.** The peek button arms; the next tile you tap turns over for
-  1.4s instead of selecting. On a face-down board every tap is already a claim
-  about which tile that is, so the question needed its own button.
-- **Numbered backs.** A tile keeps the slot number it had when the board
-  flipped, so "the fourth one" survives its neighbours being solved away. The
-  number is also the tile's aria-label — labelling it with the word would hand
-  the board straight to a screen reader.
-- **No shuffle**, and the board stays face-down through the **early call** (it
-  keeps the tiles on screen, and a free read is exactly what the peek bank is
-  there to ration). Only the end of the round turns them over.
-- **Board fit**: spokes ≤ 8 letters, and no two spokes may share their first
-  two letters. Near-twins are the failure mode — two tiles that start alike are
-  one tile in recall. (The first draft demanded twelve distinct first letters:
-  zero of the hundred boards qualify. The two-letter-prefix rule leaves 27,
-  including grade-5 boards, which is what chapter 12 needs.)
-
-### cipher — the vowels are gone
-
-Every tile arrives stripped: CRASH → CRSH, SPLIT → SPLT. Harder-looking than
-scramble and fairer than it — the consonant skeleton preserves word shape, so
-it's decoding rather than anagramming. `cipherWord` lives in `engine.ts` beside
-`scrambleWord` and is unit-tested.
-
-- **Board fit**: no two spokes may strip to the same skeleton, every skeleton
-  must be at least two letters, and at most three tiles may be two-letter
-  stubs. ICON → CN is readable next to nine fuller tiles and unreadable twelve
-  times over. (Requiring three consonants everywhere left 8 boards, none above
-  grade 4; the stub cap leaves 66 across every grade.)
-
-The cast `npm run validate` produced: cipher on `wave` (ch2) and `snap` (ch9),
-memory on `palm` (ch6) and `mark` (ch12, grade 5). Tests, validate, and the
-playtest are all clean, and both bosses were played through in a real browser.
-
-### Still-open candidates (proposed, not built)
-
-- **the brief** — the four theme names are shown up front, and you assign tiles
-  to a *named* group instead of free-grouping. It recycles the oracle's theme
-  panel — the good half of that twist, kept in git history — without the
-  cold-spelling lottery, and it
-  is genuinely harder than it sounds: named themes turn every near-miss into a
-  deliberate choice. Board fit: needs category names that don't leak the pivot —
-  already a validate rule, so any board qualifies.
-- **cascade** — the board re-scrambles after every solved group: the survivors
-  get fresh anagrams and a fresh order. Stops the "I'll park these three for
-  later" strategy that carries most boards, and costs only a re-seed of
-  `displayOf` keyed on `solved.length`. Board fit: the scramble rule (spokes
-  ≤ 7 letters). Ordering: never adjacent to **scramble** or **cipher**.
-
-## The boss briefing — every twist explains itself (iteration 31)
-
-*(Written before iteration 32 dropped the oracle. The briefing system below is
-current; every mention of the oracle in it is history — its rule and briefing
-copy went with the twist, and memory and cipher were written into the same
-`twist.*.rule` / `.brief.a` / `.brief.b` slots.)*
-
-Owner report: *"the individual boss mechanics are not clear to the player."*
-They were right, and the reason was that the game only ever **named** them.
-A boss's rule reached the player through exactly two channels:
-
-- a **1.9-second toast** on entering the level (`twist.*.intro`), fired once,
-  unrecoverable — blink, or come back to the level tomorrow, and the rules of
-  the board you're on are gone;
-- a **two-word noun phrase** — "impostors", "blackout", "the oracle" — on the
-  boss door, the up-next card, the win card's Next button and the top bar.
-  Names, not rules. "Blackout" tells a player nothing about what the board is
-  about to do to them, and the one that *sounds* self-explanatory is the one
-  that misleads: "the oracle" gives no hint that grouping is locked until you
-  spell the link.
-
-Nothing else said a word, including the **?** button — asked for help mid-boss,
-it explained the ordinary game the player was already playing.
-
-### What each twist now says for itself
-
-Every twist gained a **rule** (one line, the mechanic in a sentence) and a
-two-part **briefing** (`brief.a` = what changes, `brief.b` = how to play it),
-in `en` and `es`. `twist.*.intro` is gone — the toast it fed is what failed.
-
-### Where it says it
-
-- **The briefing** (`BossBriefing.tsx`) — a dialog, not a toast: crown, twist
-  name, the rule, then what changes / how to play it. It **opens itself on a
-  boss you haven't beaten** (`bossBeaten` = the level has stars) and waits to be
-  dismissed; a boss you've already cleared doesn't re-brief you.
-- **A rule strip on the board**, under the header, for as long as the rule is in
-  force (it goes at the win/loss card). It states the rule and **reopens the
-  briefing** when tapped — the recall path the toast never had. On lg it drops
-  its own eyebrow, because the top bar names the twist right beside it and the
-  1280×720 embed has no vertical room to spare.
-- **The how-to-play sheet leads with the boss** you're actually fighting, above
-  the three ordinary steps (and now scrolls, because that stack is taller than
-  a phone).
-- **The boss door and the up-next card** carry the rule under the name, so the
-  choice to walk in is made knowing which game is behind it. A *beaten* door
-  still names the board it was — there's nothing left to warn about.
-
-### Fixed on the way through
-
-- The Oracle's "the four themes — what single word joins them all?" prompt was
-  **hard-coded English** in `Game.tsx`; it's `game.oracle.prompt` now.
-- `LinkGuess` takes `suspended`: its window keydown handler would otherwise
-  **type the briefing-reader's keystrokes into the answer** behind the dialog,
-  which the Oracle (whose guess phase is open from the first frame) would hit
-  every time.
-
-`playtest.mjs` covers the new flow (the briefing explains the twist → dismiss →
-the rule survives on the board → tapping it reopens the briefing). All three
-headless suites and `npm test` pass with zero issues.
-
-## Debug mode: hints, auto-solve, tools (iteration 30)
-
-Owner ask: *"add a debug mode which I can use to get more hints, auto solve
-levels…"*. `?debug` already existed but did exactly one thing — unlock the
-level map — and needed a URL to reach.
-
-- **The switch moved to `src/debug.ts`** (out of `progress.ts`, which now only
-  reads it for gating) and gained `setDebug`, so it can be flipped live. Three
-  ways in: `?debug`, **Settings → Developer → Debug mode**, or the localStorage
-  key. It is mirrored in App state, so the gating, the hint bank and the tool
-  trays all react without a reload.
-- **Hints are free.** `useHintToken` no-ops in debug, the hint buttons stay
-  live on an empty bank, the badge reads ∞, and the ad refill is never offered
-  — in the game, the finale and the chapter-key panel alike.
-- **The 🛠 tool tray** (`DebugPanel.tsx`), collapsed until asked for:
-  - Game: *solve a group* (goes through solveCategory, so the points, the combo
-    and the banner behave like a real solve), *auto-solve level* (every group +
-    the link + the win card; the report effect still pays the stars, the streak
-    and the history entry), *reveal all themes*, *peek at the link* (shows the
-    pivot on its card without resolving the finale, and toggles back off),
-    *+5 hints*, *force a loss*.
-  - Index: *clear next level* (3 stars, so the letters, the unlock reveals and
-    the chapter keys all behave as they do after a real clear) and *+10 hints*.
-  - Logic Grid: *auto-solve grid* paints the level's own verified `solution`,
-    so the existing solve effect lands the win.
-- **Concealment is preserved**: nothing shows the link until a tool asks for
-  it, and a forced loss keeps the word secret for the replay, exactly like a
-  played loss does.
-- Covered by `scripts/debug.test.mts` (5 unit tests: the URL, the toggle,
-  persistence, and the gates opening — and closing again) and
-  `scripts/debug.playtest.mjs` (5 headless checks: the tray only exists in
-  debug, the in-game tools, free hints from an empty bank, the index tool, the
-  Logic Grid). `playtest.mjs` and `pairs.test.mjs` still pass with zero issues.
-
-## The difficulty ramp, rebuilt (iteration 29)
-
-Owner report: *"the difficulty ramp in levels is not right yet — reorder the
-levels in a more interesting way."* It was backlog item 10, and reading the old
-order end to end showed it was two separate problems wearing one hat.
-
-**Length was standing in for difficulty.** The score was average spoke length
-plus a nudge for long and obscure words, and it ranked GLASS — drinkware, window
-parts, vision aids, fragile materials, four concrete sets under a household word
-— as the **hardest board in the game**, so the campaign's final boss was "Raise a
-Glass". PIPE closed at 99 and SOLE at 97, while TENDER (kindness / a sore knee /
-a contract bid / a boat serving a ship) sat at 56 and RUN at 35. Long words are a
-reading test; they are not the puzzle.
-
-**And one sort is a line, not a ramp.** Levels 1–52 all fell inside a 1.7-point
-band, then the last ten climbed a cliff. Nothing marked a chapter as its own arc,
-so 100 levels each felt a hair harder than the last — which is the same as
-feeling identical.
-
-### Three parts replace the one number
-
-1. **A hand grade per board, 1–5** (`GRADE_BANDS` in `puzzles.ts`), on what a
-   cheap script can't see: how many of the four groups are *senses* rather than
-   *sets* ("To influence" vs "Parts of a tree"), how far the pivot sits from its
-   everyday meaning (the finale is the level's climax — STAR gives itself up,
-   TEMPER doesn't), and how much the groups tempt each other (SOLE puts "Parts of
-   a shoe" beside "Parts of the foot"). Ids, not numbers, so a band reads as a
-   list you can argue with.
-2. **The old score, demoted to a tiebreak** (`lexicalLoad`). Word length still
-   decides the order *inside* a grade, which is the one thing it was good at.
-3. **A placement pass**, because a graded pool still needs a shape.
-
-### The shape: a rising sawtooth
-
-`dealChapters()` gives each chapter the next slice off the easy end of the pool
-and orders it rising — then lets it reach up to `SPIKE` boards *past* its own band
-for a boss. Reaching past the band is what gives a chapter a peak; the board it
-displaces falls back to the front of the pool and **opens the next chapter**,
-which is what gives that chapter its breather. Climb, spike, relief, climb
-higher. Chapter mean grade still rises monotonically (1.1 → 4.9 from chapter 2 to
-12), but no two neighbours feel the same any more.
-
-Two rules the pass enforces, both learned from what it produced first:
-
-- **A boss tops its own chapter.** The first attempt handed level 6 a grade-1
-  boss sitting behind three grade-2 levels, because chapter 1's band is a single
-  board and the pool's easy end is all it could see. A boss must now grade at or
-  above every level the player beat to reach it — on the *grade*, not the lexical
-  tiebreak, since the twist itself is worth more than a point of word length.
-- **One compound-word board per chapter.** The "___ + FISH" / "A ___ of ice"
-  groups are the only beat that asks for a different kind of thinking, and there
-  are almost exactly twelve of them. The sort had no reason to spread them: two
-  landed in chapter 2 and none in 5, 9 or 12. `spreadWordplay` trades a spare to
-  the nearest chapter with none, for the board closest to it in difficulty. It's
-  now exactly one per chapter, all twelve.
-
-`spaceOutRepeats` then stops two levels in a row from showing the same tile
-(GEAR is on both `spring` and `bolt`; TOFFEE on `mint` and `drop`) by swapping
-within a chapter, where difficulty is a band and a swap costs the curve nothing.
-Down from a handful of clashes to zero.
-
-### Bosses are now cast, not left over
-
-`suitsTwist()` asks whether a board can carry the twist its chapter hands it,
-which nothing used to ask:
-
-- **scramble** wants short tiles. The old order gave chapter 6's scramble boss to
-  SPIN, i.e. *decode the anagram PIROUETTE*, and chapter 10's to TRIP. Anagrams of
-  10-letter words aren't harder, they're a different and worse game. Scramble
-  bosses are now `stick`, `crash`, `swing` — nothing over 7 letters.
-- **oracle** made you name the link cold, so a long or unusual pivot turned
-  lateral thinking into a spelling lottery: pivots were capped at 5 letters
-  (`wave`, `nail`, `spot`). *(Twist dropped in iteration 32.)*
-- **decoy** salts the board with impostors, so it refuses **compound-word
-  boards**. This one was a genuine fairness bug in the first pass of this
-  iteration: it cast `palm` as the decoy boss, where SPRINGS / BEACH / SUNDAY can
-  only be verified once you know the link is PALM — so on a board with three
-  fakes, those three tiles are indistinguishable from the fakes. The twist would
-  have been attacking the one group the player has no way to check.
-- **blackout** is pure memory load; any board carries it, so it takes the
-  hardest. The finale is now VOLUME (loudness / one book of a set / capacity /
-  throughput — every group an abstract measure) instead of "Raise a Glass".
-
-**`bolt` is pinned to the emoji boss slot.** The emoji boss replaces its slot's
-board outright, and EMOJI_BOSS *is* the BOLT board in pictures — same pivot, same
-four ideas (toolbox, things that run, storm, keeping it shut). With `bolt` loose
-in the campaign the player solved BOLT twice, nine levels apart, once in words
-and once in emoji. Pinning it spends the duplicate on the one slot whose own
-board is never played, and costs the campaign nothing.
-
-### The tier chip stopped lying
-
-`tier` was thirds-of-the-campaign by *position*, so it described a slot, not a
-board: `run` said "Medium" and `glass` said "Hard". It's derived from the hand
-grade now (1–2 → Easy, 3 → Medium, 4–5 → Hard), which lands within a couple of
-levels of thirds anyway — and it means a breather deep in the campaign is
-*labelled* as one. "MIND BENDERS · EASY" on level 45 is the sawtooth telling you
-this one's a warm-up, not a bug.
-
-### Guard rails
-
-`npm run validate` now fails on: a campaign puzzle with no hand grade (a new
-batch would otherwise land silently mid-curve), an id graded twice or unknown, a
-lost or duplicated board, level 1 not being `star` (the tutorial coach is written
-against that board's own first category), a boss milder than a level it follows,
-boss grades that drop across chapters, a boss that can't carry its twist, two
-chapters' worth of compound-word boards in one chapter, and two adjacent levels
-sharing a tile. The emoji chapter is exempt from the grade rules and says so —
-its board is never played.
-
-## 100 levels, twelve chapters (iteration 28)
-
-The campaign was 63 boards in eight chapters. It is now **100 boards in twelve
-chapters** — 37 new pivots authored to the house rules above, and the chapter
-frame stretched to carry them.
-
-**The content.** 37 new `RawPuzzle`s: DRAW, SPOT, RUN, SHIFT, TRIP, CROSS,
-STEAM, SINK, CHARM, VOLUME, PLUG, SCORE, RAIL, MARK, PRESENT, STALL, SWING,
-DRIVE, GRAIN, PEAK, HOOK, TURN, LEAD, CLIP, FLOOR, PRIME, SHOCK, SPIN, TENDER,
-CHANNEL, VAULT, PANEL, STEP, SNAP, TEMPER, SLATE, STRAIN. None of them re-uses
-a campaign or Daily pivot (`validate` enforces the Daily half of that), and the
-difficulty sort places them, so the new boards are spread across the whole
-campaign rather than bolted on at the end.
-
-Every board was read against the four human-only classes in *House rules*, and
-that read is where most of the authoring time went. What it caught, as a guide
-to the next batch:
-
-- **A tile another group could claim** — PASS ("___ + WORD") beside "to get to
-  the other side"; BOILER in an engine room beside "cook over boiling water";
-  FUNNEL beside a group of ducts; POINTER (a dog) beside a dog lead; PATCH
-  beside a tear in a stocking; SEESAW beside "to move to and fro"; a BOARD
-  beside a plank.
-- **A tile that is the pivot** — TIE on a DRAW board, SPRAIN one letter off
-  STRAIN, POPPER on a SNAP board (it's British for exactly that fastener).
-- **Same group twice on one board** — RAIL had "beside the staircase" and "a
-  long straight bar", which are the same idea; the second became `___ + WAY`.
-- **Spelling** — the tile vocabulary is US (HARBOR, THEATER, TIRE), even though
-  the prose here isn't: PLOW, INSTALLMENT, HUMOR, EMCEE, SANDBOX.
-
-`npm run audit` is back to one near-duplicate pair (`spring`/`fall` Seasons),
-which is the pre-existing one — every clash the new boards introduced was
-resolved by changing a tile, never a category name.
-
-**The frame.** `CHAPTER_SIZES` is now [6,7,7,8,8,8,8,9,9,9,10] + remainder:
-chapters grow as the campaign goes on, and the twelfth swallows the rest (11).
-Four new chapters — Deep Water, Sleight of Hand, The Long Game, No Safety Net —
-sit in front of The Final Test, which keeps its MASTERMIND key and its clay
-paper. Their keys are UNDERTOW · MISCHIEF · PATIENCE · TIGHTROPE, sized to
-their chapters' non-boss level counts (`validate` and `npm test` both check).
-
-Two things that would have broken quietly if left alone:
-
-- **`CHAPTER_TWISTS` is no longer cycled with a modulo.** It has one entry per
-  chapter now, because "emoji" swaps in the one bespoke picture board — a
-  second emoji chapter would have replayed a board the player already solved.
-  Adjacent chapters still never share a twist.
-- **`CHAPTER_INKS` gained four inks** (indigo, lime, slate, plum) before the
-  clay finale. `chapterInk`/`chapterPage` are modulo lookups, so twelve
-  chapters against eight inks would have restarted the palette at chapter 9 and
-  handed the finale gold.
-
-Nothing else needed touching: level counts, star totals, achievement ceilings
-and the "N levels to the next boss" carrot all derive from `LEVELS.length`.
-
-## The boss door, and letters you watch being earned (iteration 27)
-
-Iteration 26 built the chapter key as a *rule*: clear the levels, a counter
-fills, a button appears. The rule was sound and the presentation was a web
-form — five 10px squares, blank on purpose, and a boss that was an 11mm square
-with a crown sticker on it. Nothing on the page looked like the most
-distinctive fight in the game was behind it. This iteration spends the whole
-mechanic on screen.
-
-### One letter per level, and you can see which
-
-`keyLetterOf(index)` / `keySlots(chapter)` in `puzzles.ts` deal the keyword's
-letters out to the chapter's non-boss levels, one each, in a **scrambled**
-order (`KEY_DEAL`, seeded per chapter). Scrambled matters twice over: the rail
-is on screen from the first clear, so a deal in the answer's order would spell
-the key for free, and a jumble that fills in is a better collectible than a
-word slowly typing itself. `npm run validate` and `scripts/progress.test.mts`
-both pin it — the dealt letters must be the keyword's own multiset, and must
-not read as the keyword.
-
-The letters used to be hidden here ("showing them hands over the anagram"),
-which is exactly backwards: the anagram *is* the puzzle, and you can't want a
-collectible you've never seen.
-
-### The hand-over: a level turns into its letter
-
-`progress.banked` is the letters the map has already shown arriving —
-`newlyBanked` / `markBanked`, the same shape as `seen` / `markSeen`, and
-migrated for old saves so a returning player isn't buried in payouts. On the
-map, each owed letter plays in turn: the level's numeral chip **turns over**
-to its letter, holds it up, and throws it down to the chapter's rail, where the
-slot pops. The throw is a fixed-position element flying between two measured
-rects (`chipRefs` → `slotRefs`), so it crosses out of the list and into the
-panel below it.
-
-Two ordering rules that make it read as cause and effect:
-
-- **Letters first, unlocks second.** `bankTime` pushes the lock-pop reveals and
-  the unlock banner out behind the hand-over. You bought the letter by clearing
-  the level; you get paid before the map opens anything new.
-- **A backlog plays faster** (`bankRate`) — a chapter's worth of letters at
-  full pace is a ten-second cutscene. One letter always gets the full
-  performance.
-
-When the last slot fills, the rail **charges**: a gold sweep across it, a
-ring on every rune, an arpeggio, and the door underneath turns from a padlock
-to a crown with the twist named and a gold CTA. That transition only fires on
-the change — a rail that was already full when the page opened has had its
-moment.
-
-### The boss panel
-
-One object per chapter, and the only dark thing on a page of cream: the rail on
-top, the door below it in solid ink with the chapter's colour bleeding up
-through. It reads its state off the rail — `far` (padlock, `? ? ?`, a drawn
-keyhole), `sealed`, `ready` (charged, "Unseal"), `open` ("Enter"), `beaten`
-(title revealed, stars, "Replay"). The twist is revealed one beat before the
-door opens, so finishing the chapter's levels *tells you what you're walking
-into*.
-
-Spelling the key is a modal that dismisses itself, so the panel waits
-`KEY_PANEL_MS` before swinging — otherwise the payoff (jumble reordering into
-the keyword, flash across the door) would play under something covering it.
-
-### Two bugs found on the way
-
-- **"Next level →" walked straight into a sealed boss.** The win card's CTA was
-  `levelIndex + 1` with no gate, so the whole key system was skippable and the
-  door was decorative. When the next level is that boss, the button now goes to
-  the map ("🔑 To the sealed door →") — which is also where the letter you just
-  earned is about to land.
-- **Open level tiles were blank under `prefers-reduced-motion`.** The page's
-  own reduced-motion CSS caps every animation at 0.001ms, which left Framer's
-  numeral stuck on a frame that never painted. Under `reduce` the tile face is
-  now plain markup — nothing to animate, nothing to get stuck. (Pre-existing;
-  reproduced on the old build before fixing.)
-
-## Chapter keys + per-chapter paper (iteration 26)
-
-Two changes that make a chapter feel like a unit rather than eight arbitrary
-levels in a row.
-
-### The chapter key — a boss is now earned, not reached
-
-Every chapter hides a **keyword**, and every non-boss level in it banks one of
-that keyword's letters when you clear it. Bank them all and the key panel
-opens: the letters come back **jumbled, with no decoys**, and spelling the word
-opens the boss door. The keywords are themed to their chapters —
-SPARK · EMBERS · TANGLE · MIRRORS · SPIRALS · LEXICON · RIDDLES · UNDERTOW ·
-MISCHIEF · PATIENCE · TIGHTROPE · MASTERMIND —
-so the chapter's own name is the clue.
-
-It reuses what the game already teaches: `LinkGuess` is the finale's panel, and
-this is its fourth caller (finale / Oracle / early call / chapter key — the
-Oracle was dropped in iteration 32, leaving three). It took
-three new optional props — `bank`, copy overrides, and a `dismissKey` for a
-panel that has no "give up" to offer.
-
-Rules worth knowing before touching this (all pinned in
-`scripts/progress.test.mts`, which is new and wired into `npm test`):
-
-- **Banked letters are derived, never stored** — they're just the count of
-  cleared non-boss levels in the chapter. No migration, and a hand-edited save
-  can't desync from what the player actually did.
-- **A boss you have already beaten never re-locks.** Saves from before keys
-  existed keep every boss they earned; the key gates the first clear only.
-- **An unsolved key cannot deadlock the campaign.** The gate is on the boss
-  alone — the lookahead window still opens levels past it, so a player who
-  can't crack a keyword is never stuck, just held back from that one fight.
-- **Only a boss you can actually reach advertises its key** (`bossAwaitingKey`
-  vs `keyLockedBoss`). A boss five chapters ahead is locked by distance, and
-  telling that player to "spell the key" would be nonsense advice.
-- **`unlockedIds` hides a key-locked boss**, so opening one with the key makes
-  it read as newly unlocked — it gets the index's lock-pop reveal and its own
-  banner, which is the payoff moment.
-- **`npm run validate` fails the build if a keyword's length ≠ its chapter's
-  non-boss level count.** Too short strands levels that buy nothing; too long
-  leaves a slot nothing can ever fill and the boss door could never open.
-
-Rewards: opening a key pays 500 points (which feeds the rank ladder) and +2
-hints, on top of the door itself.
-
-### Per-chapter paper
-
-`CHAPTER_PAGES` in `theme.ts` derives a page stain from each chapter's ink —
-the cream pulled halfway to that chapter's wash, plus a low-alpha top glow.
-`App` sets `--page-paper` / `--page-glow` on the `.aurora` backdrop **only while
-a campaign level is open**, so the stain means "you are in chapter N"; the
-daily, Endless, Pairs and every menu keep the plain cream, because a signal
-that's everywhere says nothing. The in-game header names the chapter in its own
-ink under the level number ("CROSSED WIRES · EASY").
-
-Deliberately faint, and it never touches `CATEGORY_THEMES`: the four group
-colours are load-bearing for gameplay, and the playtest asserts the pivot is
-never distinguishable by colour mid-game. If it wants to be stronger, the
-number to turn is the glow alpha in `CHAPTER_PAGES`.
-
-## The level map became an index (iteration 25)
-
-The screen was 63 identical numbered squares in a grid, and every unlock was
-invisible: you cleared a level, came back, and one square had quietly changed
-colour. The first pass at this coloured the grid in and gave the unlock a
-reveal, which helped — but the grid itself was the problem, so it was thrown
-away and the screen rebuilt around one idea.
-
-**The two halves of the list are not the same thing, so they aren't drawn the
-same way.**
-
-- **Behind you: index lines.** A solved level is a row — a colour-coded
-  numeral, the **title of the board you beat**, a dotted leader, the stars:
-  `[21] Pen Pal ········· ⭐⭐⭐`. Titles are already public once you've solved a
-  level (the win card and the history both show them), so this leaks nothing,
-  and it turns a wall of gold squares into a record of what you cracked.
-  **The leader is what makes it work**: numerals align in one column and stars
-  in another (a fixed 3-cell grid — `☆` is narrower than `⭐`, so free-sizing
-  the pips leaves every leader ending somewhere different), and the varying
-  title lengths are absorbed in between. The crown on a boss row *trails* the
-  title so every title still starts at the same x.
-- **Ahead of you: a strip of identical squares.** An unplayed level is a 44px
-  tile, locked ones dashed. They carry no information on purpose — a title is a
-  strong hint at the link ("Star Power" → STAR), so an unsolved level must never
-  be named, and `scripts/playtest.mjs` asserts exactly that — which means they
-  have nothing to size themselves by and can simply tile evenly.
-- **An earlier take on this used variable-width title *chips* in a `flex-wrap`
-  run and it looked like clutter** — every row ragged out at a different point.
-  Same content, but "a page of type" only works if something holds the columns.
-  If you're tempted to reach for wrapped pills here again, that's the reason not
-  to.
-- **The thing you came to do is a card, not a node to hunt for.** An **Up next**
-  card sits at the top with the chapter, the level number, its difficulty tier
-  (which used to live only in an aria-label), a boss's twist when there is one,
-  and a big Play. Clear everything and it becomes a "Collection complete" card.
-- **Flat past, raised present.** Solved rows are flat; only the Up next card
-  and the open numbered tiles sit raised off the page, so the one thing to
-  press is obvious.
-- **Landscape-first for the portal.** At `lg` the screen splits the way the
-  game screen already does: what to play on the left, the collection in its own
-  `overflow-y-auto` pane on the right, so the whole thing sits above the fold in
-  the 1280×720 iframe CrazyGames serves most desktop players — **the page itself
-  never scrolls, even with every level solved**, which `scripts/playtest.mjs`
-  now asserts. The Play button goes full width in that column: on a games portal
-  the primary CTA should be the biggest thing on screen, not a chip beside a
-  heading. Portrait is untouched (one column, as before).
-- **A carrot under the hero**: "👑 5 levels to the next boss". Bosses are the
-  most distinctive content in the game, so distance-to-boss is a better thing to
-  walk towards than "level 26" — and it's a count, not a sentence, which suits
-  the platform's international audience.
-- **One flat print ink per chapter** (`CHAPTER_INKS` in `theme.ts`, eight spot
-  colours on cream), with a contents-page rule — numeral, name, hairline, star
-  count — and a rotated **COMPLETE** stamp. Perfect clears keep a gold rule
-  inside the chip, so the index records how *well* you did.
-- **Chapters you can't reach are one quiet line** that still names them
-  ("Mind Benders · Opens after level 42 · 👑 A boss closes this chapter").
-  Chapter names are flavour, never puzzle content. This retires backlog item 20
-  ("de-intimidate progress") and replaces a wall of ~40 padlocks.
-- **A reachable boss gets a caption** under the strip ("👑 Boss · Blackout") —
-  its twist can't ride on a fixed-size square without breaking the strip's
-  uniformity, and it's what makes the end of a chapter worth walking towards.
-
-**Deliberate reversal — read before "fixing" it:** iteration 11 logged
-"*Level map didn't scroll to you — a player at L34 landed at L1*" and added a
-scroll-to-your-next-node on mount. That's gone. The next level is now the card
-at the top, so the page opens at the top on purpose, and the list below reads
-as your record from the beginning. The one exception is a pending unlock: the
-page scrolls to the chip that's about to open, because an animation nobody sees
-may as well not run.
-
-**Unlocking is now something you watch, once.**
-
-- `Progress.seen` records which levels the player has already seen open.
-  `newlyUnlocked()` / `markSeen()` in `progress.ts` drive it; both ignore the
-  debug switch, so `?debug` never counts as unlocking the campaign. Existing saves
-  are migrated with everything already-open marked seen, and a fresh save starts
-  with its opening levels seen — nobody gets a backlog of stale reveals.
-- A freshly opened entry **starts on its locked face** and pops open on a timer
-  (lock flies off, the chip springs in, a shockwave ring, a rising blip),
-  staggered so two unlocks never blur into one. Revisits are static.
-- A **fixed banner** names what opened, and varies by *kind*: a new chapter
-  wins over a boss, which wins over a plain level; plain levels rotate through
-  five lines. It's fixed to the viewport because the page scrolls itself to the
-  chip that's opening — a banner in flow announced the news off-screen.
-- Most players never open the map between levels, so the **win card's Next
-  button** teases the same thing: "👑 Boss next · scrambled tiles →" or
-  "Next chapter: Warming Up →". Plain levels keep the plain label — the teaser
-  only means anything if it isn't on every card.
-
-Notes for the next session:
-
-- Rows are full-width and tiles are a uniform `flex-wrap` strip, so both reflow
-  with width for free — no breakpoint juggling. A fully-solved index is ~2500px
-  of list; in portrait you scroll it, and at `lg` it lives inside the right
-  pane's scroller so the page height stays fixed.
-- Only tiles need the unlock reveal: a freshly unlocked level is unsolved by
-  definition, so it's always in the strip. `LevelRow` has no reveal logic.
-- `levelTitle(index)` in `puzzles.ts`, not `LEVELS[index].title`: the emoji boss
-  substitutes its own board (`EMOJI_BOSS`), so the index has to name the board
-  the player actually saw. Getting this wrong would print a title for a puzzle
-  that was never played there.
-- `scripts/playtest.mjs` counts only the *reachable* chapters' entries (locked
-  chapters render none), waits out the unlock reveal — a chip mid-reveal is
-  deliberately still `disabled` — and asserts unsolved titles never appear.
-
-## Review pass (iteration 20) + backlog burn-down (iteration 21)
-
-A full read of `src/`, a puppeteer sweep (390×844, 320×568, 844×390 landscape,
-1280×720 embed) across Home / map / game / finale / Pairs / Logic / modals, and
-a content audit of all 144 boards — then a pass working the backlog it produced.
-`npm test`, `npm run validate` and `scripts/playtest.mjs` green throughout.
-
-### Shipped in the review pass
-
-- **Hint spoilers (fairness bug).** Five category names spelled out their own
-  puzzle's pivot — `light`, `palm`, `bank`, `date`, `fall` — so one 💡 hint on
-  those boards handed over the finale. Two more named a tile from a *different*
-  group (`seal` → MARINE, `fair` → JUST). All seven rewritten.
-- **Stale daily streak.** Home read `daily.streak` straight from storage, but
-  that field is only rewritten on the next clear — a streak broken weeks ago
-  still showed "🔥 6-day streak" until `recordDaily` reset it to 1. New
-  `liveDailyStreak()` only counts a run cleared today or yesterday.
-- **Logic Grid never defined "neighbour"** (orthogonal, never diagonal) and
-  always opened on puzzle 1; it now opens on your first unsolved.
-- **Level map didn't scroll to you** — a player at L34 landed at L1.
-- **Finale was tap-only** — typing places letters, Backspace undoes.
-- Escape closes modals; interstitials keep a 60s gap and skip the first minute
-  of a session; the hero scales down so the CTA clears the fold at 320×568;
-  Confetti re-themed off the pre-retheme neon palette.
-
-### Shipped in the burn-down
-
-Content (items 1–3):
-- **71 self-naming category names** rewritten — the tic was a name that is both
-  the definition and one of its three words ("To pester: PESTER/ANNOY/NAG"),
-  which made the same 💡 token worth a free tile on those boards and nothing
-  extra on the next.
-- **Within-board ambiguity** in `bark` (SNARL/GROWL interchangeable between
-  "Dog sounds" and the anger group) and `block` (BRICK and BAR both also
-  "solid chunks").
-- **Tiles that spell the pivot** — SLIGHT on LIGHT, FANATIC on FAN, GATECRASH
-  on CRASH, PENCIL on PEN, DROPLET/GUMDROP on DROP. Found while working the
-  above; the worst of the three classes, since the secret link was sitting on
-  the board it hid from.
-- **Five duplicated category beats** across boards (stick/bat, table/plot,
-  drop/crash, post/beam, court/crown).
-- `npm run validate` now **fails** on every leak class above (singular and
-  plural); `npm run audit` reports near-duplicate categories.
-
-Gameplay:
-- **Call the link early** (item 6) — one shot per level once a group is found:
-  a hit reveals the word, pays 250 × (1 + groups still open), and you play on
-  knowing it; a miss costs no mistake and no star, just the shot. The shot is
-  spent on opening the panel so the letter count can't be peeked at.
-- **Pairs progress** (8) — per-group chips (0/3 → 3/3), a "🔀 New" board button
-  mid-run, and a move counter that says what it's for.
-- **Logic drag-to-paint** (9).
-- **Logic clue vocabulary: 2 kinds → 8** (iteration 22, owner request) —
-  diagonals, row/column group-mate counts, line parity ("an odd number of my
-  column"), corner counts, and two whole-line header clues (all different /
-  exactly one pair). 20 → 30 levels, ordered as a vocabulary ramp.
-
-UX & graphics:
-- **Home fits a landscape embed** (10) — two-column grid at lg, 720 with room
-  to spare.
-- **Home's CTA plays** (14) — "Continue · L6" opens L6; the map is its own link.
-- **Mode numbers carry their units** (15) — BEST 6 / 14 MOVES / 2/20 SOLVED.
-- **Logic clue glyphs + legend** (13) — 0/1/2 and →=/→≠ instead of three tiles
-  repeating "No neighbour is in my group" in 8.8px prose.
-- **Dead zones** (12) — Pairs, Logic and the board centre their play area;
-  Pairs cards are taller on phones.
-- **Pinch-zoom restored** (16, half) — `touch-action: manipulation` on buttons
-  replaces `user-scalable=no`.
-- **The landscape wall is now a door** (11, half) — the rotate hint has a
-  "Play anyway" that hands the game back for the session.
-
-Code quality:
-- **Pure state updaters + one write path** (17) — `applyProgress` computes the
-  next state and runs its side effects in the handler; StrictMode's double
-  invoke no longer doubles saves, achievements and toasts in dev.
-- **`celebrateRank`/`awardScore`** (18) replace four copies of the rank-up block.
-- **Game.tsx split** (19) — `theme.ts`, `letters.ts`, `format.ts`,
-  `LinkGuess.tsx`, `EndCard.tsx`; 1,700 → 1,323 lines, and Pairs/Deduction no
-  longer import the game screen for a constant.
-- **Tutorial copy derives from the board** (20) — re-pinning `OPENING[0]` can
-  no longer leave the coach describing a puzzle that isn't there.
-
-## Timers and live state (iteration 24)
-
-The reported bug — **the card you are holding vanishes when you mis-couple** —
-plus two more Pairs bugs found next to it, and the patterns behind them swept
-out of `Game.tsx` and `Deduction.tsx`.
-
-- **A mis-couple made the held card invisible** (the reported one). The card
-  faces are a CSS 3D flip: the wrapper turns to `rotateY(180deg)` and the front
-  face carries its own `transform: rotateY(180deg)` to face the camera, with
-  `backface-visibility: hidden` hiding whichever side is turned away. The red
-  mis-couple shake animates `x` on that same front face — and framer-motion
-  rebuilds the element's whole transform from the values it manages, so a
-  literal `transform` string in `style` is simply dropped. The card lost its
-  half-turn mid-shake (`matrix3d(-1,…)` → `none`), turned its back, and
-  backface-visibility hid it for the **rest of the round**: the player is left
-  holding a card that isn't drawn, on a board showing 11 cards and one blank
-  cell. Fixed by handing the half-turn to framer as `rotateY: 180` in `style`
-  so it composes with the shake instead of being overwritten. Anything that
-  animates a transform on an element with a static one in `style` has this
-  bug — Pairs' card face was the only instance in `src/`.
-- **A stray timer landed on the next board.** Every deferred beat of a Pairs
-  round (the flip resolve, the two phase openings, the red flash, the end card)
-  was a bare `setTimeout`; only the flip resolve was cancellable. Hitting
-  **🔀 New** inside the 450ms after the fourth pair dealt a fresh board and
-  then opened the *coupling* phase on it — 12 cards face up, nothing placed to
-  couple onto, the board unwinnable. Now every one goes through a `later()`
-  that records its id, and `newBoard`/unmount clear the lot.
-- **Tap guards read stale state.** `flip` checked `flipped`/`matched` from the
-  closure, so taps landing before React re-rendered all saw an empty hand: a
-  burst billed a move per tap, left cards stranded face up, and a card tapped
-  twice paired with *itself* (same word → trivially a match). Moves are the
-  only thing Pairs scores, so that is a scoring bug. `phase`, `flipped` and
-  `matched` now have refs written the moment a tap is accepted; a 12-tap burst
-  costs exactly one move and flips exactly two cards.
-- **Side effects inside state updaters** — the pattern item 17 purged from
-  `App.tsx`, still living in three places. `Game.tsx` raised the combo points
-  and the "+N" popup inside a `setCombo` updater, and decided the *loss* inside
-  a `setMistakes` updater; `Deduction.tsx` played the brush click inside
-  `setColors`. An updater can run more than once for one call (StrictMode does
-  it on every dev render), so each was a double-pay/double-blip waiting to
-  happen. All three now compute from a ref and act in the handler.
-- **`Game.tsx` deferred `setStatus`** (the early call landing at 800ms, the
-  give-up reveal at 700ms) is cancellable too, so nothing from a finished run
-  can drop a restarted board into "won".
-
-Regression cover: `scripts/pairs.test.mjs` (headless) replays all three repros
-inside a full run — matching → a wrong couple (still in hand, still **drawn**,
-+1 move) → coupling → the finale. Each check was confirmed to fail on the
-pre-fix build before it was kept.
-
-### Still open
-
-1. ✅ **[gameplay] Session quests — shipped (iteration 33).** Three rotating
-   dailies, paid in hints (1 each, +2 for the set). See the iteration-33
-   section.
-2. **[gameplay] The hint token has one shape** (reveal a theme, then reveal a
-   letter). A cheaper option — "rule out one tile" — would let a stuck player
-   spend less than a whole theme.
-3. ✅ **[gameplay] The link mask counts letters now (iteration 33).**
-4. **[ux] Landscape phones are reachable but cramped.** The game's two-column
-   split needs ≥1024px; at 844×390 it's a single scrolling column, which is why
-   the rotate hint exists at all. A compact landscape board (smaller tiles, the
-   controls rail at `md` + landscape) would make the dismissal a real option
-   rather than an escape hatch.
-5. ✅ **[a11y] Modal focus — done (iteration 33).** `src/modal.ts` traps Tab
-   and restores focus to the opener. Still never run against a real screen
-   reader.
-6. ✅ **[content] Ambiguity pass — done (iteration 23).** All 576 groups across
-   144 boards read one board at a time; 30 conflicts found and fixed. See
-   "House rules for authoring a board" below for the classes it turned up.
-   Semantic overlap still can't be enforced by a script, so a new content batch
-   needs the same read.
-7. ✅ **[i18n] Done (iteration 23).** `src/i18n/` holds one catalogue per
-   locale (~290 keys), English as the source of truth, Spanish alongside it,
-   with `scripts/i18n.test.mts` failing the build on a missing key, a stray
-   key, or a lost `{placeholder}`. Locale comes from `navigator.language`,
-   is overridable in Settings, and persists. **The word puzzles stay English**
-   — a board of English words can only be rewritten per language, not
-   translated — so what a locale actually unlocks today is the Logic Grid
-   (pure deduction, no vocabulary) plus every menu, rule and result screen.
-   Adding a language is now one file plus a line in `LOCALES`.
-8. ✅ **[platform] Save-data resilience in iframes — done (iteration 33).**
-   `src/storage.ts` mirrors through the CrazyGames data module, recovers a
-   wiped save from it, and warns when nothing durable exists.
-9. ✅ **[polish] Sound pass — done (iteration 36).** Not samples: the synthesis
-   itself was rebuilt (bus mixer, limiter, shared reverb, FM bells, ducking) and
-   the game learned the sounds it was missing — one-away, losing, hints,
-   unlocks, whooshes, menu clicks, a last-try warning — plus per-channel volume
-   sliders and music that follows the screen. Levels were checked by rendering
-   every sound through an OfflineAudioContext: taps peak ~0.09, the win sting
-   ~0.5, and everything-at-once ~0.6, so nothing clips. Real samples remain an
-   option; they are no longer the obvious next win.
-10. ✅ **[content] Difficulty is hand-graded now (iteration 29).** The length
-    heuristic is demoted to a tiebreak and the order is a sawtooth, not a sort.
-    What's still approximate: the grades are one number per board, so a board
-    that's hard *because two groups tempt each other* is scored the same as one
-    that's hard *because the pivot hides* — a facet split (abstraction / pivot /
-    interference) would let a chapter be built out of one kind of hard.
-
-## SHIPPED — owner priorities #4, #8, #9, #12 + Pairs (iterations 18–19)
-
-Two sessions worked these in parallel; the merge kept one implementation and
-combined the content.
-
-- ✅ **#4 Daily pool + content batch** — `src/dailyPuzzles.ts` holds **80**
-  daily-only puzzles (66 authored in one session + 14 unique pivots folded in
-  from the parallel batch: BRIDGE, RACE, BELT, DRESS, HORN, POINT, PUNCH,
-  SEASON, SPACE, STAFF, WAKE, BOOT, CURRENT, PILOT — with word swaps to avoid
-  cross-pool category dupes / 3× spoke reuse). Rotation: `dailyPuzzle()` walks
-  a fixed seeded tour — deterministic, same for everyone, no repeat within an
-  80-day cycle. App passes `overrideRaw` to Game when playingDaily; daily
-  wins/losses never touch campaign stars/best (history id = daily id, level 0,
-  bestMs undefined). Endless draws from campaign + daily (~142 boards).
-  validate covers all 143 puzzles + id uniqueness + no daily/campaign pivot
-  overlap.
-- ✅ **#8 Submission assets** — `scripts/gen-assets.mjs` rewritten to Puzzle
-  Press (og-image + PWA icons regenerated); `scripts/gen-submission.mjs`
-  renders covers and captures real gameplay screenshots into
-  `public/art/`. Shared launcher `scripts/browser.mjs` (puppeteer →
-  puppeteer-core + system Chromium fallback).
-  **Finished in iteration 34**: seven covers, one per aspect the portal asks
-  for (16:9 at three sizes, 1:1 at two, 4:3, 9:16), each composed for its own
-  shape by `scripts/submission-art.mjs` in the game's embedded fonts. The cover
-  picture is the pivot mechanic itself — four words, one per group of a real
-  board (NUT / DASH / FLASH / LOCK), fanning into the masked link they share, so
-  a viewer can solve it before clicking. No tagline, badge or marketing line
-  anywhere in the set; the title rides above the picture as a masthead, sized to
-  stay readable at the ~300px a portal grid actually renders. The chosen words
-  are checked against `src/puzzles.ts` at render time, so rewriting that board
-  fails the build rather than shipping a cover that lies. Twelve
-  screenshots covering home, the level index, a board mid-move, the finale, the
-  win card, a boss briefing and its board, the Logic Grid, Pairs, and three
-  phone shots at 2×; and the gameplay **clip** (`npm run clip`,
-  `scripts/gen-clip.mjs`) — a DevTools screencast resampled onto a fixed frame
-  rate and encoded to VP8/WebM, so no manual screen recording is needed. Boards
-  and solutions are imported from `src/puzzles.ts` rather than pasted in, so a
-  content change can't leave the script clicking words that have moved. The
-  written half — titles, both descriptions at several lengths, instructions,
-  tags, technical answers and Spanish copy — is `public/art/index.html`, a
-  browsable page with a copy button per field that ships with the build and
-  serves at `<site>/art/`.
-- ✅ **#9 Global-English copy pass** — idiom-only titles renamed (Bark and
-  Bite, Bolt Away, A Blank Sheet, Fry Day, Plot Twist, One Pound, Swing the
-  Bat, Top Deck, The Lightning Bolt), chapter names/flavor simplified (Rare
-  Words, The Final Test), coach/rating copy de-idiomed. Titles that teach
-  their idiom via a category (e.g. Bank On It) kept as wordplay payoff. The
-  daily pool follows the plain-English house style.
-- ✅ **#12 Opening curve** — OPENING pin star→trunk→ring→bug→bank (all-concrete
-  nouns → verb groups → mostly abstract), scramble boss at L6.
-- ✅ **Pairs mode** (new engagement mechanic) — see `Pairs.tsx` in the
-  architecture map. First "second game on the same boards"; Odd One Out and
-  a spell-the-link Cipher mini remain candidates for a daily "edition" page.
-
-## CrazyGames launch-readiness backlog (iteration 17)
-
-Played the game again as a CrazyGames submission reviewer (incl. a 1280×720
-landscape-iframe pass — their most common desktop embed). Ranked by expected
-impact on the platform:
-
-1. ✅ **Retheme away from the "AI default" look.** The dark purple/fuchsia
-   gradient + glassmorphism is exactly what every LLM generates; it reads
-   generic and dates the game. New identity: **"The Puzzle Press"** — a warm
-   paper/print daily-puzzle-page look (cream paper, ink type, flat category
-   colours, chunky offset shadows, stamp-red accents, serif masthead). It
-   matches the word-puzzle audience (NYT-games adjacent, older & calmer than
-   the bloxd/Minecraft crowd) while staying playful. (Done this iteration.)
-2. ✅ **Landscape/desktop layout** — on wide viewports (≥lg) the game now splits
-   into two columns: link card + banners + board on the left, timer/controls/
-   finale/end-card in a right-hand rail. At a 1280×720 embed everything sits
-   above the fold with zero page overflow (Submit at y≈222). Mobile flow is
-   untouched (the wrappers only flex at lg). **The level index got the same
-   treatment in iteration 25** (hero left, collection in its own scroll pane
-   right); the playtest now guards both against page overflow at 1280×720.
-3. ✅ **Enable the real CrazyGames SDK** — the v3 script now loads (async,
-   defensive: every call no-ops when it's absent, so local/GitHub Pages play is
-   unaffected), with loadingStart/loadingStop wired around app boot. Final QA
-   against their preview tool still needed at submission time.
-4. ✅ **Dedicated daily pool + content batch** — 80 daily-only puzzles in
-   `src/dailyPuzzles.ts`; the daily never repeats or spoils a campaign level.
-   (Growing the pool further is an evergreen content task.)
-5. ✅ **Rewarded hint refill** — an empty bank now swaps the hint pill (both
-   in-board and in the finale) for a stamp-red "🎬 refill (+3)" button backed by
-   requestRewarded (instant in standalone play, an ad on the platform).
-6. **Session quests** — 3 rotating dailies ("solve 2 puzzles", "hit a ×3
-   combo", "guess a link first try") with hint/XP rewards; drives the
-   session-length metric CrazyGames ranks by.
-7. **Leaderboard on the daily** via the CrazyGames user/data SDK (their
-   platform accounts remove the need for our own backend).
-8. ✅ **Submission assets** — covers, screenshots, the og-image/icons, the
-   gameplay clip and the written copy pack are all generated from the live
-   game (see SHIPPED above). Nothing here is manual any more.
-9. ✅ **Global-English copy pass** — shipped (see SHIPPED above).
-10. **Save-data resilience in iframes** — localStorage can be partitioned or
-    blocked in embeds; mirror progress through the CrazyGames data module when
-    present.
-11. ✅ **Tab-blur pause** — visibilitychange now suspends the AudioContext and
-    calls gameplayStop(); on return it resumes audio and re-opens the gameplay
-    session if a level is active.
-12. ✅ **First-5-levels curve** — shipped (see SHIPPED above).
-13. ✅ **Sound polish** — done in iteration 36 (see owner priority #9): the
-    engine was rebuilt around a proper mixer rather than replaced with samples.
-14. ✅ **Interstitial pacing guard** — `showInterstitial()` now enforces a 60s
-    minimum gap and skips the first minute of a session (iteration 20).
-
-## Animation & visual-polish review (iteration 14)
-
-Played the whole game watching motion. Findings + fixes:
-
-- **Missing animation (the big one): the finale felt flat.** Tapped letters
-  snapped into the answer slots with no feedback and there was no "correct!"
-  moment. Now each placed/revealed letter **pops in** (spring), the **next slot
-  has a pulsing fuchsia ring** so you always know where you're typing, and the
-  whole row gives a **success pulse** when the word resolves. (Reveal-a-letter
-  pops too, for free.)
-- **Hard cut on tile select** → added `transition-colors` so selecting /
-  deselecting a tile eases instead of snapping.
-- **Visual noise on the level map**: removed the per-node tier "dot," which read
-  like an unread/notification badge and was redundant (difficulty is shown
-  in-level and by chapter).
-- **Expectation mismatch**: a *locked* boss node showed only a 👑 (looked
-  playable). Locked bosses now show a 🔒 with the crown as a teaser above.
-- **Collision**: the live score badge overlapped the "…in every group" header.
-  The header shortens to "Secret link" once the score badge appears.
-
-Everything else (page transitions, tile/banner springs, secret-link reveal
-flip, score popups, combo-scaled confetti, coach slide, end-card + star
-stagger, mistake-dot pips, wrong-guess shake) was reviewed and left as-is —
-they read as purposeful, not noisy.
-
-## Tutorial redesign + first-launch (iteration 13)
-
-- **Straight into gameplay**: a brand-new player now lands directly in the
-  tutorial level (no menu) — playing within seconds. Returning players still get
-  the home screen. (SDK gameplay session + audio unlock are wired for the
-  direct-entry case.)
-- **Attention-grabbing welcome** (iteration 15 follow-up): the opening step is a
-  centred, dimmed **"How to play" modal** with the three core rules and a big
-  "Let's play" CTA — it gates the board so a first-timer reads the rules instead
-  of tapping past a quiet card. The hands-on coaching then continues inline.
-- **Coach never off-screen on small embeds** (iteration 16): the inline coach
-  (steps 1–2) is now `position: sticky` at the bottom — it sits in-flow just
-  below the board on tall screens, but pins to the bottom of the viewport on
-  short CrazyGames-style resolutions so it's always visible without scrolling.
-  (`main` lost its `flex-1` so the sticky box is content-sized, not full-height.)
-- **Hands-on, think-for-yourself coach**: instead of highlighting the answer
-  tiles, the coach reveals a group's *theme* ("three of these mean a famous
-  person") and lets the player find the words. Wrong guesses cost nothing during
-  the tutorial and the nudge **escalates** — theme reminder → stronger theme
-  hint → finally a single word revealed ("ICON is one of the three") — but never
-  the whole group.
-- **Skippable**: every coach card has a Skip button.
-- **Finale prompt**: first time you reach the tap-to-spell step, a one-time hint
-  explains the four groups all point to one hidden word.
-- **Solved words stay visible**: solved groups keep showing their words through
-  the finale (the banners just shrink a little), per feedback — no more hiding
-  them behind a chip.
-- Kept STAR as the tutorial puzzle: celebrity / night sky / ___-FISH / symbols
-  all resolve to STAR — an ideal first "aha".
-
-## Content quality pass (iteration 12)
-
-Read all 62 puzzles and replaced genuinely obscure spokes with more common,
-interesting words (none needed deleting — every level was salvageable). 18
-puzzles touched:
-
-- **bark**: sailing jargon SLOOP/KETCH/YAWL → "Kinds of boat" YACHT/CANOE/FERRY
-  (this single fix made bark a fair Level 2 again).
-- **well**: AQUIFER→STREAM, HALE→ROBUST, DERRICK→DRILL.
-- **cell**: ANODE/CATHODE → SOLAR/DYNAMO (also more accurate "power sources").
-- **stamp**: QUASH/ERADICATE → ERASE/DESTROY.
-- **tank**: APC→CHOPPER, CISTERN→JUG.
-- **shower**: FETE→FIESTA, BESTOW→SPLURGE.
-- **sole**: PLAICE→FLOUNDER ("Fish on the menu").
-- **note** TENNER→DOLLAR, **drop** LOZENGE/PASTILLE→LOLLIPOP/GUMDROP,
-  **check** GINGHAM→FLORAL, **forge** BELLOWS→TONGS, **break** RESPITE→BREATHER,
-  **pen** CLINK→SLAMMER, **trunk** BOUGH/COFFER→BRANCH/LOCKER, **nail**
-  BRAD→STAPLE, **date** TRYST→AFFAIR, **track** SLEEPER→SIGNAL, **fire**
-  ARDOR→DRIVE.
-
-The difficulty scorer's obscure-word set was pruned to match. `npm run validate`
-and `npm run audit` are clean.
-
-## Device / resolution pass (iteration 11)
-
-Ran the full flow across eight viewports (tiny 320×568, 360×640, 390×844,
-430×932, phone-landscape 844×390, tablet portrait/landscape, desktop 1440×900),
-measuring vertical overflow per screen.
-
-Findings & fixes:
-- ✅ **Landscape phones were broken** (board/finale/home overflowed by 200–500px;
-  the Play button sat below the fold). Added a CSS **rotate-to-portrait hint**
-  shown only on short landscape viewports (`max-height: 500px`) — tablets and
-  desktop (tall enough) never see it.
-- ✅ **Short phones overflowed** the board/finale. Trimmed the game container's
-  dead padding (`pb-16 pt-5` → `pb-8 pt-4`) and the home's top padding; the
-  finale now fits on a 360-wide phone and the board fits to ~390.
-- ◐ **Tiny 320×568** still scrolls a little on the board/finale, but every core
-  control (tiles, submit, letter bank, buttons) is reachable and the page
-  scrolls cleanly. Acceptable for the smallest legacy phones.
-- ✅ **Tablet & desktop** render cleanly — content centred in a max-w-xl column,
-  no overflow.
-- Dropped the free-first-letter reveal in the finale (redundant with the bank).
-
-## Persona playtest (iteration 10)
-
-Played the game cold (cleared storage, ignored prior context) end-to-end, then
-re-played through three distinct CrazyGames personas. Verbatim takeaways:
-
-**1. "Tap-happy Tyler" — 13, hypercasual mobile gamer, ~50 games/week.**
-- _Clear?_ Skipped the coach. Got "tap 3, submit" fast, but the **typed-link
-  finale stalled him** — pulling up a keyboard to type a word feels like
-  homework on mobile.
-- _Engaging?_ Loved the confetti/stars, but every level gives the **same
-  reward** — no score, no combo, no "+points" dopamine, nothing to beat.
-- _Visual?_ "Looks sick." Gradients & juice land well.
-- _Bored?_ **Yes, by level 3.** Identical loop, no escalation, bosses are
-  locked far away (level 8).
-
-**2. "Crossword Carol" — 55, NYT Connections/crossword devotee.**
-- _Clear?_ Instantly — the "secret link" spin is clever and she liked it.
-- _Engaging?_ Enjoyed the deduction; wants **more wordplay payoff** (definition
-  / "used in a sentence" on reveal) and tighter fairness.
-- _Visual?_ Good, a touch flashy; wishes for a **larger-text / calmer mode**.
-- _Bored?_ Hit an early wall: **level 2 is sailing vessels (KETCH/SLOOP/YAWL)** —
-  obscure words ranked "Easy". Felt unfair so soon. Difficulty curve is shaky.
-
-**3. "Commuter Priya" — 30, casual, 5-minute phone sessions.**
-- _Clear?_ Yes. But **186 stars + 8 locked chapters** reads as a big commitment
-  for a quick game.
-- _Engaging?_ Likes the Daily. Wants to **feel progress fast** and resume
-  instantly.
-- _Visual?_ Appealing. The **finale screen scrolls** on a small phone (link card
-  + 4 banners + input + buttons).
-- _Bored?_ Would drop without a fresh hook surfaced early; the interesting boss
-  modes are hidden too deep.
-
-### Backlog from the playtest (impact-ranked)
-
-**Friction / clarity (do first):**
-1. ✅ **Tap-to-build link finale (no keyboard)** — replaced the text input with a
-   ~13-tile letter bank; tap letters to spell the word, each tile used once,
-   Undo to take one back, auto-checks when full. The reveal-a-letter hint locks
-   in the next correct letter. (Combines former items 1 + 2. The earlier
-   free-first-letter reveal was dropped — the bank already removes blank-page
-   paralysis, so the link now starts fully blank.)
-3. **Difficulty re-tune** — ✅ obscurity weighting so rare short words
-   (KETCH/SLOOP/YAWL, ARDOR, OBOE…) stop appearing in "Easy"; longer term, an
-   LLM-judged ordering.
-4. ✅ **Compact finale layout** — the four solved groups collapse into a
-   two-column chip strip during the guess so the whole end-state fits one
-   phone screen.
-5. ✅ **Coach covers the whole loop** — the tutorial now tells you you'll *tap
-   out* the link (no typing) so the finale isn't a surprise.
-6. ✅ **Clarify the home affordances** — the redundant top-left trophy is now a
-   ⚙️ Settings gear (Achievements still reachable from its own tile).
-
-**Engagement / dopamine:**
-7. ✅ **Score + combo system** — points per group, a consecutive-solve combo
-   multiplier, floating "+N" popups, score on the win card + lifetime total.
-8. ✅ **Win-card variety** — score/combo praise so the reward isn't identical
-   every level.
-9. ✅ **Escalating juice** — the confetti burst scales with the combo, so a
-    streak of solves feels increasingly celebratory.
-10. ✅ **Player level / rank meta** — lifetime score now feeds an XP ladder
-    (Novice → Legend) with a progress bar on home and a "Rank up!" toast when
-    you tick over.
-D2. ✅ **Daily-first (success rework, part 2)** — the Daily is now the Home
-    **hero**: a card with today's date, a **7-day streak strip** (🔥 for solved
-    days, a dot for today), and a Solve CTA that flips to "✓ Solved! 🔥N · next
-    in Xh Ym" once done. In-game it reads "📅 Daily · Today's challenge" (no
-    level-number leak, no boss twist), exits to Home, and the win card nudges
-    "come back tomorrow to keep your streak." Streak strip + countdown derive
-    from `daily.lastDate`/`streak` (no new storage). Still shares the same puzzle
-    for everyone each day. Next: a dedicated daily pool + more content so the
-    daily never repeats a campaign level.
-
-11. ✅ **Endless / Zen mode** — a 🧘 mode from Home: back-to-back random boards,
-    **no fail** (no mistake cap, no loss), a running "Solved N · ✦ score"
-    counter, a "Next puzzle" loop, and a best-run saved (`endlessBest`). Wins
-    still feed lifetime score/rank. The "one more" session-extender CrazyGames
-    rewards — first deliverable of the success rework.
-12. ✅ **Surface a boss sooner** — front-loaded chapter sizes so the first boss
-    now lands at level 6 (was 8) and the early map feels less like a wall.
-13. ✅ **Rewarded continue** — running out of guesses now offers a one-time
-    "second chance" (a rewarded ad via the SDK, instant in standalone play) that
-    hands back two tries before the run ends.
-
-**Word-fan depth:**
-14. **"Did you know" reveal** — show the link word's meaning / in a sentence on
-    the win card.
-15. **Definition-on-tap** for solved words (educational hook).
-16. **Harder ranked modes / no-hint challenge** for experts.
-
-**Aesthetic / accessibility / retention:**
-17. ◐ **Settings panel** — sound, music, **calm mode** (dial back confetti &
-    motion), and reset-progress with a confirm. (Large-text still to come.)
-18. ✅ **Animated home** — the logo gently floats over a soft pulsing aura so the
-    landing screen isn't static.
-19. ✅ **Resume CTA** — the home button reads "Continue · Level N" for returning
-    players, pointing at their next level.
-20. ✅ **De-intimidate progress** — the map focuses the current chapter and
-    collapses done/locked ones to a row, each with its own "Chapter ⭐ x/24"
-    (iteration 25).
-21. ◐ **Achievement nudges** — stats now flag "🔥 N to Silver!" when you're close
-    to the next tier (a post-win nudge toast is still to come).
-22. **Daily streak calendar** + milestone rewards.
-23. **Cosmetic unlocks** (tile skins / confetti) bought with stars or coins.
-24. ✅ **Richer share card** — wins render a spoiler-free 1080×1080 image (stars,
-    the coloured solve path, score, link ✓, time) shared via the Web Share API
-    with the text caption, or saved + copied as a fallback.
-
-(Implemented this iteration: 1, 3, 7, 8 — see below.)
-
-## Visual/UX review (iteration 9)
-
-Walked the whole game and compared it to the intended ideal. Issues found:
-
-1. ✅ **Hint button far too subtle** — was a faint underlined text link; now a
-   prominent amber pill with a count badge.
-2. ✅ **No play history** — added a recorded history (wins & losses, newest
-   first) with a modal reachable from Home (📜) and Stats.
-3. ✅ **Home top-aligned with a dead void** — added a quick-action row (How to
-   play · Achievements · History) and a stars/hints/streak chip.
-4. ✅ **Level map monotony** — replaced the flat padlock wall with named
-   **chapters** ("Your journey"), per-chapter star counts, 👑 **boss** nodes,
-   and locked chapters teased as "Locked".
-5. ✅ **Ghost-hint placeholders faint** — now clearer dashed boxes.
-6. ✅ **Stats pill didn't read as a button** — added a `›` affordance + label.
-7. ◐ **Bottom control cluster** — improved via the prominent hint pill; minor
-   spacing tidy still possible.
-
-## 20 reworks & features to make WordGrid more engaging
-
-A. **Versus / async duel** — both players get the same board; compare time/stars.
-B. **Endless / Zen mode** — back-to-back random boards, no fail, for flow.
-C. **Time Attack** — solve as many as possible in 3 minutes; leaderboard.
-D. **Lives/energy + comeback** — soft session cap that nudges return visits.
-E. **Themed packs** — Movies, Science, Sports sets with their own art/colours.
-F. **Weekly challenge** — a harder seeded board + a weekly leaderboard.
-G. **Combo/score multiplier** — fast consecutive solves build a visible combo.
-H. **Streak freeze / wildcard** — spend currency to protect a daily streak.
-I. **Coins economy** — earn coins; spend on hints, shuffles, board themes.
-J. **Cosmetic themes** — unlockable tile skins, backgrounds, confetti styles.
-K. ✅ **Reveal-a-letter hint tier** — finale letter mask; spend a token to
-   reveal the next letter of the link.
-L. ✅ **"One away" radar** — wrong guesses with two correct picks show
-   "🎯 So close — one away!" (engine-detected, unit-tested).
-M. **Adaptive difficulty** — tune board difficulty to the player's win rate.
-N. ✅ **Story/level-map progression** — chapters with flavor text + boss nodes.
-   **Every boss now plays differently** — and these are real changes to how the
-   game plays, not just cosmetics. One twist per chapter, no two adjacent alike:
-   - **emoji** — a bespoke picture-only board (pivot BOLT, lightning emoji
-     deliberately omitted so the link isn't spoiled). Each tile's obvious
-     reading is the wrong one; you have to find the second name (see iteration
-     34).
-   - **scramble** — every tile is an anagram you decode before grouping.
-   - ~~**the oracle**~~ — the puzzle turned inside out: all twelve words *and*
-     the four theme names up front, deduce + type the hidden link FIRST, then
-     group. **Removed in iteration 32** — see that section.
-   - **impostors (decoy)** — three trap tiles belong to NO group; include one in
-     a guess and the group busts, so you have to spot the fakes (15-tile board).
-   - **blackout** — solved group names/words stay hidden until the final reveal,
-     so you can't lean on what you've already found.
-   On a **loss the secret link is no longer revealed** — it stays masked so you
-   can still discover (and type) it on a replay; play history hides a lost
-   level's title too, since the title spells the link.
-O. **Player-created puzzles** — an authoring tool + community puzzle feed.
-P. **Hint-from-a-friend** — share a board; a friend can send one theme hint.
-Q. **Rich animated share card** — render a per-result image, not just text.
-R. ✅ **Achievements 2.0** — Bronze/Silver/Gold tiers, progress bars, and hint
-   rewards per tier (shown in the stats modal).
-S. **Sound/track packs** — selectable music beds + a real volume slider.
-T. **Localization** — finish i18n and ship 2–3 languages for reach.
-
-## Growth pass (iteration 8)
-
-Focused on the levers that actually drive a casual web game's reach & retention:
-
-- **Spoiler-free share** (Wordle-style): level/daily, star rating, the solve
-  path as coloured squares, link ✅/❌, time and mistakes, plus the play URL.
-  Also fixed a leak — the old share printed the level title (which spells the
-  link to recipients).
-- **Rich link previews**: Open Graph + Twitter Card meta and a branded
-  1200×630 `og-image.png` (generated by `scripts/gen-assets.mjs`).
-- **PWA / installable / offline**: web manifest, app icons, apple-touch-icon,
-  and a network-first service worker. "Add to home screen" + offline play.
-- **Achievements** (9): unlock toasts on win + an earned/locked grid in the
-  stats modal — concrete goals that pull players back.
-- **Hidden-title leak** also fixed earlier this pass (title shown only on reveal).
-
-## Done in the full backlog pass (iteration 7)
-
-### P1 — correctness & fairness ✅
-- Manual ambiguity review of all 62 levels; fixed 4 ambiguous spokes
-  (ring BAND→HALO, mold SHAPE→SWAY, well BORE→OASIS, trunk LIMB→BOUGH) and added
-  an `npm run audit` helper.
-- A wrong "guess the link" now costs a star (engine-enforced, message on the card).
-
-### P2 — depth, balance, progression ✅
-- Difficulty tiers (Easy/Medium/Hard) via a word-length/rarity heuristic; levels
-  ordered easiest-first (STAR pinned), tier dot on each node.
-- Hint button: reveal a group for a star (also a rewarded-ad hook).
-- Smarter link decoys (biased to the answer's length).
-- Looser gating: a window of levels (lookahead 3) stays unlocked.
-
-### P3 — polish & retention ✅
-- Colourblind-safe groups (distinct ●▲■◆ shapes) + aria-live announcements.
-- Daily Challenge (date-seeded) with its own streak, on the start screen.
-- Stats modal: stars, levels cleared, completion %, links guessed, streaks.
-- Background music: synthesized ambient loop with its own 🎵 toggle (default off).
-- CrazyGames SDK shim (`src/sdk.ts`), wired for gameplay lifecycle, interstitials,
-  rewarded ads, and happytime; commented script tag in `index.html`.
-
-### Carried-over ✅
-- Pure, unit-tested engine (`src/engine.ts`, `npm test`).
-- Shuffle tiles; live timer + move counter; per-level best time on the win card.
-- Keyboard shortcuts (Enter submits, Escape clears).
-- i18n scaffold (`src/i18n.ts`) with a few strings wired.
-
----
-
-## Still open / honest caveats
-
-Kept honest as of iteration 33 — three entries here had been overtaken by the
-work and were still being read as current by fresh sessions, which is worse than
-having no list at all.
-
-1. **[content, high] Ambiguity is hand-reviewed, not solver-proven.** Every
-   group across all 181 boards has been read by a human (iterations 23 and 28),
-   and `npm run validate` enforces the four structural rules — but semantic
-   overlap can't be scripted, so any new content batch needs the same read. See
-   *House rules for authoring a board*.
-2. **[balance] Difficulty is hand-graded, one number per board** (iteration 29).
-   What's still approximate: a board that's hard because two groups tempt each
-   other scores the same as one that's hard because the pivot hides. A facet
-   split (abstraction / pivot / interference) would let a chapter be built out
-   of one kind of hard.
-3. **[ads] CrazyGames integration is a shim.** Real ads/analytics only work once
-   embedded on CrazyGames with their SDK script and an approved build. The
-   **data module** is now used for real (iteration 33), but likewise can only be
-   verified on-platform — off-platform it is correctly absent.
-4. **[music] The loop is written, not composed.** Iteration 36 replaced the
-   random pentatonic pads with three four-bar scenes (menu / play / boss) —
-   pad, bass, brush and a probabilistic melody, scheduled against the audio
-   clock — and gave music its own volume. What it still is not is a *tune*: the
-   melody is chosen at random inside the bar's chord, so it never develops and
-   never resolves. It defaults to off, which is the honest setting for a loop
-   that has to survive an hour.
-5. **[polish] Still no recorded samples.** The synthesis is now good enough that
-   this is a taste call rather than a gap: FM bells, filtered noise and a shared
-   reverb, mixed through a limiter. A recorded set would add character; it would
-   also add the first fetch this game has ever needed.
-6. **[a11y] Not audited with a real screen reader.** Keyboard play is in better
-   shape than it was — Escape closes every dialog, Tab is trapped inside one and
-   handed back to the opener (iteration 33), tile selection works via Tab+Space
-   — but none of it has been run past an actual screen reader.
-7. **[ux] Landscape phones are reachable but cramped.** The two-column split
-   needs ≥1024px; at 844×390 it's a single scrolling column, which is why the
-   rotate hint exists. A compact landscape board would make dismissing that hint
-   a real option rather than an escape hatch.
-8. **[mobile] Tall end-state layouts** (link card + 4 banners + grid) can scroll
-   on small phones.
-9. **[gameplay] The hint token has one shape** (reveal a theme, then a letter).
-   A cheaper option — "rule out one tile" — would let a stuck player spend less
+5. Campaign curve: every puzzle hand-graded, level 1 is `star`, a boss grades
+   ≥ every level before it in its chapter, boss grades never drop across
+   chapters, a boss can carry its twist, one compound-word board per chapter,
+   no adjacent levels share a tile, chapter-key length = non-boss level count.
+6. Emoji board: every tile has a picture, none reused, none for a non-tile,
+   none on the ⚡ / 🔩 / 🌩 spoiler list.
+
+**Reported by `audit`, for a human:** two tiles sharing a 5-letter stem; two
+groups on different boards sharing 2 of 3 words; tiles reused on 3+ boards;
+very short tiles.
+
+**Only a human catches these** — the four classes the passes actually found:
+- **A tile another group's category could claim** (FIELD in "Baseball venues"
+  beside "Green spaces"). The commonest and the most unfair: the player is
+  right and the game says no.
+- **A tile that is a synonym of a tile in another group** (SWELL vs SURGE).
+- **A tile that is a synonym of the pivot** (a wedding RING on a BAND board).
+- **A category name that is factually wrong** ("Armored vehicles" over JEEP).
+
+The test for every tile: *read it alone, with no category names, and ask which
+groups on this board it could join.* If the answer isn't exactly one, change
+the tile — never the category name, which the player can't see while guessing.
+Tile vocabulary is US spelling (HARBOR, TIRE). Titles stay global-English;
+idiom is allowed only where a category teaches it (Bank On It).
+
+**Board fit per twist** (`suitsTwist`): *scramble* — every spoke ≤ 7 letters
+(anagramming PIROUETTE is a different, worse game); *cipher* — no two spokes
+strip to the same skeleton, every skeleton ≥ 2 letters, at most three 2-letter
+stubs; *memory* — spokes ≤ 8 letters and no two share their first two letters
+(near-twins are one tile in recall); *decoy* — no compound-word board (its
+tiles can't be verified without the link, so they're indistinguishable from
+the fakes) and at most one 9+-letter spoke; *blackout* — anything, so it takes
+the hardest; *emoji* — the one bespoke board.
+
+## Decisions worth keeping (read before "fixing" one)
+
+**Campaign shape**
+- Difficulty is a **hand grade** (senses vs sets, how far the pivot sits from
+  its everyday meaning, how much the groups tempt each other); word length is
+  only a tiebreak. The old length score ranked GLASS hardest in the game.
+- The order is a **rising sawtooth**, not a sort: each chapter climbs, spikes
+  on its boss, and the displaced board opens the next chapter as a breather.
+  "MIND BENDERS · EASY" on level 45 is the design, not a bug — the tier chip
+  reads the grade, not the position.
+- `bolt` is pinned to the emoji slot because EMOJI_BOSS *is* the BOLT board;
+  loose, the player solved it twice.
+- The **oracle** twist (name the link first, then group) was removed: it
+  duplicated the early call, disabled it to avoid the clash, and spent the
+  finale in the opening ten seconds. Its theme panel survives in git if the
+  "brief" idea below is ever built.
+- Twist deal rules: no adjacent repeats; emoji exactly once (it swaps in the
+  one bespoke board); memory never beside blackout; cipher never beside
+  scramble.
+- **Memory boss ≠ Pairs.** Pairs is a flip-two mode on its own screen; the
+  memory boss is the normal grouping game on a board you can no longer read.
+
+**Level index**
+- It is an **index, not a map**: solved levels are named rows in aligned
+  columns, unsolved ones a strip of identical squares. Wrapped title chips
+  were tried and looked like clutter; a grid of squares hid every unlock.
+- The page opens at the **top** on purpose (the next level is the card
+  there) — iteration 11's scroll-to-your-node was deliberately reversed. The
+  one exception is a pending unlock reveal.
+- **Chapter-key letters are visible and dealt scrambled.** Hiding them was
+  backwards: the anagram *is* the puzzle, and you can't want a collectible
+  you've never seen. Letters land before locks pop (you're paid before the
+  index opens anything).
+- Banked letters are **derived from cleared levels, never stored**; a beaten
+  boss never re-locks; an unsolved key can't deadlock the campaign (the
+  lookahead still opens levels past it); the win card's Next never walks
+  into a sealed door.
+
+**Game**
+- The **early call is spent on opening the panel**, so the letter count can't
+  be peeked at for free. The link mask shows one `?` per letter (iteration
+  33) — the finale lost a little, the whole middle of the board gained a
+  deduction.
+- A loss keeps the link masked so the level is replayable.
+- The tutorial board is STAR with no compound-word group; coach copy derives
+  from `OPENING[0]`'s own first category, so re-pinning it can't strand the
+  coach.
+
+**Meta and platform**
+- Daily is a deterministic seeded tour — same board for everyone, nothing
+  stored; a daily win never touches campaign stars.
+- Quests are a **pure function of the date**, paid in hints the moment a goal
+  is met (no claim button); a `pairs`/`logic` draw is the only nudge into a
+  side mode.
+- Endless is locked behind a finished campaign — it's the payoff, not a
+  fourth mode on day one.
+- Storage: the "nothing durable" banner waits ~8 s for the async SDK; a live
+  save is never overwritten by a stale platform copy (adoption only fills a
+  key we have nothing for).
+- Level tracking is **off by default**, shows a dash under `MIN_SAMPLE`, and
+  treats the server's answer as untrusted input.
+- Rewarded-ad failure paths **resolve true**: never strand a player behind an
+  ad that couldn't load.
+- **Puzzle content is not localized.** A board of English words can only be
+  rewritten per language, not translated; a locale unlocks the Logic Grid
+  (no vocabulary) and every menu, rule and result screen.
+
+**Audio and motion**
+- Music defaults to **off** — honest for a loop that has to survive an hour.
+  Nothing is scheduled while the tab is hidden (a frozen clock fires it all at
+  once on return).
+- `usePresence` carries a **payload frozen at its last present value**: a
+  leaving toast keeps its words, a leaving win card doesn't flip to the loss
+  card, a leaving coach doesn't return null.
+- The score counts up via the DOM, not React state — sixty renders a second
+  of the game screen for one label is not a trade worth making.
+- Motion "animates the identity": stamps, rattles, punched-paper chads, the
+  link assembled letter by letter. Don't reach for generic fades.
+
+## Open backlog
+
+Ranked by expected impact. Nothing here is started.
+
+1. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
+   is empty in both `index.html` and `docs/index.html`, so the whole feature
+   is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
+   somewhere and point the tag at it.
+2. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
+   module and ads all correctly no-op off-platform; final QA against their
+   preview tool is still owed at submission time.
+3. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
+   needs the full read in *Authoring a board*. Growing the daily pool is the
+   evergreen content task.
+4. **[ux] Landscape phones are cramped.** The two-column split needs ≥1024 px;
+   at 844×390 it's one scrolling column behind the rotate hint. A compact
+   landscape board (smaller tiles, controls rail at `md` + landscape) would
+   make "Play anyway" a real option.
+5. **[a11y] Never run past a real screen reader.** Keyboard play, Escape and
+   the focus trap are in; nothing has been checked with VoiceOver/NVDA. A
+   large-text mode is also still missing from Settings.
+6. **[gameplay] The hint token has one shape** (reveal a theme, then a
+   letter). A cheaper "rule out one tile" would let a stuck player spend less
    than a whole theme.
+7. **[gameplay] Two twist candidates**, designed but not built: **brief** —
+   the four theme names shown up front, tiles assigned to a *named* group
+   (recycles the oracle's panel without the cold-spelling lottery; any board
+   fits); **cascade** — the board re-scrambles after every solved group
+   (kills the park-three-for-later strategy; scramble's board fit; never
+   adjacent to scramble or cipher).
+8. **[balance] Grades are one number per board.** A facet split (abstraction /
+   pivot / interference) would let a chapter be built from one kind of hard.
+9. **[mobile] Tall end-states scroll on small phones**; 320×568 scrolls a
+   little on the board and finale (accepted for legacy phones).
+10. **[engagement] Small retention hooks not built**: a post-win "N to
+    Silver" nudge toast (the stats modal already says it), a daily-streak
+    calendar with milestones, a "did you know" line about the link word on
+    the win card.
+11. **[music] The loop is written, not composed** — the melody is chosen at
+    random inside the bar's chord, so it never develops or resolves. Recorded
+    samples remain a taste call, not a gap (levels are measured; nothing
+    clips).
+12. **[docs] `README.md`'s intro still says "9 words / four categories of two"**
+    — the board is 12 words, 4 × 3 spokes. Rewrite the first paragraph and the
+    *Adding puzzles* section.
 
-**Corrected here, so it isn't re-read as open:** i18n is done (iteration 23 — a
-full catalogue per locale, English + Spanish, `npm test` fails on a missing key);
-the link finale is not multiple choice (it is tap-or-type spelling, with the
-early call on top); difficulty is no longer a length heuristic.
+## Parked ideas
 
-## Possible next ideas
-- Leaderboards / cloud save (needs a backend — `server/stats-server.mjs` from
-  iteration 34 is one, and could grow a leaderboard table).
-- Achievements (perfect streaks, all-Easy 3-stars, daily streak milestones).
-- Theme/colour settings; larger-text mode.
-- A puzzle-authoring tool that runs the ambiguity check as you write.
+Not scheduled; listed so they aren't re-invented. Anything with a clock or an
+energy cap is out (hard requirement 1).
+
+- Leaderboard on the daily via the CrazyGames user/data SDK; cloud save.
+  `server/stats-server.mjs` could grow a table if a backend is wanted anyway.
+- Versus / async duel on the same board; a weekly seeded challenge.
+- Themed packs (Movies, Science, Sports) with their own inks.
+- Cosmetic unlocks (tile skins, confetti) bought with stars; streak freeze.
+- Adaptive difficulty from the player's own win rate (the tracking client
+  already has the numbers).
+- Player-authored puzzles, and an authoring tool that runs the ambiguity
+  checks as you write.
+- Definition-on-tap for solved words; a harder no-hint mode.
+
+## History
+
+One line per iteration, newest first. The commit bodies carry the reasoning.
+
+| # | What | Commits |
+|---|---|---|
+| 37 | GSAP for the beats, then Framer Motion retired entirely; `anim.ts`, `usePresence`, shared `dialogIn`; found and fixed a chapter-key DOM leak | `2dd039e` `d400a92` `a6f89ee` |
+| 36 | Audio pass: mixer, limiter, reverb send, FM bells, sounds for silent moments, three music scenes, per-bus volume | `9e169e8` |
+| 35 | Emoji boss rebuilt: the name is the answer, the picture misleads; banner names the picture; validate checks emoji maps | `c55d0ca` `31b2222` |
+| 34 | Level tracking (client, reference server, dashboard, clear-rate line); submission pack finished and published at `/art/` | `08bab1e` `de34b1b` `7be41c8` `acd7606` |
+| 33 | `storage.ts` (SDK mirror, memory fallback, banner); daily quests; link mask counts letters; `useModal` focus trap; rank ladder removed. Follow-ups: Endless gated on a finished campaign, shadows on one scale, compound group off the tutorial board | `5501af9` `e6f41d0` `b6548ba` `ee6ff21` |
+| 32 | Oracle twist scrapped; memory and cipher twists added; twists re-dealt | `0682b1d` `621fc0c` `0ca9f24` |
+| 31 | Boss briefing: rule + two-part brief per twist, dialog on an unbeaten boss, rule strip on the board | `cccaa8a` |
+| 30 | Debug mode: `debug.ts`, free hints, the 🛠 tray; Next level skips cleared boards | `04dbd1b` `a3663bc` |
+| 29 | Difficulty ramp rebuilt: hand grades, sawtooth placement, bosses cast to their twist, tier from grade | `6ea4f2a` |
+| 28 | 100 levels in twelve chapters (37 new boards, four new chapters and keys) | `a922a59` |
+| 27 | Boss door and the letter hand-over; keep working when the SDK is disabled | `9e2bccd` `b0886c6` |
+| 26 | Chapter keys gate the boss; per-chapter page stain | `dd47d57` |
+| 25 | Level select rebuilt as an index; landscape-first; unlock reveals | `5ef0a80` `1a2b50f` `47b6f5d` `6518df2` |
+| 24 | Pairs timers and stale-state bugs; side effects out of updaters everywhere | `36ae84b` `c99bfc9` |
+| 23 | Ambiguity pass over all 576 groups; real i18n catalogue + Spanish | `aebd0b5` `014b7c1` |
+| 22 | Logic Grid: eight clue kinds on a vocabulary ramp, rules in one tested module | `eb90ccc` `e104f4b` |
+| 20–21 | Review pass (hint spoilers, stale streak, typed finale) and burn-down (71 category names, early call, `applyProgress`, Game.tsx split, home fits the embed) | `8540e05` … `dc7ac44` |
+| 18–19 | 80-puzzle daily pool; submission assets; global-English copy; opening curve; Pairs mode; Logic Grid first version | `bb9d553` `c77c8d0` `170729d` |
+| 17 | The Puzzle Press retheme; two-column embed layout; live SDK; rewarded hint refill | — |
+| 13–16 | Tutorial redesign (straight into play, welcome modal, escalating coach); animation review | — |
+| 10–12 | Persona playtest → score/combo, tap-to-spell finale, Endless, daily hero, rewarded continue; device pass; content quality pass | — |
+| 7–9 | Engine tests, difficulty tiers, hints, daily, achievements, PWA, share card, chapters and bosses | — |
