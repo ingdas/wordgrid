@@ -5,6 +5,7 @@ import {
   dialogIn,
   dialogOut,
   dropOut,
+  liftOut,
   motionOn,
   riseOut,
   screenOut,
@@ -38,7 +39,7 @@ import {
 import { recordQuest, QUEST_SET_BONUS, COMBO_TARGET, type QuestDef, type QuestEvent } from "./quests";
 import { debugRequested, isDebug, setDebug } from "./debug";
 import { useModal } from "./modal";
-import { readItem, writeItem, removeItem, startSdkMirror } from "./storage";
+import { readItem, writeItem, removeItem, readSession, writeSession, startSdkMirror } from "./storage";
 import {
   initAudio,
   isMuted,
@@ -78,6 +79,7 @@ import Game from "./Game";
 import { BossRules } from "./BossBriefing";
 import Pairs from "./Pairs";
 import Deduction from "./Deduction";
+import { Intro } from "./Intro";
 
 type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
 
@@ -115,6 +117,12 @@ const noop = () => {};
 const CALM_KEY = "wordgrid:calm";
 const readCalm = () => readItem(CALM_KEY) === "1";
 
+// The opening has played this visit. Session-scoped on purpose: a visit is the
+// unit — coming back to the menu from a level, or from any side mode, must not
+// replay it, and neither should a reload mid-session — but the next time the
+// game is opened it runs again, for the returning player as much as the new one.
+const INTRO_KEY = "wordgrid:intro";
+
 export default function App() {
   const systemReduce = useSystemReduceMotion();
   const [calm, setCalm] = useState(readCalm);
@@ -123,6 +131,14 @@ export default function App() {
   // including the ones fired from event handlers deep in a screen that was
   // never handed the flag as a prop.
   useReduceMotion(reduce);
+  // The opening: the press run in src/Intro.tsx, in front of whichever screen
+  // the visit starts on — the tutorial board on a first launch, Home after.
+  // Decorative, so Calm and the system's reduced-motion preference cut it
+  // entirely rather than showing a still of it.
+  const [intro, setIntro] = useState(() => motionOn() && readSession(INTRO_KEY) !== "1");
+  useEffect(() => {
+    writeSession(INTRO_KEY, "1");
+  }, []);
   // The interactive coached tutorial runs once, on the player's first level.
   const [tutorialPending, setTutorialPending] = useState(() => !readItem("wordgrid:tutorial"));
   // First-ever launch drops straight into the tutorial level rather than the
@@ -735,6 +751,9 @@ export default function App() {
   const settingsHere = usePresence(showSettings, null, dialogOut);
   const achHere = usePresence(unlockedAch != null, unlockedAch, riseOut);
   const warnHere = usePresence(storageWarn, null, dropOut);
+  // The plate stays up through its lift-off while the first screen mounts
+  // under it, so the hand-over is an overlap and never a blank page.
+  const introHere = usePresence(intro, null, liftOut);
 
   const onBoard = screen === "game" || screen === "pairs" || screen === "deduction";
   const onBoss = screen === "game" && !endless && !playingDaily && bossTwist(levelIndex) !== null;
@@ -758,7 +777,7 @@ export default function App() {
       />
       <div className="grain" />
 
-      {shownScreen.key === "home" && (
+      {!intro && shownScreen.key === "home" && (
           <ScreenWrap key="home" ref={shownScreen.ref}>
             <StartScreen
               progress={progress}
@@ -780,7 +799,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "levels" && (
+      {!intro && shownScreen.key === "levels" && (
           <ScreenWrap key="levels" ref={shownScreen.ref}>
             <LevelSelect
               progress={progress}
@@ -805,7 +824,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "pairs" && (
+      {!intro && shownScreen.key === "pairs" && (
           <ScreenWrap key="pairs" ref={shownScreen.ref}>
             <Pairs
               reduce={reduce}
@@ -816,7 +835,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "deduction" && (
+      {!intro && shownScreen.key === "deduction" && (
           <ScreenWrap key="deduction" ref={shownScreen.ref}>
             <Deduction
               reduce={reduce}
@@ -828,7 +847,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "game" && (
+      {!intro && shownScreen.key === "game" && (
           <ScreenWrap key="game" ref={shownScreen.ref}>
             <Game
               key={endless ? `e${endlessPos}` : playingDaily ? `d-${dailyRaw?.id}` : levelIndex}
@@ -893,6 +912,8 @@ export default function App() {
             />
           </ScreenWrap>
       )}
+
+      {introHere.rendered && <Intro ref={introHere.ref} onDone={() => setIntro(false)} />}
 
       {helpHere.rendered && (
         <HelpModal

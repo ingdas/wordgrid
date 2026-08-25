@@ -36,9 +36,10 @@ p.on("console", (m) => {
 p.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
 
 await p.goto(BASE, { waitUntil: "networkidle0" });
-await p.evaluate(() => localStorage.clear());
+// A fresh visit as well as a fresh save: the opening plays once per visit, and
+// this first load has already spent it.
+await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
 await p.reload({ waitUntil: "networkidle0" });
-await sleep(500);
 
 async function clickText(sel, text) {
   for (const h of await p.$$(sel)) {
@@ -64,6 +65,30 @@ async function solveGroup(group) {
   await sleep(500);
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
+
+// 0. The opening. It owns the first paint for up to three seconds — the plate
+//    stamps its `data-intro` with the time it started, so the run is measured
+//    from the page's own clock rather than from when the navigation settled.
+const introMs = await p.evaluate(
+  () =>
+    new Promise((resolve) => {
+      const plate = document.querySelector("[data-intro]");
+      if (!plate) return resolve(-1);
+      const started = Number(plate.getAttribute("data-intro")) || performance.now();
+      const tick = () => {
+        if (!document.querySelector("[data-intro]")) return resolve(Math.round(performance.now() - started));
+        if (performance.now() - started > 8000) return resolve(-2);
+        setTimeout(tick, 50);
+      };
+      tick();
+    }),
+);
+log("opening animation on launch:", introMs >= 0 ? `${introMs}ms` : introMs === -1 ? "did not play" : "never finished");
+if (introMs === -1) note("The opening animation did not play on a fresh launch.");
+if (introMs === -2) note("The opening animation never finished (nothing to play under it).");
+if (introMs > 3300) note(`The opening ran ${introMs}ms — it has to be over in about three seconds.`);
+if (introMs >= 0 && introMs < 2000) note(`The opening ran only ${introMs}ms — it should be a real sequence, not a flash.`);
+await sleep(700); // the tutorial board deals in under the lifted plate
 
 // 1. First launch drops straight into the tutorial game — no menu.
 if (await clickText("button", "Play")) note("First launch showed a Play menu instead of starting the game.");
@@ -225,6 +250,10 @@ await p.screenshot({ path: `${SHOT}/r8-history.png` });
 await p.evaluate(() => localStorage.setItem("wordgrid:tutorial", "1"));
 await p.goto(BASE + "?debug", { waitUntil: "networkidle0" }); // unlock all levels for the test
 await sleep(400);
+// Same visit, back at the menu: the opening has had its one run.
+const replayed = (await p.$("[data-intro]")) != null;
+log("opening does not replay within the visit:", !replayed);
+if (replayed) note("The opening animation replayed on a later return to the menu in the same visit.");
 await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(500);
 const bossNode = await p.$("button[aria-label^='Play the boss']");

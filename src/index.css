@@ -37,6 +37,8 @@
 
 :root {
   color-scheme: light;
+  /* Newsprint grain, used by the page (`.grain`) and the opening's plate. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 html,
@@ -82,7 +84,18 @@ body {
   pointer-events: none;
   opacity: 0.05;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: var(--grain);
+}
+
+/* The opening's plate is opaque paper over the page, so it carries its own
+   grain — the same stock, or the lift-off would reveal a different sheet. */
+.intro-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: var(--grain);
 }
 
 /* Pinch-zoom stays available (the viewport tag no longer blocks it); this

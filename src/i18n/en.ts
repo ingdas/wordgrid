@@ -22,6 +22,10 @@ export const en: Record<string, string> = {
   "common.moves.one": "{n} move",
   "common.moves.other": "{n} moves",
 
+  // --- opening ------------------------------------------------------------
+  "intro.tagline": "Four hidden groups. One secret word.",
+  "intro.skip": "Tap to skip",
+
   // --- home ---------------------------------------------------------------
   "home.taglineBefore": "Four hidden groups.",
   "home.taglineHighlight": "One secret word",

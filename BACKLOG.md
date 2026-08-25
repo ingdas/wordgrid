@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 37 (GSAP replaces Framer Motion;
-one animation library, −41 kB gzip)._
+_Last updated 2026-08-26, after iteration 38 (the opening: a once-per-visit
+press run in front of the first screen)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -115,7 +115,9 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   never exactly repeats yesterday's, `recordQuest` pays once. `QUEST_REWARD =
   1` hint, `QUEST_SET_BONUS = 2`, `COMBO_TARGET = 3`. State rides in
   `Progress.quests`; events are raised in `App.tsx`.
-- `storage.ts` — **every** persisted read/write. `localStorage` when a real
+- `storage.ts` — **every** persisted read/write (plus `readSession`/
+  `writeSession`, the per-visit tier — `sessionStorage` with a memory
+  fallback, never mirrored). `localStorage` when a real
   probe write works, the CrazyGames data module when the SDK is there
   (`startSdkMirror` polls `MIRROR_TRIES = 12` × `MIRROR_GAP_MS = 700`, then
   reconciles both ways — adopts a key only the platform has, pushes up a key
@@ -153,7 +155,10 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   by `scripts/audio.test.mts`.
 - `anim.ts` — all motion, GSAP. `EASE` (incl. the hand-authored stamp
   `CustomEase`), `setReduceMotion`/`motionOn` (one module flag, kept in step
-  with the system preference and the Calm switch by App), hooks
+  with the system preference and the Calm switch by App), the opening
+  (`openingIn` — the press run, `OPENING_S = 2.7` s before the plate lifts with
+  `liftOut`; played once per visit by `Intro.tsx`, gated on a `sessionStorage`
+  flag through `storage.ts`'s `readSession`/`writeSession`), hooks
   `usePresence` (holds a leaving node mounted **and carries a payload frozen
   at its last present value**), `useSwitch` (one screen at a time),
   `useGsap`, `useOdometer` (score count-up written straight to the DOM),
@@ -185,6 +190,13 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   locale, Developer → debug toggle + level tracking, reset; stats; history;
   how-to-play); the storage banner; music scene; `visibilitychange` pause;
   rewarded `refillHints` (+3).
+- `Intro.tsx` — the opening plate. Mounted by App in front of the first
+  screen (the tutorial board or Home) while `intro` is set; any tap or key
+  fast-forwards the run (and is the gesture that unlocks audio), `onDone`
+  drops the plate and mounts the screen under it. Never replays within a
+  visit — the flag is per tab session, so a reload doesn't replay it either,
+  and the next visit does. Calm / reduced motion cut it entirely. The main
+  playtest reads its duration off `data-intro`.
 - `StartScreen.tsx` — Daily hero (7-day streak strip, countdown, Solve CTA),
   the quests card, Continue · L{n} (plays that level; the index is the link
   under it), mode row (Endless — a locked door until the campaign is done ·
