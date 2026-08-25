@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import gsap from "gsap";
-import { EASE, motionOn, useGsap } from "./anim";
+import { EASE, motionOn, pressDown, release, useGsap } from "./anim";
 import { LEVELS } from "./puzzles";
 import { DEDUCTION_LEVELS } from "./deductionLevels";
 import {
@@ -194,9 +193,11 @@ export default function StartScreen({
         className="mt-6 flex w-full max-w-sm flex-col items-center gap-3 sm:mt-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0"
       >
         {/* Daily Challenge — the hero. A shared puzzle each day with a streak. */}
-        <motion.button
+        <button
           onClick={() => { playConfirm(); onDaily(); }}
-          whileTap={{ scale: 0.98 }}
+          onPointerDown={(e) => pressDown(e.currentTarget)}
+          onPointerUp={(e) => release(e.currentTarget)}
+          onPointerLeave={(e) => release(e.currentTarget)}
           className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-stamp transition hover:border-press/60"
         >
           <div className="flex items-center justify-between">
@@ -244,7 +245,7 @@ export default function StartScreen({
               </>
             )}
           </div>
-        </motion.button>
+        </button>
 
         <button
           onClick={() => { playConfirm(); onPlay(); }}

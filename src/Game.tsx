@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import gsap from "gsap";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
@@ -17,6 +16,13 @@ import Confetti from "./Confetti";
 import {
   EASE,
   breathe,
+  dialogIn,
+  dialogOut,
+  dropOut,
+  floatPop,
+  motionOn,
+  sinkOut,
+  usePresence,
   captureGhosts,
   captureOrder,
   dealIn,
@@ -265,6 +271,18 @@ export default function Game({
   // beaten and waits to be dismissed, and the rule strip under the header
   // reopens it at any point in the fight.
   const [brief, setBrief] = useState(twist != null && !bossBeaten);
+
+  // Things that have to outlive the state that dismissed them, so they can be
+  // animated out before React takes them away. `rendered` is what to mount;
+  // `ref` goes on the element's root. See `usePresence` in src/anim.ts.
+  // Each one carries the state it is rendered from, so a card on its way out
+  // isn't redrawn from a game that has already moved on.
+  const offerHere = usePresence(offering, null, sinkOut);
+  const endHere = usePresence(status === "won" || status === "lost", status, sinkOut);
+  const coachHere = usePresence(coach >= 1 && coach <= 2 && status === "playing", coach, dropOut);
+  const welcomeHere = usePresence(coach === 0 && status === "playing", null, dialogOut);
+  const briefHere = usePresence(brief && twist != null, twist, dialogOut);
+  const toastHere = usePresence(toast != null, toast, dropOut);
 
   // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
   useEffect(() => {
@@ -892,20 +910,9 @@ export default function Game({
       <main className="relative mt-4 flex flex-1 flex-col justify-center lg:block">
         {/* Floating reward popups ("+200 ×2") rising near the link card */}
         <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex flex-col items-center gap-1">
-          <AnimatePresence>
-            {pops.map((p) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, y: 12, scale: 0.7 }}
-                animate={{ opacity: 1, y: -16, scale: 1 }}
-                exit={{ opacity: 0, y: -40, scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-stamp-sm"
-              >
-                {p.text}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {pops.map((p) => (
+            <RewardPop key={p.id} text={p.text} />
+          ))}
         </div>
 
         {/* On wide viewports (landscape embeds / desktop) the game splits into
@@ -928,8 +935,7 @@ export default function Game({
             little during the guess to keep the end-state compact. */}
         {(bannerCats.length > 0 || revealedHints.size > 0) && (
           <div className="mt-3 space-y-2">
-            <AnimatePresence initial={false}>
-              {bannerCats.map((cat, i) => (
+            {bannerCats.map((cat, i) => (
                 <SolvedBanner
                   key={cat.name}
                   ref={banners.bind(cat.name)}
@@ -947,10 +953,9 @@ export default function Game({
               {status !== "lost" &&
                 puzzle.categories
                   .filter((c) => !solved.includes(c) && revealedHints.has(c.name))
-                  .map((cat) => (
-                    <HintBanner key={`hint-${cat.name}`} cat={cat} themeIndex={indexByName.get(cat.name) ?? 0} />
-                  ))}
-            </AnimatePresence>
+                .map((cat) => (
+                  <HintBanner key={`hint-${cat.name}`} cat={cat} themeIndex={indexByName.get(cat.name) ?? 0} />
+                ))}
           </div>
         )}
 
@@ -1070,9 +1075,9 @@ export default function Game({
           />
         )}
 
-        <AnimatePresence>
-          {offering && <ContinueOffer onAccept={takeSecondChance} onDecline={declineSecondChance} />}
-        </AnimatePresence>
+        {offerHere.rendered && (
+          <ContinueOffer ref={offerHere.ref} onAccept={takeSecondChance} onDecline={declineSecondChance} />
+        )}
 
         {status === "guessing" && (
           <LinkGuess
@@ -1092,11 +1097,14 @@ export default function Game({
           />
         )}
 
-        <AnimatePresence>
-          {(status === "won" || status === "lost") && (
-            <EndCard
-              key={status}
-              won={status === "won"}
+        {endHere.rendered && (
+          <EndCard
+            // Keyed off the held status, not the live one: a restart flips
+            // `status` back to "playing" while the card is still leaving, and a
+            // changed key would remount it out from under its own exit.
+            key={endHere.data}
+            ref={endHere.ref}
+              won={endHere.data === "won"}
               title={raw.title}
               stars={stars}
               mistakes={mistakes}
@@ -1140,59 +1148,45 @@ export default function Game({
               daily={daily}
               onExit={onExit}
               onRestart={restart}
-              onNext={onNext}
-              nextLabel={nextLabel}
-            />
-          )}
-        </AnimatePresence>
+            onNext={onNext}
+            nextLabel={nextLabel}
+          />
+        )}
 
         {/* Steps 1–2 of the coach sit in the game flow (just below the board) so
             they stay close to the action without pinning to the viewport. */}
-        <AnimatePresence>
-          {coach >= 1 && coach <= 2 && status === "playing" && (
-            <Coach
-              step={coach}
-              theme={puzzle.categories[0].name}
-              onNext={() => setCoach((c) => c + 1)}
-              onDone={() => { setCoach(-1); onTutorialDone(); }}
-              onSkip={() => { setCoach(-1); onTutorialDone(); }}
-            />
-          )}
-        </AnimatePresence>
+        {coachHere.rendered && (
+          <Coach
+            ref={coachHere.ref}
+            step={coachHere.data}
+            theme={puzzle.categories[0].name}
+            onNext={() => setCoach((c) => c + 1)}
+            onDone={() => { setCoach(-1); onTutorialDone(); }}
+            onSkip={() => { setCoach(-1); onTutorialDone(); }}
+          />
+        )}
         </div>
         </div>
       </main>
 
       {/* The welcome step is a centred, dimmed overlay so a first-time player
           reads the rules before the board tempts them into tapping. */}
-      <AnimatePresence>
-        {coach === 0 && status === "playing" && (
-          <WelcomeOverlay
-            onStart={() => setCoach(1)}
-            onSkip={() => { setCoach(-1); onTutorialDone(); }}
-          />
-        )}
-      </AnimatePresence>
+      {welcomeHere.rendered && (
+        <WelcomeOverlay
+          ref={welcomeHere.ref}
+          onStart={() => setCoach(1)}
+          onSkip={() => { setCoach(-1); onTutorialDone(); }}
+        />
+      )}
 
-      <AnimatePresence>
-        {brief && twist && <BossBriefing twist={twist} onClose={() => setBrief(false)} />}
-      </AnimatePresence>
+      {briefHere.rendered && briefHere.data && (
+        <BossBriefing ref={briefHere.ref} twist={briefHere.data} onClose={() => setBrief(false)} />
+      )}
 
       <div className="sr-only" role="status" aria-live="polite">
         {announce} {toast}
       </div>
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {toastHere.rendered && <Toast ref={toastHere.ref} text={toastHere.data} />}
 
       {debug && (
         <DebugPanel
@@ -1237,6 +1231,48 @@ function buildShare(opts: {
     ? `${opts.linkCorrect ? "🔑✅" : "🔑❌"}  ⏱️ ${fmtTime(opts.timeMs)}${opts.mistakes ? `  ❌${opts.mistakes}` : ""}`
     : t("share.soClose");
   return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: location.href })}`;
+}
+
+/**
+ * A floating "+200 ×2", from the moment it appears to the moment it's gone.
+ *
+ * Its whole life is one timeline, because nothing decides when it leaves — the
+ * board puts it on a timer the instant it's raised. That makes the exit part of
+ * the animation rather than a reaction to a removal that has to be waited for,
+ * which is the only reason this doesn't need `usePresence`.
+ */
+function RewardPop({ text }: { text: string }) {
+  const el = useGsap<HTMLDivElement>((node) => void floatPop(node), []);
+  return (
+    <div
+      ref={el}
+      className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-stamp-sm"
+    >
+      {text}
+    </div>
+  );
+}
+
+/** The bottom-of-screen message, up from the edge and back down to it. */
+function Toast({ ref, text }: { ref?: Ref<HTMLDivElement>; text: string | null }) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (motionOn() && el.current) {
+      gsap.fromTo(el.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: EASE.press });
+    }
+  }, []);
+  return (
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
+    >
+      {text}
+    </div>
+  );
 }
 
 function SecretLink({
@@ -1484,15 +1520,17 @@ function SolvedBanner({
 }
 
 // A hinted-but-unsolved group: shows the theme and placeholders, never the words.
+//
+// It arrives stamped like everything else and leaves without ceremony, which is
+// the honest reading: the only way a hint banner goes is by being solved, and
+// the group's real banner lands in that same spot on the same frame. Fading it
+// out would put a hole between the two.
 function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) {
   const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
+  const el = useGsap<HTMLDivElement>((node) => void stampIn(node, { from: 1.12, tilt: 0.8 }), [cat.name]);
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9, y: -8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+    <div
+      ref={el}
       className="flex items-center justify-between rounded-2xl border-2 border-dashed px-4 py-2.5"
       style={{ borderColor: theme.tint, background: `${theme.tint}14`, color: theme.tint }}
     >
@@ -1510,12 +1548,24 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
           />
         ))}
       </span>
-    </motion.div>
+    </div>
   );
 }
 
-function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>; onDecline: () => void }) {
+function ContinueOffer({
+  ref,
+  onAccept,
+  onDecline,
+}: {
+  ref?: Ref<HTMLDivElement>;
+  onAccept: () => Promise<void>;
+  onDecline: () => void;
+}) {
   const [pending, setPending] = useState(false);
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    stampIn(el.current, { from: 0.96, tilt: 0 });
+  }, []);
   const accept = async () => {
     setPending(true);
     try {
@@ -1525,11 +1575,12 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
     }
   };
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 16, scale: 0.96 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
       className="mt-7 rounded-3xl border border-gold/70 bg-gold/10 p-6 text-center"
     >
       <div className="text-4xl">😮‍💨</div>
@@ -1551,7 +1602,7 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
           {t("game.continue.decline")}
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1698,83 +1749,84 @@ const WELCOME_RULES = [
   { icon: "⭐", key: "welcome.rule3" },
 ];
 
-function WelcomeOverlay({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+function WelcomeOverlay({
+  ref,
+  onStart,
+  onSkip,
+}: {
+  ref?: Ref<HTMLDivElement>;
+  onStart: () => void;
+  onSkip: () => void;
+}) {
   // No Escape here: this one is the first thing a new player sees, and the way
   // past it is a choice (start, or skip) rather than a dismissal. Tab still
   // stays inside it.
   const panel = useModal<HTMLDivElement>();
+  // The same entrance the boss briefing gets — one dialog timeline, in anim.ts.
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={t("welcome.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-5"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 16 }}
-        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         className="w-full max-w-sm rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-stamp-lg"
       >
-        <motion.div
-          initial={{ scale: 0, rotate: -25 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
+        <div
+          data-dialog-mark
           className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-press text-3xl text-paper shadow-stamp"
         >
           <span aria-hidden>◆</span>
-        </motion.div>
+        </div>
         <h2 className="mt-4 font-display text-3xl font-bold text-ink">{t("welcome.title")}</h2>
         <p className="mt-1 text-sm text-ink-soft">{t("welcome.subtitle")}</p>
         <div className="mt-5 space-y-2.5 text-left">
           {WELCOME_RULES.map((r, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -14 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.18 + i * 0.09 }}
-              className="flex items-center gap-3 rounded-2xl bg-white p-3"
-            >
+            <div key={i} data-dialog-row className="flex items-center gap-3 rounded-2xl bg-white p-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>
                 {r.icon}
               </span>
               <span className="text-sm font-semibold leading-snug text-ink">{t(r.key)}</span>
-            </motion.div>
+            </div>
           ))}
         </div>
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+        <button
+          data-dialog-cta
           onClick={onStart}
           className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-stamp transition hover:scale-[1.02] active:scale-95"
         >
           {t("welcome.start")}
-        </motion.button>
+        </button>
         <button
           onClick={onSkip}
           className="mx-auto mt-2 block py-1.5 text-xs font-semibold text-ink-soft transition hover:text-ink"
         >
           {t("welcome.skip")}
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
 function Coach({
+  ref,
   step,
   theme,
   onNext,
   onDone,
   onSkip,
 }: {
+  ref?: Ref<HTMLDivElement>;
   step: number;
   /** The tutorial board's first category, so the copy matches the tiles. */
   theme: string;
@@ -1783,12 +1835,22 @@ function Coach({
   onSkip: () => void;
 }) {
   const c = COACH[step];
+  const el = useRef<HTMLDivElement | null>(null);
+  // A sticky note going up on the page. The rotation is the note's own, so the
+  // slide in has to leave it alone and move `y` only.
+  useEffect(() => {
+    if (motionOn() && el.current) {
+      gsap.fromTo(el.current, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.36, ease: EASE.press });
+    }
+  }, [step]);
   if (!c) return null;
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 20, opacity: 0 }}
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
       // Sticky: sits in-flow just below the board on tall screens, but pins to
       // the bottom of the viewport on short ones so it's never off-screen.
       // Styled as a sticky note pinned to the puzzle page.
@@ -1818,6 +1880,6 @@ function Coach({
       {!c.cta && (
         <div className="mt-2 text-xs font-semibold uppercase tracking-widest text-press">{t("coach.yourTurn")}</div>
       )}
-    </motion.div>
+    </div>
   );
 }

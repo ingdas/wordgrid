@@ -16,7 +16,7 @@
  * `motion.*` component is also driving on the same node, or the two would take
  * turns writing the same transform.
  */
-import { useEffect, useLayoutEffect, useMemo, useRef, type DependencyList, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DependencyList, type RefObject } from "react";
 import gsap from "gsap";
 import { CustomEase } from "gsap/CustomEase";
 import { Flip } from "gsap/Flip";
@@ -183,6 +183,133 @@ export function useOdometer(value: number, format: (n: number) => string = (n) =
 }
 
 // ---------------------------------------------------------------------------
+// Presence — animating something out, after React has decided it's gone
+// ---------------------------------------------------------------------------
+
+/** An exit: animate the node out and hand back the animation to wait on. */
+export type Exit<T extends HTMLElement = HTMLElement> = (el: T) => gsap.core.Animation | null;
+
+/**
+ * Keep a node mounted long enough to leave.
+ *
+ * React tears an element out of the DOM the moment its condition goes false,
+ * which is the one thing an imperative animation library can't work around on
+ * its own — by the time you could animate it, there's nothing to animate. So
+ * the flag and the mounting are separated: `rendered` stays true past `present`
+ * until the exit finishes, and the caller puts `ref` on the node's root.
+ *
+ * `data` is the second half of the job, and the half that is easy to forget.
+ * A leaving element is rendered from state that has already moved on — the
+ * toast whose text is now null, the win card whose game is now "playing", the
+ * coach whose step is now -1 — so it would blank out, change identity, or
+ * vanish outright on the way out. Whatever is passed as `payload` is held at
+ * the last value it had while present, and handed back as `data` for the
+ * caller to render from:
+ *
+ *     const end = usePresence(status !== "playing", status, sinkOut);
+ *     {end.rendered && <EndCard ref={end.ref} won={end.data === "won"} … />}
+ *
+ * Re-entering mid-exit reverts the half-finished tween rather than killing it,
+ * so the node goes back to the styles it had rather than keeping whatever
+ * opacity it had reached on the way out. With motion off there is no exit at
+ * all and `rendered` simply tracks `present`.
+ */
+export function usePresence<P, T extends HTMLElement = HTMLDivElement>(
+  present: boolean,
+  payload: P,
+  // Typed against the base element so a shared exit (which knows nothing about
+  // what it is closing) doesn't narrow the ref the caller gets back.
+  exit: Exit<HTMLElement>
+): { rendered: boolean; ref: RefObject<T | null>; data: P } {
+  const [rendered, setRendered] = useState(present);
+  const ref = useRef<T | null>(null);
+  const leaving = useRef<gsap.core.Animation | null>(null);
+  const held = useRef(payload);
+  if (present) held.current = payload;
+  // Held in a ref so a caller passing an inline arrow can't restart the exit
+  // on every render.
+  const exitRef = useRef(exit);
+  exitRef.current = exit;
+
+  // Arriving is immediate: mount in this same render rather than a frame later,
+  // or the node would flash in at its natural size before its entrance runs.
+  if (present && !rendered) setRendered(true);
+
+  useEffect(() => {
+    if (present) {
+      leaving.current?.revert();
+      leaving.current = null;
+      return;
+    }
+    const el = ref.current;
+    const tween = el && motionOn() ? exitRef.current(el) : null;
+    if (!tween) {
+      setRendered(false);
+      return;
+    }
+    leaving.current = tween;
+    tween.eventCallback("onComplete", () => {
+      leaving.current = null;
+      setRendered(false);
+    });
+    return () => {
+      tween.kill();
+      leaving.current = null;
+    };
+  }, [present]);
+
+  return { rendered, ref, data: present ? payload : held.current };
+}
+
+/** Straight out. */
+export const fadeOut: Exit = (el) => gsap.to(el, { opacity: 0, duration: 0.2, ease: "power2.in" });
+
+/** Down and out — a toast going back where it came from. */
+export const dropOut: Exit = (el) =>
+  gsap.to(el, { y: 30, opacity: 0, duration: 0.24, ease: "power2.in" });
+
+/** A card settling back into the page as it goes. */
+export const sinkOut: Exit = (el) =>
+  gsap.to(el, { y: 16, scale: 0.96, opacity: 0, duration: 0.24, ease: "power2.in" });
+
+// ---------------------------------------------------------------------------
+// Dialogs
+// ---------------------------------------------------------------------------
+
+/**
+ * The one dialog entrance, shared by every dialog in the game.
+ *
+ * The scrim fades, the card is stamped up under it, its mark spins into place
+ * and the rules deal in one after another. Callers mark the parts with data
+ * attributes rather than passing refs, so a dialog that has no mark or no rows
+ * simply doesn't get those beats instead of having to opt out of them.
+ */
+export function dialogIn(scope: HTMLElement) {
+  if (!motionOn()) return null;
+  const panel = scope.querySelector("[data-panel]");
+  const mark = scope.querySelector("[data-dialog-mark]");
+  const rows = scope.querySelectorAll("[data-dialog-row]");
+  const cta = scope.querySelector("[data-dialog-cta]");
+  const tl = gsap.timeline();
+  tl.fromTo(scope, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 0);
+  if (panel) tl.fromTo(panel, { scale: 0.9, y: 24 }, { scale: 1, y: 0, duration: 0.5, ease: EASE.stamp }, 0.04);
+  if (mark) tl.fromTo(mark, { scale: 0, rotate: -25 }, { scale: 1, rotate: 0, duration: 0.55, ease: EASE.stamp }, 0.12);
+  if (rows.length)
+    tl.fromTo(rows, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.34, ease: "power2.out", stagger: 0.09 }, 0.2);
+  if (cta) tl.fromTo(cta, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.42);
+  return tl;
+}
+
+/** …and the way back out: the card drops away a beat before the scrim clears. */
+export const dialogOut: Exit = (el) => {
+  const panel = el.querySelector("[data-panel]");
+  const tl = gsap.timeline();
+  if (panel) tl.to(panel, { scale: 0.92, y: 16, opacity: 0, duration: 0.2, ease: "power2.in" }, 0);
+  tl.to(el, { opacity: 0, duration: 0.24, ease: "power2.in" }, 0);
+  return tl;
+};
+
+// ---------------------------------------------------------------------------
 // Beats
 // ---------------------------------------------------------------------------
 
@@ -276,6 +403,26 @@ export function punch(els: Els, scale = 1.3) {
     { scale: 1 },
     { scale, duration: 0.14, ease: EASE.press, yoyo: true, repeat: 1, clearProps: "scale" }
   );
+}
+
+/**
+ * A reward popup's entire life: thrown up off the card, held, then carried
+ * away. One timeline rather than an entrance and a separate exit, because
+ * nothing decides when it goes — it is on a timer from the moment it appears,
+ * so the leaving is part of the animation instead of a reaction to a state
+ * change that has to be waited for.
+ */
+export function floatPop(el: El) {
+  const target = alive(el)[0];
+  if (!target || !motionOn()) return null;
+  return gsap
+    .timeline()
+    .fromTo(
+      target,
+      { y: 14, scale: 0.7, opacity: 0 },
+      { y: -16, scale: 1, opacity: 1, duration: 0.34, ease: EASE.stamp }
+    )
+    .to(target, { y: -46, scale: 0.92, opacity: 0, duration: 0.5, ease: "power1.in" }, 0.55);
 }
 
 /** A card that wants to be noticed, breathing until it is. Kill the return value. */

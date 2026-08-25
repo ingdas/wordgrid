@@ -55,20 +55,29 @@ a missing key or a dropped `{placeholder}`.
 
 - [Vite](https://vitejs.dev/) + [React 19](https://react.dev/) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com/)
-- [GSAP](https://gsap.com/) for the beats, [Framer Motion](https://www.framer.com/motion/)
-  for presence and layout — see [Motion](#motion)
+- [GSAP](https://gsap.com/) for the animation — see [Motion](#motion).
+  [Framer Motion](https://www.framer.com/motion/) is still on the level index,
+  Pairs and the Logic Grid, and is being retired screen by screen.
 
 ## Motion
 
-The animation is split down one line, and it isn't arbitrary. **Framer Motion**
-keeps what it is good at: things entering and leaving (`AnimatePresence` — the
-toast, the reward popups, the second-chance offer) and layout that has to
-reflow. **GSAP** owns the *beats* — the moments the game reacts to something you
-did — because those want timelines, staggers and to be fired from an event
-handler, which is awkward in a declarative animation library and native to an
-imperative one. Nothing animates a property that a `motion.*` component is also
-driving on the same node, or the two would take turns writing the same
-transform.
+The game screen, the home screen and the finale are **GSAP** throughout. The
+level index, Pairs, the Logic Grid and the settings sheet are still on **Framer
+Motion**; they'll move over as they're touched. Two animation libraries is a
+tax, and the plan is to stop paying it — measured on this bundle they cost
+almost exactly the same (~42 kB gzip each), so carrying both is ~36% of the
+JavaScript to do one job.
+
+What made the split worth closing rather than keeping: Framer was being carried
+almost entirely for **exit animations**. React tears an element out of the DOM
+the moment its condition goes false, so by the time an imperative library could
+animate it there is nothing left to animate — the one thing GSAP genuinely
+can't do unaided. `usePresence` in [`src/anim.ts`](./src/anim.ts) closes that
+gap in about forty lines: it holds the node mounted past its own condition, and
+holds the state it was rendered *from* along with it, so a card on its way out
+isn't redrawn from a game that has already moved on (the toast whose text is
+now null, the win card whose round is now "playing", the coach whose step is
+now -1).
 
 All of it lives in [`src/anim.ts`](./src/anim.ts), and it animates the identity
 rather than in spite of it: this is a print shop, so things are **stamped** onto
@@ -92,6 +101,11 @@ fall. The beats worth knowing about:
   were being assembled in a composing stick.
 - **A spent guess** doesn't fade out. It takes a hit: a hard flick out and back
   down to a grey nub.
+- **Every dialog** — the how-to-play sheet, a boss briefing — shares one
+  entrance: the scrim fades, the card is stamped up under it, its mark spins
+  into place and the rules deal in one at a time. Callers mark the parts with
+  `data-panel` / `data-dialog-mark` / `data-dialog-row` / `data-dialog-cta`, so
+  a dialog with no mark simply doesn't get that beat rather than opting out.
 
 One module-level flag turns every one of them into a cut, kept in step with the
 system's reduced-motion preference and the in-game **Calm** switch by `App`.

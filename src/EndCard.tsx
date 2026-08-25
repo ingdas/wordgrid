@@ -1,6 +1,6 @@
-import { motion } from "framer-motion";
+import { useRef, type Ref } from "react";
 import gsap from "gsap";
-import { EASE, motionOn, useGsap } from "./anim";
+import { EASE, motionOn, stampIn, useGsap } from "./anim";
 import { fmtTime } from "./format";
 import { t } from "./i18n";
 import { renderShareCard, type ShareCardData } from "./sharecard";
@@ -53,6 +53,7 @@ function StarRow({ stars }: { stars: number }) {
 }
 
 export function EndCard({
+  ref,
   won,
   title,
   stars,
@@ -74,6 +75,8 @@ export function EndCard({
   onRestart,
   onNext,
 }: {
+  /** Presence handle: keeps the card mounted long enough to leave. */
+  ref?: Ref<HTMLDivElement>;
   won: boolean;
   title: string;
   stars: number;
@@ -96,6 +99,10 @@ export function EndCard({
   onRestart: () => void;
   onNext?: () => void;
 }) {
+  const card = useRef<HTMLDivElement | null>(null);
+  // The result lands on the page like everything else does.
+  useGsap(() => void stampIn(card.current, { from: 0.94, tilt: 0 }), [won]);
+
   const newBest = won && (bestMs == null || timeMs < bestMs);
   const share = async () => {
     // Render the result image; share it with the caption when the platform
@@ -133,11 +140,12 @@ export function EndCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ type: "spring", stiffness: 280, damping: 24 }}
+    <div
+      ref={(node) => {
+        card.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
       className="mt-8 rounded-3xl border-2 border-ink bg-white p-6 text-center"
     >
       {won ? (
@@ -223,6 +231,6 @@ export function EndCard({
             </button>
           ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { type Ref } from "react";
+import { dialogIn, useGsap } from "./anim";
 import { t } from "./i18n";
 import { useModal } from "./modal";
 import type { BossTwist } from "./puzzles";
@@ -19,7 +20,7 @@ export function BossRules({ twist }: { twist: BossTwist }) {
   return (
     <div className="space-y-2.5 text-left">
       {parts.map((p) => (
-        <div key={p.key} className="flex gap-3 rounded-2xl bg-white p-3">
+        <div key={p.key} data-dialog-row className="flex gap-3 rounded-2xl bg-white p-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>
             {p.icon}
           </span>
@@ -33,27 +34,38 @@ export function BossRules({ twist }: { twist: BossTwist }) {
   );
 }
 
-export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: () => void }) {
+export function BossBriefing({
+  ref,
+  twist,
+  onClose,
+}: {
+  /** The presence handle that keeps this mounted long enough to leave. */
+  ref?: Ref<HTMLDivElement>;
+  twist: BossTwist;
+  onClose: () => void;
+}) {
   // Escape closes it and Tab stays inside it, like every other dialog.
   const panel = useModal<HTMLDivElement>(onClose);
+  // …and it arrives the way every other dialog does. The parts are marked with
+  // data attributes; the timeline lives in src/anim.ts.
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), [twist]);
 
   const name = t(`twist.${twist}.short`);
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("boss.brief.a11y", { what: name })}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-5"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 16 }}
-        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -61,14 +73,12 @@ export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: ()
         // the card scrolls rather than pushing its own dismiss button off.
         className="max-h-[88vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-ink bg-paper p-6 text-center shadow-stamp-lg"
       >
-        <motion.div
-          initial={{ scale: 0, rotate: -25 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 13, delay: 0.08 }}
+        <div
+          data-dialog-mark
           className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-ink text-3xl text-paper shadow-stamp"
         >
           <span aria-hidden>👑</span>
-        </motion.div>
+        </div>
         <div className="mt-3 text-[0.6rem] font-extrabold uppercase tracking-[0.25em] text-press">
           {t("boss.brief.eyebrow")}
         </div>
@@ -83,16 +93,14 @@ export function BossBriefing({ twist, onClose }: { twist: BossTwist; onClose: ()
           <BossRules twist={twist} />
         </div>
 
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+        <button
+          data-dialog-cta
           onClick={onClose}
           className="mt-6 w-full rounded-2xl bg-press py-3.5 text-base font-bold text-paper shadow-stamp transition hover:scale-[1.02] active:scale-95"
         >
           {t("boss.brief.cta")}
-        </motion.button>
-      </motion.div>
-    </motion.div>
+        </button>
+      </div>
+    </div>
   );
 }

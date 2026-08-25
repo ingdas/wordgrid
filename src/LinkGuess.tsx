@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { pressDown, punch, rattle, release, stampIn } from "./anim";
+import { EASE, motionOn, pressDown, punch, rattle, release, stampIn } from "./anim";
+import gsap from "gsap";
 import { buildLetterBank } from "./letters";
 import { playDeselect, playSelect } from "./audio";
 import { t } from "./i18n";
@@ -142,8 +142,16 @@ export function LinkGuess({
     if (resolved) punch(slotRow.current, 1.08);
   }, [resolved]);
 
+  // The finale coming up out of the board.
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (motionOn() && panel.current) {
+      gsap.fromTo(panel.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: EASE.press });
+    }
+  }, []);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
+    <div ref={panel} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
         {t(titleKey ?? (early ? "game.early.title" : "finale.title"))}
       </h3>
@@ -265,7 +273,7 @@ export function LinkGuess({
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
