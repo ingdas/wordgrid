@@ -197,7 +197,8 @@ async function winLevelOne(page) {
   await submitGroup(page, GROUPS[0]);
   await submitGroup(page, GROUPS[1]);
   await submitGroup(page, GROUPS[2]);
-  await sleep(1800); // the last group auto-solves → the link finale
+  await submitGroup(page, GROUPS[3]);
+  await sleep(900); // the fourth banner lands → the link finale
   for (const ch of "STAR") {
     for (const h of await page.$$("button")) {
       const hit = await h.evaluate((e, c) => {

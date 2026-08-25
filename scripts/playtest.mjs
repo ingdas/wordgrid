@@ -114,13 +114,19 @@ log("hint revealed a category theme:", /words for a celebrity/i.test(afterHint))
 if (!/words for a celebrity/i.test(afterHint)) note("Hint did not reveal a category theme.");
 await p.screenshot({ path: `${SHOT}/r-hint.png` });
 
-// 4. Solve groups (coach advances after the first; group 4 auto-solves)
+// 4. Solve all four groups (coach advances after the first; the last group is
+//    submitted like any other — nothing solves itself)
 await solveGroup(GROUPS[0]);
 await clickText("button", "I'm on it"); // dismiss coach step 2
 await sleep(200);
 await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
-await sleep(1200); // auto-solve final group → guessing
+const threeDown = await bodyText();
+log("last group waits to be submitted:", /HEART/.test(threeDown) && !/spell the secret word/i.test(threeDown));
+if (!/HEART/.test(threeDown)) note("The last group left the board before it was submitted.");
+if (/spell the secret word/i.test(threeDown)) note("The finale opened with a group still on the board.");
+await solveGroup(GROUPS[3]);
+await sleep(700); // the fourth banner lands → guessing
 
 // 4c. Solved groups keep showing their words during the finale.
 const dispNow = await bodyText();

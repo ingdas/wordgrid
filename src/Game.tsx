@@ -379,19 +379,16 @@ export default function Game({
     [buzz, pushPop, tiles]
   );
 
-  // Auto-solve the final pair, then move on — normally into the "guess the
-  // link" finale.
+  // Every group found → on to the "guess the link" finale. The last group is
+  // the player's to submit like the other three: with three tiles left it's
+  // no puzzle, but it is the move that finishes the board, and the combo, the
+  // points and the banner flight are theirs to collect for it.
   useEffect(() => {
     if (status !== "playing") return;
-    if (solved.length === puzzle.categories.length - 1) {
-      const last = unsolvedCategories[0];
-      const timer = setTimeout(() => solveCategory(last, solved.length), 600);
-      return () => clearTimeout(timer);
-    }
     // A link already named (a successful early call) means the finale has
     // nothing left to ask — the last group solved is the win.
     if (solved.length === puzzle.categories.length) setStatus(linkGuess != null ? "won" : "guessing");
-  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, linkGuess]);
+  }, [solved, status, puzzle.categories.length, linkGuess]);
 
   // A solved group, in one move: the banner is stamped onto the page and the
   // three tiles that earned it are pulled off the board and filed into it, so
@@ -770,9 +767,10 @@ export default function Game({
   );
 
   // One call per level, spent on opening: no free look at the letter count.
+  // On offer from the first solve until the last group falls.
   const canCallEarly =
     status === "playing" && !offering && !earlyCallSpent && coach < 0 &&
-    solved.length >= 1 && unsolvedCategories.length >= 2;
+    solved.length >= 1 && unsolvedCategories.length >= 1;
   const startEarlyCall = useCallback(() => {
     setEarlyCallSpent(true);
     setEarlyCall(true);
