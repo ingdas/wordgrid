@@ -387,23 +387,32 @@ export const dialogOut: Exit = (el) => {
 // ---------------------------------------------------------------------------
 
 /** How long the opening runs before the plate lifts, in seconds. */
-export const OPENING_S = 2.6;
+export const OPENING_S = 2.5;
 
 /**
  * The press run — the game's opening, played once per visit.
  *
  * It tells the whole premise without a word of copy: four blank word tiles in
- * the four group colours are dealt onto the page, pulled together into one
+ * the four group colours are dealt onto the page, swept together into one
  * point, and the press's mark comes down on that point — four groups, one
  * link. The title is then set letter by letter under it, as the link reveal
  * sets its word, a rule is drawn and the one-line pitch soaks in. Everything
  * arrives the way everything else in the game arrives: stamped.
  *
+ * The dealing and the sweep are one motion, not two. Each tile rests for a
+ * sixth of a second after it lands, then visibly winds up — lifts and leans
+ * away from the centre — before it dives, and the sweep ripples left to right
+ * on the same stagger as the deal, so the first tile is already leaning while
+ * the last is still landing. (A first cut let the whole row settle and then
+ * eased the pull in from a standstill; the half-second in between read as the
+ * animation having stalled.) The mark hits as the first tile arrives and its
+ * glyph punches for each of the three that follow, so they read as swallowed.
+ *
  * The caller marks the parts (`data-open-tile`, `-stage`, `-ring`, `-mark`,
- * `-letter`, `-line`, `-rule`, `-skip`) and owns the plate itself; `onDone`
- * fires at `OPENING_S`, which is the cue to lift it (see `liftOut`) and let
- * the screen underneath stamp itself in. The whole thing, lift included, fits
- * inside three seconds.
+ * `-glyph`, `-letter`, `-line`, `-rule`, `-skip`) and owns the plate itself;
+ * `onDone` fires at `OPENING_S`, which is the cue to lift it (see `liftOut`)
+ * and let the screen underneath stamp itself in. The whole thing, lift
+ * included, fits inside three seconds.
  */
 export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
   const q = <T extends HTMLElement>(sel: string) => [...scope.querySelectorAll<T>(sel)];
@@ -411,6 +420,7 @@ export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
   const stage = scope.querySelector<HTMLElement>("[data-open-stage]");
   const ring = scope.querySelector<HTMLElement>("[data-open-ring]");
   const mark = scope.querySelector<HTMLElement>("[data-open-mark]");
+  const glyph = scope.querySelector<HTMLElement>("[data-open-glyph]");
   const letters = q("[data-open-letter]");
   const line = scope.querySelector<HTMLElement>("[data-open-line]");
   const rule = scope.querySelector<HTMLElement>("[data-open-rule]");
@@ -428,6 +438,17 @@ export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
       : { x: 0, y: 0 };
   });
 
+  // The deal and the sweep share one stagger, so they interleave.
+  const DEAL_AT = 0.05;
+  const STEP = 0.09;
+  const DEAL_DUR = 0.5;
+  const REST = 0.17;
+  const WIND_DUR = 0.16;
+  const DIVE_DUR = 0.34;
+  const sweepAt = (i: number) => DEAL_AT + DEAL_DUR + REST + i * STEP;
+  const arriveAt = (i: number) => sweepAt(i) + WIND_DUR + DIVE_DUR;
+  const markAt = arriveAt(0) - 0.07; // the stamp ease hits the page ~11% in
+
   const tl = gsap.timeline({ onComplete: opts.onDone });
   // Nothing shows before its cue.
   gsap.set(later, { opacity: 0 });
@@ -437,43 +458,68 @@ export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
     tl.fromTo(
       tiles,
       { y: -44, scale: 0.8, opacity: 0, rotate: () => gsap.utils.random(-9, 9) },
-      { y: 0, scale: 1, opacity: 1, rotate: 0, duration: 0.5, ease: EASE.stamp, stagger: 0.11 },
-      0.05
+      { y: 0, scale: 1, opacity: 1, rotate: 0, duration: DEAL_DUR, ease: EASE.stamp, stagger: STEP },
+      DEAL_AT
     );
-  // 2. …pulled into one point.
-  tiles.forEach((tile, i) =>
+  // 2. …each winds up — lifts, leans away from the middle — and dives for it.
+  tiles.forEach((tile, i) => {
+    const away = offsets[i].x === 0 ? 0 : -Math.sign(offsets[i].x) * 10;
     tl.to(
       tile,
-      { x: offsets[i].x, y: offsets[i].y, scale: 0.25, rotate: gsap.utils.random(-40, 40), opacity: 0, duration: 0.45, ease: "power2.in" },
-      1.0 + i * 0.04
-    )
-  );
-  // 3. The mark comes down where they met — and the paper rings.
+      {
+        keyframes: [
+          { x: away, y: -8, scale: 1.1, rotate: away * 0.6, duration: WIND_DUR, ease: "power2.out" },
+          {
+            x: offsets[i].x,
+            y: offsets[i].y,
+            scale: 0.25,
+            rotate: gsap.utils.random(-40, 40),
+            opacity: 0,
+            duration: DIVE_DUR,
+            ease: "power2.in",
+          },
+        ],
+      },
+      sweepAt(i)
+    );
+  });
+  // 3. The mark comes down as the first one arrives — and the paper rings.
   if (mark)
     tl.fromTo(
       mark,
       { scale: 2.4, rotate: -34, opacity: 0 },
       { scale: 1, rotate: 0, opacity: 1, duration: 0.62, ease: EASE.stamp, immediateRender: false },
-      1.25
+      markAt
     );
   if (ring)
     tl.fromTo(
       ring,
       { scale: 0.7, opacity: 0.7 },
       { scale: 1.9, opacity: 0, duration: 0.7, ease: EASE.press, immediateRender: false },
-      1.34
+      markAt + 0.08
+    );
+  // …and swallows the three behind it.
+  if (glyph)
+    tiles.slice(1).forEach((_, k) =>
+      tl.fromTo(
+        glyph,
+        { scale: 1 },
+        { scale: 1.45, duration: 0.09, ease: EASE.press, yoyo: true, repeat: 1, immediateRender: false },
+        arriveAt(k + 1) - 0.04
+      )
     );
   // 4. The title, set one letter at a time.
+  const titleAt = markAt + 0.25;
   if (letters.length)
     tl.fromTo(
       letters,
       { scale: 1.6, y: -6, opacity: 0, rotate: () => gsap.utils.random(-9, 9) },
       { scale: 1, y: 0, opacity: 1, rotate: 0, duration: 0.42, ease: EASE.stamp, stagger: 0.075, immediateRender: false },
-      1.45
+      titleAt
     );
   // 5. A rule drawn under it; the pitch soaks in.
-  if (line) tl.fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.4, ease: EASE.soak, immediateRender: false }, 2.02);
-  if (rule) tl.fromTo(rule, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: EASE.soak, immediateRender: false }, 2.15);
+  if (line) tl.fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.4, ease: EASE.soak, immediateRender: false }, titleAt + 0.55);
+  if (rule) tl.fromTo(rule, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: EASE.soak, immediateRender: false }, titleAt + 0.68);
   // The way out, offered once the first beat has landed.
   if (skip) tl.fromTo(skip, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out", immediateRender: false }, 0.9);
   // Pin the end so `onDone` fires on the cue and not when the last tween happens to finish.

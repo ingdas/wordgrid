@@ -155,7 +155,7 @@ twist closing each) → Game. One side mode: **Endless**
 - `anim.ts` — all motion, GSAP. `EASE` (incl. the hand-authored stamp
   `CustomEase`), `setReduceMotion`/`motionOn` (one module flag, kept in step
   with the system preference and the Calm switch by App), the opening
-  (`openingIn` — the press run, `OPENING_S = 2.7` s before the plate lifts with
+  (`openingIn` — the press run, `OPENING_S = 2.5` s before the plate lifts with
   `liftOut`; played once per visit by `Intro.tsx`, gated on a `sessionStorage`
   flag through `storage.ts`'s `readSession`/`writeSession`), hooks
   `usePresence` (holds a leaving node mounted **and carries a payload frozen

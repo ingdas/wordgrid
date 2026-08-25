@@ -102,7 +102,7 @@ export function Intro({ ref, onDone }: { ref?: Ref<HTMLDivElement>; onDone: () =
             aria-hidden
             className="relative grid h-16 w-16 place-items-center rounded-3xl bg-press text-3xl text-paper shadow-stamp-lg sm:h-20 sm:w-20 sm:text-4xl"
           >
-            <span>◆</span>
+            <span data-open-glyph className="inline-block">◆</span>
           </div>
         </div>
 
