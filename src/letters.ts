@@ -1,6 +1,5 @@
-// The letter bank behind every spell-the-link finale (the main game's and
-// Pairs'). Deterministic per pivot, so the same board always offers the same
-// tiles.
+// The letter bank behind every spell-the-link finale. Deterministic per pivot,
+// so the same board always offers the same tiles.
 export function buildLetterBank(pivot: string): string[] {
   const letters = pivot.split("");
   const total = Math.min(15, Math.max(13, pivot.length + 8));

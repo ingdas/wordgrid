@@ -234,7 +234,7 @@ function now() {
   return ctx ? ctx.currentTime : 0;
 }
 
-// A voice budget. Dragging across the logic grid or spamming tiles can ask for
+// A voice budget. Spamming tiles or a burst of stings can ask for
 // dozens of overlapping oscillators; past a couple of dozen nobody can hear the
 // difference and every one of them costs CPU on a phone.
 let voices = 0;

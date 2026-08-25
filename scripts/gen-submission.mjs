@@ -20,8 +20,6 @@ import { mkdirSync } from "node:fs";
 import { launchBrowser } from "./browser.mjs";
 import { coverWide, coverSquare, coverPortrait, coverSmall } from "./submission-art.mjs";
 import { CHAPTERS, LEVELS } from "../src/puzzles.ts";
-import { DAILY_PUZZLES } from "../src/dailyPuzzles.ts";
-import { DEDUCTION_LEVELS } from "../src/deductionLevels.ts";
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "art");
 mkdirSync(OUT, { recursive: true });
@@ -92,8 +90,6 @@ function seed(cleared, keys) {
       history: [],
       score: 8400,
       endlessBest: 0,
-      pairsBest: 14,
-      deductionSolved: ["logic-1", "logic-2"],
       keys,
     }),
   );
@@ -145,87 +141,6 @@ async function spellLink(word) {
   }
 }
 
-/**
- * Colour `count` of the open Logic Grid's twelve tiles the way the puzzle's own
- * solution does, so the shot shows real deduction in progress rather than a
- * blank grid. The level is read off the header, not assumed.
- */
-async function paintLogicGrid(count) {
-  const header = await page.$eval("body", (b) => b.innerText);
-  const n = Number(/Puzzle\s+(\d+)\s*\//.exec(header)?.[1] ?? 1);
-  const solution = DEDUCTION_LEVELS[n - 1].solution;
-  const brushes = await page.$$('button[aria-label^="Group "]');
-  // Paint group by group: a brush is picked once and then used, which is how
-  // the grid is actually played.
-  for (let g = 0; g < brushes.length; g++) {
-    const cells = solution.flatMap((v, i) => (v === g && i < count ? [i] : []));
-    if (!cells.length) continue;
-    await brushes[g].click();
-    await sleep(180);
-    for (const i of cells) {
-      const tiles = await page.$$('button[aria-label^="Tile"]');
-      await tiles[i].click();
-      await sleep(160);
-    }
-  }
-}
-
-/**
- * Play the open Pairs board until `groups` groups are matched. The deck is
- * shuffled fresh every time, so this reads the twelve words off the cards, works
- * out which level's board it is dealing with, and only then starts matching —
- * the same information a player builds up by flipping.
- */
-async function playPairs(groups) {
-  // The cards are the only buttons with the card aspect ratio, and they keep
-  // their DOM position for the whole board — so an index is a place on the table.
-  const DECK = 'button[class*="aspect-[1.15/1]"]';
-  const labels = () => page.$$eval(DECK, (bs) => bs.map((x) => x.getAttribute("aria-label")));
-  const click = async (i) => {
-    const deck = await page.$$(DECK);
-    await deck[i].click();
-  };
-
-  // Turn every card over once, two at a time, remembering what was where.
-  const seen = new Array(12).fill(null);
-  for (let i = 0; i < 12; i += 2) {
-    await click(i);
-    await sleep(220);
-    await click(i + 1);
-    await sleep(260);
-    const now = await labels();
-    now.forEach((w, k) => {
-      if (w && w !== "Face-down card") seen[k] = w;
-    });
-    await sleep(1200); // they turn back
-  }
-  if (seen.some((w) => !w)) throw new Error("did not read the whole Pairs deck");
-
-  // Which board is this? The twelve spokes identify exactly one puzzle, and
-  // Pairs deals from the campaign and the daily pool alike.
-  const set = new Set(seen);
-  const level = [...LEVELS, ...DAILY_PUZZLES].find((l) => {
-    const spokes = l.categories.flatMap((c) => c.words.map((w) => w.toUpperCase()));
-    return spokes.length === set.size && spokes.every((w) => set.has(w));
-  });
-  if (!level) throw new Error(`Pairs board matched no puzzle: ${seen.join(",")}`);
-
-  // Some groups fall out of the reveal sweep by luck, so this counts what is
-  // already face up rather than assuming the board is untouched.
-  const faceUp = async () => (await labels()).filter((w) => w !== "Face-down card").length;
-  for (const cat of level.categories) {
-    if ((await faceUp()) >= groups * 2) break;
-    const words = cat.words.map((w) => w.toUpperCase());
-    const down = await labels();
-    const free = seen.flatMap((w, i) => (words.includes(w) && down[i] === "Face-down card" ? [i] : []));
-    if (free.length < 2) continue; // this one is already matched
-    await click(free[0]);
-    await sleep(240);
-    await click(free[1]);
-    await sleep(900);
-  }
-}
-
 // --- landscape set (1280×720 is CrazyGames' most common desktop embed) ------
 await openApp(1280, 720);
 await shot("screen-1-home-1280x720.png");
@@ -271,26 +186,12 @@ await shot("screen-6-boss-briefing-1280x720.png");
 await clickText("Got it", 1200);
 await shot("screen-7-boss-board-1280x720.png");
 
-// --- the other two modes ----------------------------------------------------
-// Both are shown part-played. An untouched Logic Grid is twelve blank tiles and
-// an untouched Pairs board is twelve identical card backs — true to the game,
-// and useless as a picture of it.
-await openApp(1280, 720);
-await clickText("Logic", 1400);
-await paintLogicGrid(8);
-await shot("screen-8-logic-1280x720.png");
-
-await openApp(1280, 720);
-await clickText("Pairs", 1400);
-await playPairs(3);
-await shot("screen-9-pairs-1280x720.png");
-
 // --- portrait set (phones, and the portal's mobile placements) -------------
 // A phone-sized viewport at 2× rather than a 720-wide desktop window: the app
 // lays out for the CSS width, so 720 CSS pixels would photograph a tablet.
 const PHONE = { css: [390, 844], scale: 2 }; // → 780×1688 files
 await openApp(...PHONE.css, { scale: PHONE.scale });
-await shot("screen-10-home-780x1688.png");
+await shot("screen-8-home-780x1688.png");
 
 await clickText("Browse all");
 await clickText("Play →", 1100);
@@ -298,14 +199,14 @@ for (const w of level.categories[0].words) await clickWord(w);
 await submitGroup();
 await sleep(2600);
 for (const w of level.categories[1].words) await clickWord(w);
-await shot("screen-11-board-780x1688.png");
+await shot("screen-9-board-780x1688.png");
 
 await submitGroup();
 for (const w of level.categories[2].words) await clickWord(w);
 await submitGroup();
 await sleep(1800);
 await spellLink(level.pivot.slice(0, Math.max(1, level.pivot.length - 2)));
-await shot("screen-12-finale-780x1688.png");
+await shot("screen-10-finale-780x1688.png");
 
 await browser.close();
 console.log("done →", OUT);

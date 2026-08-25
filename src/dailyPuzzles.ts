@@ -7,7 +7,7 @@ import type { RawPuzzle } from "./puzzles";
 // repeat or spoil a level the player hasn't reached. No pivot here is reused
 // from the campaign. The daily rotation walks a fixed shuffled tour of this
 // pool (see progress.ts), so a daily never repeats within a full cycle
-// (80 days). Endless mode and Pairs also draw from this pool.
+// (80 days). Endless mode also draws from this pool.
 //
 // Same shape as the campaign: 1 hidden pivot + 4 categories x 3 spokes.
 // House style: category names in plain, global English — short words, no

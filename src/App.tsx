@@ -77,11 +77,9 @@ import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
 import { BossRules } from "./BossBriefing";
-import Pairs from "./Pairs";
-import Deduction from "./Deduction";
 import { Intro } from "./Intro";
 
-type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
+type Screen = "home" | "levels" | "game";
 
 /**
  * What the win card's "Next" button should say. Most players never open the
@@ -271,7 +269,7 @@ export default function App() {
     return { prev, next };
   }, []);
 
-  /** Points earned outside the campaign — Endless, Pairs, the logic grid. */
+  /** Points earned outside the campaign — Endless. */
   const awardScore = useCallback(
     (points: number) => {
       applyProgress((p) => ({ ...p, score: p.score + points }));
@@ -657,65 +655,6 @@ export default function App() {
     gameplayStart();
   }, []);
 
-  // --- Pairs (memory) mode -------------------------------------------------
-  const playPairs = useCallback(() => {
-    initAudio();
-    startMusic();
-    setPlayingDaily(false);
-    setScreen("pairs");
-    gameplayStart();
-  }, []);
-
-  const exitPairs = useCallback(() => {
-    gameplayStop();
-    setScreen("home");
-  }, []);
-
-  // --- Deduction Grid mode -------------------------------------------------
-  const playDeduction = useCallback(() => {
-    initAudio();
-    startMusic();
-    setPlayingDaily(false);
-    setScreen("deduction");
-    gameplayStart();
-  }, []);
-
-  const exitDeduction = useCallback(() => {
-    gameplayStop();
-    setScreen("home");
-  }, []);
-
-  const handleDeductionSolve = useCallback(
-    (id: string) => {
-      happytime();
-      applyProgress((p) =>
-        p.deductionSolved.includes(id)
-          ? p
-          : {
-              ...p,
-              deductionSolved: [...p.deductionSolved, id],
-              score: p.score + 500, // a solved logic grid is worth a chunk of points
-            }
-      );
-      questEvents(["logic"]);
-    },
-    [applyProgress, questEvents]
-  );
-
-  // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
-  const handlePairsFinish = useCallback(
-    (result: { moves: number; score: number }) => {
-      happytime();
-      applyProgress((p) => ({
-        ...p,
-        score: p.score + result.score,
-        pairsBest: p.pairsBest === 0 ? result.moves : Math.min(p.pairsBest, result.moves),
-      }));
-      questEvents(["pairs"]);
-    },
-    [applyProgress, questEvents]
-  );
-
   const exitEndless = useCallback(() => {
     gameplayStop();
     applyProgress((p) => (endlessSolved <= p.endlessBest ? p : { ...p, endlessBest: endlessSolved }));
@@ -724,8 +663,8 @@ export default function App() {
   }, [endlessSolved, applyProgress]);
 
   // Playing a campaign level stains the page with that chapter's paper stock,
-  // so chapter 6 doesn't look like chapter 1. The daily, Endless, Pairs and
-  // every menu keep the plain cream — the stain means "you are in chapter N",
+  // so chapter 6 doesn't look like chapter 1. The daily, Endless and every
+  // menu keep the plain cream — the stain means "you are in chapter N",
   // and it would say nothing if it were everywhere.
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
@@ -755,7 +694,7 @@ export default function App() {
   // under it, so the hand-over is an overlap and never a blank page.
   const introHere = usePresence(intro, null, liftOut);
 
-  const onBoard = screen === "game" || screen === "pairs" || screen === "deduction";
+  const onBoard = screen === "game";
   const onBoss = screen === "game" && !endless && !playingDaily && bossTwist(levelIndex) !== null;
   useEffect(() => {
     setMusicScene(onBoss ? "boss" : onBoard ? "play" : "menu");
@@ -785,8 +724,6 @@ export default function App() {
               onLevels={openLevels}
               onDaily={playDaily}
               onEndless={playEndless}
-              onPairs={playPairs}
-              onDeduction={playDeduction}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -820,29 +757,6 @@ export default function App() {
               onToggleMute={toggleMute}
               musicOn={musicOn}
               onToggleMusic={toggleMusic}
-            />
-          </ScreenWrap>
-      )}
-
-      {!intro && shownScreen.key === "pairs" && (
-          <ScreenWrap key="pairs" ref={shownScreen.ref}>
-            <Pairs
-              reduce={reduce}
-              best={progress.pairsBest}
-              onFinish={handlePairsFinish}
-              onExit={exitPairs}
-            />
-          </ScreenWrap>
-      )}
-
-      {!intro && shownScreen.key === "deduction" && (
-          <ScreenWrap key="deduction" ref={shownScreen.ref}>
-            <Deduction
-              reduce={reduce}
-              debug={debug}
-              solvedIds={progress.deductionSolved}
-              onSolve={handleDeductionSolve}
-              onExit={exitDeduction}
             />
           </ScreenWrap>
       )}

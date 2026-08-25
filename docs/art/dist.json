@@ -1,9 +1,9 @@
 {
   "file": "wordgrid-crazygames.zip",
-  "bytes": 566150,
-  "unpacked": 1015981,
+  "bytes": 554514,
+  "unpacked": 966326,
   "version": "1.0.0",
-  "sha256": "6b882b6c3f46d0b8a4b37419274cf874f2e288724d166a9b09f47598b5a8529b",
+  "sha256": "d9259dac764216b189a2f71a84069a29f863093a193be8b2d4c3ddb28d0cea31",
   "entries": [
     {
       "path": "apple-touch-icon.png",
@@ -22,12 +22,12 @@
       "bytes": 11572
     },
     {
-      "path": "assets/index-CXLRWf5u.css",
-      "bytes": 52857
+      "path": "assets/index-4EpT-8OP.js",
+      "bytes": 550087
     },
     {
-      "path": "assets/index-DesTXZtw.js",
-      "bytes": 599742
+      "path": "assets/index-CXLRWf5u.css",
+      "bytes": 52857
     },
     {
       "path": "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",

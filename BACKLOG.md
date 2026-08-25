@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 39 (the CrazyGames upload zip is a
-build output, linked from the art page)._
+_Last updated 2026-08-26, after iteration 40 (Pairs and the Logic Grid removed;
+the game is the word board again)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -22,9 +22,8 @@ of 12 words that sort into 4 themed groups of three, all joined by one hidden
 **link word** (the "pivot", e.g. STAR) that is spelled at the end. Flow: first
 launch → straight into the guided tutorial; afterwards Home (Daily hero card,
 quests, mode row) → Level index (100 levels, 12 chapters, a boss with its own
-twist closing each) → Game. Side modes on the same boards: **Pairs** (memory
-matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
-(unlocked by finishing the campaign).
+twist closing each) → Game. One side mode: **Endless**
+(the campaign boards plus the daily pool, unlocked by finishing the campaign).
 
 ## Session bootstrap
 
@@ -33,15 +32,15 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
 - **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
-  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
-  suites: engine, deduction, progress/key gating, quests, storage, debug,
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (nine unit
+  suites: engine, progress/key gating, quests, storage, debug,
   i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
-  board), `npm run audit` (ambiguity report for a human), `npm run
-  gen:deduction` (regenerate Logic Grid levels), `node scripts/gen-assets.mjs`
+  board), `npm run audit` (ambiguity report for a human), `node
+  scripts/gen-assets.mjs`
   (og-image + icons), `npm run submission` / `npm run clip` (store art — see
   README).
-- **Headless playtests — all six must pass with zero issues before a push.**
+- **Headless playtests — all five must pass with zero issues before a push.**
   They need Chrome: either `npm install --no-save puppeteer` (pruned by any
   later `npm install`) or a system Chrome, which `scripts/browser.mjs` finds
   on its own (`CHROME_PATH` if it lives somewhere unusual). Serve the build
@@ -51,10 +50,8 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
     full flow: tutorial, boss briefing, keys, loss path, unlock reveal, the
     720p embed fitting without page scroll, unsolved titles never shown, the
     pivot never distinguishable by colour.
-  - `BASE=… node scripts/pairs.test.mjs` — a Pairs run plus the two
-    iteration-24 timer/stale-state repros.
   - `BASE=… node scripts/debug.playtest.mjs` — the tool tray, free hints,
-    auto-solve, the index and Logic Grid tools.
+    auto-solve, the index tool.
   - `BASE=… node scripts/iteration33.playtest.mjs` — quests paying out, the
     letter-counting link mask, Tab trapped in a dialog, play with a throwing
     `localStorage`.
@@ -98,17 +95,14 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   `levelTitle(index)` — use it, not `LEVELS[i].title`, because the emoji slot
   substitutes its board.
 - `dailyPuzzles.ts` — the 80-puzzle daily-only pool (no pivot shared with the
-  campaign). Also feeds Endless and Pairs.
-- `deductionLevels.ts` / `deductionRules.ts` — the 30 pre-generated Logic Grid
-  levels (`logic-1…30`) and the clue rules shared by the generator and the
-  screen.
+  campaign). Also feeds Endless.
 - `engine.ts` — pure, unit-tested: `evaluateGuess` (one-away), `computeStars`,
   `linkMatches` (case/plural/synonyms via `accept`), `scrambleWord`,
   `cipherWord` (vowel-stripping; imported back by `puzzles.ts` with an
   explicit `.ts` extension so node scripts can load it), `shuffle`, `guessKey`.
 - `progress.ts` — `Progress` schema: `stars`, `streak`, `bestStreak`,
   `linksGuessed`, `best`, `daily{lastDate,streak}`, `achievements`, `hints`,
-  `history`, `score`, `endlessBest`, `pairsBest`, `deductionSolved`, `seen`,
+  `history`, `score`, `endlessBest`, `seen`,
   `banked`, `keys`, `quests`. `isUnlocked` (`LOOKAHEAD = 3` + debug + the
   chapter-key boss gate), `endlessUnlocked` (every campaign level cleared, or
   debug), the key helpers (`bankedLetters`/`keyReady`/`keySolved`/`solveKey`/
@@ -117,7 +111,7 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   debug-blind, both migrated), `dailyPuzzle()` (fixed seeded tour, same for
   everyone, no repeat in 80 days), `liveDailyStreak` (only a run cleared today
   or yesterday counts). Rules pinned in `scripts/progress.test.mts`.
-- `quests.ts` — `QUEST_POOL` (7), `QUESTS_PER_DAY = 3`, a date-seeded draw that
+- `quests.ts` — `QUEST_POOL` (5), `QUESTS_PER_DAY = 3`, a date-seeded draw that
   never exactly repeats yesterday's, `recordQuest` pays once. `QUEST_REWARD =
   1` hint, `QUEST_SET_BONUS = 2`, `COMBO_TARGET = 3`. State rides in
   `Progress.quests`; events are raised in `App.tsx`.
@@ -140,8 +134,7 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 - `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
 - `i18n/` — `index.ts` (detect, persist, `t()`, `plural()`), `en.ts` (source
   of truth, ~460 keys), `es.ts`. Components never hold copy: chapter names,
-  tier labels, achievement titles, boss rules/briefings and every Logic clue
-  sentence are keys. Puzzle *content* stays English on purpose (see
+  tier labels, achievement titles, boss rules and briefings are keys. Puzzle *content* stays English on purpose (see
   Decisions). `scripts/i18n.test.mts` fails on a missing/stray key or a lost
   `{placeholder}`.
 - `sdk.ts` — defensive CrazyGames v3 wrapper. Off-platform the script loads
@@ -185,14 +178,13 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 
 ### Screens (`src/`)
 
-- `App.tsx` — screen router (home / levels / game / pairs / deduction) and
+- `App.tsx` — screen router (home / levels / game) and
   progress state. **All progress writes go through `applyProgress(mutate)`**;
   side effects (save, achievements, toasts, quest events) run in the handler,
   never inside a React updater. `handleWin` (stars/streak/best/+1 hint/score,
   achievements, history; a daily win never writes campaign stars — history id
   = daily id, level 0). Daily via `overrideRaw`; Endless (campaign + daily
-  pool, no-fail, `endlessBest`, gated on a finished campaign); Pairs and
-  Logic routing; the sheets (settings: sound + level, music + level, calm,
+  pool, no-fail, `endlessBest`, gated on a finished campaign); the sheets (settings: sound + level, music + level, calm,
   locale, Developer → debug toggle + level tracking, reset; stats; history;
   how-to-play); the storage banner; music scene; `visibilitychange` pause;
   rewarded `refillHints` (+3).
@@ -205,8 +197,8 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   playtest reads its duration off `data-intro`.
 - `StartScreen.tsx` — Daily hero (7-day streak strip, countdown, Solve CTA),
   the quests card, Continue · L{n} (plays that level; the index is the link
-  under it), mode row (Endless — a locked door until the campaign is done ·
-  Pairs · Logic), each stat with its unit. Two columns at `lg`.
+  under it), the Endless
+  door (locked until the campaign is done), each stat with its unit. Two columns at `lg`.
 - `LevelSelect.tsx` — the level **index**: an Up-next card (chapter, tier,
   boss rule, community clear rate, Play), then twelve chapter sections in
   their own ink, each split into `LevelRow` (solved: numeral · title · dotted
@@ -236,25 +228,6 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   rule strip reopens it) and `BossRules` (reused by how-to-play). Copy:
   `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
 - `EndCard.tsx` — win/loss card, stars, ratings, share.
-- `Pairs.tsx` — 🃏 matching → coupling (the four leftovers; a wrong couple
-  flashes red and stays in hand, still costs a move) → spell the link.
-  Fewest moves = `pairsBest`. All timers go through a cancellable `later()`;
-  tap guards read refs, not closure state. Face-down cards never leak their
-  word.
-- `Deduction.tsx` — 🧩 Logic Grid. A 3×4/4×3 grid, four hidden groups of
-  three in any shape (15,400 partitions); eight clue kinds drawn as icon +
-  value with a per-board key (`deg`, `dir`, `diag`, `line`, `parity`,
-  `corners` on tiles; `rainbow`, `onepair` on row/column headers). Paint by
-  tap or drag; live ✓/✕ badge per clue; a full wrong board shakes and opens a
-  plain-words problem panel. Generator (`scripts/gen-deduction.mts`) keeps
-  only boards a human-style forced-inference solver cracks, minimises clues,
-  proves uniqueness by brute force, and orders levels as a vocabulary ramp
-  (`BANDS`); the tier chip reports measured inference depth. **Adding a clue
-  kind**: a `countScope` entry (or pair/line rule) in `deductionRules.ts`
-  (shared by the generator, the screen and `scripts/deduction.test.mts`),
-  wording in `clueText`/`violationText` and a `LEGEND` row in
-  `Deduction.tsx`, a `BANDS` slot in `scripts/gen-deduction.mts`, then
-  `npm run gen:deduction`.
 - `LevelStats.tsx` — Settings → Developer → Level tracking dashboard, plus
   `useCommunityStats()` for the Up-next card's clear-rate line.
 - `DebugPanel.tsx` — the 🛠 tray, bottom-left, mounted only in debug mode;
@@ -269,13 +242,12 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 
 ### Elsewhere
 
-- `scripts/` — `validate.mts`, `audit.mts`, `gen-deduction.mts`, the ten
-  `*.test.mts` unit suites, the five `*.playtest.mjs` / `pairs.test.mjs`
-  browser suites, `browser.mjs` (Chrome launcher), `gen-assets.mjs`,
-  `gen-submission.mjs` + `submission-art.mjs`, `gen-clip.mjs`, `dist-zip.mts`
-  (a dependency-free, byte-reproducible ZIP writer and the Vite plugin that
-  runs it at the end of every build; `EXCLUDE` says what stays out) +
-  `dist.playtest.mjs`.
+- `scripts/` — `validate.mts`, `audit.mts`, the nine `*.test.mts` unit
+  suites, the five `*.playtest.mjs` browser suites, `browser.mjs` (Chrome
+  launcher), `gen-assets.mjs`, `gen-submission.mjs` + `submission-art.mjs`,
+  `gen-clip.mjs`, `dist-zip.mts` (a dependency-free, byte-reproducible ZIP
+  writer and the Vite plugin that runs it at the end of every build; `EXCLUDE`
+  says what stays out) + `dist.playtest.mjs`.
 - `server/stats-server.mjs` — dependency-free Node + SQLite reference server
   for level tracking (`POST /events`, `GET /levels`, `/levels.csv`,
   `/health`).
@@ -385,8 +357,9 @@ the hardest; *emoji* — the one bespoke board.
 - Twist deal rules: no adjacent repeats; emoji exactly once (it swaps in the
   one bespoke board); memory never beside blackout; cipher never beside
   scramble.
-- **Memory boss ≠ Pairs.** Pairs is a flip-two mode on its own screen; the
-  memory boss is the normal grouping game on a board you can no longer read.
+- **The memory boss is not a matching game.** It is the normal grouping game
+  on a board you can no longer read; the flip-two Pairs mode that once sat
+  beside it was a separate screen, never its base, and is gone (see below).
 
 **Level index**
 - It is an **index, not a map**: solved levels are named rows in aligned
@@ -417,11 +390,15 @@ the hardest; *emoji* — the one bespoke board.
 **Meta and platform**
 - Daily is a deterministic seeded tour — same board for everyone, nothing
   stored; a daily win never touches campaign stars.
-- Quests are a **pure function of the date**, paid in hints the moment a goal
-  is met (no claim button); a `pairs`/`logic` draw is the only nudge into a
-  side mode.
+- Quests are a **pure function of the date**, paid in hints the moment a goal is met (no claim button).
 - Endless is locked behind a finished campaign — it's the payoff, not a
-  fourth mode on day one.
+  second mode on day one.
+- **Pairs and the Logic Grid were removed (iteration 40, owner's call).** The
+  game is the word board; two unrelated side modes on the home screen split
+  the pitch and the player's attention. Both screens, the 30 generated levels,
+  the generator, their tests and store shots are in git at `d2f4f8a`. Their
+  quests (`pairs`, `logic`) and save fields (`pairsBest`, `deductionSolved`)
+  went with them — an old save's stray keys are dropped by `loadProgress`.
 - Storage: the "nothing durable" banner waits ~8 s for the async SDK; a live
   save is never overwritten by a stale platform copy (adoption only fills a
   key we have nothing for).
@@ -434,8 +411,8 @@ the hardest; *emoji* — the one bespoke board.
   and `activate` clears only `wordgrid-*` caches — CacheStorage is per origin,
   and both `ingdas.github.io` and a portal's games host are shared origins.
 - **Puzzle content is not localized.** A board of English words can only be
-  rewritten per language, not translated; a locale unlocks the Logic Grid
-  (no vocabulary) and every menu, rule and result screen.
+  rewritten per language, not translated; a locale unlocks every menu, rule and
+  result screen.
 
 **Audio and motion**
 - Music defaults to **off** — honest for a loop that has to survive an hour.
@@ -518,6 +495,7 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
+| 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | — |
 | 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
 | 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
 | 37 | GSAP for the beats, then Framer Motion retired entirely; `anim.ts`, `usePresence`, shared `dialogIn`; found and fixed a chapter-key DOM leak | `2dd039e` `d400a92` `a6f89ee` |

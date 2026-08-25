@@ -8,9 +8,8 @@
 // SCOPE, stated plainly: this localizes the interface, not the puzzles. The
 // word modes are English by construction — a board of English words with
 // English category names can't be translated, only rewritten per language.
-// What a translated UI does unlock today is the **Logic Grid**, which is pure
-// deduction with no vocabulary at all, plus every menu, rule and result screen
-// around the rest.
+// What a translated UI does unlock is every menu, rule and result screen
+// around the boards.
 import { readItem, writeItem } from "../storage.ts";
 import { en } from "./en.ts";
 import { es } from "./es.ts";

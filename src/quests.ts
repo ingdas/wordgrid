@@ -2,9 +2,8 @@
 //
 // The game already counts a lot of things forever: stars, achievements tiers,
 // lifetime score, best streak. What none of those give a returning player is a
-// reason to play *today* specifically, or a reason to open a mode they've never
-// touched. Three goals that reset every night do both, and they pay in the one
-// currency the game actually spends — hint tokens.
+// reason to play *today* specifically. Three goals that reset every night do,
+// and they pay in the one currency the game actually spends — hint tokens.
 //
 // Deliberately small: one hint per quest, two more for the set (five a day at
 // most, against one hint per level cleared). They nudge; they don't become the
@@ -15,7 +14,7 @@
 // App.tsx wherever a board finishes.
 
 /** Everything a quest can be counting. Raised by App.tsx on a finished board. */
-export type QuestEvent = "solve" | "perfect" | "link" | "combo" | "daily" | "logic" | "pairs";
+export type QuestEvent = "solve" | "perfect" | "link" | "combo" | "daily";
 
 export interface QuestDef {
   id: string;
@@ -34,8 +33,6 @@ export const QUEST_POOL: QuestDef[] = [
   { id: "link", icon: "🔑", event: "link", goal: 1, titleKey: "quest.link.title" },
   { id: "combo", icon: "🔥", event: "combo", goal: 1, titleKey: "quest.combo.title" },
   { id: "daily", icon: "📅", event: "daily", goal: 1, titleKey: "quest.daily.title" },
-  { id: "logic", icon: "🧠", event: "logic", goal: 1, titleKey: "quest.logic.title" },
-  { id: "pairs", icon: "🃏", event: "pairs", goal: 1, titleKey: "quest.pairs.title" },
 ];
 
 /** A ×3 chain is what the "combo" quest asks for — three groups, no misses. */

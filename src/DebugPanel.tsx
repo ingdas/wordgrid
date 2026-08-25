@@ -6,7 +6,7 @@ import { t } from "./i18n";
 // The debug tool tray. Mounted only when debug mode is on (see src/debug.ts),
 // and collapsed to a single 🛠 button until it's asked for, so a screen being
 // tested still looks like the screen a player sees. Each screen passes its own
-// tools — the word game solves groups, the Logic Grid paints its solution.
+// tools — the board solves groups, the index clears levels.
 //
 // Pinned bottom-left: the toast sits bottom-centre and the coach card bottom-
 // middle, so this is the one corner nothing else claims.

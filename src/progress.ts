@@ -20,8 +20,6 @@ export interface Progress {
   history: HistoryEntry[]; // recent finished games, newest first
   score: number; // lifetime points (groups + combos + links)
   endlessBest: number; // most puzzles cleared in one Endless run
-  pairsBest: number; // fewest moves to clear a Pairs board (0 = never cleared)
-  deductionSolved: string[]; // ids of solved Deduction Grid levels
   seen: string[]; // level ids already watched opening on the map (see newlyUnlocked)
   banked: string[]; // level ids already watched handing their key letter over
   keys: number[]; // chapter indices whose key has been spelled (opens that boss)
@@ -68,8 +66,6 @@ export function loadProgress(): Progress {
         history: p.history ?? [],
         score: p.score ?? 0,
         endlessBest: p.endlessBest ?? 0,
-        pairsBest: p.pairsBest ?? 0,
-        deductionSolved: p.deductionSolved ?? [],
         seen: p.seen ?? [],
         banked: p.banked ?? [],
         keys: p.keys ?? [],
@@ -101,8 +97,6 @@ export function loadProgress(): Progress {
     history: [],
     score: 0,
     endlessBest: 0,
-    pairsBest: 0,
-    deductionSolved: [],
     // The levels a brand-new player starts with were never locked to them, so
     // they don't get an unlock reveal on the first visit to the map.
     seen: LEVELS.slice(0, LOOKAHEAD).map((l) => l.id),
