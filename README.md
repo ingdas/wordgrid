@@ -55,7 +55,48 @@ a missing key or a dropped `{placeholder}`.
 
 - [Vite](https://vitejs.dev/) + [React 19](https://react.dev/) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com/)
-- [Framer Motion](https://www.framer.com/motion/) for the animations
+- [GSAP](https://gsap.com/) for the beats, [Framer Motion](https://www.framer.com/motion/)
+  for presence and layout — see [Motion](#motion)
+
+## Motion
+
+The animation is split down one line, and it isn't arbitrary. **Framer Motion**
+keeps what it is good at: things entering and leaving (`AnimatePresence` — the
+toast, the reward popups, the second-chance offer) and layout that has to
+reflow. **GSAP** owns the *beats* — the moments the game reacts to something you
+did — because those want timelines, staggers and to be fired from an event
+handler, which is awkward in a declarative animation library and native to an
+imperative one. Nothing animates a property that a `motion.*` component is also
+driving on the same node, or the two would take turns writing the same
+transform.
+
+All of it lives in [`src/anim.ts`](./src/anim.ts), and it animates the identity
+rather than in spite of it: this is a print shop, so things are **stamped** onto
+the page (a hand-authored `CustomEase` that hits hard and rocks twice, like a
+rubber stamp on paper), a rejected guess **rattles** the board like a shoved
+sheet, and the confetti is punched-paper chads that flutter edge-on as they
+fall. The beats worth knowing about:
+
+- **A solved group** is one move, not two. The three tiles you picked are
+  photocopied where they stand, the banner is stamped onto the page, and the
+  copies are flown into it — so the group visibly *becomes* the banner instead
+  of one thing vanishing while another appears somewhere else. The paper is
+  then thrown from the banner, which is where the good news happened.
+- **A shuffle** slides every tile from where it was to where it now is
+  (GSAP Flip), with a few degrees of spin so it reads as a hand of cards being
+  cut rather than a spreadsheet re-sorting.
+- **The score** counts up to its new total instead of jumping to it, written
+  straight to the DOM — sixty renders a second of a whole game screen to
+  animate one label is not a trade worth making.
+- **The link reveal** — the climax — sets the word letter by letter, as if it
+  were being assembled in a composing stick.
+- **A spent guess** doesn't fade out. It takes a hit: a hard flick out and back
+  down to a grey nub.
+
+One module-level flag turns every one of them into a cut, kept in step with the
+system's reduced-motion preference and the in-game **Calm** switch by `App`.
+A beat fired from a handler five components deep can't forget to check it,
+which is the failure mode that setting exists to prevent.
 
 ## Develop
 

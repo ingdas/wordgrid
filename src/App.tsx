@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useReduceMotion } from "./anim";
 import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type BossTwist, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
@@ -105,6 +106,10 @@ export default function App() {
   const systemReduce = useReducedMotion() ?? false;
   const [calm, setCalm] = useState(readCalm);
   const reduce = systemReduce || calm; // calm mode = no confetti / minimal motion
+  // One switch for the whole GSAP layer: every beat in src/anim.ts checks it,
+  // including the ones fired from event handlers deep in a screen that was
+  // never handed the flag as a prop.
+  useReduceMotion(reduce);
   // The interactive coached tutorial runs once, on the player's first level.
   const [tutorialPending, setTutorialPending] = useState(() => !readItem("wordgrid:tutorial"));
   // First-ever launch drops straight into the tutorial level rather than the

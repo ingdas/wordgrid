@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import gsap from "gsap";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
@@ -13,6 +14,25 @@ import { BossBriefing } from "./BossBriefing";
 import { DebugPanel } from "./DebugPanel";
 import { EndCard } from "./EndCard";
 import Confetti from "./Confetti";
+import {
+  EASE,
+  breathe,
+  captureGhosts,
+  captureOrder,
+  dealIn,
+  flyGhosts,
+  inkFlash,
+  playOrder,
+  pressDown,
+  punch,
+  rattle,
+  release,
+  stampIn,
+  useElementMap,
+  useGsap,
+  useOdometer,
+  type Ghost,
+} from "./anim";
 import {
   playSelect,
   playDeselect,
@@ -147,8 +167,10 @@ export default function Game({
   const [mistakes, setMistakes] = useState(0);
   const mistakesRef = useRef(0);
   const [status, setStatus] = useState<Status>("playing");
-  const [shake, setShake] = useState(0);
   const [burst, setBurst] = useState(0);
+  // Where the last group landed, so its paper is thrown from the banner
+  // instead of dropped over the whole screen.
+  const [burstAt, setBurstAt] = useState<{ x: number; y: number } | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
   const [pastGuesses, setPastGuesses] = useState<Set<string>>(new Set());
   const [linkGuess, setLinkGuess] = useState<string | null>(null);
@@ -189,6 +211,9 @@ export default function Game({
   // Decoys are appended last, so shuffle once up front to scatter the impostors.
   const [order, setOrder] = useState<string[]>(() => (twist === "decoy" ? shuffle(spokeTiles) : spokeTiles));
   const [now, setNow] = useState(Date.now());
+  // Bumped whenever the board should be dealt again from scratch: a restart,
+  // and the moment the memory boss turns every tile over.
+  const [dealKey, setDealKey] = useState(0);
   const [coach, setCoach] = useState(tutorial ? 0 : -1);
   const [finalMs, setFinalMs] = useState(0);
   const reported = useRef(false);
@@ -199,6 +224,20 @@ export default function Game({
   const isTutorialRun = useRef(tutorial).current;
   const coachMisses = useRef(0);
   const finaleHinted = useRef(false);
+
+  // --- the press ----------------------------------------------------------
+  // Handles the GSAP layer animates through (see src/anim.ts). The board and
+  // the banner column hand out one element per word / per group name, so a
+  // beat raised in an event handler can reach exactly the tiles it's about.
+  const boardRef = useRef<HTMLDivElement>(null);
+  const linkCardRef = useRef<HTMLDivElement>(null);
+  const tiles = useElementMap<string>();
+  const banners = useElementMap<string>();
+  // Photocopies of the three tiles a solve just took off the board, parked
+  // here until the banner they belong to has rendered and can be flown to.
+  const pendingGhosts = useRef<{ name: string; ghosts: Ghost[] } | null>(null);
+  // Where every tile was standing immediately before a shuffle reordered them.
+  const shuffleFrom = useRef<ReturnType<typeof captureOrder>>(null);
 
   // The board was dealt: that's one attempt at this level. Raised here rather
   // than at the five places that push the player into a game, so it can't
@@ -300,7 +339,10 @@ export default function Game({
     (cat: Category, index: number) => {
       playCorrect(index);
       buzz(30);
-      setBurst((b) => b + 1);
+      // Photocopy the three tiles where they stand. The next line takes them
+      // off the board; the copies are what fly into the banner, once the
+      // banner exists to be flown to (see the layout effect below).
+      pendingGhosts.current = { name: cat.name, ghosts: captureGhosts(tiles.pick(cat.spokes)) };
       setAnnounce(t("game.groupFound", { theme: cat.name, n: index + 1 }));
       setSolved((prev) => [...prev, cat]);
       setSelected([]);
@@ -316,7 +358,7 @@ export default function Game({
       setScore((s) => s + pts);
       pushPop(nc > 1 ? `+${pts}  ×${nc}` : `+${pts}`);
     },
-    [buzz, pushPop]
+    [buzz, pushPop, tiles]
   );
 
   // Auto-solve the final pair, then move on — normally into the "guess the
@@ -332,6 +374,49 @@ export default function Game({
     // nothing left to ask — the last group solved is the win.
     if (solved.length === puzzle.categories.length) setStatus(linkGuess != null ? "won" : "guessing");
   }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, linkGuess]);
+
+  // A solved group, in one move: the banner is stamped onto the page and the
+  // three tiles that earned it are pulled off the board and filed into it, so
+  // the group visibly *becomes* the banner instead of one thing vanishing
+  // while another appears somewhere else. Confetti is thrown when they land —
+  // from the banner, which is where the good news actually happened.
+  useLayoutEffect(() => {
+    const pending = pendingGhosts.current;
+    if (!pending) return;
+    pendingGhosts.current = null;
+    const banner = banners.map.get(pending.name) ?? null;
+    stampIn(banner);
+    flyGhosts(pending.ghosts, banner, {
+      onDone: () => {
+        if (!banner?.isConnected) return;
+        const box = banner.getBoundingClientRect();
+        inkFlash(banner, "rgba(255, 253, 246, 0.9)");
+        punch(linkCardRef.current, 1.05);
+        setBurstAt({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+        setBurst((b) => b + 1);
+      },
+    });
+  }, [solved, banners]);
+
+  // Deal the board in: on arrival, on a restart, and when the memory boss
+  // turns every tile face-down — the same wave of paper landing, which is the
+  // honest way to show a board that has just become a different board.
+  useLayoutEffect(() => {
+    dealIn(tiles.pick(order));
+    // Dealing is about the board as a whole, not about which words are left on
+    // it — re-running it every time a group is solved would re-deal the
+    // survivors on top of the flight that just took their neighbours away.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealKey, puzzle]);
+
+  // A shuffle slides every tile from where it was to where it now is, rather
+  // than teleporting the board into a new arrangement.
+  useLayoutEffect(() => {
+    const from = shuffleFrom.current;
+    shuffleFrom.current = null;
+    playOrder(from, tiles.pick(order), { spin: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order]);
 
   // Advance the coach once the player lands their first pair, and record that
   // the tutorial has been completed so it never re-triggers.
@@ -416,13 +501,16 @@ export default function Game({
     }
     if (result.kind === "repeat") {
       setToast(t("game.repeat"));
-      setShake((s) => s + 1);
+      // A guess you've already made costs nothing, so the board only twitches.
+      rattle(boardRef.current, tiles.pick(remainingSpokes), 0.5);
       return;
     }
     if (result.oneAway) playNearMiss();
     else playWrong();
     buzz([0, 50, 30, 50]);
-    setShake((s) => s + 1);
+    // Rejected: the sheet is shoved and the tiles rattle after it, from the
+    // middle out, so the whole board reads as one piece of paper.
+    rattle(boardRef.current, tiles.pick(remainingSpokes));
     // During the guided tutorial a wrong guess never costs anything — just nudge
     // toward the theme, escalating to a real hint if they keep missing (but
     // never handing over the whole group).
@@ -458,7 +546,7 @@ export default function Game({
       if (!secondChanceUsed) setOffering(true);
       else setStatus("lost");
     }
-  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes, tiles, remainingSpokes]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
@@ -482,14 +570,18 @@ export default function Game({
 
   const shuffleTiles = useCallback(() => {
     playWhoosh();
+    // Record where every tile is standing *now*: the layout effect on `order`
+    // slides them from here to wherever the new arrangement puts them.
+    shuffleFrom.current = captureOrder(tiles.pick(order));
     setOrder((o) => shuffle(o));
-  }, []);
+  }, [tiles, order]);
 
   // Ready: flip the memory board. The clock restarts here, so studying for as
   // long as you like never shows up as a slow round on the win card.
   const flipBoard = useCallback(() => {
     playSelect();
     setFlipped(true);
+    setDealKey((k) => k + 1); // every tile has just become a different tile
     startedAt.current = Date.now();
     setNow(Date.now());
   }, []);
@@ -595,8 +687,8 @@ export default function Game({
     mistakesRef.current = 0;
     setMistakes(0);
     setStatus("playing");
-    setShake(0);
     setBurst(0);
+    setBurstAt(undefined);
     setToast(null);
     setPastGuesses(new Set());
     setLinkGuess(null);
@@ -620,6 +712,7 @@ export default function Game({
     coachMisses.current = 0;
     finaleHinted.current = false;
     setOrder(shuffle(spokeTiles));
+    setDealKey((k) => k + 1);
   }, [spokeTiles, twist, clearTimers]);
 
   // Keyboard shortcuts: Enter submits, Escape clears.
@@ -822,6 +915,7 @@ export default function Game({
         <div className="min-w-0 lg:max-w-xl lg:flex-1">
         {/* The secret link — present in every group, word hidden until the end */}
         <SecretLink
+          ref={linkCardRef}
           reveal={revealLink}
           word={puzzle.pivot}
           spotlight={coach === 0}
@@ -838,6 +932,7 @@ export default function Game({
               {bannerCats.map((cat, i) => (
                 <SolvedBanner
                   key={cat.name}
+                  ref={banners.bind(cat.name)}
                   cat={cat}
                   themeIndex={indexByName.get(cat.name) ?? 0}
                   masked={maskSolved}
@@ -860,31 +955,29 @@ export default function Game({
         )}
 
         {(status === "playing" || status === "lost" || linkPending) && (
-          <motion.div
-            key={shake}
-            animate={shake && !reduce ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
-            transition={{ duration: 0.45 }}
-            className="mt-4 flex flex-wrap justify-center gap-3"
-          >
-            <AnimatePresence mode="popLayout">
-              {remainingSpokes.map((word) => (
-                <WordTile
-                  key={word}
-                  word={word}
-                  display={displayOf(word)}
-                  emoji={twist === "emoji"}
-                  // A face-down tile keeps the number it had when the board
-                  // flipped, so "the fourth one" stays a thing you can hold on
-                  // to as its neighbours are solved away.
-                  faceDown={faceDown(word)}
-                  slot={order.indexOf(word) + 1}
-                  selected={selected.includes(word)}
-                  disabled={status !== "playing" || offering || studying}
-                  onClick={() => toggleSelect(word)}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          // No presence/layout animation on this list: every way a tile can
+          // leave the board is a beat the press already owns — solved tiles
+          // fly into their banner, a shuffle slides them, a rejected guess
+          // rattles them. See the layout effects above.
+          <div ref={boardRef} className="mt-4 flex flex-wrap justify-center gap-3">
+            {remainingSpokes.map((word) => (
+              <WordTile
+                key={word}
+                ref={tiles.bind(word)}
+                word={word}
+                display={displayOf(word)}
+                emoji={twist === "emoji"}
+                // A face-down tile keeps the number it had when the board
+                // flipped, so "the fourth one" stays a thing you can hold on
+                // to as its neighbours are solved away.
+                faceDown={faceDown(word)}
+                slot={order.indexOf(word) + 1}
+                selected={selected.includes(word)}
+                disabled={status !== "playing" || offering || studying}
+                onClick={() => toggleSelect(word)}
+              />
+            ))}
+          </div>
         )}
         {status === "lost" && (
           <p className="mt-6 text-center text-sm text-ink-soft">
@@ -1115,9 +1208,9 @@ export default function Game({
       )}
 
       {!reduce && burst > 0 && status === "playing" && (
-        <Confetti key={burst} count={Math.min(64, 16 + combo * 12)} />
+        <Confetti key={burst} count={Math.min(64, 16 + combo * 12)} origin={burstAt} power={0.7 + combo * 0.15} />
       )}
-      {status === "won" && !reduce && <Confetti count={110} />}
+      {status === "won" && !reduce && <Confetti count={130} />}
     </div>
   );
 }
@@ -1147,22 +1240,50 @@ function buildShare(opts: {
 }
 
 function SecretLink({
+  ref,
   reveal,
   word,
   spotlight,
   score,
   combo,
 }: {
+  ref?: Ref<HTMLDivElement>;
   reveal: boolean;
   word: string;
   spotlight: boolean;
   score: number;
   combo: number;
 }) {
+  const card = useRef<HTMLDivElement | null>(null);
+  // The score counts up to its new total rather than jumping to it — a group
+  // is worth a hundred points and it should look like it earned them.
+  const total = useOdometer(score);
+  const comboChip = useRef<HTMLSpanElement>(null);
+
+  // While the coach is pointing at this card it breathes, and stops the moment
+  // it isn't the thing being pointed at any more.
+  useEffect(() => {
+    if (!spotlight) return;
+    const tw = breathe(card.current);
+    return () => {
+      tw?.kill();
+      if (card.current) gsap.set(card.current, { clearProps: "scale" });
+    };
+  }, [spotlight]);
+
+  // A combo that just went up gets a beat of its own — it's the one number on
+  // screen that says you're on a run.
+  useEffect(() => {
+    if (combo >= 2) punch(comboChip.current, 1.35);
+  }, [combo]);
+
   return (
-    <motion.div
-      animate={spotlight ? { scale: [1, 1.04, 1] } : {}}
-      transition={{ duration: 1.4, repeat: spotlight ? Infinity : 0 }}
+    <div
+      ref={(el) => {
+        card.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       className={`relative overflow-hidden rounded-2xl border px-4 py-3 text-center ${
         spotlight ? "border-press ring-2 ring-press/60" : "border-ink/25"
       }`}
@@ -1171,8 +1292,12 @@ function SecretLink({
       {score > 0 && (
         <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-extrabold text-gold-deep">
           <span aria-hidden>✦</span>
-          {score.toLocaleString()}
-          {combo >= 2 && <span className="ml-0.5 text-press">🔥{combo}</span>}
+          <span ref={total}>{score.toLocaleString()}</span>
+          {combo >= 2 && (
+            <span ref={comboChip} className="ml-0.5 inline-block text-press">
+              🔥{combo}
+            </span>
+          )}
         </div>
       )}
       <div className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-ink-soft">
@@ -1181,13 +1306,7 @@ function SecretLink({
       <div className="mt-1 flex items-center justify-center gap-2">
         <span aria-hidden className="text-lg">◆</span>
         {reveal ? (
-          <motion.span
-            initial={{ rotateX: 90, opacity: 0 }}
-            animate={{ rotateX: 0, opacity: 1 }}
-            className="font-display text-2xl font-bold uppercase tracking-wide text-ink"
-          >
-            {word}
-          </motion.span>
+          <LinkWord word={word} />
         ) : (
           // One ? per letter. The mask used to be a fixed `? ? ?` whatever the
           // pivot was, which made the link something you could only attack at
@@ -1201,11 +1320,49 @@ function SecretLink({
           </span>
         )}
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+/**
+ * The reveal — the climax of a level, so it isn't a fade.
+ *
+ * The word is set letter by letter, each one dropping onto the card as if it
+ * were being placed in a composing stick: a whole line of type assembled in
+ * front of you, left to right, and then the card takes the weight of it.
+ */
+function LinkWord({ word }: { word: string }) {
+  const row = useGsap<HTMLSpanElement>((scope) => {
+    const letters = scope.querySelectorAll("[data-letter]");
+    gsap
+      .timeline()
+      .fromTo(
+        letters,
+        { y: -26, opacity: 0, rotateX: -80, scale: 1.4 },
+        { y: 0, opacity: 1, rotateX: 0, scale: 1, duration: 0.44, ease: EASE.stamp, stagger: 0.055 }
+      )
+      .to(scope, { scale: 1.08, duration: 0.14, ease: EASE.press }, ">-0.1")
+      .to(scope, { scale: 1, duration: 0.5, ease: EASE.stamp });
+  }, [word]);
+
+  return (
+    <span
+      ref={row}
+      aria-label={word}
+      className="inline-flex font-display text-2xl font-bold uppercase tracking-wide text-ink"
+      style={{ perspective: 400 }}
+    >
+      {word.split("").map((ch, i) => (
+        <span key={i} data-letter aria-hidden className="inline-block">
+          {ch}
+        </span>
+      ))}
+    </span>
   );
 }
 
 function WordTile({
+  ref,
   word,
   display,
   emoji,
@@ -1215,6 +1372,7 @@ function WordTile({
   disabled,
   onClick,
 }: {
+  ref?: Ref<HTMLButtonElement>;
   word: string;
   display?: string;
   emoji?: boolean;
@@ -1246,14 +1404,24 @@ function WordTile({
     : "border-2 border-ink bg-white text-ink shadow-stamp-sm hover:bg-cream";
   if (selected) look = "border-2 border-ink bg-ink text-paper translate-x-[2px] translate-y-[2px]";
 
+  // The press comes down on pointer-down and lifts on release, so the tile is
+  // under your finger for as long as your finger is on it — a fixed-length tap
+  // animation is a tile that springs back while you're still holding it.
+  const el = useRef<HTMLButtonElement | null>(null);
+  const down = () => !disabled && pressDown(el.current);
+  const up = () => !disabled && release(el.current);
+
   return (
-    <motion.button
-      layout
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.4, y: -24 }}
-      transition={{ type: "spring", stiffness: 380, damping: 28 }}
-      whileTap={disabled ? undefined : { scale: 0.92 }}
+    <button
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      onPointerDown={down}
+      onPointerUp={up}
+      onPointerLeave={up}
+      onPointerCancel={up}
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
@@ -1263,11 +1431,12 @@ function WordTile({
       className={`relative grid aspect-[1.7/1] w-[calc((100%-1.5rem)/3)] select-none place-items-center rounded-2xl px-1.5 text-center font-bold uppercase leading-tight tracking-wide transition-colors duration-150 ${sizeClass} ${look} disabled:cursor-default`}
     >
       {shown}
-    </motion.button>
+    </button>
   );
 }
 
 function SolvedBanner({
+  ref,
   cat,
   themeIndex,
   masked,
@@ -1275,6 +1444,7 @@ function SolvedBanner({
   compact,
   order,
 }: {
+  ref?: Ref<HTMLDivElement>;
   cat: Category;
   themeIndex: number;
   masked: boolean;
@@ -1284,13 +1454,12 @@ function SolvedBanner({
   order: number;
 }) {
   const theme = CATEGORY_THEMES[themeIndex % CATEGORY_THEMES.length];
+  // The stamp itself is fired by the board (it has to be sequenced with the
+  // tiles flying in), so this is just the surface it lands on.
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9, y: -8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className={`flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r ${theme.grad} shadow-stamp ${
+    <div
+      ref={ref}
+      className={`flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r ${theme.grad} shadow-stamp transition-[padding] duration-300 ${
         compact ? "px-3 py-1.5" : "px-4 py-2.5"
       }`}
       style={{ color: theme.ink }}
@@ -1310,7 +1479,7 @@ function SolvedBanner({
           </span>
         ))}
       </span>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1386,6 +1555,47 @@ function ContinueOffer({ onAccept, onDecline }: { onAccept: () => Promise<void>;
   );
 }
 
+/**
+ * The guesses you have left, as a row of stamp-red dots.
+ *
+ * A dot doesn't fade out when it's spent — it takes a hit: a hard flick out to
+ * one and a half and back down to a grey nub, which is the only place on the
+ * board where losing something is shown as an event rather than a state.
+ */
+function MistakeDots({ mistakes, max }: { mistakes: number; max: number }) {
+  const row = useRef<HTMLDivElement>(null);
+  const spent = useRef(mistakes);
+
+  useEffect(() => {
+    const dots = row.current?.children;
+    const was = spent.current;
+    spent.current = mistakes;
+    if (!dots) return;
+    for (let i = 0; i < dots.length; i++) {
+      const live = i < max - mistakes;
+      const justSpent = !live && i >= max - was;
+      const dot = dots[i] as HTMLElement;
+      if (justSpent) punch(dot, 1.6);
+      gsap.to(dot, {
+        scale: live ? 1 : 0.7,
+        opacity: live ? 1 : 0.25,
+        duration: 0.35,
+        delay: justSpent ? 0.18 : 0,
+        ease: EASE.stamp,
+        overwrite: "auto",
+      });
+    }
+  }, [mistakes, max]);
+
+  return (
+    <div ref={row} className="flex gap-1.5" role="img" aria-label={t("game.a11y.guessesLeft", { n: max - mistakes, max })}>
+      {Array.from({ length: max }).map((_, i) => (
+        <span key={i} className="h-2.5 w-2.5 rounded-full bg-press" />
+      ))}
+    </div>
+  );
+}
+
 function Controls({
   mistakes,
   max,
@@ -1425,15 +1635,7 @@ function Controls({
       ) : (
         <div className="flex items-center gap-2 text-sm text-ink-soft">
           <span>{t("game.mistakesLeft")}</span>
-          <div className="flex gap-1.5" role="img" aria-label={t("game.a11y.guessesLeft", { n: max - mistakes, max })}>
-            {Array.from({ length: max }).map((_, i) => (
-              <motion.span
-                key={i}
-                animate={{ scale: i < max - mistakes ? 1 : 0.7, opacity: i < max - mistakes ? 1 : 0.25 }}
-                className="h-2.5 w-2.5 rounded-full bg-press"
-              />
-            ))}
-          </div>
+          <MistakeDots mistakes={mistakes} max={max} />
         </div>
       )}
       <div className="flex gap-3">

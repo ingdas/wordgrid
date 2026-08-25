@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { pressDown, punch, rattle, release, stampIn } from "./anim";
 import { buildLetterBank } from "./letters";
 import { playDeselect, playSelect } from "./audio";
 import { t } from "./i18n";
@@ -132,6 +133,15 @@ export function LinkGuess({
     return () => window.removeEventListener("keydown", onKey);
   }); // no dep array: the handler closes over the current taps/used set
 
+  // The row of slots: rattled on a rejected word, punched on the right one.
+  const slotRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (shakeKey) rattle(slotRow.current, [...(slotRow.current?.children ?? [])] as HTMLElement[]);
+  }, [shakeKey]);
+  useEffect(() => {
+    if (resolved) punch(slotRow.current, 1.08);
+  }, [resolved]);
+
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-7 text-center">
       <h3 className="font-display text-xl font-bold text-ink">
@@ -141,12 +151,10 @@ export function LinkGuess({
         {t(bodyKey ?? (early ? "game.early.body" : "finale.body"))}
       </p>
 
-      {/* The answer so far. Tapped letters pop into the slots; a wrong word
-          shakes; a correct word gives the whole row a quick success pulse. */}
-      <motion.div
-        key={shakeKey}
-        animate={resolved ? { scale: [1, 1.08, 1] } : wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
-        transition={{ duration: 0.4 }}
+      {/* The answer so far. Tapped letters are stamped into the slots; a wrong
+          word rattles the row; a correct one gives it a beat of its own. */}
+      <div
+        ref={slotRow}
         className="mt-4 flex flex-wrap justify-center gap-1.5"
         aria-label={t("finale.a11y.slots", { n: pivot.length })}
       >
@@ -168,22 +176,11 @@ export function LinkGuess({
                     : "border-ink/25 text-ink/25"
               }`}
             >
-              {ch ? (
-                <motion.span
-                  key={ch + i}
-                  initial={{ scale: 1.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 520, damping: 24 }}
-                >
-                  {ch}
-                </motion.span>
-              ) : (
-                "_"
-              )}
+              {ch ? <Slot key={ch + i} ch={ch} /> : "_"}
             </span>
           );
         })}
-      </motion.div>
+      </div>
 
       {wrong ? (
         <p className="mt-2 text-sm font-semibold text-press">{t("finale.wrong")}</p>
@@ -196,9 +193,11 @@ export function LinkGuess({
         {bank.map((ch, i) => {
           const isUsed = used.has(i);
           return (
-            <motion.button
+            <button
               key={i}
-              whileTap={isUsed || resolved ? undefined : { scale: 0.88 }}
+              onPointerDown={(e) => !isUsed && !resolved && !full && pressDown(e.currentTarget)}
+              onPointerUp={(e) => release(e.currentTarget)}
+              onPointerLeave={(e) => release(e.currentTarget)}
               onClick={() => tap(i)}
               disabled={isUsed || resolved || full}
               aria-label={t(isUsed ? "finale.a11y.letterUsed" : "finale.a11y.letter", { letter: ch })}
@@ -209,7 +208,7 @@ export function LinkGuess({
               }`}
             >
               {ch}
-            </motion.button>
+            </button>
           );
         })}
       </div>
@@ -267,5 +266,18 @@ export function LinkGuess({
         )}
       </div>
     </motion.div>
+  );
+}
+
+/** One letter landing in its slot — stamped, like everything else here. */
+function Slot({ ch }: { ch: string }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    stampIn(el.current, { from: 1.7, tilt: 6 });
+  }, [ch]);
+  return (
+    <span ref={el} className="inline-block">
+      {ch}
+    </span>
   );
 }

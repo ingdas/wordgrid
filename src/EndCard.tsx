@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import gsap from "gsap";
+import { EASE, motionOn, useGsap } from "./anim";
 import { fmtTime } from "./format";
 import { t } from "./i18n";
 import { renderShareCard, type ShareCardData } from "./sharecard";
@@ -6,22 +8,44 @@ import { playConfirm, playUi } from "./audio";
 
 const RATING_COUNT = 5; // end.rating.0 … end.rating.4 (see src/i18n)
 
+/**
+ * The stars, awarded one at a time.
+ *
+ * A star doesn't appear — it's *struck*: it comes in oversized and spinning,
+ * hits the card, and the card takes the blow (the whole row recoils a couple of
+ * pixels under each one). The beats are 200ms apart, which is the spacing the
+ * star chime is already scheduled on in `Game`, so the picture and the sound
+ * land together. An unearned star just sits there, grey, from the start —
+ * a hollow star arriving with a bang would be reading the result wrong.
+ */
 function StarRow({ stars }: { stars: number }) {
+  const row = useGsap<HTMLDivElement>((scope) => {
+    const earned = scope.querySelectorAll("[data-earned]");
+    if (!earned.length || !motionOn()) return;
+    const tl = gsap.timeline({ delay: 0.35 });
+    earned.forEach((star, i) => {
+      tl.fromTo(
+        star,
+        { scale: 2.6, rotate: -140, opacity: 0 },
+        { scale: 1, rotate: 0, opacity: 1, duration: 0.5, ease: EASE.stamp },
+        i * 0.2
+      ).to(scope, { y: 3, duration: 0.06, yoyo: true, repeat: 1, ease: "power2.out" }, i * 0.2 + 0.16);
+    });
+  }, [stars]);
+
   return (
-    <div className="flex justify-center gap-2">
+    <div ref={row} className="flex justify-center gap-2">
       {[0, 1, 2].map((i) => {
         const earned = i < stars;
         return (
-          <motion.div
+          <div
             key={i}
-            initial={{ scale: 0, rotate: -40 }}
-            animate={{ scale: earned ? 1 : 0.8, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.2 + i * 0.2 }}
+            data-earned={earned ? "" : undefined}
             style={{ fontSize: 44 }}
-            className={earned ? "drop-shadow-stamp" : "opacity-30 grayscale"}
+            className={earned ? "drop-shadow-stamp" : "scale-75 opacity-30 grayscale"}
           >
             {earned ? "⭐" : "☆"}
-          </motion.div>
+          </div>
         );
       })}
     </div>
