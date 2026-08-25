@@ -18,7 +18,7 @@ export function BossRules({ twist }: { twist: BossTwist }) {
     { key: "boss.brief.how", body: t(`twist.${twist}.brief.b`), icon: "🧭" },
   ];
   return (
-    <div className="space-y-2.5 text-left">
+    <div className="space-y-2.5 text-start">
       {parts.map((p) => (
         <div key={p.key} data-dialog-row className="flex gap-3 rounded-2xl bg-white p-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>

@@ -220,21 +220,21 @@ export function LevelStatsModal({
         <div className="mt-2 divide-y divide-ink/10">
           {ordered.map((r) => (
             <div key={r.id} className="flex items-center gap-2 py-1.5">
-              <span className="w-6 shrink-0 text-right font-display text-[0.7rem] font-bold tabular-nums text-ink-soft">
+              <span className="w-6 shrink-0 text-end font-display text-[0.7rem] font-bold tabular-nums text-ink-soft">
                 {r.index + 1}
               </span>
               {/* Unsolved levels stay nameless: the title is a clue. */}
               <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">
                 {r.solved ? levelTitle(r.index) : t("track.unsolved")}
               </span>
-              <span className="w-16 shrink-0 text-right text-[0.65rem] tabular-nums text-ink-soft">
+              <span className="w-16 shrink-0 text-end text-[0.65rem] tabular-nums text-ink-soft">
                 {r.community?.solvers
                   ? t("track.solvers", { n: r.community.solvers })
                   : r.mine
                     ? t("track.mine", { wins: r.mine.wins, plays: r.mine.plays })
                     : "—"}
               </span>
-              <span className="w-9 shrink-0 text-right font-display text-[0.7rem] font-bold tabular-nums text-ink">
+              <span className="w-9 shrink-0 text-end font-display text-[0.7rem] font-bold tabular-nums text-ink">
                 {r.rate === null ? "—" : pct(r.rate)}
               </span>
               <span aria-hidden className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-ink/10">

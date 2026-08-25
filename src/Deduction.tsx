@@ -295,7 +295,7 @@ function DeductionBoard({
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
-          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
+          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 ps-2.5 pe-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           <span aria-hidden>‹</span> {t("common.home")}
         </button>
@@ -455,7 +455,7 @@ function DeductionBoard({
                 style={{ color: th.ink }}
               >
                 <span aria-hidden>{th.shape}</span>
-                <span className="absolute -bottom-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[0.6rem] font-extrabold text-paper">
+                <span className="absolute -bottom-1.5 -end-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[0.6rem] font-extrabold text-paper">
                   {3 - used(k)}
                 </span>
               </button>
@@ -642,7 +642,7 @@ function GridTile({
       {(status === "ok" || status === "bad") && (
         <span
           aria-hidden
-          className={`absolute -right-1 -top-1 z-10 grid h-4 w-4 place-items-center rounded-full text-[0.6rem] font-extrabold text-white ${
+          className={`absolute -end-1 -top-1 z-10 grid h-4 w-4 place-items-center rounded-full text-[0.6rem] font-extrabold text-white ${
             status === "ok" ? "bg-leaf" : "bg-press"
           }`}
         >

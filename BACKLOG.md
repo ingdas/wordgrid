@@ -36,7 +36,8 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   suites: engine, deduction, progress/key gating, quests, storage, debug,
   i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
-  board), `npm run audit` (ambiguity report for a human), `npm run
+  board — for every language; `-- --locale xx` for one), `npm run audit`
+  (ambiguity report for a human, English), `npm run
   gen:deduction` (regenerate Logic Grid levels), `node scripts/gen-assets.mjs`
   (og-image + icons), `npm run submission` / `npm run clip` (store art — see
   README).
@@ -130,12 +131,21 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
 - `sharecard.ts` — 1080×1080 spoiler-free canvas PNG for Web Share.
-- `i18n/` — `index.ts` (detect, persist, `t()`, `plural()`), `en.ts` (source
-  of truth, ~460 keys), `es.ts`. Components never hold copy: chapter names,
-  tier labels, achievement titles, boss rules/briefings and every Logic clue
-  sentence are keys. Puzzle *content* stays English on purpose (see
-  Decisions). `scripts/i18n.test.mts` fails on a missing/stray key or a lost
-  `{placeholder}`.
+- `i18n/` — the 25 CrazyGames languages, **boards included** (iteration 38).
+  `locales.ts` (the platform's list, `matchLocale`), `index.ts` (detect:
+  `?lang` → saved → navigator → SDK `systemInfo.locale`; lazy `loadLocale`
+  one chunk per language before first paint; `t()`, `plural()` via
+  `Intl.PluralRules` with optional `.few/.many`), `en.ts` (source of truth,
+  ~500 keys) + one catalogue per language, `script.ts` (what a letter is per
+  writing system: `letters()` graphemes, `normalize()` folding, `cipher()`
+  per script, the finale `pool`; `activeScript()` is read by engine/letters/
+  puzzles), `content/<xx>.ts` (a language's boards, keys, decoys — overlaid
+  slot for slot by `localizeRaw` in `buildPuzzle`/`chapterKey`/`levelTitle`/
+  `decoyTiles`; `content/README.md` is the authoring spec, `scripts/
+  i18n-slots.mts <xx>` the per-slot sheet). Components never hold copy.
+  `scripts/i18n.test.mts` fails on a missing/stray key or a lost
+  `{placeholder}`; `npm run validate -- --locale xx` holds a language's boards
+  to the same rules as English (plus script and inflection checks).
 - `sdk.ts` — defensive CrazyGames v3 wrapper. Off-platform the script loads
   but is disabled, so every call throws/rejects `sdkDisabled`: the wrapper
   swallows both, latches "unusable", and every rewarded failure path (no SDK,
@@ -406,9 +416,14 @@ the hardest; *emoji* — the one bespoke board.
   treats the server's answer as untrusted input.
 - Rewarded-ad failure paths **resolve true**: never strand a player behind an
   ad that couldn't load.
-- **Puzzle content is not localized.** A board of English words can only be
-  rewritten per language, not translated; a locale unlocks the Logic Grid
-  (no vocabulary) and every menu, rule and result screen.
+- **Puzzle content is localized by rewriting, never translating** (iteration
+  38 reversed the earlier "stays English" decision for the CrazyGames rollout).
+  A board of English words can't be translated, so every language writes its
+  own board into each of the shared 100 slots; the English placement pass
+  (grades, twists, order) is pinned to English rules and defines the slots for
+  everyone. The boards of the other 24 languages were written by Claude
+  against `content/README.md` and pass `validate`; **they have not had the
+  human ambiguity read the English boards had** (see Open backlog).
 
 **Audio and motion**
 - Music defaults to **off** — honest for a loop that has to survive an hour.
@@ -426,45 +441,52 @@ the hardest; *emoji* — the one bespoke board.
 
 Ranked by expected impact. Nothing here is started.
 
-1. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
+1. **[content] The 24 non-English board sets need a native read.** Every
+   language's 181 boards pass `validate`, but the four failure classes in
+   *Authoring a board* are only caught by a human who speaks the language;
+   the English set had that read, these haven't. Also unverified: RTL layout
+   in Arabic beyond `dir=rtl` and logical utilities, CJK/Thai type fit on the
+   smallest tiles, and system-font fallbacks for the display face (Fraunces
+   has no Cyrillic/Greek/CJK/Thai/Arabic).
+2. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
    is empty in both `index.html` and `docs/index.html`, so the whole feature
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
    somewhere and point the tag at it.
-2. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
+3. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform; final QA against their
    preview tool is still owed at submission time.
-3. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
+4. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
-4. **[ux] Landscape phones are cramped.** The two-column split needs ≥1024 px;
+5. **[ux] Landscape phones are cramped.** The two-column split needs ≥1024 px;
    at 844×390 it's one scrolling column behind the rotate hint. A compact
    landscape board (smaller tiles, controls rail at `md` + landscape) would
    make "Play anyway" a real option.
-5. **[a11y] Never run past a real screen reader.** Keyboard play, Escape and
+6. **[a11y] Never run past a real screen reader.** Keyboard play, Escape and
    the focus trap are in; nothing has been checked with VoiceOver/NVDA. A
    large-text mode is also still missing from Settings.
-6. **[gameplay] The hint token has one shape** (reveal a theme, then a
+7. **[gameplay] The hint token has one shape** (reveal a theme, then a
    letter). A cheaper "rule out one tile" would let a stuck player spend less
    than a whole theme.
-7. **[gameplay] Two twist candidates**, designed but not built: **brief** —
+8. **[gameplay] Two twist candidates**, designed but not built: **brief** —
    the four theme names shown up front, tiles assigned to a *named* group
    (recycles the oracle's panel without the cold-spelling lottery; any board
    fits); **cascade** — the board re-scrambles after every solved group
    (kills the park-three-for-later strategy; scramble's board fit; never
    adjacent to scramble or cipher).
-8. **[balance] Grades are one number per board.** A facet split (abstraction /
+9. **[balance] Grades are one number per board.** A facet split (abstraction /
    pivot / interference) would let a chapter be built from one kind of hard.
-9. **[mobile] Tall end-states scroll on small phones**; 320×568 scrolls a
+10. **[mobile] Tall end-states scroll on small phones**; 320×568 scrolls a
    little on the board and finale (accepted for legacy phones).
-10. **[engagement] Small retention hooks not built**: a post-win "N to
+11. **[engagement] Small retention hooks not built**: a post-win "N to
     Silver" nudge toast (the stats modal already says it), a daily-streak
     calendar with milestones, a "did you know" line about the link word on
     the win card.
-11. **[music] The loop is written, not composed** — the melody is chosen at
+12. **[music] The loop is written, not composed** — the melody is chosen at
     random inside the bar's chord, so it never develops or resolves. Recorded
     samples remain a taste call, not a gap (levels are measured; nothing
     clips).
-12. **[docs] `README.md`'s intro still says "9 words / four categories of two"**
+13. **[docs] `README.md`'s intro still says "9 words / four categories of two"**
     — the board is 12 words, 4 × 3 spokes. Rewrite the first paragraph and the
     *Adding puzzles* section.
 

@@ -329,14 +329,14 @@ export default function LevelSelect({
           (the same trick the game screen uses at lg). */}
       <div className="lg:flex lg:min-h-0 lg:flex-1 lg:items-stretch lg:gap-8">
         <div className="lg:flex lg:w-[21rem] lg:shrink-0 lg:flex-col lg:justify-start lg:pt-6">
-          <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink lg:mt-0 lg:text-left lg:text-4xl">
+          <h2 className="mt-6 text-center font-display text-3xl font-bold tracking-tight text-ink lg:mt-0 lg:text-start lg:text-4xl">
             {t("levels.title")}
           </h2>
-          <p className="mt-1 text-center text-xs font-semibold text-ink-soft lg:text-left">
+          <p className="mt-1 text-center text-xs font-semibold text-ink-soft lg:text-start">
             {t("levels.summary", { solved: solvedCount, perfect: perfectCount, total: LEVELS.length })}
           </p>
           {debug && (
-            <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf lg:text-left">
+            <p className="mt-1 text-center text-[0.7rem] font-bold uppercase tracking-widest text-leaf lg:text-start">
               {t("levels.debug")}
             </p>
           )}
@@ -345,7 +345,7 @@ export default function LevelSelect({
             <>
               <UpNextCard index={nextIndex} onPlay={() => onPick(nextIndex)} />
               {bossAhead != null && (
-                <p className="mt-2.5 text-center text-xs font-semibold text-ink-soft lg:text-left">
+                <p className="mt-2.5 text-center text-xs font-semibold text-ink-soft lg:text-start">
                   {plural("levels.bossIn", bossAhead)}
                 </p>
               )}
@@ -359,7 +359,7 @@ export default function LevelSelect({
           )}
         </div>
 
-        <div className="mt-7 space-y-5 lg:mt-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4 lg:pr-2 lg:pt-4">
+        <div className="mt-7 space-y-5 lg:mt-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4 lg:pe-2 lg:pt-4">
         {CHAPTERS.map((chap, ci) => {
           const ink = chapterInk(ci);
           const slice = LEVELS.slice(chap.start, chap.end);
@@ -708,7 +708,7 @@ function BossPanel({
             ))}
 
         <span
-          className="ml-auto shrink-0 pl-1 text-[0.6rem] font-bold"
+          className="ms-auto shrink-0 ps-1 text-[0.6rem] font-bold"
           style={{ color: spelled ? "#8a5c00" : ink.deep }}
         >
           {spelled
@@ -1092,7 +1092,7 @@ function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolea
           // Fixed, not in flow: the page scrolls itself to the chip that's
           // opening, so a banner in the layout would announce the news
           // somewhere the player isn't looking.
-          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-stamp lg:left-[max(1rem,calc((100vw-64rem)/2+1rem))] lg:right-auto lg:mx-0 lg:w-[21rem]"
+          className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[min(28rem,calc(100%-2rem))] cursor-pointer items-center gap-3 rounded-2xl border-2 border-ink bg-gold/95 px-4 py-2.5 shadow-stamp lg:start-[max(1rem,calc((100vw-64rem)/2+1rem))] lg:end-auto lg:mx-0 lg:w-[21rem]"
         >
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border-2 border-ink bg-white font-display text-base font-bold">
             {news.icon}
@@ -1150,7 +1150,7 @@ function LevelRow({
         `, ${t(TIER_KEY[LEVELS[index].tier])}` +
         t("levels.a11y.stars", { n: earned })
       }
-      className="flex w-full items-center gap-2.5 rounded-lg px-1 py-[3px] text-left transition hover:bg-cream"
+      className="flex w-full items-center gap-2.5 rounded-lg px-1 py-[3px] text-start transition hover:bg-cream"
     >
       <Chip
         chipRef={chipRef}
@@ -1181,7 +1181,7 @@ function LevelRow({
       </span>
       <span
         aria-hidden
-        className="w-3 shrink-0 text-right font-display text-[0.65rem] font-bold"
+        className="w-3 shrink-0 text-end font-display text-[0.65rem] font-bold"
         style={{ color: ink.deep, opacity: banked && !flipping ? 0.45 : 0 }}
       >
         {letter}

@@ -31,7 +31,7 @@ function ToastBody({ ref, text }: { ref: Ref<HTMLDivElement>; text: string | nul
         if (typeof ref === "function") ref(node);
         else if (ref) ref.current = node;
       }}
-      className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
+      className="fixed inset-x-0 bottom-8 z-40 mx-auto w-fit rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
     >
       {text}
     </div>

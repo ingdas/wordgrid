@@ -43,13 +43,26 @@ Chase the ⭐ total and your 🔥 streak.
 
 ## Languages
 
-The interface is localized (`src/i18n/`): English and Spanish, picked up from
-`navigator.language` and switchable in Settings. The **word puzzles stay
-English** — a board of English words can't be translated, only rewritten — so
-a translated UI fully unlocks the Logic Grid (pure deduction, no vocabulary)
-and makes every menu, rule and result screen readable around the rest. Adding
-a language is one catalogue file plus a line in `LOCALES`; `npm test` fails on
-a missing key or a dropped `{placeholder}`.
+The game ships in the 25 languages CrazyGames serves (`src/i18n/locales.ts`,
+scraped from the platform's own list) — and not just the menus: **every
+language has its own boards.** A board of English words can't be translated,
+only rewritten (PITCH is a throw, a sales talk, a musical height and a playing
+field in English and nothing of the kind anywhere else), so each language
+fills the same 100 campaign slots, the emoji boss and the 80-board daily pool
+with link words of its own, plus its own chapter keys and decoy tiles
+(`src/i18n/content/<xx>.ts`; the rules are in `src/i18n/content/README.md`).
+The campaign's *shape* — chapters, boss twists, hand grades, slot ids — is
+shared, so progress carries across a language switch.
+
+"Letter" is per script too (`src/i18n/script.ts`): the finale bank, the key
+rail and the scramble boss work in kana, Hangul syllable blocks and Thai
+clusters, and the "no vowels" boss has a cipher per writing system (vowels;
+Arabic long vowels; the Thai consonant frame; Korean 초성; every second kana
+blanked). The language is picked from `?lang=`, then the player's saved
+choice, then the browser, and on CrazyGames from the SDK's `systemInfo.locale`;
+it's switchable in Settings and each language loads as its own chunk. `npm
+test` fails on a missing key or a dropped `{placeholder}`; `npm run validate`
+checks every language's boards against the same rules as English.
 
 ## Tech stack
 

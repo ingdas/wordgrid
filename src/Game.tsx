@@ -827,7 +827,7 @@ export default function Game({
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
-          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
+          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 ps-2.5 pe-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           <span aria-hidden>‹</span> {t(endless ? "common.endRun" : daily ? "common.home" : "common.levels")}
         </button>
@@ -886,7 +886,7 @@ export default function Game({
         <button
           onClick={() => setBrief(true)}
           aria-label={t("boss.rule.a11y", { what: twistName(twist), rule: twistRule(twist) })}
-          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-left text-paper shadow-stamp transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
+          className="mt-3 flex w-full items-start gap-2 rounded-2xl border-2 border-ink bg-ink px-3 py-2 text-start text-paper shadow-stamp transition hover:brightness-125 active:scale-[0.99] lg:items-center lg:py-1.5"
         >
           <span aria-hidden className="text-base leading-tight">👑</span>
           <span aria-hidden className="min-w-0 flex-1">
@@ -1306,11 +1306,11 @@ function SecretLink({
       style={{ background: "#fffdf6", border: "2px dashed rgba(38,34,26,0.45)", boxShadow: "var(--shadow-stamp)" }}
     >
       {score > 0 && (
-        <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-extrabold text-gold-deep">
+        <div className="absolute end-2.5 top-2.5 flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-extrabold text-gold-deep">
           <span aria-hidden>✦</span>
           <span ref={total}>{score.toLocaleString()}</span>
           {combo >= 2 && (
-            <span ref={comboChip} className="ml-0.5 inline-block text-press">
+            <span ref={comboChip} className="ms-0.5 inline-block text-press">
               🔥{combo}
             </span>
           )}
@@ -1770,7 +1770,7 @@ function WelcomeOverlay({
         </div>
         <h2 className="mt-4 font-display text-3xl font-bold text-ink">{t("welcome.title")}</h2>
         <p className="mt-1 text-sm text-ink-soft">{t("welcome.subtitle")}</p>
-        <div className="mt-5 space-y-2.5 text-left">
+        <div className="mt-5 space-y-2.5 text-start">
           {WELCOME_RULES.map((r, i) => (
             <div key={i} data-dialog-row className="flex items-center gap-3 rounded-2xl bg-white p-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-press/10 text-xl" aria-hidden>
@@ -1843,7 +1843,7 @@ function Coach({
         <span className="font-bold text-ink">{t(`${c.key}.title`)}</span>
         <button
           onClick={onSkip}
-          className="ml-auto rounded-full px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-cream hover:text-ink"
+          className="ms-auto rounded-full px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-cream hover:text-ink"
         >
           {t("common.skip")}
         </button>

@@ -261,7 +261,7 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
-          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 pl-2.5 pr-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
+          className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white py-2 ps-2.5 pe-4 text-sm font-semibold text-ink transition hover:bg-cream active:scale-95"
         >
           <span aria-hidden>‹</span> {t("common.home")}
         </button>
@@ -490,7 +490,7 @@ function PairCard({
         >
           <span>
             {matchedTheme && (
-              <span aria-hidden className="mr-1 text-[0.65em] opacity-70">
+              <span aria-hidden className="me-1 text-[0.65em] opacity-70">
                 {matchedTheme.shape}
               </span>
             )}

@@ -958,7 +958,7 @@ export default function App() {
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold text-lg">
                 {achHere.data.icon}
               </span>
-              <div className="text-left">
+              <div className="text-start">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-gold-deep">
                   {achHere.data.header ?? t("achievement.unlocked")}
                 </div>
@@ -974,7 +974,7 @@ export default function App() {
           <Banner ref={warnHere.ref} from={60} role="status" className="fixed inset-x-0 bottom-3 z-[55] flex justify-center px-4">
             <div className="flex max-w-sm items-start gap-3 rounded-2xl border-2 border-press bg-paper px-4 py-3 shadow-stamp-lg">
               <span className="text-lg" aria-hidden>⚠️</span>
-              <div className="text-left">
+              <div className="text-start">
                 <div className="text-sm font-bold text-ink">{t("storage.warn.title")}</div>
                 <p className="mt-0.5 text-[0.7rem] leading-snug text-ink-soft">{t("storage.warn.body")}</p>
               </div>
@@ -1169,7 +1169,7 @@ function HistoryModal({
             {t("history.empty")}
           </p>
         ) : (
-          <ul className="mt-4 -mr-2 space-y-2 overflow-y-auto pr-2">
+          <ul className="mt-4 -me-2 space-y-2 overflow-y-auto pe-2">
             {progress.history.map((h, i) => (
               <li
                 key={`${h.at}-${i}`}
@@ -1186,7 +1186,7 @@ function HistoryModal({
                     {fmt(h.timeMs)}
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 text-end">
                   {h.won ? (
                     <div className="font-bold text-gold-deep">
                       {"★".repeat(h.stars)}
@@ -1243,7 +1243,7 @@ function VolumeRow({
         onKeyUp={onPreview}
         className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-ink/15 accent-leaf"
       />
-      <span className="w-9 shrink-0 text-right text-[0.7rem] font-bold tabular-nums text-ink-soft">{pct}%</span>
+      <span className="w-9 shrink-0 text-end text-[0.7rem] font-bold tabular-nums text-ink-soft">{pct}%</span>
     </div>
   );
 }
@@ -1273,7 +1273,7 @@ function ToggleRow({
         className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-leaf" : "bg-ink/15"}`}
       >
         <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-stamp-sm transition-all ${on ? "left-[1.375rem]" : "left-0.5"}`}
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-stamp-sm transition-all ${on ? "start-[1.375rem]" : "start-0.5"}`}
         />
       </button>
     </div>
@@ -1394,7 +1394,7 @@ function SettingsModal({
               rates per level, straight from the players who have tried them. */}
           <button
             onClick={onTracking}
-            className="w-full border-t border-ink/15 py-3 text-left transition hover:bg-cream"
+            className="w-full border-t border-ink/15 py-3 text-start transition hover:bg-cream"
           >
             <div className="text-sm font-bold text-ink">{t("settings.tracking")}</div>
             <div className="text-[0.7rem] text-ink-soft">{t("settings.tracking.hint")}</div>

@@ -383,6 +383,11 @@ export const en: Record<string, string> = {
   "quest.set.hint": "All three: +{n} 💡",
   "quest.set.done": "Bonus claimed — new quests at midnight",
 
+  // --- the rotate-to-portrait hint (static markup in index.html) -----------
+  "rotate.title": "Rotate to portrait",
+  "rotate.body": "WordGrid plays best with your phone upright.",
+  "rotate.dismiss": "Play anyway",
+
   // --- saving -------------------------------------------------------------
   "storage.warn.title": "Progress won't be saved",
   "storage.warn.body": "This browser is blocking storage for the game, so this session's stars and streak end with the tab.",

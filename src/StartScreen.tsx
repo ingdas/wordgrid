@@ -139,11 +139,11 @@ export default function StartScreen({
       <button
         onClick={() => { playUi(); onSettings(); }}
         aria-label={t("a11y.settings")}
-        className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
+        className="absolute start-4 top-4 grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-white text-lg transition hover:bg-cream active:scale-95"
       >
         ⚙️
       </button>
-      <div className="absolute right-4 top-4 flex gap-2">
+      <div className="absolute end-4 top-4 flex gap-2">
         <button
           onClick={onToggleMusic}
           aria-label={t(musicOn ? "a11y.musicOff" : "a11y.musicOn")}
@@ -198,7 +198,7 @@ export default function StartScreen({
           onPointerDown={(e) => pressDown(e.currentTarget)}
           onPointerUp={(e) => release(e.currentTarget)}
           onPointerLeave={(e) => release(e.currentTarget)}
-          className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-left shadow-stamp transition hover:border-press/60"
+          className="w-full overflow-hidden rounded-3xl border border-ink/20 bg-white p-4 text-start shadow-stamp transition hover:border-press/60"
         >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
@@ -343,7 +343,7 @@ export default function StartScreen({
                 <span className={`text-sm ${done ? "" : "opacity-45"}`} aria-hidden>
                   {def.icon}
                 </span>
-                <span className={`flex-1 text-left text-[0.72rem] font-semibold leading-tight ${done ? "text-ink-soft line-through" : "text-ink"}`}>
+                <span className={`flex-1 text-start text-[0.72rem] font-semibold leading-tight ${done ? "text-ink-soft line-through" : "text-ink"}`}>
                   {t(def.titleKey, { n: def.goal })}
                 </span>
                 <span className={`shrink-0 text-[0.7rem] font-bold ${done ? "text-leaf" : "text-ink-soft"}`}>
@@ -353,7 +353,7 @@ export default function StartScreen({
             );
           })}
         </ul>
-        <div className="mt-2 border-t border-dashed border-ink/15 pt-1.5 text-left text-[0.65rem] font-semibold text-ink-soft">
+        <div className="mt-2 border-t border-dashed border-ink/15 pt-1.5 text-start text-[0.65rem] font-semibold text-ink-soft">
           {quests.claimed.includes(SET_ID) ? t("quest.set.done") : t("quest.set.hint", { n: QUEST_SET_BONUS })}
         </div>
       </div>

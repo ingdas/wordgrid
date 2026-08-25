@@ -24,7 +24,7 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
   const [open, setOpen] = useState(false);
   const tray = usePresence(open, null, sinkOut);
   return (
-    <div className="fixed bottom-3 left-3 z-[70] flex flex-col items-start gap-2">
+    <div className="fixed bottom-3 start-3 z-[70] flex flex-col items-start gap-2">
       {tray.rendered && (
           <Tray ref={tray.ref}>
             <div className="px-1.5 pb-1.5 text-[0.6rem] font-bold uppercase tracking-widest text-leaf">
@@ -36,7 +36,7 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
                   key={tool.key}
                   onClick={tool.onClick}
                   disabled={tool.disabled}
-                  className={`rounded-xl border px-2.5 py-1.5 text-left text-xs font-bold transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-35 ${
+                  className={`rounded-xl border px-2.5 py-1.5 text-start text-xs font-bold transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-35 ${
                     tool.danger ? "border-press/50 text-press" : "border-ink/25 text-ink"
                   }`}
                 >

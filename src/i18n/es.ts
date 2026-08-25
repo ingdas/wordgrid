@@ -373,6 +373,11 @@ export const es: Record<string, string> = {
   "quest.set.hint": "Las tres: +{n} 💡",
   "quest.set.done": "Bonus cobrado — nuevas misiones a medianoche",
 
+  // --- the rotate-to-portrait hint (static markup in index.html) -----------
+  "rotate.title": "Gira a vertical",
+  "rotate.body": "WordGrid se juega mejor con el móvil en vertical.",
+  "rotate.dismiss": "Jugar así",
+
   // --- saving -------------------------------------------------------------
   "storage.warn.title": "El progreso no se guardará",
   "storage.warn.body": "Este navegador bloquea el almacenamiento del juego: las estrellas y la racha de esta sesión se pierden al cerrar la pestaña.",

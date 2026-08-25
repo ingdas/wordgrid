@@ -178,18 +178,18 @@ export function EndCard({
             <div className="mt-2 text-sm font-semibold text-leaf">
               {t("end.endlessSolved", { n: endlessInfo.solved })}
               {endlessInfo.solved > 0 && endlessInfo.solved >= endlessInfo.best ? (
-                <span className="ml-1 text-gold-deep">{t("end.newBestRun")}</span>
+                <span className="ms-1 text-gold-deep">{t("end.newBestRun")}</span>
               ) : (
-                endlessInfo.best > 0 && <span className="ml-1 text-leaf/70">{t("end.bestRun", { n: endlessInfo.best })}</span>
+                endlessInfo.best > 0 && <span className="ms-1 text-leaf/70">{t("end.bestRun", { n: endlessInfo.best })}</span>
               )}
             </div>
           ) : (
             <div className="mt-2 text-xs text-ink-soft">
               ⏱ {fmtTime(timeMs)}
               {newBest ? (
-                <span className="ml-1 font-semibold text-leaf">{t("end.newBestTime")}</span>
+                <span className="ms-1 font-semibold text-leaf">{t("end.newBestTime")}</span>
               ) : (
-                bestMs != null && <span className="ml-1">{t("end.bestTime", { time: fmtTime(bestMs) })}</span>
+                bestMs != null && <span className="ms-1">{t("end.bestTime", { time: fmtTime(bestMs) })}</span>
               )}
             </div>
           )}
