@@ -495,7 +495,7 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
-| 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | — |
+| 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | `9f87486` |
 | 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
 | 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
 | 37 | GSAP for the beats, then Framer Motion retired entirely; `anim.ts`, `usePresence`, shared `dialogIn`; found and fixed a chapter-key DOM leak | `2dd039e` `d400a92` `a6f89ee` |
