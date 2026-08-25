@@ -518,6 +518,8 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
+| 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
+| 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
 | 37 | GSAP for the beats, then Framer Motion retired entirely; `anim.ts`, `usePresence`, shared `dialogIn`; found and fixed a chapter-key DOM leak | `2dd039e` `d400a92` `a6f89ee` |
 | 36 | Audio pass: mixer, limiter, reverb send, FM bells, sounds for silent moments, three music scenes, per-bus volume | `9e169e8` |
 | 35 | Emoji boss rebuilt: the name is the answer, the picture misleads; banner names the picture; validate checks emoji maps | `c55d0ca` `31b2222` |
