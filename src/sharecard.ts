@@ -3,6 +3,7 @@
 // title (which would give the answer away). Returns a PNG blob, or null if the
 // canvas isn't available.
 
+import { t } from "./i18n";
 export interface ShareCardData {
   level: number;
   daily: boolean;
@@ -77,7 +78,7 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
 
     ctx.fillStyle = "#6f6757";
     ctx.font = "600 36px Arial, sans-serif";
-    ctx.fillText(d.daily ? "Daily Challenge" : `Level ${d.level}`, S / 2, 188);
+    ctx.fillText(d.daily ? t("home.daily") : t("game.level", { n: d.level }), S / 2, 188);
 
     // Stars (or a cross for a loss)
     if (d.won) {
@@ -118,18 +119,18 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob | null> {
     ctx.fill();
     ctx.fillStyle = "#8a5c00";
     ctx.font = "800 52px Arial, sans-serif";
-    ctx.fillText(`✦ ${d.score.toLocaleString()} pts`, S / 2, 710);
+    ctx.fillText(`✦ ${t("end.points", { n: d.score.toLocaleString() })}`, S / 2, 710);
 
     // Detail line
     ctx.fillStyle = "#26221a";
     ctx.font = "600 40px Arial, sans-serif";
-    const link = d.won ? (d.linkCorrect ? "🔑 link ✓" : "link ✗") : "so close";
+    const link = d.won ? (d.linkCorrect ? t("share.link.got") : t("share.link.missed")) : t("share.soClose");
     ctx.fillText(`${link}    ⏱ ${fmtTime(d.timeMs)}${d.mistakes ? `    ✕ ${d.mistakes}` : ""}`, S / 2, 800);
 
     // Footer
     ctx.fillStyle = "#d9482b";
     ctx.font = "600 34px Arial, sans-serif";
-    ctx.fillText("Play free → wordgrid", S / 2, 980);
+    ctx.fillText(t("share.footer"), S / 2, 980);
 
     return await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
   } catch {

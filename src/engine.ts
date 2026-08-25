@@ -1,6 +1,7 @@
 // Pure, side-effect-free game logic, split out from the Game component so it
 // can be unit-tested without a DOM. See scripts/engine.test.mts.
 import type { Category } from "./puzzles";
+import { activeScript, graphemes } from "./i18n/script.ts";
 
 export type GuessResult =
   | { kind: "solved"; category: Category }
@@ -51,21 +52,28 @@ export function shuffle<T>(input: readonly T[]): T[] {
   return arr;
 }
 
-/** Upper-case and strip everything but letters, for forgiving text matching. */
+/**
+ * The forgiving form of a word for matching: upper-cased in the language being
+ * played, accents folded where they decorate a letter, everything that isn't a
+ * letter dropped. See src/i18n/script.ts for what that means per script.
+ */
 export function normalizeWord(s: string): string {
-  return s.toUpperCase().replace(/[^A-Z]/g, "");
+  return activeScript().normalize(s);
 }
 
 /** A deterministic anagram of a word (boss twist). Same letters, reordered;
  *  differs from the original when the letters allow it. */
 export function scrambleWord(word: string): string {
-  if (word.length < 2) return word;
+  // Shuffled by grapheme, so a Thai vowel mark or a Hangul block stays whole;
+  // for A–Z words this is the same walk over the same letters as before.
+  const units = graphemes(word);
+  if (units.length < 2) return word;
   let seed = 0;
   for (const c of word) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const rand = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0x100000000;
   let out = word;
   for (let tries = 0; tries < 10 && out === word; tries++) {
-    const a = word.split("");
+    const a = [...units];
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(rand() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
@@ -75,12 +83,13 @@ export function scrambleWord(word: string): string {
   return out;
 }
 
-/** A word with its vowels stripped (cipher twist): CRASH → CRSH. Y stays —
- *  it carries the word's shape — and a word that strips to nothing keeps its
- *  letters, which `suitsTwist` also refuses to cast in the first place. */
+/** A word with its vowels stripped (cipher twist): CRASH → CRSH. In English Y
+ *  stays — it carries the word's shape — and other scripts have their own idea
+ *  of the transform (src/i18n/script.ts). A word that strips to under two
+ *  units keeps its letters, which `suitsTwist` also refuses to cast. */
 export function cipherWord(word: string): string {
-  const out = word.replace(/[AEIOU]/g, "");
-  return out.length >= 2 ? out : word;
+  const out = activeScript().cipher(word);
+  return graphemes(out).length >= 2 ? out : word;
 }
 
 /**

@@ -28,6 +28,8 @@ import { playCorrect, playCollect, playWin, playUnlock, playWhoosh } from "./aud
 import { plural, t } from "./i18n";
 import { LinkGuess } from "./LinkGuess";
 import { shuffledLetters } from "./letters";
+import { graphemes } from "./i18n/script";
+import { normalizeWord } from "./engine";
 import { DebugPanel } from "./DebugPanel";
 import { useCommunityStats } from "./LevelStats";
 import { successRate } from "./stats";
@@ -389,9 +391,7 @@ export default function LevelSelect({
                     collecting, so a locked chapter still advertises the game
                     it's holding rather than just refusing you. */}
                 <div aria-hidden className="mt-1.5 flex items-center gap-1 opacity-30">
-                  {chapterKey(ci)
-                    .split("")
-                    .map((_, i) => (
+                  {graphemes(chapterKey(ci)).map((_, i) => (
                       <span key={i} className="h-4 w-3.5 rounded-[3px] border border-dashed border-ink" />
                     ))}
                 </div>
@@ -684,7 +684,7 @@ function BossPanel({
         {spelled
           ? // Spelled: the jumble settles into the word itself, which is the
             // trophy — and the only place the player ever sees it written out.
-            word.split("").map((ch, i) => (
+            graphemes(word).map((ch, i) => (
               <Rune
                 key={`solved-${i}`}
                 letter={ch}
@@ -922,7 +922,7 @@ function ChapterKeyPanel({
   const [resolved, setResolved] = useState(false);
 
   const submit = (text: string) => {
-    if (text.toUpperCase() !== word) return false;
+    if (normalizeWord(text) !== normalizeWord(word)) return false;
     setResolved(true);
     playWin();
     onSolved();
@@ -964,7 +964,7 @@ function ChapterKeyPanel({
           revealedLetters={revealed}
           hintBank={hints}
           unlimited={unlimited}
-          canRevealLetter={(unlimited || hints > 0) && revealed < word.length - 1}
+          canRevealLetter={(unlimited || hints > 0) && revealed < graphemes(word).length - 1}
           onRevealLetter={() => {
             if (!unlimited && hints <= 0) return;
             onUseHint();

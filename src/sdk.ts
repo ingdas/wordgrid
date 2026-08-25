@@ -21,6 +21,10 @@ export interface CrazyData {
 interface CrazySDK {
   init?: () => Promise<void> | void;
   data?: CrazyData;
+  user?: {
+    /** v3: `locale` is the site's language, "en-US" style. */
+    systemInfo?: { locale?: string; countryCode?: string };
+  };
   game?: {
     gameplayStart?: () => void;
     gameplayStop?: () => void;
@@ -224,4 +228,18 @@ export function requestRewarded(): Promise<boolean> {
       settle(true);
     }
   });
+}
+
+/**
+ * The language the platform is showing the player, "de-DE" style, or null
+ * off-platform / before init. CrazyGames serves the game inside a localized
+ * site, so this is the right default for a player who hasn't picked one.
+ */
+export function platformLocale(): string | null {
+  try {
+    const tag = sdk()?.user?.systemInfo?.locale;
+    return typeof tag === "string" && tag ? tag : null;
+  } catch {
+    return null;
+  }
 }

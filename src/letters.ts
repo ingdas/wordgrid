@@ -1,10 +1,12 @@
 // The letter bank behind every spell-the-link finale (the main game's and
 // Pairs'). Deterministic per pivot, so the same board always offers the same
-// tiles.
+// tiles. "Letter" is whatever the language spells with — see src/i18n/script.ts.
+import { activeScript, graphemes } from "./i18n/script.ts";
+
 export function buildLetterBank(pivot: string): string[] {
-  const letters = pivot.split("");
-  const total = Math.min(15, Math.max(13, pivot.length + 8));
-  const POOL = "EAIOTNRSLCUDPMHGBFYWKVXZJQ";
+  const letters = graphemes(pivot);
+  const total = Math.min(15, Math.max(13, letters.length + 8));
+  const POOL = activeScript().pool(pivot);
   let seed = 7;
   for (const c of pivot) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const rand = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0x100000000;
@@ -23,7 +25,7 @@ export function buildLetterBank(pivot: string): string[] {
  * Deterministic per word, so the jumble is stable across renders and reloads.
  */
 export function shuffledLetters(word: string): string[] {
-  const letters = word.split("");
+  const letters = graphemes(word);
   let seed = 11;
   for (const c of word) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const rand = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0x100000000;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { EASE, motionOn, pressDown, punch, rattle, release, stampIn } from "./anim";
 import gsap from "gsap";
 import { buildLetterBank } from "./letters";
+import { activeScript, graphemes } from "./i18n/script";
 import { playDeselect, playSelect } from "./audio";
 import { t } from "./i18n";
 
@@ -55,6 +56,9 @@ export function LinkGuess({
   onReveal: () => void;
 }) {
   const bank = useMemo(() => providedBank ?? buildLetterBank(pivot), [providedBank, pivot]);
+  // The answer as the units a player spells with (a Hangul block, a Thai
+  // cluster, a kana) — never code units, which would split a mark from its letter.
+  const letters = useMemo(() => graphemes(pivot), [pivot]);
   // Indices of bank tiles the player has tapped, in order (the suffix after the
   // free/ revealed prefix). Cleared whenever the revealed prefix grows.
   const [taps, setTaps] = useState<number[]>([]);
@@ -69,26 +73,26 @@ export function LinkGuess({
   // Bank tiles consumed: greedily by the locked prefix, then the player's taps.
   const used = useMemo(() => {
     const s = new Set<number>();
-    for (let k = 0; k < revealedLetters && k < pivot.length; k++) {
-      const ch = pivot[k];
+    for (let k = 0; k < revealedLetters && k < letters.length; k++) {
+      const ch = letters[k];
       for (let i = 0; i < bank.length; i++) {
         if (!s.has(i) && bank[i] === ch) { s.add(i); break; }
       }
     }
     taps.forEach((i) => s.add(i));
     return s;
-  }, [bank, pivot, revealedLetters, taps]);
+  }, [bank, letters, revealedLetters, taps]);
 
-  const prefix = pivot.slice(0, revealedLetters);
-  const built = prefix + taps.map((i) => bank[i]).join("");
-  const full = built.length >= pivot.length;
+  const built = [...letters.slice(0, revealedLetters), ...taps.map((i) => bank[i])];
+  const builtText = built.join("");
+  const full = built.length >= letters.length;
 
   // Auto-check once every slot is filled (no keyboard, no Submit button).
   useEffect(() => {
     if (resolved || !full || submitting.current) return;
     submitting.current = true;
     const timer = setTimeout(() => {
-      const ok = onSubmit(built);
+      const ok = onSubmit(builtText);
       submitting.current = false;
       if (!ok) {
         setWrong(true);
@@ -99,7 +103,7 @@ export function LinkGuess({
       }
     }, 280);
     return () => { clearTimeout(timer); submitting.current = false; };
-  }, [full, built, resolved, onSubmit, early, onMiss]);
+  }, [full, builtText, resolved, onSubmit, early, onMiss]);
 
   const tap = (i: number) => {
     if (resolved || used.has(i) || full) return;
@@ -124,9 +128,13 @@ export function LinkGuess({
         backspace();
         return;
       }
-      if (!/^[a-zA-Z]$/.test(e.key)) return;
-      const ch = e.key.toUpperCase();
-      const i = bank.findIndex((b, idx) => b === ch && !used.has(idx));
+      // A single typed letter in any script; compared folded, so "e" finds
+      // an É tile and "и" an Й one. Names like "Shift" are longer and skipped.
+      if (e.key.length > 2 || !/\p{L}/u.test(e.key)) return;
+      const norm = activeScript().normalize;
+      const want = norm(e.key);
+      if (!want) return;
+      const i = bank.findIndex((b, idx) => norm(b) === want && !used.has(idx));
       if (i >= 0) tap(i);
     };
     window.addEventListener("keydown", onKey);
@@ -164,13 +172,13 @@ export function LinkGuess({
       <div
         ref={slotRow}
         className="mt-4 flex flex-wrap justify-center gap-1.5"
-        aria-label={t("finale.a11y.slots", { n: pivot.length })}
+        aria-label={t("finale.a11y.slots", { n: letters.length })}
       >
-        {pivot.split("").map((_, i) => {
+        {letters.map((_, i) => {
           const locked = i < revealedLetters;
           const placed = i < built.length;
           const next = i === built.length && !resolved;
-          const ch = resolved ? pivot[i] : placed ? built[i] : "";
+          const ch = resolved ? letters[i] : placed ? built[i] : "";
           return (
             <span
               key={i}

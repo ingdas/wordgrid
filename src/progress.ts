@@ -1,4 +1,4 @@
-import { CHAPTERS, LEVELS, chapterKey, keyLevels, seededShuffle, type RawPuzzle } from "./puzzles.ts";
+import { CHAPTERS, LEVELS, keyLevels, seededShuffle, type RawPuzzle } from "./puzzles.ts";
 import { DAILY_PUZZLES } from "./dailyPuzzles.ts";
 import { isDebug } from "./debug.ts";
 import { readItem, writeItem } from "./storage.ts";
@@ -232,7 +232,7 @@ export function markBanked(p: Progress): Progress {
 
 /** Every letter banked — the key can be attempted. */
 export function keyReady(p: Progress, ci: number): boolean {
-  return bankedLetters(p, ci) >= chapterKey(ci).length;
+  return bankedLetters(p, ci) >= keyLevels(ci).length;
 }
 
 export function keySolved(p: Progress, ci: number): boolean {

@@ -66,12 +66,13 @@ import {
   happytime,
   showInterstitial,
   requestRewarded,
+  platformLocale,
 } from "./sdk";
 import { startStats, trackFinish } from "./stats";
 import { LevelStatsModal } from "./LevelStats";
 import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
 import { chapterPage } from "./theme";
-import { LOCALES, getLocale, setLocale, t, type Locale } from "./i18n";
+import { LOCALES, adoptPlatformLocale, getLocale, setLocale, t, type Locale } from "./i18n";
 import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
@@ -135,8 +136,9 @@ export default function App() {
   // the whole tree is keyed on it below.
   const [locale, setLocaleState] = useState<Locale>(() => getLocale());
   const changeLocale = useCallback((next: Locale) => {
-    setLocale(next);
-    setLocaleState(next);
+    // A language is one chunk (strings, boards, letters): the tree re-keys
+    // only once it has arrived, so nothing renders half-translated.
+    void setLocale(next).then(() => setLocaleState(getLocale()));
   }, []);
   // Debug mode. It's on when the page was opened with `?debug` (src/debug.ts),
   // mirrored in state so flipping it in Settings re-renders the tree — the
@@ -189,6 +191,11 @@ export default function App() {
     const stopStats = startStats();
     let stopMirror: (() => void) | undefined;
     void initSdk().then(() => {
+      // On CrazyGames the site is already in the player's language; follow it
+      // unless they picked one themselves (or the URL did). See src/i18n.
+      void adoptPlatformLocale(platformLocale()).then((changed) => {
+        if (changed) setLocaleState(getLocale());
+      });
       // Once the platform is up, reconcile the save with its data module: the
       // embed's own localStorage can be partitioned away between visits, and
       // that store is the copy that survives it. See src/storage.ts.
@@ -1350,20 +1357,20 @@ function SettingsModal({
           <div className="py-3">
             <div className="text-sm font-bold text-ink">{t("settings.language")}</div>
             <div className="text-[0.7rem] text-ink-soft">{t("settings.language.hint")}</div>
-            <div className="mt-2 flex flex-wrap gap-2">
+            {/* Twenty-five languages: a list, not a row of chips. Each option
+                is named in its own language so a player can find theirs. */}
+            <select
+              value={getLocale()}
+              onChange={(e) => onLocale(e.target.value as Locale)}
+              aria-label={t("settings.language")}
+              className="mt-2 w-full rounded-xl border-2 border-ink bg-paper px-3 py-2 text-sm font-bold text-ink shadow-stamp-sm"
+            >
               {LOCALES.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => onLocale(l.id)}
-                  aria-pressed={getLocale() === l.id}
-                  className={`rounded-full border-2 px-3 py-1.5 text-xs font-bold transition ${
-                    getLocale() === l.id ? "border-ink bg-ink text-paper" : "border-ink/30 text-ink hover:bg-cream"
-                  }`}
-                >
+                <option key={l.id} value={l.id} lang={l.id}>
                   {l.label}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
 

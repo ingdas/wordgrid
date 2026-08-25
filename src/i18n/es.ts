@@ -2,9 +2,8 @@
 // build on any missing or stray key, and on a placeholder that doesn't survive
 // translation.
 //
-// The word puzzles themselves stay English (a board of English words can't be
-// translated, only rewritten); this covers the interface and the Logic Grid,
-// which needs no vocabulary at all.
+// The boards themselves live in src/i18n/content/es.ts — a board of English
+// words can't be translated, only rewritten, so Spanish has its own.
 export const es: Record<string, string> = {
   // --- shared -------------------------------------------------------------
   "app.name": "WordGrid",
@@ -231,6 +230,9 @@ export const es: Record<string, string> = {
   "share.level": "WordGrid · Nivel {n}",
   "share.soClose": "¡Casi!",
   "share.play": "Juega 👉 {url}",
+  "share.link.got": "🔑 enlace ✓",
+  "share.link.missed": "enlace ✗",
+  "share.footer": "Juega gratis → wordgrid",
 
   // --- tutorial -----------------------------------------------------------
   "welcome.title": "Cómo jugar",
@@ -301,7 +303,7 @@ export const es: Record<string, string> = {
   "settings.calm": "Modo tranquilo",
   "settings.calm.hint": "Menos confeti y movimiento",
   "settings.language": "Idioma",
-  "settings.language.hint": "Menús y reglas; los puzles de palabras siguen en inglés",
+  "settings.language.hint": "Menús, reglas y todos los tableros: cada idioma tiene sus propios puzles",
   "settings.reset": "Borrar el progreso",
   "settings.reset.confirm": "¿Borrar estrellas, puntos e historial?",
   "settings.reset.yes": "Borrarlo todo",
@@ -391,6 +393,7 @@ export const es: Record<string, string> = {
   "pairs.spelled": "🔑 ¡La escribiste!",
   "pairs.revealed": "Revelada por esta vez.",
   "pairs.newBest": "¡Nuevo récord!",
+  "pairs.showWord": "Muéstrame la palabra",
   "pairs.a11y.faceDown": "Carta boca abajo",
   "pairs.a11y.progress": "Grupos completados",
 

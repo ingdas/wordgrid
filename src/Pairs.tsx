@@ -6,6 +6,7 @@ import { LEVELS, buildPuzzle, type Puzzle, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import { CATEGORY_THEMES } from "./theme";
 import { buildLetterBank } from "./letters";
+import { displayWidth, graphemes } from "./i18n/script";
 import { linkMatches } from "./engine";
 import { plural, t } from "./i18n";
 import { showInterstitial } from "./sdk";
@@ -437,8 +438,11 @@ function PairCard({
     if (wrong) rattle(front.current, [], 0.6);
   }, [wrong]);
 
+  // Sized by how wide the word sits, not how many code units it has: a
+  // six-block Korean word is as wide as a ten-letter English one.
+  const width = displayWidth(word);
   const sizeClass =
-    word.length >= 10 ? "text-[0.6rem]" : word.length >= 8 ? "text-[0.7rem]" : word.length >= 7 ? "text-xs" : "text-sm";
+    width >= 10 ? "text-[0.6rem]" : width >= 8 ? "text-[0.7rem]" : width >= 7 ? "text-xs" : "text-sm";
   // A face-up card is still tappable during coupling (as a couple target or to
   // pick up a leftover), so tappability is driven purely by `disabled`.
   const face = wrong
@@ -510,17 +514,19 @@ function LinkSpell({
   onSolve: (spelled: boolean) => void;
 }) {
   const bank = useMemo(() => buildLetterBank(pivot), [pivot]);
+  const letters = useMemo(() => graphemes(pivot), [pivot]);
   const [taps, setTaps] = useState<number[]>([]);
   const [wrong, setWrong] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
   const [resolved, setResolved] = useState(false);
-  const built = taps.map((i) => bank[i]).join("");
-  const full = built.length >= pivot.length;
+  const built = taps.map((i) => bank[i]);
+  const builtText = built.join("");
+  const full = built.length >= letters.length;
 
   useEffect(() => {
     if (resolved || !full) return;
     const timer = setTimeout(() => {
-      if (linkMatches(built, pivot, accept)) {
+      if (linkMatches(builtText, pivot, accept)) {
         setResolved(true);
         onSolve(true);
       } else {
@@ -530,7 +536,7 @@ function LinkSpell({
       }
     }, 280);
     return () => clearTimeout(timer);
-  }, [full, built, resolved, pivot, accept, onSolve]);
+  }, [full, builtText, resolved, pivot, accept, onSolve]);
 
   const panel = useGsap<HTMLDivElement>(
     (el) => void gsap.fromTo(el, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: EASE.press }),
@@ -543,8 +549,8 @@ function LinkSpell({
 
   return (
     <div ref={panel} className="mt-6 text-center">
-      <div ref={slots} className="flex flex-wrap justify-center gap-1.5" aria-label={`${pivot.length} letters`}>
-        {pivot.split("").map((_, i) => {
+      <div ref={slots} className="flex flex-wrap justify-center gap-1.5" aria-label={t("finale.a11y.slots", { n: letters.length })}>
+        {letters.map((_, i) => {
           const placed = i < built.length;
           const next = i === built.length && !resolved;
           return (
@@ -602,7 +608,7 @@ function LinkSpell({
           disabled={resolved || !taps.length}
           className="flex items-center gap-1.5 rounded-full border border-ink/30 px-4 py-2 text-xs font-bold text-ink transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-35"
         >
-          ⌫ Undo
+          {t("finale.undo")}
         </button>
         <button
           onClick={() => {
@@ -613,7 +619,7 @@ function LinkSpell({
           disabled={resolved}
           className="rounded-full px-3 py-2 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
         >
-          Show me the word
+          {t("pairs.showWord")}
         </button>
       </div>
     </div>

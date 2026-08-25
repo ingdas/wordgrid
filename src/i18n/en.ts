@@ -238,6 +238,9 @@ export const en: Record<string, string> = {
   "share.level": "WordGrid · Level {n}",
   "share.soClose": "So close!",
   "share.play": "Play 👉 {url}",
+  "share.link.got": "🔑 link ✓",
+  "share.link.missed": "link ✗",
+  "share.footer": "Play free → wordgrid",
 
   // --- tutorial -----------------------------------------------------------
   "welcome.title": "How to play",
@@ -310,7 +313,7 @@ export const en: Record<string, string> = {
   "settings.calm": "Calm mode",
   "settings.calm.hint": "Dial back confetti & motion",
   "settings.language": "Language",
-  "settings.language.hint": "Menus and rules; the word puzzles stay English",
+  "settings.language.hint": "Menus, rules and every board — each language has its own puzzles",
   "settings.reset": "Reset progress",
   "settings.reset.confirm": "Erase all stars, scores & history?",
   "settings.reset.yes": "Reset everything",
@@ -400,6 +403,7 @@ export const en: Record<string, string> = {
   "pairs.spelled": "🔑 You spelled it!",
   "pairs.revealed": "Revealed for you this time.",
   "pairs.newBest": "New best!",
+  "pairs.showWord": "Show me the word",
   "pairs.a11y.faceDown": "Face-down card",
   "pairs.a11y.progress": "Groups completed",
 

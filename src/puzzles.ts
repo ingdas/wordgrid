@@ -10,7 +10,8 @@
 // looks like once the cipher twist has stripped it. engine.ts only imports a
 // *type* back from here, so nothing circular survives the build. The explicit
 // .ts extension is what lets `npm run validate` load this file under bare node.
-import { cipherWord } from "./engine.ts";
+import { activeScript, graphemes, rulesFor, type ScriptRules } from "./i18n/script.ts";
+import { activeContent, localizeRaw } from "./i18n/content/active.ts";
 
 export interface RawCategory {
   /** Human-readable theme revealed once solved. */
@@ -1217,10 +1218,19 @@ export function seededShuffle<T>(input: T[], seed: number): T[] {
   return arr;
 }
 
-export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
-  const pivot = raw.pivot.toUpperCase();
+/**
+ * The playable board for a raw puzzle — in the language being played: the
+ * active locale's overlay (src/i18n/content) replaces the English board slot
+ * for slot, so every caller sees localized tiles without knowing about locales.
+ * Upper-casing follows the language too (Turkish İ), and the shuffle is seeded
+ * off the id, so a slot lays out the same in every language.
+ */
+export function buildPuzzle(source: RawPuzzle, seed = 1): Puzzle {
+  const raw = localizeRaw(source);
+  const upper = activeScript().upper;
+  const pivot = upper(raw.pivot);
   const categories: Category[] = raw.categories.map((c) => {
-    const spokes = c.words.map((w) => w.toUpperCase());
+    const spokes = c.words.map(upper);
     return { name: c.name, spokes, members: [pivot, ...spokes] };
   });
   const allWords = [pivot, ...categories.flatMap((c) => c.spokes)];
@@ -1230,10 +1240,8 @@ export function buildPuzzle(raw: RawPuzzle, seed = 1): Puzzle {
     pivot,
     words: seededShuffle(allWords, seed + raw.id.length * 7),
     categories,
-    accept: (raw.accept ?? []).map((w) => w.toUpperCase()),
-    emoji: Object.fromEntries(
-      Object.entries(raw.emoji ?? {}).map(([k, v]) => [k.toUpperCase(), v]),
-    ),
+    accept: (raw.accept ?? []).map(upper),
+    emoji: Object.fromEntries(Object.entries(raw.emoji ?? {}).map(([k, v]) => [upper(k), v])),
   };
 }
 
@@ -1469,25 +1477,33 @@ const CHAPTER_TWISTS: BossTwist[] = [
  *  - blackout / emoji: nothing about the board fights them (the emoji boss
  *    replaces its board outright), so anything can carry them.
  */
-export function suitsTwist(twist: BossTwist, raw: RawPuzzle): boolean {
+export function suitsTwist(twist: BossTwist, raw: RawPuzzle, rules: ScriptRules = activeScript()): boolean {
+  // Lengths are in the language's own letters (a Hangul block, a Thai cluster),
+  // and the cipher is that script's cipher — so a localized board is judged by
+  // what its players will actually see. The placement pass passes English.
   const spokes = raw.categories.flatMap((c) => c.words);
+  const len = (w: string) => rules.letters(w).length;
+  const cipher = (w: string) => {
+    const out = rules.cipher(w);
+    return graphemes(out).length >= 2 ? out : w;
+  };
   switch (twist) {
     case "scramble":
-      return spokes.every((w) => w.length <= 7);
+      return spokes.every((w) => len(w) <= 7);
     case "decoy":
-      return !hasWordplay(raw) && spokes.filter((w) => w.length >= 9).length <= 1;
+      return !hasWordplay(raw) && spokes.filter((w) => len(w) >= 9).length <= 1;
     case "cipher": {
-      const skeletons = spokes.map(cipherWord);
+      const skeletons = spokes.map(cipher);
       return (
-        skeletons.every((s) => s.length >= 2) &&
-        skeletons.filter((s) => s.length === 2).length <= 3 &&
+        skeletons.every((s) => len(s) >= 2) &&
+        skeletons.filter((s) => len(s) === 2).length <= 3 &&
         new Set(skeletons).size === skeletons.length
       );
     }
     case "memory":
       return (
-        spokes.every((w) => w.length <= 8) &&
-        new Set(spokes.map((w) => w.slice(0, 2))).size === spokes.length
+        spokes.every((w) => len(w) <= 8) &&
+        new Set(spokes.map((w) => rules.letters(w).slice(0, 2).join(""))).size === spokes.length
       );
     default:
       return true;
@@ -1513,6 +1529,10 @@ const EMOJI_TWIN = "bolt";
 
 // How far past its own difficulty band a chapter may reach for a boss.
 const SPIKE = 4;
+
+// The placement pass shapes the ENGLISH boards: the slots it produces are
+// shared by every language, so it must never see another language's rules.
+const ENGLISH = rulesFor("en");
 
 /**
  * Deal the graded pool into the chapter spans as a rising sawtooth.
@@ -1546,7 +1566,7 @@ function dealChapters(): RawPuzzle[][] {
     // is a single board, and the easy end of the pool handed level 6 a grade-1
     // boss behind three grade-2 levels.
     const floor = Math.max(...[...head, ...band].map((p) => gradeOf(p.id)));
-    const ok = (p: RawPuzzle) => suitsTwist(twist, p) && gradeOf(p.id) >= floor;
+    const ok = (p: RawPuzzle) => suitsTwist(twist, p, ENGLISH) && gradeOf(p.id) >= floor;
     const reach = [...band, ...pool.slice(0, SPIKE)];
     // The hardest board in reach that can carry the twist and tops the chapter.
     // If the reach holds none, take the *easiest* board further up the pool that
@@ -1742,9 +1762,14 @@ export const CHAPTER_KEYS = [
   "MASTERMIND", // 12 The Final Test
 ];
 
-/** The keyword guarding a chapter's boss. */
+/**
+ * The keyword guarding a chapter's boss, in the language being played: the
+ * active locale's own keyword when it has one (src/i18n/content), else the
+ * English. Letters only — a two-word key spells without its space.
+ */
 export function chapterKey(chapter: number): string {
-  return CHAPTER_KEYS[chapter % CHAPTER_KEYS.length];
+  const word = activeContent()?.keys[chapter] ?? CHAPTER_KEYS[chapter % CHAPTER_KEYS.length];
+  return activeScript().upper(word).replace(/[^\p{L}\p{M}]/gu, "");
 }
 
 /** Levels in a chapter that bank a key letter — everything but the boss. */
@@ -1764,29 +1789,36 @@ export function keyLevels(chapter: number): number[] {
  * puzzle. And a jumble that fills in as you play is a far better collectible
  * than a word slowly typing itself.
  */
-const KEY_DEAL: string[][] = CHAPTER_KEYS.map((word, ci) => {
-  const letters = word.split("");
+const dealCache = new Map<string, string[]>();
+function keyDeal(ci: number): string[] {
+  const word = chapterKey(ci);
+  const hit = dealCache.get(`${ci}:${word}`);
+  if (hit) return hit;
+  const letters = graphemes(word);
   // A shuffle is allowed to come back as the word itself; that one outcome
   // gives the key away, so try again from a moved seed. Repeated letters make
   // several shuffles read alike, never the word, so this settles at once.
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const dealt = seededShuffle(letters, 90210 + ci * 7717 + attempt * 131);
-    if (dealt.join("") !== word) return dealt;
+  let dealt: string[] | null = null;
+  for (let attempt = 0; attempt < 8 && !dealt; attempt++) {
+    const d = seededShuffle(letters, 90210 + ci * 7717 + attempt * 131);
+    if (d.join("") !== word) dealt = d;
   }
-  return [...letters].reverse();
-});
+  dealt ??= [...letters].reverse();
+  dealCache.set(`${ci}:${word}`, dealt);
+  return dealt;
+}
 
 /** The key letter a level banks when it's cleared, or null if it banks none. */
 export function keyLetterOf(index: number): string | null {
   const ci = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
   if (ci < 0) return null;
   const slot = keyLevels(ci).indexOf(index);
-  return slot < 0 ? null : KEY_DEAL[ci % KEY_DEAL.length][slot];
+  return slot < 0 ? null : keyDeal(ci)[slot];
 }
 
 /** Every slot in a chapter's key: the level that fills it, and with what. */
 export function keySlots(chapter: number): { index: number; letter: string }[] {
-  const deal = KEY_DEAL[chapter % KEY_DEAL.length];
+  const deal = keyDeal(chapter);
   return keyLevels(chapter).map((index, slot) => ({ index, letter: deal[slot] }));
 }
 
@@ -1797,7 +1829,7 @@ export function keySlots(chapter: number): { index: number; letter: string }[] {
  * has solved the level, so it has to name the board they really saw.
  */
 export function levelTitle(index: number): string {
-  return bossTwist(index) === "emoji" ? EMOJI_BOSS.title : LEVELS[index].title;
+  return localizeRaw(bossTwist(index) === "emoji" ? EMOJI_BOSS : LEVELS[index]).title;
 }
 
 // The "decoy" boss salts the board with impostor words that fit no group. We
@@ -1811,7 +1843,10 @@ const DECOY_POOL = [
 
 export function decoyTiles(puzzle: Puzzle, count = 3): string[] {
   const taken = new Set([puzzle.pivot, ...puzzle.words, ...puzzle.accept]);
-  const pool = DECOY_POOL.filter((w) => !taken.has(w));
+  const source = activeContent()?.decoys;
+  const pool = (source?.length ? source : DECOY_POOL)
+    .map((w) => activeScript().upper(w))
+    .filter((w) => !taken.has(w));
   let seed = 0;
   for (const c of puzzle.id) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const picks: string[] = [];

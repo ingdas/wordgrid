@@ -8,6 +8,7 @@ import { useModal } from "./modal";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
 import { plural, t } from "./i18n";
+import { displayWidth, graphemes } from "./i18n/script";
 import { LinkGuess } from "./LinkGuess";
 import { BossBriefing } from "./BossBriefing";
 import { DebugPanel } from "./DebugPanel";
@@ -626,13 +627,14 @@ export default function Game({
   }, [canHint, hintableCategories, onUseHint]);
 
   // Finale hint: spend a token to reveal the next letter of the secret link.
-  const canRevealLetter = hasHint && revealedLetters < puzzle.pivot.length;
+  const pivotLength = graphemes(puzzle.pivot).length;
+  const canRevealLetter = hasHint && revealedLetters < pivotLength;
   const revealLetter = useCallback(() => {
     if (!hasHint) return;
-    setRevealedLetters((n) => Math.min(n + 1, puzzle.pivot.length));
+    setRevealedLetters((n) => Math.min(n + 1, pivotLength));
     onUseHint();
     playHint();
-  }, [hasHint, puzzle.pivot.length, onUseHint]);
+  }, [hasHint, pivotLength, onUseHint]);
 
   // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
   const refill = useCallback(async () => {
@@ -1105,7 +1107,7 @@ export default function Game({
             key={endHere.data}
             ref={endHere.ref}
               won={endHere.data === "won"}
-              title={raw.title}
+              title={puzzle.title}
               stars={stars}
               mistakes={mistakes}
               streak={streak}
@@ -1328,9 +1330,9 @@ function SecretLink({
           // turns the card into a clue you can narrow while you group.
           <span
             className="font-display text-2xl font-bold tracking-[0.3em] text-ink"
-            aria-label={t("game.secretLink.letters", { n: word.length })}
+            aria-label={t("game.secretLink.letters", { n: graphemes(word).length })}
           >
-            {"?".repeat(word.length).split("").join(" ")}
+            {graphemes(word).map(() => "?").join(" ")}
           </span>
         )}
       </div>
@@ -1366,7 +1368,7 @@ function LinkWord({ word }: { word: string }) {
       className="inline-flex font-display text-2xl font-bold uppercase tracking-wide text-ink"
       style={{ perspective: 400 }}
     >
-      {word.split("").map((ch, i) => (
+      {graphemes(word).map((ch, i) => (
         <span key={i} data-letter aria-hidden className="inline-block">
           {ch}
         </span>
@@ -1402,9 +1404,9 @@ function WordTile({
     ? "font-display text-xl sm:text-2xl"
     : emoji
     ? "text-3xl sm:text-4xl"
-    : shown.length >= 8
+    : displayWidth(shown) >= 8
       ? "text-[0.7rem] sm:text-xs"
-      : shown.length >= 7
+      : displayWidth(shown) >= 7
         ? "text-xs sm:text-sm"
         : "text-sm sm:text-base";
 
