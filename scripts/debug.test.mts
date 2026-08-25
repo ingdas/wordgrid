@@ -1,10 +1,13 @@
 // The debug switch. It is the one flag that can hand a player the whole game,
-// so how it turns on (URL, Settings toggle, storage) and what it opens up
-// (every level, every boss door) are pinned here rather than eyeballed.
+// so how it turns on (the URL, and only the URL), that it does not outlive that
+// URL, and what it opens up (every level, every boss door) are pinned here
+// rather than eyeballed.
 import assert from "node:assert/strict";
 
-// A minimal browser surface, since the switch lives in localStorage and reads
-// the query string. Installed before the modules under test are imported.
+// A minimal browser surface, installed before the modules under test are
+// imported. The switch reads the query string; localStorage is here for
+// progress.ts, which the gating cases go through — the switch itself must
+// never touch it, and the cases below check that it doesn't.
 const store = new Map<string, string>();
 const g = globalThis as Record<string, unknown>;
 g.localStorage = {
@@ -15,8 +18,8 @@ g.localStorage = {
 const location = { search: "" };
 g.window = { location };
 
-const { isDebug, setDebug, resetDebugCache } = await import("../src/debug.ts");
-// The switch reads through src/storage.ts, which keeps its own in-memory copy
+const { isDebug, setDebug, resetDebugCache, debugRequested } = await import("../src/debug.ts");
+// progress.ts reads through src/storage.ts, which keeps its own in-memory copy
 // of every key — clearing the fake store alone would leave that copy standing.
 const { resetStorageCache } = await import("../src/storage.ts");
 const { isUnlocked, keyLockedBoss, loadProgress } = await import("../src/progress.ts");
@@ -37,40 +40,47 @@ function reset(search = "") {
   resetDebugCache();
 }
 
-test("off unless something turns it on", () => {
+test("off unless ?debug is in the URL", () => {
   reset();
+  assert.equal(debugRequested(), false);
   assert.equal(isDebug(), false);
 });
 
-test("?debug turns it on and is remembered without the query", () => {
+test("?debug turns it on, for this page only", () => {
   reset("?debug");
+  assert.equal(debugRequested(), true);
   assert.equal(isDebug(), true);
+  assert.equal(store.has("wordgrid:debug"), false, "the switch must not be written to storage");
+  // The next load without the query is an ordinary player's.
   location.search = "";
   resetDebugCache();
-  assert.equal(isDebug(), true, "the switch should outlive the URL that set it");
+  assert.equal(isDebug(), false, "the switch must not outlive the URL that set it");
 });
 
-test("?debug=0 turns it back off, and that sticks too", () => {
+test("?debug rides along with other parameters; ?debug=0 counts as absent", () => {
+  reset("?lang=es&debug");
+  assert.equal(isDebug(), true);
+  reset("?debug=1");
+  assert.equal(isDebug(), true);
+  reset("?debug=0");
+  assert.equal(debugRequested(), false);
+  assert.equal(isDebug(), false);
+});
+
+test("the Settings toggle flips it live, for this session only", () => {
   reset("?debug");
-  assert.equal(isDebug(), true);
-  location.search = "?debug=0";
-  resetDebugCache();
-  assert.equal(isDebug(), false);
-  location.search = "";
-  resetDebugCache();
-  assert.equal(isDebug(), false);
-});
-
-test("the Settings toggle flips it live, and persists", () => {
-  reset();
-  setDebug(true);
-  assert.equal(isDebug(), true, "no reload should be needed");
-  resetDebugCache();
-  assert.equal(isDebug(), true);
   setDebug(false);
-  assert.equal(isDebug(), false);
+  assert.equal(isDebug(), false, "no reload should be needed");
+  setDebug(true);
+  assert.equal(isDebug(), true);
+  assert.equal(store.has("wordgrid:debug"), false, "toggling must not write to storage");
+  // A reload answers to the URL again, whatever the toggle last said.
   resetDebugCache();
-  assert.equal(isDebug(), false);
+  assert.equal(isDebug(), true);
+  setDebug(true);
+  location.search = "";
+  resetDebugCache();
+  assert.equal(isDebug(), false, "an earlier toggle must not be remembered without the query");
 });
 
 test("debug opens every level and every boss door", () => {

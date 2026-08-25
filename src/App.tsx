@@ -36,7 +36,7 @@ import {
   type Progress,
 } from "./progress";
 import { recordQuest, QUEST_SET_BONUS, COMBO_TARGET, type QuestDef, type QuestEvent } from "./quests";
-import { isDebug, setDebug } from "./debug";
+import { debugRequested, isDebug, setDebug } from "./debug";
 import { useModal } from "./modal";
 import { readItem, writeItem, removeItem, startSdkMirror } from "./storage";
 import {
@@ -138,9 +138,9 @@ export default function App() {
     setLocale(next);
     setLocaleState(next);
   }, []);
-  // Debug mode. The flag lives in localStorage (and answers to `?debug`), but
-  // it's mirrored in state so flipping it in Settings re-renders the tree —
-  // the level gating, the hint bank and the tool panels all read it.
+  // Debug mode. It's on when the page was opened with `?debug` (src/debug.ts),
+  // mirrored in state so flipping it in Settings re-renders the tree — the
+  // level gating, the hint bank and the tool panels all read it.
   const [debug, setDebugState] = useState(() => isDebug());
   const toggleDebug = useCallback(() => {
     setDebugState((d) => {
@@ -1367,19 +1367,22 @@ function SettingsModal({
           </div>
         </div>
 
-        {/* Developer tools. Off by default and last on the page, but a real
-            switch rather than a URL you have to remember: it's the same flag
-            `?debug` sets, so everything downstream behaves identically. */}
+        {/* Developer tools, last on the page. The debug switch only exists on
+            a page opened with `?debug` — a player never sees a toggle that
+            hands them the whole game — and it flips the same flag the URL set,
+            so everything downstream behaves identically. */}
         <div className="mt-4 border-t border-dashed border-ink/20 pt-1">
           <div className="pt-2 text-[0.6rem] font-bold uppercase tracking-widest text-ink-soft">
             {t("settings.developer")}
           </div>
-          <ToggleRow
-            label={t("settings.debug")}
-            hint={t("settings.debug.hint")}
-            on={debug}
-            onToggle={onToggleDebug}
-          />
+          {debugRequested() && (
+            <ToggleRow
+              label={t("settings.debug")}
+              hint={t("settings.debug.hint")}
+              on={debug}
+              onToggle={onToggleDebug}
+            />
+          )}
           {/* How the campaign is actually landing: solve counts and success
               rates per level, straight from the players who have tried them. */}
           <button

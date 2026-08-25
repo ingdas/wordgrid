@@ -167,9 +167,10 @@ clicking words that have moved.
 
 ### Debug mode
 
-For playtesting and QA. Turn it on by appending **`?debug`** to the URL (it's
-remembered afterwards — `?debug=0` clears it) or with the **Debug mode** toggle
-in **Settings → Developer**. It gives you:
+For playtesting and QA. Turn it on by appending **`?debug`** to the URL. It is
+on for exactly that page — drop the query and the game is a player's again —
+and while it's there, **Settings → Developer** has a **Debug mode** toggle to
+turn it off and back on for the session. It gives you:
 
 - every level and every boss door **unlocked**, keys included;
 - **free hints** — the bank reads ∞, nothing is spent, and no ad is offered;
@@ -180,7 +181,8 @@ in **Settings → Developer**. It gives you:
   *auto-solve grid*.
 
 Nothing about it leaks into a normal save: the tray is only mounted while debug
-is on, and the switch lives in its own localStorage key (`wordgrid:debug`).
+is on, the Settings switch only on a page opened with `?debug`, and nothing
+about it is written to storage.
 
 ### Saving
 

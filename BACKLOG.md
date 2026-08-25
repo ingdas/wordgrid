@@ -60,10 +60,10 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   - `node scripts/stats.playtest.mjs` — level tracking against the real
     reference server, a level played offline; it serves `docs/` and runs the
     server itself, so it needs no preview.
-- **Debug mode**: `?debug` in the URL (remembered; `?debug=0` clears it),
-  **Settings → Developer**, or `localStorage["wordgrid:debug"]="1"` (what the
-  scripts do). Everything unlocked, free hints, the 🛠 tool tray. Full list in
-  README.
+- **Debug mode**: only on a page opened with `?debug` in the URL — not
+  remembered, nothing stored; the scripts open `?debug` too. That page's
+  **Settings → Developer** has a toggle to turn it off and on for the session.
+  Everything unlocked, free hints, the 🛠 tool tray. Full list in README.
 - **Commit style**: imperative summary + a body that says why; end with
   `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` and the
   session's `Claude-Session:` URL trailer. Never put a model id in code.

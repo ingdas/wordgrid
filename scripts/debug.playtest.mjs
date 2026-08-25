@@ -5,8 +5,9 @@
 //   BASE=http://localhost:4173/ node scripts/debug.playtest.mjs
 //
 // Five checks:
-//   1. the tool tray only exists in debug mode, and the Settings toggle is a
-//      real way in and out of it
+//   1. debug mode exists only on a page opened with `?debug`: no tray and no
+//      Settings switch without it, nothing written to storage with it, and
+//      that page's Settings toggle turns it off and back on live
 //   2. the in-game tools: reveal every theme, peek at the link, auto-solve
 //   3. hints are free (the bank reads ∞ and never goes down)
 //   4. the index tool clears the next level for real (stars are persisted)
@@ -43,6 +44,24 @@ async function clickText(sel, text) {
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
 const trayButton = () => p.$('button[aria-label="Debug tools"]');
+const debugToggle = () => p.$('button[aria-label="Debug mode"]');
+// Game → Levels → Home → ⚙ Settings.
+async function openSettingsFromGame() {
+  await clickText("button", "Levels");
+  await sleep(400);
+  await p.evaluate(() =>
+    [...document.querySelectorAll("button")].find((e) => e.getAttribute("aria-label") === "Home")?.click()
+  );
+  await sleep(500);
+  const gear = await p.$('button[aria-label="Settings"]');
+  if (!gear) {
+    note("Home has no Settings button.");
+    return false;
+  }
+  await gear.click();
+  await sleep(400);
+  return true;
+}
 async function openTray() {
   const btn = await trayButton();
   if (!btn) return false;
@@ -63,14 +82,16 @@ async function freshDebugSave(hints = 3) {
   await p.evaluate((n) => {
     localStorage.clear();
     localStorage.setItem("wordgrid:tutorial", "1");
-    localStorage.setItem("wordgrid:debug", "1");
     localStorage.setItem("wordgrid:progress", JSON.stringify({ hints: n }));
   }, hints);
-  await p.goto(BASE, { waitUntil: "networkidle0" });
+  await p.goto(BASE + "?debug", { waitUntil: "networkidle0" });
   await sleep(600);
 }
 
-// 1. Off by default; the Settings toggle turns it on and off again.
+// 1. Debug mode exists only on a page opened with `?debug`. An ordinary player
+//    gets no tray and no switch in Settings; with the query, the tray is there,
+//    nothing is written to storage, and the Settings toggle turns debug off and
+//    back on without a reload.
 {
   await p.goto(BASE, { waitUntil: "networkidle0" });
   await p.evaluate(() => {
@@ -84,33 +105,46 @@ async function freshDebugSave(hints = 3) {
   log("no tray for an ordinary player:", (await trayButton()) == null);
   if (await trayButton()) note("Debug tray is mounted with debug mode off.");
 
-  // Home → Settings → Developer → Debug mode
-  await clickText("button", "Levels");
-  await sleep(400);
-  await p.evaluate(() =>
-    [...document.querySelectorAll("button")].find((e) => e.getAttribute("aria-label") === "Home")?.click()
-  );
-  await sleep(500);
-  const gear = await p.$('button[aria-label="Settings"]');
-  if (!gear) note("Home has no Settings button.");
-  else await gear.click();
-  await sleep(400);
-  const settings = await bodyText();
-  if (!/developer/i.test(settings)) note("Settings has no Developer section.");
-  const toggle = await p.$('button[aria-label="Debug mode"]');
-  if (!toggle) note("Settings has no Debug mode toggle.");
+  await openSettingsFromGame();
+  if (!/developer/i.test(await bodyText())) note("Settings has no Developer section.");
+  log("no debug switch for an ordinary player:", (await debugToggle()) == null);
+  if (await debugToggle()) note("Settings shows the Debug mode toggle on a page opened without ?debug.");
+
+  // The same save, opened with ?debug.
+  await p.goto(BASE + "?debug", { waitUntil: "networkidle0" });
+  await sleep(600);
+  await clickText("button", "Play");
+  await sleep(600);
+  log("tray on a page opened with ?debug:", (await trayButton()) != null);
+  if (!(await trayButton())) note("Debug tray is missing on a page opened with ?debug.");
+  const stored = await p.evaluate(() => localStorage.getItem("wordgrid:debug"));
+  log("nothing about debug is stored:", stored === null);
+  if (stored !== null) note("?debug was written to localStorage — debug mode must not be remembered.");
+
+  await openSettingsFromGame();
+  const toggle = await debugToggle();
+  if (!toggle) note("Settings has no Debug mode toggle on a page opened with ?debug.");
   else {
-    await toggle.click();
+    await toggle.click(); // off
     await sleep(300);
-    const on = await p.evaluate(() => localStorage.getItem("wordgrid:debug"));
-    log("settings toggle turns debug on:", on === "1");
-    if (on !== "1") note("Settings toggle did not turn debug mode on.");
     await clickText("button", "Done");
     await sleep(900); // let the modal's exit animation release the backdrop
     await clickText("button", "Play");
     await sleep(900);
-    log("tray appears without a reload:", (await trayButton()) != null);
-    if (!(await trayButton())) note("Debug tray did not appear after toggling debug on.");
+    log("toggle turns debug off without a reload:", (await trayButton()) == null);
+    if (await trayButton()) note("Debug tray stayed mounted after toggling debug off.");
+
+    await openSettingsFromGame();
+    const again = await debugToggle();
+    if (!again) note("The Debug mode toggle vanished once debug was off; there is no way back on.");
+    else await again.click(); // back on
+    await sleep(300);
+    await clickText("button", "Done");
+    await sleep(900);
+    await clickText("button", "Play");
+    await sleep(900);
+    log("toggle turns debug back on:", (await trayButton()) != null);
+    if (!(await trayButton())) note("Debug tray did not come back after toggling debug on again.");
   }
   if (SHOT) await p.screenshot({ path: `${SHOT}/debug-tray.png` });
 }

@@ -28,7 +28,6 @@ export const KEYS = [
   "wordgrid:progress",
   "wordgrid:tutorial",
   "wordgrid:calm",
-  "wordgrid:debug",
   "wordgrid:muted",
   "wordgrid:music",
   "wordgrid:sfxvol",

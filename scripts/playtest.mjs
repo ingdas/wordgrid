@@ -216,11 +216,8 @@ await p.screenshot({ path: `${SHOT}/r8-history.png` });
 
 // 10. Boss level: the first chapter's boss is the "scramble" twist (different
 //     gameplay). Unlock everything, then click the first 👑 boss node.
-await p.evaluate(() => {
-  localStorage.setItem("wordgrid:tutorial", "1");
-  localStorage.setItem("wordgrid:debug", "1"); // unlock all levels for the test
-});
-await p.goto(BASE, { waitUntil: "networkidle0" });
+await p.evaluate(() => localStorage.setItem("wordgrid:tutorial", "1"));
+await p.goto(BASE + "?debug", { waitUntil: "networkidle0" }); // unlock all levels for the test
 await sleep(400);
 await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(500);
@@ -410,11 +407,8 @@ await p.screenshot({ path: `${SHOT}/r10-loss.png` });
 //     collection scrolls inside its own pane, the page itself never scrolls.
 //     Checked with everything solved, the longest the list can ever get.
 await p.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
-await p.evaluate(() => {
-  localStorage.setItem("wordgrid:tutorial", "1");
-  localStorage.setItem("wordgrid:debug", "1");
-});
-await p.goto(BASE, { waitUntil: "networkidle0" });
+await p.evaluate(() => localStorage.setItem("wordgrid:tutorial", "1"));
+await p.goto(BASE + "?debug", { waitUntil: "networkidle0" }); // everything open
 await sleep(500);
 await clickText("button", "Browse all");
 await sleep(900);

@@ -47,11 +47,10 @@ async function seed(progress = {}, extra = {}) {
   await p.evaluate((prog, more) => {
     localStorage.clear();
     localStorage.setItem("wordgrid:tutorial", "1");
-    localStorage.setItem("wordgrid:debug", "1");
     localStorage.setItem("wordgrid:progress", JSON.stringify(prog));
     for (const [k, v] of Object.entries(more)) localStorage.setItem(k, v);
   }, progress, extra);
-  await p.goto(BASE, { waitUntil: "networkidle0" });
+  await p.goto(BASE + "?debug", { waitUntil: "networkidle0" }); // everything open, free hints
   await sleep(700);
 }
 
