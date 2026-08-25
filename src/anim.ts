@@ -261,6 +261,66 @@ export function usePresence<P, T extends HTMLElement = HTMLDivElement>(
   return { rendered, ref, data: present ? payload : held.current };
 }
 
+/**
+ * One slot, one screen at a time: the outgoing one leaves before the incoming
+ * one arrives.
+ *
+ * Returns the key that should actually be rendered — which lags the real one
+ * for the length of the exit — and a ref for whatever is rendered under it.
+ * Crossfading two full screens over each other means two of them laid out at
+ * once, which on a phone is a scrollbar and a jump; waiting costs a quarter of
+ * a second and looks deliberate.
+ */
+export function useSwitch<K, T extends HTMLElement = HTMLDivElement>(key: K, exit: Exit<HTMLElement>) {
+  const [shown, setShown] = useState(key);
+  const ref = useRef<T | null>(null);
+  // The newest key, so a second change mid-exit lands on the right screen
+  // rather than on the one that was next when the exit started.
+  const wanted = useRef(key);
+  wanted.current = key;
+  const exitRef = useRef(exit);
+  exitRef.current = exit;
+
+  useEffect(() => {
+    if (key === shown) return;
+    const el = ref.current;
+    const tween = el && motionOn() ? exitRef.current(el) : null;
+    if (!tween) {
+      setShown(key);
+      return;
+    }
+    tween.eventCallback("onComplete", () => setShown(wanted.current));
+    return () => {
+      tween.kill();
+    };
+  }, [key, shown]);
+
+  return { key: shown, ref };
+}
+
+/**
+ * The system's reduced-motion preference, as a React value.
+ *
+ * `src/anim.ts` reads the same query once at module load for its own flag; this
+ * is for App, which has to fold it together with the in-game Calm switch and
+ * re-render when either changes.
+ */
+export function useSystemReduceMotion(): boolean {
+  const query = "(prefers-reduced-motion: reduce)";
+  const [on, setOn] = useState(
+    () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia(query);
+    const listen = () => setOn(mq.matches);
+    mq.addEventListener("change", listen);
+    setOn(mq.matches);
+    return () => mq.removeEventListener("change", listen);
+  }, []);
+  return on;
+}
+
 /** Straight out. */
 export const fadeOut: Exit = (el) => gsap.to(el, { opacity: 0, duration: 0.2, ease: "power2.in" });
 
@@ -271,6 +331,20 @@ export const dropOut: Exit = (el) =>
 /** A card settling back into the page as it goes. */
 export const sinkOut: Exit = (el) =>
   gsap.to(el, { y: 16, scale: 0.96, opacity: 0, duration: 0.24, ease: "power2.in" });
+
+/**
+ * Back up off the top of the screen — a banner that came down from there.
+ *
+ * Slower than the toast's drop on purpose: this one has sixty pixels to cover
+ * and is usually carrying something worth reading, so snapping it away reads as
+ * a glitch rather than a dismissal.
+ */
+export const riseOut: Exit = (el) =>
+  gsap.to(el, { y: -60, opacity: 0, duration: 0.45, ease: "power2.in" });
+
+/** A whole screen stepping aside for the next one. */
+export const screenOut: Exit = (el) =>
+  gsap.to(el, { y: -8, opacity: 0, duration: 0.22, ease: "power2.in" });
 
 // ---------------------------------------------------------------------------
 // Dialogs

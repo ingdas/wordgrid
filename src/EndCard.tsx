@@ -22,12 +22,17 @@ function StarRow({ stars }: { stars: number }) {
   const row = useGsap<HTMLDivElement>((scope) => {
     const earned = scope.querySelectorAll("[data-earned]");
     if (!earned.length || !motionOn()) return;
+    // Hidden, not oversized, while they wait their turn: a `fromTo` writes its
+    // start values as soon as it is built, so all three stars would otherwise
+    // sit at 2.6× for the length of the delay — three 114px stars inside a card
+    // sized for 44px ones.
+    gsap.set(earned, { opacity: 0 });
     const tl = gsap.timeline({ delay: 0.35 });
     earned.forEach((star, i) => {
       tl.fromTo(
         star,
         { scale: 2.6, rotate: -140, opacity: 0 },
-        { scale: 1, rotate: 0, opacity: 1, duration: 0.5, ease: EASE.stamp },
+        { scale: 1, rotate: 0, opacity: 1, duration: 0.5, ease: EASE.stamp, immediateRender: false },
         i * 0.2
       ).to(scope, { y: 3, duration: 0.06, yoyo: true, repeat: 1, ease: "power2.out" }, i * 0.2 + 0.16);
     });

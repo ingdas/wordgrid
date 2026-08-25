@@ -1,5 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
+import gsap from "gsap";
+import {
+  EASE,
+  type Exit,
+  dialogIn,
+  dialogOut,
+  motionOn,
+  pressDown,
+  release,
+  sinkOut,
+  useGsap,
+  usePresence,
+} from "./anim";
 import {
   LEVELS,
   CHAPTERS,
@@ -248,6 +260,9 @@ export default function LevelSelect({
 
   // Which chapter's key panel is open, if any.
   const [keyPanel, setKeyPanel] = useState<number | null>(null);
+  // Carries the chapter it was opened for, so the panel isn't redrawn for a
+  // null chapter on the way out.
+  const keyHere = usePresence(keyPanel != null, keyPanel, dialogOut);
 
   // A concrete thing to walk towards. Bosses are the most distinctive content
   // in the game, so "3 to the boss" is a better carrot than "level 26".
@@ -326,7 +341,7 @@ export default function LevelSelect({
 
           {nextIndex >= 0 ? (
             <>
-              <UpNextCard index={nextIndex} reduce={reduce} onPlay={() => onPick(nextIndex)} />
+              <UpNextCard index={nextIndex} onPlay={() => onPick(nextIndex)} />
               {bossAhead != null && (
                 <p className="mt-2.5 text-center text-xs font-semibold text-ink-soft lg:text-left">
                   {plural("levels.bossIn", bossAhead)}
@@ -484,34 +499,7 @@ export default function LevelSelect({
 
       {/* The letter in transit, drawn above everything and outside the layout
           so it can cross from an index row into the rail below it. */}
-      <AnimatePresence>
-        {flight && (
-          <motion.span
-            key="flight"
-            aria-hidden
-            className="pointer-events-none fixed z-[80] grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
-            style={{
-              left: flight.x0 - flight.w / 2,
-              top: flight.y0 - flight.h / 2,
-              width: flight.w,
-              height: flight.h,
-              background: flight.fill,
-            }}
-            initial={{ x: 0, y: 0, scale: 1.3, rotate: -12 }}
-            animate={{
-              x: [0, (flight.x1 - flight.x0) * 0.45, flight.x1 - flight.x0],
-              // A lob, not a slide: the letter is thrown to the rail.
-              y: [0, (flight.y1 - flight.y0) * 0.5 - 38, flight.y1 - flight.y0],
-              scale: [1.3, 1.15, 1],
-              rotate: [-12, 8, 0],
-            }}
-            exit={{ opacity: 0, scale: 1.4, transition: { duration: 0.14 } }}
-            transition={{ duration: FLY_MS / 1000, times: [0, 0.5, 1], ease: "easeInOut" }}
-          >
-            {flight.letter}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {flight && <FlyingLetter key={`${flight.letter}-${flight.x0}-${flight.y0}`} flight={flight} />}
 
       {debug && (
         <DebugPanel
@@ -526,19 +514,18 @@ export default function LevelSelect({
         />
       )}
 
-      <AnimatePresence>
-        {keyPanel != null && (
-          <ChapterKeyPanel
-            chapter={keyPanel}
-            hints={hints}
-            unlimited={debug}
-            onUseHint={onUseHint}
-            onRefillHints={onRefillHints}
-            onSolved={() => onSolveKey(keyPanel)}
-            onClose={() => setKeyPanel(null)}
-          />
-        )}
-      </AnimatePresence>
+      {keyHere.rendered && keyHere.data != null && (
+        <ChapterKeyPanel
+          ref={keyHere.ref}
+          chapter={keyHere.data}
+          hints={hints}
+          unlimited={debug}
+          onUseHint={onUseHint}
+          onRefillHints={onRefillHints}
+          onSolved={() => onSolveKey(keyHere.data!)}
+          onClose={() => setKeyPanel(null)}
+        />
+      )}
     </div>
   );
 }
@@ -683,12 +670,10 @@ function BossPanel({
     + (doorRule ? `. ${doorRule}` : "");
 
   return (
-    <motion.div
+    <div
       ref={panelRef}
       className="relative mt-3 overflow-hidden rounded-2xl border-2 border-ink shadow-stamp"
       style={{ background: ink.wash, opacity: state === "far" ? 0.9 : 1 }}
-      animate={burst && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
-      transition={{ duration: 0.5 }}
     >
       {/* --- the rail ------------------------------------------------------ */}
       <div
@@ -707,7 +692,6 @@ function BossPanel({
                 gold
                 index={i}
                 ink={ink}
-                reduce={reduce}
                 pop={burst}
               />
             ))
@@ -718,7 +702,6 @@ function BossPanel({
                 filled={onRail(slot.index)}
                 index={i}
                 ink={ink}
-                reduce={reduce}
                 charge={charge || (railFull && !reduce)}
                 tileRef={(el) => slotRef(LEVELS[slot.index].id, el)}
               />
@@ -741,13 +724,14 @@ function BossPanel({
 
         {/* The charge sweep: one pass of gold light across the finished rail. */}
         {charge && !reduce && (
-          <motion.span
-            aria-hidden
+          <Sweep
+            key="charge"
             className="pointer-events-none absolute inset-y-0 w-24 -skew-x-12"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(237,168,32,0.55), transparent)" }}
-            initial={{ left: "-20%", opacity: 0 }}
-            animate={{ left: "110%", opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 1.1, ease: "easeInOut" }}
+            background="linear-gradient(90deg, transparent, rgba(237,168,32,0.55), transparent)"
+            from="-20%"
+            to="110%"
+            duration={1.1}
+            fade
           />
         )}
       </div>
@@ -762,21 +746,9 @@ function BossPanel({
           style={{ background: `radial-gradient(120% 140% at 12% 120%, ${ink.fill}, transparent 65%)` }}
         />
 
-        <motion.span
-          aria-hidden
-          className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink text-lg"
-          style={{ background: state === "far" || state === "sealed" ? "#4a443a" : ink.fill }}
-          animate={
-            reduce || state === "far" || state === "sealed"
-              ? { scale: 1 }
-              : state === "beaten"
-                ? { scale: 1 }
-                : { scale: [1, 1.09, 1], rotate: [0, -4, 0] }
-          }
-          transition={{ duration: 2.1, repeat: state === "open" || state === "ready" ? Infinity : 0 }}
-        >
+        <Crown live={state === "open" || state === "ready"} background={state === "far" || state === "sealed" ? "#4a443a" : ink.fill}>
           {state === "far" || state === "sealed" ? "🔒" : "👑"}
-        </motion.span>
+        </Crown>
 
         {/* The whole stack is decorative: the sr-only label at the foot of the
             panel says the same thing in one sentence, and reads "? ? ?" as the
@@ -810,29 +782,28 @@ function BossPanel({
         </div>
 
         {state === "ready" && (
-          <motion.button
+          <PulseButton
+            beat={1.055}
             onClick={onOpenKey}
             disabled={!canSpell}
             aria-label={label}
             className="relative shrink-0 rounded-full border-2 border-ink bg-gold px-3.5 py-1.5 text-xs font-extrabold text-ink shadow-stamp-sm transition hover:brightness-105 active:scale-95"
-            animate={reduce ? { scale: 1 } : { scale: [1, 1.055, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
           >
             {t("boss.cta.key")}
-          </motion.button>
+          </PulseButton>
         )}
         {(state === "open" || state === "beaten") && (
-          <motion.button
+          <PulseButton
+            // A door already beaten has nothing to ask for, so it sits still.
+            beat={state === "open" ? 1.06 : 0}
             onClick={onPlay}
             aria-label={label}
             className={`relative shrink-0 rounded-full border-2 border-ink px-3.5 py-1.5 text-xs font-extrabold shadow-stamp-sm transition active:scale-95 ${
               state === "open" ? "bg-press text-paper hover:brightness-110" : "bg-paper text-ink hover:bg-cream"
             }`}
-            animate={reduce || state === "beaten" ? { scale: 1 } : { scale: [1, 1.06, 1] }}
-            transition={{ duration: 1.5, repeat: state === "open" ? Infinity : 0 }}
           >
             {t(state === "open" ? "boss.cta.play" : "boss.cta.replay")}
-          </motion.button>
+          </PulseButton>
         )}
         {(state === "far" || state === "sealed") && (
           // A keyhole, drawn rather than set in emoji: the shut door's answer
@@ -850,25 +821,22 @@ function BossPanel({
         )}
 
         {/* The door coming open: one flash of light across the ink. */}
-        <AnimatePresence>
-          {burst && !reduce && (
-            <motion.span
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(255,240,200,0.85), transparent)" }}
-              initial={{ x: "-100%", opacity: 0.9 }}
-              animate={{ x: "100%" }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.85, ease: "easeOut" }}
-            />
-          )}
-        </AnimatePresence>
+        {burst && !reduce && (
+          <Sweep
+            key={`door-${burst}`}
+            className="pointer-events-none absolute inset-0"
+            background="linear-gradient(90deg, transparent, rgba(255,240,200,0.85), transparent)"
+            from="-100%"
+            to="100%"
+            duration={0.85}
+          />
+        )}
       </div>
 
       {/* A shut door has no control to carry its state, so it says it here.
           The other states put the same sentence on their button. */}
       {(state === "far" || state === "sealed") && <span className="sr-only">{label}</span>}
-    </motion.div>
+    </div>
   );
 }
 
@@ -883,7 +851,6 @@ function Rune({
   gold,
   index,
   ink,
-  reduce,
   charge,
   pop,
   tileRef,
@@ -894,7 +861,6 @@ function Rune({
   gold?: boolean;
   index: number;
   ink: ChapterInk;
-  reduce: boolean;
   /** The rail is complete and waiting to be spelled — the slots stir. */
   charge?: boolean;
   /** Land with a pop (the key was just spelled). */
@@ -904,43 +870,17 @@ function Rune({
   const tilt = index % 2 ? 1.5 : -1.5;
   return (
     <span ref={tileRef} className="relative grid h-8 w-[1.65rem] place-items-center">
-      <AnimatePresence initial={false}>
-        {filled ? (
-          <motion.span
-            key="filled"
-            className="absolute inset-0 grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
-            style={{ background: gold ? "#f0c04a" : ink.fill }}
-            initial={reduce ? { opacity: 1 } : { scale: 0.35, rotate: tilt - 22, opacity: 0 }}
-            animate={
-              reduce || !charge
-                ? { scale: 1, rotate: tilt, opacity: 1, y: 0 }
-                : { scale: 1, rotate: tilt, opacity: 1, y: [0, -3, 0] }
-            }
-            exit={{ opacity: 0 }}
-            transition={
-              reduce
-                ? { duration: 0 }
-                : charge
-                  ? { y: { duration: 1.5, repeat: Infinity, delay: index * 0.11 }, default: { type: "spring", stiffness: 460, damping: 16 } }
-                  : { type: "spring", stiffness: 460, damping: 16, delay: pop ? index * 0.06 : 0 }
-            }
-          >
-            {letter}
-            {charge && !reduce && !gold && (
-              <span aria-hidden className="pointer-events-none absolute -inset-0.5 rounded-md ring-2 ring-gold" />
-            )}
-          </motion.span>
-        ) : (
-          <motion.span
-            key="empty"
-            aria-hidden
-            className="absolute inset-0 rounded-md border-2 border-dashed bg-ink/5"
-            style={{ borderColor: ink.deep, opacity: 0.35 }}
-            exit={reduce ? { opacity: 0 } : { scale: 1.5, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          />
-        )}
-      </AnimatePresence>
+      <RailFace
+        filled={filled}
+        letter={letter}
+        tilt={tilt}
+        gold={gold}
+        charge={charge}
+        index={index}
+        pop={pop}
+        fill={ink.fill}
+        deep={ink.deep}
+      />
       <span className="sr-only">
         {filled ? t("key.a11y.rune", { letter }) : t("key.a11y.emptyRune")}
       </span>
@@ -955,6 +895,7 @@ function Rune({
  * game has already taught.
  */
 function ChapterKeyPanel({
+  ref,
   chapter,
   hints,
   unlimited,
@@ -963,6 +904,8 @@ function ChapterKeyPanel({
   onSolved,
   onClose,
 }: {
+  /** Presence handle: keeps the panel mounted long enough to leave. */
+  ref?: Ref<HTMLDivElement>;
   chapter: number;
   hints: number;
   /** Debug: hints are free, so the letter reveal never runs out. */
@@ -987,18 +930,19 @@ function ChapterKeyPanel({
     return true;
   };
 
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-ink/45 px-4 py-8"
     >
-      <motion.div
-        initial={{ scale: 0.94, y: 12 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.96, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      <div
+        data-panel
         className="w-full max-w-md rounded-3xl border-2 border-ink bg-paper px-5 pb-5 pt-4 shadow-stamp-lg"
       >
         <div className="text-center">
@@ -1030,8 +974,8 @@ function ChapterKeyPanel({
           onSubmit={submit}
           onReveal={onClose}
         />
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -1040,7 +984,7 @@ function ChapterKeyPanel({
  * and its difficulty — and, for a boss, which twist is waiting — but never the
  * board's title, which would leak the link on a level you haven't played.
  */
-function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean; onPlay: () => void }) {
+function UpNextCard({ index, onPlay }: { index: number; onPlay: () => void }) {
   const chapter = CHAPTERS.findIndex((c) => index >= c.start && index < c.end);
   const ink = chapterInk(Math.max(chapter, 0));
   const twist = bossTwist(index);
@@ -1048,14 +992,13 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
   // is configured AND enough people have finished it to mean anything — a
   // clear rate drawn from three attempts would be a lie with a % sign on it.
   const rate = successRate(useCommunityStats()?.levels[LEVELS[index].id]);
+  const upNext = useGsap<HTMLDivElement>(
+    (el) => void gsap.fromTo(el, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.42, ease: EASE.press }),
+    []
+  );
 
   return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-stamp"
-    >
+    <div ref={upNext} className="mt-5 overflow-hidden rounded-3xl border-2 border-ink bg-white shadow-stamp">
       <div className="px-4 pb-4 pt-3 lg:px-5 lg:pb-5 lg:pt-4" style={{ background: ink.wash }}>
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-[0.6rem] font-extrabold uppercase tracking-[0.15em]" style={{ color: ink.deep }}>
@@ -1099,7 +1042,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1110,6 +1053,7 @@ function UpNextCard({ index, reduce, onPlay }: { index: number; reduce: boolean;
  */
 function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolean; lead: number }) {
   const [show, setShow] = useState(fresh.length > 0);
+  const newsHere = usePresence(show, null, sinkOut);
   const news = useMemo(() => {
     if (!fresh.length) return null;
     const idx = fresh.map((id) => LEVELS.findIndex((l) => l.id === id)).filter((i) => i >= 0);
@@ -1138,13 +1082,11 @@ function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolea
 
   if (!news) return null;
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
-          transition={{ delay: delay / 1000, type: "spring", stiffness: 280, damping: 22 }}
+    <>
+      {newsHere.rendered && (
+        <NewsBanner
+          ref={newsHere.ref}
+          delay={delay}
           onClick={() => setShow(false)}
           role="status"
           // Fixed, not in flow: the page scrolls itself to the chip that's
@@ -1161,9 +1103,9 @@ function UnlockBanner({ fresh, reduce, lead }: { fresh: string[]; reduce: boolea
               {t("levels.unlock.more", { n: extra })}
             </span>
           )}
-        </motion.div>
+        </NewsBanner>
       )}
-    </AnimatePresence>
+    </>
   );
 }
 
@@ -1210,49 +1152,21 @@ function LevelRow({
       }
       className="flex w-full items-center gap-2.5 rounded-lg px-1 py-[3px] text-left transition hover:bg-cream"
     >
-      <motion.span
-        ref={chipRef}
-        aria-hidden
-        className="relative grid h-6 w-6 shrink-0 place-items-center rounded-md border font-display text-[0.7rem] font-bold tabular-nums text-ink"
-        style={{ background: ink.fill, borderColor: flipping ? ink.deep : "rgba(38,34,26,0.25)" }}
-        animate={flipping ? { scale: 1.35, y: -2 } : { scale: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 420, damping: 18 }}
+      <Chip
+        chipRef={chipRef}
+        lifted={flipping}
+        background={ink.fill}
+        borderColor={flipping ? ink.deep : "rgba(38,34,26,0.25)"}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {flipping && letter ? (
-            <motion.span
-              key="letter"
-              className="text-[0.8rem]"
-              initial={{ rotateY: -90, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: 90, opacity: 0 }}
-              transition={{ duration: 0.22 }}
-            >
-              {letter}
-            </motion.span>
-          ) : (
-            <motion.span
-              key="num"
-              initial={{ rotateY: -90, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: 90, opacity: 0 }}
-              transition={{ duration: 0.22 }}
-            >
-              {index + 1}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <FlipSwap flipped={!!(flipping && letter)} front={index + 1} back={letter} />
         {flipping && (
-          <motion.span
-            aria-hidden
+          <Shockwave
             className="pointer-events-none absolute inset-0 rounded-md border-2"
-            style={{ borderColor: ink.deep }}
-            initial={{ opacity: 0.9, scale: 1 }}
-            animate={{ opacity: 0, scale: 2.1 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
+            color={ink.deep}
+            to={2.1}
           />
         )}
-      </motion.span>
+      </Chip>
 
       <span className="shrink-0 font-display text-sm font-bold text-ink">{levelTitle(index)}</span>
       <span aria-hidden className="h-0 flex-1 self-end border-b border-dotted border-ink/30 pb-[7px]" />
@@ -1314,6 +1228,7 @@ function LevelTile({
   }, [revealDelay, reduce, index]);
 
   const showOpen = unlocked && opened;
+  const tile = useRef<HTMLButtonElement | null>(null);
   const style: React.CSSProperties = {};
   let face = "border-dashed border-ink/25 bg-cream/60";
   if (showOpen) {
@@ -1322,12 +1237,14 @@ function LevelTile({
   }
 
   return (
-    <motion.button
-      ref={tileRef}
-      initial={reduce ? false : { opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: reduce ? 0 : Math.min(index * 0.008, 0.25), type: "spring", stiffness: 340, damping: 24 }}
-      whileTap={showOpen ? { scale: 0.94 } : undefined}
+    <button
+      ref={(node) => {
+        tile.current = node;
+        if (typeof tileRef === "function") tileRef(node);
+      }}
+      onPointerDown={() => showOpen && pressDown(tile.current)}
+      onPointerUp={() => showOpen && release(tile.current)}
+      onPointerLeave={() => showOpen && release(tile.current)}
       onClick={onClick}
       disabled={!showOpen}
       aria-label={
@@ -1339,63 +1256,557 @@ function LevelTile({
       className={`relative grid h-11 w-11 place-items-center rounded-xl border-2 font-display transition-colors disabled:cursor-default ${face}`}
       style={style}
     >
-      {isNext && showOpen && (
-        <motion.span
-          aria-hidden
-          className="absolute -inset-0.5 rounded-xl ring-2 ring-press"
-          animate={reduce ? { opacity: 1 } : { opacity: [0.35, 1, 0.35] }}
-          transition={reduce ? undefined : { duration: 1.6, repeat: Infinity }}
-        />
-      )}
+      {isNext && showOpen && <NextRing />}
 
       {/* With motion turned down the face is plain markup, not an animation
           that has been shortened to nothing: the page's own reduced-motion CSS
           caps every animation at 0.001ms, which used to leave the numeral
           stuck on a frame that never painted — an open tile with nothing on
           it. Nothing to animate, nothing to get stuck. */}
-      {reduce ? (
-        showOpen ? (
-          <span className="text-base font-bold leading-none">{index + 1}</span>
-        ) : (
-          <span aria-hidden className="text-sm opacity-55">🔒</span>
-        )
-      ) : (
-        <AnimatePresence mode="wait" initial={false}>
-          {showOpen ? (
-            <motion.span
-              key="open"
-              className="text-base font-bold leading-none"
-              initial={revealDelay == null ? false : { scale: 0.4, rotate: -12 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 420, damping: 15 }}
-            >
-              {index + 1}
-            </motion.span>
-          ) : (
-            <motion.span
-              key="locked"
-              aria-hidden
-              className="text-sm opacity-55"
-              exit={{ scale: 1.6, opacity: 0, rotate: 25 }}
-              transition={{ duration: 0.28 }}
-            >
-              🔒
-            </motion.span>
-          )}
-        </AnimatePresence>
-      )}
+      <TileFace open={showOpen} number={index + 1} popped={revealDelay != null} />
 
       {/* The shockwave the popping lock leaves behind. */}
-      {revealDelay != null && showOpen && !reduce && (
-        <motion.span
-          aria-hidden
+      {revealDelay != null && showOpen && (
+        <Shockwave
           className="pointer-events-none absolute inset-0 rounded-xl border-2"
-          style={{ borderColor: ink.deep }}
-          initial={{ opacity: 0.9, scale: 1 }}
-          animate={{ opacity: 0, scale: 1.8 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          color={ink.deep}
         />
       )}
-    </motion.button>
+    </button>
   );
 }
+
+// ---------------------------------------------------------------------------
+// The index's own small animations
+// ---------------------------------------------------------------------------
+
+/** A letter thrown from an index row down into the chapter's rail. */
+function FlyingLetter({ flight }: { flight: Flight }) {
+  const el = useGsap<HTMLSpanElement>((node) => {
+    if (!motionOn()) return;
+    const dx = flight.x1 - flight.x0;
+    const dy = flight.y1 - flight.y0;
+    gsap.fromTo(
+      node,
+      { x: 0, y: 0, scale: 1.3, rotate: -12 },
+      {
+        // A lob, not a slide: the letter is thrown to the rail, so the arc is
+        // two keyframes with a lift in the middle rather than one straight run.
+        keyframes: {
+          x: [dx * 0.45, dx],
+          y: [dy * 0.5 - 38, dy],
+          scale: [1.15, 1],
+          rotate: [8, 0],
+          easeEach: "sine.inOut",
+        },
+        duration: FLY_MS / 1000,
+      }
+    );
+  }, [flight]);
+  return (
+    <span
+      ref={el}
+      aria-hidden
+      className="pointer-events-none fixed z-[80] grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
+      style={{
+        left: flight.x0 - flight.w / 2,
+        top: flight.y0 - flight.h / 2,
+        width: flight.w,
+        height: flight.h,
+        background: flight.fill,
+      }}
+    >
+      {flight.letter}
+    </span>
+  );
+}
+
+/** A button that keeps asking to be pressed. `beat` of 0 sits still. */
+function PulseButton({
+  beat,
+  children,
+  ...rest
+}: { beat: number; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const el = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!beat || !motionOn() || !el.current) return;
+    const tw = gsap.to(el.current, {
+      scale: beat,
+      duration: 0.75,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+    });
+    return () => {
+      tw.revert();
+    };
+  }, [beat]);
+  return (
+    <button ref={el} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+/** One pass of light across a surface. */
+function Sweep({
+  className,
+  background,
+  from,
+  to,
+  duration,
+  fade = false,
+}: {
+  className: string;
+  background: string;
+  from: string;
+  to: string;
+  duration: number;
+  /** Fade up and out across the pass, rather than starting lit. */
+  fade?: boolean;
+}) {
+  const el = useGsap<HTMLSpanElement>((node) => {
+    if (!motionOn()) return;
+    const prop = fade ? "left" : "x";
+    gsap.fromTo(
+      node,
+      { [prop]: from, opacity: fade ? 0 : 0.9 },
+      {
+        [prop]: to,
+        duration,
+        ease: fade ? "sine.inOut" : "power2.out",
+        ...(fade ? { keyframes: { opacity: [1, 1, 0] } } : { opacity: 0 }),
+      }
+    );
+  }, []);
+  return <span ref={el} aria-hidden className={className} style={{ background }} />;
+}
+
+/**
+ * Two faces on one tile, turned over to swap between them.
+ *
+ * Only the face being shown is mounted. The other one stays just long enough to
+ * turn away, which matters here beyond tidiness: the back of an index chip is
+ * the key letter that level paid out, and a letter parked in the DOM at
+ * `opacity: 0` is a letter anyone can read out of the page.
+ */
+function FlipSwap({ flipped, front, back }: { flipped: boolean; front: ReactNode; back: ReactNode }) {
+  const turnAway: Exit = (el) =>
+    gsap.to(el, { rotationY: 90, opacity: 0, duration: 0.22, ease: "power2.in" });
+  const backHere = usePresence<ReactNode, HTMLSpanElement>(flipped, back, turnAway);
+  const frontHere = usePresence<null, HTMLSpanElement>(!flipped, null, turnAway);
+  return (
+    <span className="grid place-items-center" style={{ perspective: 200 }}>
+      {frontHere.rendered && (
+        <Face key="front" ref={frontHere.ref} turning={!flipped}>
+          {front}
+        </Face>
+      )}
+      {backHere.rendered && (
+        <Face key="back" ref={backHere.ref} turning={flipped} className="text-[0.8rem]">
+          {backHere.data}
+        </Face>
+      )}
+    </span>
+  );
+}
+
+/** One side of a {@link FlipSwap}, turning in when it is the one being shown. */
+function Face({
+  ref,
+  turning,
+  className = "",
+  children,
+}: {
+  ref?: Ref<HTMLSpanElement>;
+  turning: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const el = useRef<HTMLSpanElement | null>(null);
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (!el.current) return;
+    // The first face to appear is simply there — a chip that turned itself over
+    // on mount would flip every row on the way into the page.
+    if (first.current || !motionOn()) {
+      first.current = false;
+      gsap.set(el.current, { rotationY: 0, opacity: 1 });
+      return;
+    }
+    if (turning) {
+      gsap.fromTo(
+        el.current,
+        { rotationY: -90, opacity: 0 },
+        { rotationY: 0, opacity: 1, duration: 0.22, ease: "power2.out" }
+      );
+    }
+  }, [turning]);
+  return (
+    <span ref={(node) => {
+      el.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    }} style={{ gridArea: "1 / 1" }} className={className}>
+      {children}
+    </span>
+  );
+}
+
+/** The ring a popping lock or an opening door leaves behind. */
+function Shockwave({ className, color, to = 1.8 }: { className: string; color: string; to?: number }) {
+  const el = useGsap<HTMLSpanElement>((node) => {
+    if (!motionOn()) return;
+    gsap.fromTo(node, { opacity: 0.9, scale: 1 }, { opacity: 0, scale: to, duration: 0.7, ease: "power2.out" });
+  }, []);
+  return <span ref={el} aria-hidden className={className} style={{ borderColor: color }} />;
+}
+
+/**
+ * One slot on a chapter's key rail: an empty dashed box until its letter is
+ * banked, then the letter itself, landing with a pop.
+ *
+ * Only the face in force is mounted. That is not just tidiness here — the
+ * letter is the reward for clearing the level that pays it out, and a letter
+ * parked at `opacity: 0` is a letter anyone can read straight out of the page.
+ * Every chapter key in the game would be sitting in the DOM from the first
+ * visit. The other face stays only as long as it takes to get out of the way.
+ *
+ * The float is the rail "charging" once every letter is in and the door is
+ * waiting to be spelled.
+ */
+function RailFace({
+  filled,
+  letter,
+  tilt,
+  gold,
+  charge,
+  index,
+  pop,
+  fill,
+  deep,
+}: {
+  filled: boolean;
+  letter?: string;
+  tilt: number;
+  gold?: boolean;
+  charge?: boolean;
+  index: number;
+  pop?: boolean;
+  fill: string;
+  deep: string;
+}) {
+  const onHere = usePresence<null, HTMLSpanElement>(filled, null, (el) =>
+    gsap.to(el, { opacity: 0, duration: 0.2, ease: "power2.in" })
+  );
+  const offHere = usePresence<null, HTMLSpanElement>(!filled, null, (el) =>
+    gsap.to(el, { scale: 1.5, opacity: 0, duration: 0.3, ease: "power2.out" })
+  );
+  return (
+    <>
+      {offHere.rendered && (
+        <span
+          ref={offHere.ref}
+          aria-hidden
+          className="absolute inset-0 rounded-md border-2 border-dashed bg-ink/5"
+          style={{ borderColor: deep, opacity: 0.35 }}
+        />
+      )}
+      {onHere.rendered && (
+        <RailLetter
+          ref={onHere.ref}
+          letter={letter}
+          tilt={tilt}
+          gold={gold}
+          charge={charge}
+          index={index}
+          pop={pop}
+          fill={fill}
+        />
+      )}
+    </>
+  );
+}
+
+/** A banked letter landing in its slot, and stirring once the rail is full. */
+function RailLetter({
+  ref,
+  letter,
+  tilt,
+  gold,
+  charge,
+  index,
+  pop,
+  fill,
+}: {
+  ref?: Ref<HTMLSpanElement>;
+  letter?: string;
+  tilt: number;
+  gold?: boolean;
+  charge?: boolean;
+  index: number;
+  pop?: boolean;
+  fill: string;
+}) {
+  const el = useRef<HTMLSpanElement | null>(null);
+  const first = useRef(true);
+
+  useLayoutEffect(() => {
+    if (!el.current) return;
+    const landed = { scale: 1, rotate: tilt, opacity: 1 };
+    // A rail that is already full when the page opens is a fact, not an event:
+    // only a letter that arrives while you are looking gets thrown down.
+    if (first.current || !motionOn()) {
+      first.current = false;
+      gsap.set(el.current, landed);
+      return;
+    }
+    gsap.fromTo(
+      el.current,
+      { scale: 0.35, rotate: tilt - 22, opacity: 0 },
+      { ...landed, duration: 0.45, ease: EASE.stamp, delay: pop ? index * 0.06 : 0 }
+    );
+  }, [tilt, pop, index]);
+
+  // Each slot lifts a beat after the one before it, so the row reads left to
+  // right rather than pulsing as one block.
+  useEffect(() => {
+    if (!charge || !motionOn() || !el.current) return;
+    const tw = gsap.to(el.current, {
+      y: -3,
+      duration: 0.75,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+      delay: index * 0.11,
+    });
+    return () => {
+      tw.revert();
+    };
+  }, [charge, index]);
+
+  return (
+    <span
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      className="absolute inset-0 grid place-items-center rounded-md border-2 border-ink font-display text-sm font-bold text-ink shadow-stamp-sm"
+      style={{ background: gold ? "#f0c04a" : fill }}
+    >
+      {letter}
+      {charge && !gold && (
+        <span aria-hidden className="pointer-events-none absolute -inset-0.5 rounded-md ring-2 ring-gold" />
+      )}
+    </span>
+  );
+}
+
+/** The door's crown, stirring while the door has something to offer. */
+function Crown({ live, background, children }: { live: boolean; background: string; children: ReactNode }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!live || !motionOn() || !el.current) return;
+    const tw = gsap.to(el.current, {
+      scale: 1.09,
+      rotate: -4,
+      duration: 1.05,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+    });
+    return () => {
+      tw.revert();
+    };
+  }, [live]);
+  return (
+    <span
+      ref={el}
+      aria-hidden
+      className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink text-lg"
+      style={{ background }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The what-just-opened banner, up from the bottom edge after a beat. */
+function NewsBanner({
+  ref,
+  delay,
+  children,
+  ...rest
+}: { ref?: Ref<HTMLDivElement>; delay: number; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!el.current) return;
+    if (!motionOn()) {
+      gsap.set(el.current, { opacity: 1, y: 0, scale: 1 });
+      return;
+    }
+    // The page is still scrolling itself to the chip that opened; the banner
+    // waits for it rather than announcing the news over the top of the journey.
+    //
+    // `immediateRender: false` is doing real work here. By default a `fromTo`
+    // writes its start values the moment it is built, so through a delay this
+    // long the banner would sit 24px below where it belongs — and it is
+    // `fixed`, so that offset is 6px of scroll height on a page that is
+    // supposed to fit a 720p embed exactly. Hidden and untransformed until its
+    // turn, it costs the layout nothing while it waits.
+    gsap.set(el.current, { opacity: 0 });
+    const tw = gsap.fromTo(
+      el.current,
+      { opacity: 0, y: 24, scale: 0.94 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: EASE.stamp, delay: delay / 1000, immediateRender: false }
+    );
+    return () => {
+      tw.kill();
+    };
+  }, [delay]);
+  return (
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** The index row's numeral, lifted while it is turning over to its letter. */
+function Chip({
+  chipRef,
+  lifted,
+  background,
+  borderColor,
+  children,
+}: {
+  chipRef?: (el: HTMLElement | null) => void;
+  lifted: boolean;
+  background: string;
+  borderColor: string;
+  children: ReactNode;
+}) {
+  const el = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!el.current) return;
+    gsap.to(el.current, {
+      scale: lifted ? 1.35 : 1,
+      y: lifted ? -2 : 0,
+      duration: motionOn() ? 0.4 : 0,
+      ease: EASE.stamp,
+      overwrite: "auto",
+    });
+  }, [lifted]);
+  return (
+    <span
+      ref={(node) => {
+        el.current = node;
+        chipRef?.(node);
+      }}
+      aria-hidden
+      className="relative grid h-6 w-6 shrink-0 place-items-center rounded-md border font-display text-[0.7rem] font-bold tabular-nums text-ink"
+      style={{ background, borderColor }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The ring around whatever you'd play next. */
+function NextRing() {
+  const el = useGsap<HTMLSpanElement>((node) => {
+    if (!motionOn()) return;
+    gsap.fromTo(node, { opacity: 0.35 }, { opacity: 1, duration: 0.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
+  }, []);
+  return <span ref={el} aria-hidden className="absolute -inset-0.5 rounded-xl ring-2 ring-press" />;
+}
+
+/**
+ * A level tile's face: its number once open, a padlock until then.
+ *
+ * The lock stays mounted past the moment the level opens, so it can pop off —
+ * that pop is the whole unlock beat, and it can't happen if React has already
+ * removed the thing that's meant to be popping. Only ever one face at rest.
+ */
+function TileFace({ open, number, popped }: { open: boolean; number: number; popped: boolean }) {
+  const numHere = usePresence<null, HTMLSpanElement>(open, null, (el) =>
+    gsap.to(el, { scale: 1.6, rotate: 25, opacity: 0, duration: 0.28, ease: "power2.out" })
+  );
+  const lockHere = usePresence<null, HTMLSpanElement>(!open, null, (el) =>
+    gsap.to(el, { scale: 1.6, rotate: 25, opacity: 0, duration: 0.28, ease: "power2.out" })
+  );
+  return (
+    <>
+      {numHere.rendered && (
+        <TilePop ref={numHere.ref} pop={popped} className="absolute text-base font-bold leading-none">
+          {number}
+        </TilePop>
+      )}
+      {lockHere.rendered && (
+        <TilePop ref={lockHere.ref} pop={false} className="absolute text-sm opacity-55" hidden>
+          🔒
+        </TilePop>
+      )}
+    </>
+  );
+}
+
+/**
+ * One face of a level tile, landing on it.
+ *
+ * With motion off this is plain markup rather than an animation shortened to
+ * nothing: the page's own reduced-motion CSS caps every animation at 0.001ms,
+ * which used to leave the numeral stuck on a frame that never painted — an open
+ * tile with nothing on it.
+ */
+function TilePop({
+  ref,
+  pop,
+  className,
+  hidden,
+  children,
+}: {
+  ref?: Ref<HTMLSpanElement>;
+  /** This face is arriving because a lock just came off, so it lands harder. */
+  pop: boolean;
+  className: string;
+  hidden?: boolean;
+  children: ReactNode;
+}) {
+  const el = useRef<HTMLSpanElement | null>(null);
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (!el.current) return;
+    if (first.current || !motionOn()) {
+      first.current = false;
+      gsap.set(el.current, { opacity: 1, scale: 1, rotate: 0 });
+      return;
+    }
+    gsap.fromTo(
+      el.current,
+      { scale: pop ? 0.4 : 1, rotate: pop ? -12 : 0, opacity: 0 },
+      { scale: 1, rotate: 0, opacity: 1, duration: 0.45, ease: EASE.stamp }
+    );
+  }, [pop]);
+  return (
+    <span
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      aria-hidden={hidden}
+      className={className}
+    >
+      {children}
+    </span>
+  );
+}
+

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import gsap from "gsap";
+import { EASE, motionOn, rattle, stampIn, useGsap } from "./anim";
+import { Toast } from "./Toast";
 import { LEVELS, buildPuzzle, type Puzzle, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import { CATEGORY_THEMES } from "./theme";
@@ -328,20 +330,15 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
           })}
         </div>
 
-        <AnimatePresence>
-          {phase === "spell" && (
-            <LinkSpell key="spell" pivot={puzzle.pivot} accept={puzzle.accept} onSolve={solveLink} />
-          )}
-        </AnimatePresence>
+        {/* Neither of these ever had an exit to run — the board is replaced
+            wholesale — so the presence wrappers around them were doing nothing
+            but costing a library. */}
+        {phase === "spell" && (
+          <LinkSpell key="spell" pivot={puzzle.pivot} accept={puzzle.accept} onSolve={solveLink} />
+        )}
 
-        <AnimatePresence>
-          {phase === "done" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 280, damping: 24 }}
-              className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center"
-            >
+        {phase === "done" && (
+            <ClearedCard>
               <div className="text-4xl" aria-hidden>🃏</div>
               <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("pairs.cleared")}</h3>
               <p className="mt-2 text-sm text-ink-soft">
@@ -372,23 +369,11 @@ export default function Pairs({ reduce, best, onFinish, onExit }: PairsProps) {
                   {t("end.nextPuzzle")}
                 </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </ClearedCard>
+        )}
       </main>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Toast text={toast} />
       <div className="sr-only" role="status" aria-live="polite">{toast}</div>
 
       {phase === "done" && !reduce && <Confetti count={90} />}
@@ -425,6 +410,33 @@ function PairCard({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const flipper = useRef<HTMLDivElement>(null);
+  const front = useRef<HTMLDivElement>(null);
+
+  // The half-turn belongs to GSAP, and so does the mis-couple shake, on two
+  // different nodes. It used to be a `rotateY: 180` in a style object with the
+  // shake animating `x` on the same element: the animation library rebuilt the
+  // whole transform from the values it knew about, a literal one not being
+  // among them, so the card lost its half-turn mid-shake, turned its back —
+  // and backface-visibility hid it for the rest of the round with the player
+  // still holding it. Setting it through GSAP keeps it in the same transform
+  // GSAP is composing, which is what stops that happening again.
+  useLayoutEffect(() => {
+    if (front.current) gsap.set(front.current, { rotationY: 180 });
+  }, []);
+  useLayoutEffect(() => {
+    if (!flipper.current) return;
+    gsap.to(flipper.current, {
+      rotationY: faceUp ? 180 : 0,
+      duration: motionOn() ? 0.5 : 0,
+      ease: EASE.stamp,
+      overwrite: "auto",
+    });
+  }, [faceUp]);
+  useEffect(() => {
+    if (wrong) rattle(front.current, [], 0.6);
+  }, [wrong]);
+
   const sizeClass =
     word.length >= 10 ? "text-[0.6rem]" : word.length >= 8 ? "text-[0.7rem]" : word.length >= 7 ? "text-xs" : "text-sm";
   // A face-up card is still tappable during coupling (as a couple target or to
@@ -447,12 +459,7 @@ function PairCard({
       className="aspect-[1.15/1] select-none disabled:cursor-default sm:aspect-[1.55/1]"
       style={{ perspective: 600 }}
     >
-      <motion.div
-        className="relative h-full w-full"
-        style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateY: faceUp ? 180 : 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 24 }}
-      >
+      <div ref={flipper} className="relative h-full w-full" style={{ transformStyle: "preserve-3d" }}>
         {/* Back: a Puzzle Press card sleeve */}
         <div
           className="absolute inset-0 grid place-items-center rounded-2xl border-2 border-ink bg-cream text-lg text-ink/30"
@@ -461,19 +468,18 @@ function PairCard({
           <span aria-hidden>◆</span>
         </div>
         {/* Front: the word — inked in its theme colour once matched/coupled.
-            The half-turn is handed to framer as `rotateY`, not baked into a
-            `transform` string: the mis-couple shake animates `x`, and framer
-            rebuilds the whole transform from the values it knows about. A
-            literal transform is not one of them, so the card lost its half-turn
-            mid-shake, turned its back — and backface-visibility hid it for the
-            rest of the round, with the player still holding it. */}
-        <motion.div
-          animate={wrong ? { x: [0, -6, 6, -4, 4, 0] } : {}}
-          transition={{ duration: 0.4 }}
+            Its half-turn is set through GSAP rather than written as a literal
+            `transform`, and the history is why: the mis-couple shake animates
+            `x` on this same node, and an animation library rebuilds the whole
+            transform from the values it knows about. A literal one is not among
+            them, so the card lost its half-turn mid-shake, turned its back —
+            and backface-visibility hid it for the rest of the round, with the
+            player still holding it. See the effects above. */}
+        <div
+          ref={front}
           className={`absolute inset-0 grid place-items-center rounded-2xl border-2 px-1 text-center font-bold uppercase leading-tight tracking-wide ${sizeClass} ${face}`}
           style={{
             backfaceVisibility: "hidden",
-            rotateY: 180,
             color: matchedTheme?.ink,
             boxShadow: "var(--shadow-stamp-sm)",
           }}
@@ -486,8 +492,8 @@ function PairCard({
             )}
             {word}
           </span>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </button>
   );
 }
@@ -526,15 +532,18 @@ function LinkSpell({
     return () => clearTimeout(timer);
   }, [full, built, resolved, pivot, accept, onSolve]);
 
+  const panel = useGsap<HTMLDivElement>(
+    (el) => void gsap.fromTo(el, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: EASE.press }),
+    []
+  );
+  const slots = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (shakeKey) rattle(slots.current, [...(slots.current?.children ?? [])] as HTMLElement[]);
+  }, [shakeKey]);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6 text-center">
-      <motion.div
-        key={shakeKey}
-        animate={wrong ? { x: [0, -8, 8, -6, 6, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="flex flex-wrap justify-center gap-1.5"
-        aria-label={`${pivot.length} letters`}
-      >
+    <div ref={panel} className="mt-6 text-center">
+      <div ref={slots} className="flex flex-wrap justify-center gap-1.5" aria-label={`${pivot.length} letters`}>
         {pivot.split("").map((_, i) => {
           const placed = i < built.length;
           const next = i === built.length && !resolved;
@@ -553,7 +562,7 @@ function LinkSpell({
             </span>
           );
         })}
-      </motion.div>
+      </div>
       {wrong && <p className="mt-2 text-sm font-semibold text-press">{t("finale.wrong")}</p>}
 
       <div className="mx-auto mt-3 flex max-w-sm flex-wrap justify-center gap-2">
@@ -607,6 +616,16 @@ function LinkSpell({
           Show me the word
         </button>
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+/** The board-cleared panel, stamped onto the page like every other result. */
+function ClearedCard({ children }: { children: ReactNode }) {
+  const el = useGsap<HTMLDivElement>((node) => void stampIn(node, { from: 0.94, tilt: 0 }), []);
+  return (
+    <div ref={el} className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center">
+      {children}
+    </div>
   );
 }

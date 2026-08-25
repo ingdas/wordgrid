@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useState, type Ref } from "react";
+import { dialogIn, useGsap } from "./anim";
 import { LEVELS, levelTitle } from "./puzzles";
 import { useModal } from "./modal";
 import { t } from "./i18n";
@@ -57,7 +57,16 @@ function ago(at: number): string {
   return t("track.ago.days", { n: Math.round(hours / 24) });
 }
 
-export function LevelStatsModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+export function LevelStatsModal({
+  ref,
+  progress,
+  onClose,
+}: {
+  /** Presence handle: keeps the dialog mounted long enough to leave. */
+  ref?: Ref<HTMLDivElement>;
+  progress: Progress;
+  onClose: () => void;
+}) {
   const panel = useModal<HTMLDivElement>(onClose);
   const [, bump] = useState(0);
   const rerender = useCallback(() => bump((n) => n + 1), []);
@@ -118,22 +127,24 @@ export function LevelStatsModal({ progress, onClose }: { progress: Progress; onC
     { plays: 0, wins: 0, solvers: 0 }
   );
 
+  // The same entrance every dialog in the game gets — see src/anim.ts.
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("track.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 24 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -249,8 +260,8 @@ export function LevelStatsModal({ progress, onClose }: { progress: Progress; onC
         >
           {t("common.done")}
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 

@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useReduceMotion } from "./anim";
+import gsap from "gsap";
+import {
+  EASE,
+  dialogIn,
+  dialogOut,
+  dropOut,
+  motionOn,
+  riseOut,
+  screenOut,
+  useGsap,
+  usePresence,
+  useReduceMotion,
+  useSwitch,
+  useSystemReduceMotion,
+} from "./anim";
 import { LEVELS, CHAPTERS, bossTwist, chapterKey, chapterOfLevel, type BossTwist, type RawPuzzle } from "./puzzles";
 import { DAILY_PUZZLES } from "./dailyPuzzles";
 import {
@@ -103,7 +116,7 @@ const CALM_KEY = "wordgrid:calm";
 const readCalm = () => readItem(CALM_KEY) === "1";
 
 export default function App() {
-  const systemReduce = useReducedMotion() ?? false;
+  const systemReduce = useSystemReduceMotion();
   const [calm, setCalm] = useState(readCalm);
   const reduce = systemReduce || calm; // calm mode = no confetti / minimal motion
   // One switch for the whole GSAP layer: every beat in src/anim.ts checks it,
@@ -705,6 +718,24 @@ export default function App() {
   // the warm bed, any board gets the one with a pulse, and a boss door turns it
   // minor. All three share a key, so a change lands as a modulation on the next
   // bar and not as a record being swapped.
+  // One screen at a time: the outgoing one leaves before the next arrives, so
+  // two full screens are never laid out together.
+  const shownScreen = useSwitch(screen, screenOut);
+  // Everything that has to outlive the state that dismissed it. Each carries
+  // the state it is drawn from, so a sheet on its way out isn't redrawn from a
+  // game that has already moved on. See `usePresence` in src/anim.ts.
+  const helpHere = usePresence(
+    showHelp,
+    screen === "game" && !endless && !playingDaily ? bossTwist(levelIndex) : null,
+    dialogOut
+  );
+  const statsHere = usePresence(showStats, null, dialogOut);
+  const historyHere = usePresence(showHistory, null, dialogOut);
+  const trackHere = usePresence(showTracking, null, dialogOut);
+  const settingsHere = usePresence(showSettings, null, dialogOut);
+  const achHere = usePresence(unlockedAch != null, unlockedAch, riseOut);
+  const warnHere = usePresence(storageWarn, null, dropOut);
+
   const onBoard = screen === "game" || screen === "pairs" || screen === "deduction";
   const onBoss = screen === "game" && !endless && !playingDaily && bossTwist(levelIndex) !== null;
   useEffect(() => {
@@ -727,9 +758,8 @@ export default function App() {
       />
       <div className="grain" />
 
-      <AnimatePresence mode="wait">
-        {screen === "home" && (
-          <ScreenWrap key="home">
+      {shownScreen.key === "home" && (
+          <ScreenWrap key="home" ref={shownScreen.ref}>
             <StartScreen
               progress={progress}
               onPlay={play}
@@ -748,10 +778,10 @@ export default function App() {
               onToggleMusic={toggleMusic}
             />
           </ScreenWrap>
-        )}
+      )}
 
-        {screen === "levels" && (
-          <ScreenWrap key="levels">
+      {shownScreen.key === "levels" && (
+          <ScreenWrap key="levels" ref={shownScreen.ref}>
             <LevelSelect
               progress={progress}
               reduce={reduce}
@@ -773,10 +803,10 @@ export default function App() {
               onToggleMusic={toggleMusic}
             />
           </ScreenWrap>
-        )}
+      )}
 
-        {screen === "pairs" && (
-          <ScreenWrap key="pairs">
+      {shownScreen.key === "pairs" && (
+          <ScreenWrap key="pairs" ref={shownScreen.ref}>
             <Pairs
               reduce={reduce}
               best={progress.pairsBest}
@@ -784,10 +814,10 @@ export default function App() {
               onExit={exitPairs}
             />
           </ScreenWrap>
-        )}
+      )}
 
-        {screen === "deduction" && (
-          <ScreenWrap key="deduction">
+      {shownScreen.key === "deduction" && (
+          <ScreenWrap key="deduction" ref={shownScreen.ref}>
             <Deduction
               reduce={reduce}
               debug={debug}
@@ -796,10 +826,10 @@ export default function App() {
               onExit={exitDeduction}
             />
           </ScreenWrap>
-        )}
+      )}
 
-        {screen === "game" && (
-          <ScreenWrap key="game">
+      {shownScreen.key === "game" && (
+          <ScreenWrap key="game" ref={shownScreen.ref}>
             <Game
               key={endless ? `e${endlessPos}` : playingDaily ? `d-${dailyRaw?.id}` : levelIndex}
               puzzleIndex={levelIndex}
@@ -862,32 +892,37 @@ export default function App() {
               onTutorialDone={finishTutorial}
             />
           </ScreenWrap>
-        )}
-      </AnimatePresence>
+      )}
 
-      <AnimatePresence>
-        {showHelp && (
-          <HelpModal
-            // Asked for help mid-boss, the sheet answers about *this* boss
-            // first: the three ordinary steps aren't what stopped them.
-            twist={screen === "game" && !endless && !playingDaily ? bossTwist(levelIndex) : null}
-            onClose={() => setShowHelp(false)}
-          />
-        )}
-        {showStats && (
-          <StatsModal
-            progress={progress}
-            onClose={() => setShowStats(false)}
-            onHistory={() => {
-              setShowStats(false);
-              setShowHistory(true);
-            }}
-          />
-        )}
-        {showHistory && <HistoryModal progress={progress} onClose={() => setShowHistory(false)} />}
-        {showTracking && <LevelStatsModal progress={progress} onClose={() => setShowTracking(false)} />}
-        {showSettings && (
-          <SettingsModal
+      {helpHere.rendered && (
+        <HelpModal
+          ref={helpHere.ref}
+          // Asked for help mid-boss, the sheet answers about *this* boss
+          // first: the three ordinary steps aren't what stopped them.
+          twist={helpHere.data}
+          onClose={() => setShowHelp(false)}
+        />
+      )}
+      {statsHere.rendered && (
+        <StatsModal
+          ref={statsHere.ref}
+          progress={progress}
+          onClose={() => setShowStats(false)}
+          onHistory={() => {
+            setShowStats(false);
+            setShowHistory(true);
+          }}
+        />
+      )}
+      {historyHere.rendered && (
+        <HistoryModal ref={historyHere.ref} progress={progress} onClose={() => setShowHistory(false)} />
+      )}
+      {trackHere.rendered && (
+        <LevelStatsModal ref={trackHere.ref} progress={progress} onClose={() => setShowTracking(false)} />
+      )}
+      {settingsHere.rendered && (
+        <SettingsModal
+          ref={settingsHere.ref}
             muted={muted}
             musicOn={musicOn}
             sfxVol={sfxVol}
@@ -904,47 +939,32 @@ export default function App() {
               setShowSettings(false);
               setShowTracking(true);
             }}
-            onLocale={changeLocale}
-            onReset={resetProgress}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-      </AnimatePresence>
+          onLocale={changeLocale}
+          onReset={resetProgress}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
-      <AnimatePresence>
-        {unlockedAch && (
-          <motion.div
-            initial={{ y: -60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -60, opacity: 0 }}
-            className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4"
-          >
+      {achHere.rendered && achHere.data && (
+          <Banner ref={achHere.ref} from={-60} className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4">
             <div className="flex items-center gap-3 rounded-2xl border border-gold/60 bg-paper px-4 py-2.5 shadow-stamp-lg">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold text-lg">
-                {unlockedAch.icon}
+                {achHere.data.icon}
               </span>
               <div className="text-left">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-gold-deep">
-                  {unlockedAch.header ?? t("achievement.unlocked")}
+                  {achHere.data.header ?? t("achievement.unlocked")}
                 </div>
-                <div className="text-sm font-bold text-ink">{unlockedAch.label}</div>
+                <div className="text-sm font-bold text-ink">{achHere.data.label}</div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Banner>
+      )}
 
       {/* Nothing here will outlive the tab. Said once, quietly, at the bottom —
           it's a warning, not a modal, and the game plays fine either way. */}
-      <AnimatePresence>
-        {storageWarn && (
-          <motion.div
-            initial={{ y: 60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
-            role="status"
-            className="fixed inset-x-0 bottom-3 z-[55] flex justify-center px-4"
-          >
+      {warnHere.rendered && (
+          <Banner ref={warnHere.ref} from={60} role="status" className="fixed inset-x-0 bottom-3 z-[55] flex justify-center px-4">
             <div className="flex max-w-sm items-start gap-3 rounded-2xl border-2 border-press bg-paper px-4 py-3 shadow-stamp-lg">
               <span className="text-lg" aria-hidden>⚠️</span>
               <div className="text-left">
@@ -958,22 +978,25 @@ export default function App() {
                 {t("common.dismiss")}
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Banner>
+      )}
     </div>
   );
 }
 
 function StatsModal({
+  ref,
   progress,
   onClose,
   onHistory,
 }: {
+  ref?: React.Ref<HTMLDivElement>;
   progress: Progress;
   onClose: () => void;
   onHistory: () => void;
 }) {
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
+
   const panel = useModal<HTMLDivElement>(onClose);
   const cleared = clearedCount(progress);
   const stats: [string, string][] = [
@@ -987,21 +1010,20 @@ function StatsModal({
     [t("stats.bestStreak"), `${progress.bestStreak}`],
   ];
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("stats.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 24 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -1086,8 +1108,8 @@ function StatsModal({
         >
           Close
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -1102,25 +1124,33 @@ function relativeTime(at: number): string {
   return d === 1 ? t("history.yesterday") : t("history.days", { n: d });
 }
 
-function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
+function HistoryModal({
+  ref,
+  progress,
+  onClose,
+}: {
+  ref?: React.Ref<HTMLDivElement>;
+  progress: Progress;
+  onClose: () => void;
+}) {
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
   const panel = useModal<HTMLDivElement>(onClose);
   const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("history.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 24 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -1170,8 +1200,8 @@ function HistoryModal({ progress, onClose }: { progress: Progress; onClose: () =
         >
           Close
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -1244,6 +1274,7 @@ function ToggleRow({
 }
 
 function SettingsModal({
+  ref,
   muted,
   musicOn,
   sfxVol,
@@ -1261,6 +1292,7 @@ function SettingsModal({
   onReset,
   onClose,
 }: {
+  ref?: React.Ref<HTMLDivElement>;
   muted: boolean;
   musicOn: boolean;
   sfxVol: number;
@@ -1280,23 +1312,23 @@ function SettingsModal({
   onClose: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
   const panel = useModal<HTMLDivElement>(onClose);
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 24 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -1394,22 +1426,66 @@ function SettingsModal({
         >
           {t("common.done")}
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
-function ScreenWrap({ children }: { children: React.ReactNode }) {
+function ScreenWrap({ ref, children }: { ref?: React.Ref<HTMLDivElement>; children: React.ReactNode }) {
+  const el = useGsap<HTMLDivElement>(
+    (node) => void gsap.fromTo(node, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.25, ease: EASE.press }),
+    []
+  );
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.25 }}
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
       className="min-h-full"
     >
       {children}
-    </motion.div>
+    </div>
+  );
+}
+
+/**
+ * A strip that slides in from an edge and back out to it — the achievement
+ * banner from the top, the storage warning from the bottom.
+ */
+function Banner({
+  ref,
+  from,
+  className,
+  role,
+  children,
+}: {
+  ref?: React.Ref<HTMLDivElement>;
+  /** Offset it comes in from: negative for the top edge, positive the bottom. */
+  from: number;
+  className: string;
+  role?: string;
+  children: React.ReactNode;
+}) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (motionOn() && el.current) {
+      gsap.fromTo(el.current, { y: from, opacity: 0 }, { y: 0, opacity: 1, duration: 0.34, ease: EASE.press });
+    }
+  }, [from]);
+  return (
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      role={role}
+      className={className}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -1419,24 +1495,32 @@ const STEPS = [
   { icon: "⭐", grad: "from-[#f2b544] to-[#eda820]", key: "help.step3" },
 ];
 
-function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () => void }) {
+function HelpModal({
+  ref,
+  twist,
+  onClose,
+}: {
+  ref?: React.Ref<HTMLDivElement>;
+  twist?: BossTwist | null;
+  onClose: () => void;
+}) {
+  const scope = useGsap<HTMLDivElement>((el) => void dialogIn(el), []);
   const panel = useModal<HTMLDivElement>(onClose);
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
+      ref={(el) => {
+        scope.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("help.title")}
       className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 24 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      <div
+        data-panel
         ref={panel}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
@@ -1491,7 +1575,7 @@ function HelpModal({ twist, onClose }: { twist?: BossTwist | null; onClose: () =
         >
           {t("help.letsPlay")}
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

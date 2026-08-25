@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import gsap from "gsap";
+import { EASE, motionOn, sinkOut, usePresence } from "./anim";
 import { t } from "./i18n";
 
 // The debug tool tray. Mounted only when debug mode is on (see src/debug.ts),
@@ -21,17 +22,11 @@ export interface DebugTool {
 
 export function DebugPanel({ tools }: { tools: DebugTool[] }) {
   const [open, setOpen] = useState(false);
+  const tray = usePresence(open, null, sinkOut);
   return (
     <div className="fixed bottom-3 left-3 z-[70] flex flex-col items-start gap-2">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
-            className="w-52 rounded-2xl border-2 border-leaf bg-paper p-2 shadow-stamp"
-          >
+      {tray.rendered && (
+          <Tray ref={tray.ref}>
             <div className="px-1.5 pb-1.5 text-[0.6rem] font-bold uppercase tracking-widest text-leaf">
               {t("debug.title")}
             </div>
@@ -49,9 +44,8 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
                 </button>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Tray>
+      )}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={t("debug.tools")}
@@ -60,6 +54,32 @@ export function DebugPanel({ tools }: { tools: DebugTool[] }) {
       >
         <span aria-hidden>🛠</span>
       </button>
+    </div>
+  );
+}
+
+/** The tray itself, up out of the button it belongs to. */
+function Tray({ ref, children }: { ref?: Ref<HTMLDivElement>; children: ReactNode }) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (motionOn() && el.current) {
+      gsap.fromTo(
+        el.current,
+        { opacity: 0, y: 8, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.18, ease: EASE.press }
+      );
+    }
+  }, []);
+  return (
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      className="w-52 rounded-2xl border-2 border-leaf bg-paper p-2 shadow-stamp"
+    >
+      {children}
     </div>
   );
 }

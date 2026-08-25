@@ -1,5 +1,7 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
+import gsap from "gsap";
+import { EASE, dropOut, rattle, stampIn, usePresence, useGsap } from "./anim";
+import { Toast } from "./Toast";
 import {
   DEDUCTION_LEVELS,
   type DeductionAxis,
@@ -114,7 +116,6 @@ function DeductionBoard({
   const [brush, setBrush] = useState(0); // 0-3 theme, -1 eraser
   const [solved, setSolved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [badKey, setBadKey] = useState(0);
 
   useEffect(() => {
     if (!toast) return;
@@ -218,6 +219,10 @@ function DeductionBoard({
   // tile they started on, so the run is tracked from the grid with
   // elementFromPoint rather than per-tile enter events.
   const dragging = useRef(false);
+  // The grid recoils when a full-but-wrong answer is checked, and the panel
+  // explaining why has to outlive the state that dismisses it.
+  const gridEl = useRef<HTMLDivElement>(null);
+  const whyHere = usePresence(evalNow.full && !evalNow.solved, null, dropOut);
   useEffect(() => {
     const stop = () => (dragging.current = false);
     window.addEventListener("pointerup", stop);
@@ -261,7 +266,9 @@ function DeductionBoard({
   const checkFull = useCallback(() => {
     if (!evalNow.full || evalNow.solved) return;
     playWrong();
-    setBadKey((k) => k + 1);
+    // The whole grid recoils. It used to be a remount key on the container,
+    // which threw away and rebuilt every cell in it to replay a nudge.
+    rattle(gridEl.current, [], 0.8);
     setToast(
       !evalNow.sizesOk
         ? t("logic.sizes")
@@ -341,10 +348,8 @@ function DeductionBoard({
       </p>
 
       <main className="relative mt-4 flex flex-1 flex-col justify-center">
-        <motion.div
-          key={badKey}
-          animate={badKey && !reduce ? { x: [0, -8, 8, -6, 6, 0] } : {}}
-          transition={{ duration: 0.4 }}
+        <div
+          ref={gridEl}
           onPointerDown={onGridPointerDown}
           onPointerMove={onGridPointerMove}
           className="mx-auto grid w-full max-w-sm gap-2"
@@ -383,17 +388,11 @@ function DeductionBoard({
               })}
             </Fragment>
           ))}
-        </motion.div>
+        </div>
 
         {/* Why-it's-wrong panel: every violated clue explained in plain words. */}
-        <AnimatePresence>
-          {evalNow.full && !evalNow.solved && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              className="mx-auto mt-4 w-full max-w-sm rounded-2xl border-2 border-press/50 bg-press/5 p-3"
-            >
+        {whyHere.rendered && (
+            <WhyPanel ref={whyHere.ref}>
               {!evalNow.sizesOk ? (
                 <p className="text-sm font-semibold text-press">
                   {t("logic.sizes")}
@@ -417,9 +416,8 @@ function DeductionBoard({
                   ))}
                 </ul>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </WhyPanel>
+        )}
 
         {/* The key. Only the icons on THIS board, so it stays short as the
             clue vocabulary grows. */}
@@ -474,14 +472,10 @@ function DeductionBoard({
           </div>
         )}
 
-        <AnimatePresence>
-          {solved && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 280, damping: 24 }}
-              className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center"
-            >
+        {/* The grid is replaced wholesale on the next board, so this never had
+            an exit to run and the presence wrapper around it did nothing. */}
+        {solved && (
+            <SolvedCard>
               <div className="text-4xl" aria-hidden>🧠</div>
               <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("logic.win.title")}</h3>
               <p className="mt-2 text-sm text-ink-soft">{t("logic.win.body")}</p>
@@ -501,23 +495,11 @@ function DeductionBoard({
                   </button>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </SolvedCard>
+        )}
       </main>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 30, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Toast text={toast} />
       <div className="sr-only" role="status" aria-live="polite">{toast}</div>
 
       {debug && (
@@ -729,5 +711,35 @@ function LineHeader({
     >
       {text.glyph}
     </span>
+  );
+}
+
+/** Why the board is wrong: in from just below, out the same way. */
+function WhyPanel({ ref, children }: { ref?: Ref<HTMLDivElement>; children: ReactNode }) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (el.current) gsap.fromTo(el.current, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.24, ease: EASE.press });
+  }, []);
+  return (
+    <div
+      ref={(node) => {
+        el.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      }}
+      className="mx-auto mt-4 w-full max-w-sm rounded-2xl border-2 border-press/50 bg-press/5 p-3"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** The grid-solved panel, stamped onto the page like every other result. */
+function SolvedCard({ children }: { children: ReactNode }) {
+  const el = useGsap<HTMLDivElement>((node) => void stampIn(node, { from: 0.94, tilt: 0 }), []);
+  return (
+    <div ref={el} className="mt-6 rounded-3xl border-2 border-ink bg-white p-6 text-center">
+      {children}
+    </div>
   );
 }

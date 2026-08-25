@@ -55,29 +55,42 @@ a missing key or a dropped `{placeholder}`.
 
 - [Vite](https://vitejs.dev/) + [React 19](https://react.dev/) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com/)
-- [GSAP](https://gsap.com/) for the animation — see [Motion](#motion).
-  [Framer Motion](https://www.framer.com/motion/) is still on the level index,
-  Pairs and the Logic Grid, and is being retired screen by screen.
+- [GSAP](https://gsap.com/) for the animation — see [Motion](#motion)
 
 ## Motion
 
-The game screen, the home screen and the finale are **GSAP** throughout. The
-level index, Pairs, the Logic Grid and the settings sheet are still on **Framer
-Motion**; they'll move over as they're touched. Two animation libraries is a
-tax, and the plan is to stop paying it — measured on this bundle they cost
-almost exactly the same (~42 kB gzip each), so carrying both is ~36% of the
-JavaScript to do one job.
+All of it is **GSAP**, in [`src/anim.ts`](./src/anim.ts). It replaced Framer
+Motion, which the game was carrying almost entirely for one feature: 37 exit
+animations, 10 of them a bare opacity fade. One `layout` prop, two `whileTap`,
+no drag, no shared-element transitions. Dropping it took **41 kB gzip off the
+bundle**, about 18% of the JavaScript.
 
-What made the split worth closing rather than keeping: Framer was being carried
-almost entirely for **exit animations**. React tears an element out of the DOM
-the moment its condition goes false, so by the time an imperative library could
-animate it there is nothing left to animate — the one thing GSAP genuinely
-can't do unaided. `usePresence` in [`src/anim.ts`](./src/anim.ts) closes that
-gap in about forty lines: it holds the node mounted past its own condition, and
-holds the state it was rendered *from* along with it, so a card on its way out
-isn't redrawn from a game that has already moved on (the toast whose text is
-now null, the win card whose round is now "playing", the coach whose step is
-now -1).
+The thing that made Framer load-bearing is real, and worth knowing about before
+touching any of this. React tears an element out of the DOM the moment its
+condition goes false, so an imperative library gets nothing to animate.
+`usePresence` closes that in about forty lines: it holds the node mounted past
+its own condition and runs an exit before letting go.
+
+The half that is easy to miss is that it also has to hold the state the node was
+rendered *from*. A leaving element is drawn from a game that has already moved
+on — the toast whose text is now null would blank out mid-slide, the win card
+whose status is now "playing" would flip to the loss card on the way out, the
+coach whose step is now -1 would return null and never animate at all. So the
+hook carries a payload frozen at its last present value, and callers render the
+leaving element from that.
+
+Two habits the conversion turned into rules:
+
+- **Never park a hidden face in the DOM.** A rail slot that keeps its letter at
+  `opacity: 0` until the level is cleared is a chapter key anyone can read
+  straight out of the page. Both faces mounted is the easy way to animate a
+  swap, and it's wrong here — the face that isn't showing stays only as long as
+  it takes to turn away.
+- **`immediateRender: false` on any delayed `fromTo`.** GSAP writes a tween's
+  start values the moment it is built, so through a delay the element sits in
+  its "from" pose — which for the index's unlock banner meant a `fixed`
+  element parked 24px low, and 6px of scroll height on a page that has to fit a
+  720p embed exactly.
 
 All of it lives in [`src/anim.ts`](./src/anim.ts), and it animates the identity
 rather than in spite of it: this is a print shop, so things are **stamped** onto
@@ -101,7 +114,8 @@ fall. The beats worth knowing about:
   were being assembled in a composing stick.
 - **A spent guess** doesn't fade out. It takes a hit: a hard flick out and back
   down to a grey nub.
-- **Every dialog** — the how-to-play sheet, a boss briefing — shares one
+- **Every dialog** — how-to-play, settings, stats, history, a boss briefing,
+  a chapter key — shares one
   entrance: the scrim fades, the card is stamped up under it, its mark spins
   into place and the rules deal in one at a time. Callers mark the parts with
   `data-panel` / `data-dialog-mark` / `data-dialog-row` / `data-dialog-cta`, so

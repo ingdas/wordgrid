@@ -13,6 +13,7 @@ import { BossBriefing } from "./BossBriefing";
 import { DebugPanel } from "./DebugPanel";
 import { EndCard } from "./EndCard";
 import Confetti from "./Confetti";
+import { Toast } from "./Toast";
 import {
   EASE,
   breathe,
@@ -282,7 +283,6 @@ export default function Game({
   const coachHere = usePresence(coach >= 1 && coach <= 2 && status === "playing", coach, dropOut);
   const welcomeHere = usePresence(coach === 0 && status === "playing", null, dialogOut);
   const briefHere = usePresence(brief && twist != null, twist, dialogOut);
-  const toastHere = usePresence(toast != null, toast, dropOut);
 
   // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
   useEffect(() => {
@@ -1186,7 +1186,7 @@ export default function Game({
       <div className="sr-only" role="status" aria-live="polite">
         {announce} {toast}
       </div>
-      {toastHere.rendered && <Toast ref={toastHere.ref} text={toastHere.data} />}
+      <Toast text={toast} />
 
       {debug && (
         <DebugPanel
@@ -1247,28 +1247,6 @@ function RewardPop({ text }: { text: string }) {
     <div
       ref={el}
       className="rounded-full bg-gold px-3 py-1 text-sm font-extrabold text-ink shadow-stamp-sm"
-    >
-      {text}
-    </div>
-  );
-}
-
-/** The bottom-of-screen message, up from the edge and back down to it. */
-function Toast({ ref, text }: { ref?: Ref<HTMLDivElement>; text: string | null }) {
-  const el = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (motionOn() && el.current) {
-      gsap.fromTo(el.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: EASE.press });
-    }
-  }, []);
-  return (
-    <div
-      ref={(node) => {
-        el.current = node;
-        if (typeof ref === "function") ref(node);
-        else if (ref) ref.current = node;
-      }}
-      className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center text-sm font-semibold text-paper shadow-stamp-lg"
     >
       {text}
     </div>
