@@ -1,0 +1,77 @@
+{
+  "file": "wordgrid-crazygames.zip",
+  "bytes": 566150,
+  "unpacked": 1015981,
+  "version": "1.0.0",
+  "sha256": "6b882b6c3f46d0b8a4b37419274cf874f2e288724d166a9b09f47598b5a8529b",
+  "entries": [
+    {
+      "path": "apple-touch-icon.png",
+      "bytes": 7975
+    },
+    {
+      "path": "assets/fraunces-latin-ext-wght-normal-Ca2vKHc0.woff2",
+      "bytes": 33584
+    },
+    {
+      "path": "assets/fraunces-latin-wght-normal-ukD16Tqj.woff2",
+      "bytes": 36620
+    },
+    {
+      "path": "assets/fraunces-vietnamese-wght-normal-CnvboYUG.woff2",
+      "bytes": 11572
+    },
+    {
+      "path": "assets/index-CXLRWf5u.css",
+      "bytes": 52857
+    },
+    {
+      "path": "assets/index-DesTXZtw.js",
+      "bytes": 599742
+    },
+    {
+      "path": "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
+      "bytes": 25960
+    },
+    {
+      "path": "assets/inter-cyrillic-wght-normal-DqGufNeO.woff2",
+      "bytes": 18748
+    },
+    {
+      "path": "assets/inter-greek-ext-wght-normal-DlzME5K_.woff2",
+      "bytes": 11232
+    },
+    {
+      "path": "assets/inter-greek-wght-normal-CkhJZR-_.woff2",
+      "bytes": 18996
+    },
+    {
+      "path": "assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2",
+      "bytes": 85068
+    },
+    {
+      "path": "assets/inter-latin-wght-normal-Dx4kXJAl.woff2",
+      "bytes": 48256
+    },
+    {
+      "path": "assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2",
+      "bytes": 10252
+    },
+    {
+      "path": "icon-192.png",
+      "bytes": 8804
+    },
+    {
+      "path": "icon-512.png",
+      "bytes": 41826
+    },
+    {
+      "path": "index.html",
+      "bytes": 3882
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 607
+    }
+  ]
+}

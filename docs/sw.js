@@ -10,8 +10,15 @@ self.addEventListener("install", (e) => {
 });
 
 self.addEventListener("activate", (e) => {
+  // Drop our own stale caches only. CacheStorage is per origin, not per scope,
+  // and this origin can be shared (every project on a github.io user site, every
+  // game on a portal's games host) — another app's caches are not ours to clear.
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k.startsWith("wordgrid-") && k !== CACHE).map((k) => caches.delete(k)))
+      )
   );
   self.clients.claim();
 });

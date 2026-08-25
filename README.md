@@ -139,7 +139,7 @@ which is the failure mode that setting exists to prevent.
 ```bash
 npm install
 npm run dev       # local dev server
-npm run build     # type-check + build to /docs
+npm run build     # type-check + build to /docs (+ the CrazyGames upload zip in /docs/art)
 npm test          # unit tests for the pure game engine (src/engine.ts)
 npm run validate  # structurally check every puzzle (13 unique tiles, link fits)
 npm run audit     # flag spokes that may be ambiguous, for human review
@@ -162,6 +162,28 @@ npm run build && npm run preview  # the pack is captured from the real build
 npm run submission                # covers + screenshots (COVERS=1 for art only)
 npm run clip                      # gameplay.webm
 ```
+
+The game build is in the pack too. `npm run build` ends by zipping what it just
+built — minus the pack itself, the GitHub Pages files, the share-preview image
+and the service worker — into `docs/art/wordgrid-crazygames.zip`, with a
+`dist.json` beside it (size, listing, SHA-256) that the page's **Build**
+section reads and links. That is the file for the CrazyGames upload form:
+`index.html` at the root, every path relative, the SDK loaded from its CDN and
+nothing fetched from anywhere else. It is written by
+[`scripts/dist-zip.mts`](./scripts/dist-zip.mts) rather than the `zip` CLI so
+that the same sources always give the same bytes — otherwise every build would
+churn a half-megabyte binary in the committed `docs/`.
+
+```bash
+npm run build && node scripts/dist.playtest.mjs   # check the zip the build wrote
+```
+
+The check unpacks the zip, serves it from a nested path and loads it inside an
+iframe on a different origin — the way the portal does — and fails on an
+absolute path, a file `index.html` asks for that isn't in the archive, a request
+to any host that isn't the SDK's, a service-worker registration, or a page
+error. (The worker is for the standalone site: `main.tsx` only registers it when
+the game is the top-level page, so inside the embed nothing is asked for.)
 
 The covers are rendered from branded HTML in `scripts/submission-art.mjs`. Every
 one of them shows the same picture: four words, one from each group of a real

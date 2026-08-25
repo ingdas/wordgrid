@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 38 (the opening: a once-per-visit
-press run in front of the first screen)._
+_Last updated 2026-08-26, after iteration 39 (the CrazyGames upload zip is a
+build output, linked from the art page)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -32,7 +32,8 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   standing instruction — no branches, no waiting for review). The production
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
-- **Commands**: `npm run build` (tsc + vite → `docs/`), `npm test` (ten unit
+- **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
   suites: engine, deduction, progress/key gating, quests, storage, debug,
   i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
@@ -40,7 +41,7 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   gen:deduction` (regenerate Logic Grid levels), `node scripts/gen-assets.mjs`
   (og-image + icons), `npm run submission` / `npm run clip` (store art — see
   README).
-- **Headless playtests — all five must pass with zero issues before a push.**
+- **Headless playtests — all six must pass with zero issues before a push.**
   They need Chrome: either `npm install --no-save puppeteer` (pruned by any
   later `npm install`) or a system Chrome, which `scripts/browser.mjs` finds
   on its own (`CHROME_PATH` if it lives somewhere unusual). Serve the build
@@ -60,6 +61,11 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   - `node scripts/stats.playtest.mjs` — level tracking against the real
     reference server, a level played offline; it serves `docs/` and runs the
     server itself, so it needs no preview.
+  - `node scripts/dist.playtest.mjs` — the CrazyGames zip the build wrote:
+    unpacked, served from a nested path inside a foreign iframe like the
+    portal does; fails on an absolute path, a missing file, a request to any
+    host but the SDK's, a service-worker registration or a page error. Needs
+    no preview either.
 - **Debug mode**: only on a page opened with `?debug` in the URL — not
   remembered, nothing stored; the scripts open `?debug` too. That page's
   **Settings → Developer** has a toggle to turn it off and on for the session.
@@ -266,11 +272,16 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 - `scripts/` — `validate.mts`, `audit.mts`, `gen-deduction.mts`, the ten
   `*.test.mts` unit suites, the five `*.playtest.mjs` / `pairs.test.mjs`
   browser suites, `browser.mjs` (Chrome launcher), `gen-assets.mjs`,
-  `gen-submission.mjs` + `submission-art.mjs`, `gen-clip.mjs`.
+  `gen-submission.mjs` + `submission-art.mjs`, `gen-clip.mjs`, `dist-zip.mts`
+  (a dependency-free, byte-reproducible ZIP writer and the Vite plugin that
+  runs it at the end of every build; `EXCLUDE` says what stays out) +
+  `dist.playtest.mjs`.
 - `server/stats-server.mjs` — dependency-free Node + SQLite reference server
   for level tracking (`POST /events`, `GET /levels`, `/levels.csv`,
   `/health`).
-- `public/art/` — the submission pack, served at `<site>/art/`.
+- `public/art/` — the submission pack, served at `<site>/art/`. Its **Build**
+  section links `wordgrid-crazygames.zip` and reads `dist.json`; both are build
+  output in `docs/art/`, never in `public/`.
 
 ## Hard requirements (owner)
 
@@ -418,6 +429,10 @@ the hardest; *emoji* — the one bespoke board.
   treats the server's answer as untrusted input.
 - Rewarded-ad failure paths **resolve true**: never strand a player behind an
   ad that couldn't load.
+- **The service worker is for the standalone site.** `main.tsx` registers it
+  only when the game is the top-level page, the upload zip leaves `sw.js` out,
+  and `activate` clears only `wordgrid-*` caches — CacheStorage is per origin,
+  and both `ingdas.github.io` and a portal's games host are shared origins.
 - **Puzzle content is not localized.** A board of English words can only be
   rewritten per language, not translated; a locale unlocks the Logic Grid
   (no vocabulary) and every menu, rule and result screen.
@@ -443,8 +458,9 @@ Ranked by expected impact. Nothing here is started.
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
    somewhere and point the tag at it.
 2. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
-   module and ads all correctly no-op off-platform; final QA against their
-   preview tool is still owed at submission time.
+   module and ads all correctly no-op off-platform. The upload itself is ready
+   (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);
+   what is owed is the run through their preview tool with that file.
 3. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
