@@ -105,8 +105,9 @@ fall. The beats worth knowing about:
   title is then set letter by letter and the plate lifts off the first screen,
   which stamps itself in underneath. It runs once per visit (a tap or key
   fast-forwards it), in front of the tutorial board on a first launch and in
-  front of Home after; coming back to the menu never replays it. Under three
-  seconds, and cut entirely under Calm or a reduced-motion preference.
+  front of Home after; coming back to the menu never replays it. About four
+  seconds, the last one and a half of them a hold so the pitch gets read, and
+  cut entirely under Calm or a reduced-motion preference.
 - **A solved group** is one move, not two. The three tiles you picked are
   photocopied where they stand, the banner is stamped onto the page, and the
   copies are flown into it — so the group visibly *becomes* the banner instead

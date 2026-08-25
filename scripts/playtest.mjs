@@ -66,7 +66,7 @@ async function solveGroup(group) {
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
 
-// 0. The opening. It owns the first paint for up to three seconds — the plate
+// 0. The opening. It owns the first paint for about four seconds — the plate
 //    stamps its `data-intro` with the time it started, so the run is measured
 //    from the page's own clock rather than from when the navigation settled.
 const introMs = await p.evaluate(
@@ -86,7 +86,7 @@ const introMs = await p.evaluate(
 log("opening animation on launch:", introMs >= 0 ? `${introMs}ms` : introMs === -1 ? "did not play" : "never finished");
 if (introMs === -1) note("The opening animation did not play on a fresh launch.");
 if (introMs === -2) note("The opening animation never finished (nothing to play under it).");
-if (introMs > 3300) note(`The opening ran ${introMs}ms — it has to be over in about three seconds.`);
+if (introMs > 4300) note(`The opening ran ${introMs}ms — it has to be over in about four seconds.`);
 if (introMs >= 0 && introMs < 2000) note(`The opening ran only ${introMs}ms — it should be a real sequence, not a flash.`);
 await sleep(700); // the tutorial board deals in under the lifted plate
 

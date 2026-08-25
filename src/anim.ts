@@ -387,7 +387,7 @@ export const dialogOut: Exit = (el) => {
 // ---------------------------------------------------------------------------
 
 /** How long the opening runs before the plate lifts, in seconds. */
-export const OPENING_S = 2.5;
+export const OPENING_S = 3.6;
 
 /**
  * The press run — the game's opening, played once per visit.
@@ -408,11 +408,17 @@ export const OPENING_S = 2.5;
  * animation having stalled.) The mark hits as the first tile arrives and its
  * glyph punches for each of the three that follow, so they read as swallowed.
  *
+ * The page then *holds*: the title and the pitch are in by about 2.1 s and the
+ * plate doesn't lift until 3.6, because a line you can't finish reading is
+ * worse than none — the first cut lifted the plate the moment the pitch had
+ * soaked in, and it went unread. The mark breathes once through the hold so
+ * the page reads as waiting for you rather than as stuck.
+ *
  * The caller marks the parts (`data-open-tile`, `-stage`, `-ring`, `-mark`,
  * `-glyph`, `-letter`, `-line`, `-rule`, `-skip`) and owns the plate itself;
  * `onDone` fires at `OPENING_S`, which is the cue to lift it (see `liftOut`)
  * and let the screen underneath stamp itself in. The whole thing, lift
- * included, fits inside three seconds.
+ * included, is about four seconds — the last one and a half of them the hold.
  */
 export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
   const q = <T extends HTMLElement>(sel: string) => [...scope.querySelectorAll<T>(sel)];
@@ -509,17 +515,21 @@ export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
       )
     );
   // 4. The title, set one letter at a time.
-  const titleAt = markAt + 0.25;
+  const titleAt = markAt + 0.22;
   if (letters.length)
     tl.fromTo(
       letters,
       { scale: 1.6, y: -6, opacity: 0, rotate: () => gsap.utils.random(-9, 9) },
-      { scale: 1, y: 0, opacity: 1, rotate: 0, duration: 0.42, ease: EASE.stamp, stagger: 0.075, immediateRender: false },
+      { scale: 1, y: 0, opacity: 1, rotate: 0, duration: 0.4, ease: EASE.stamp, stagger: 0.06, immediateRender: false },
       titleAt
     );
-  // 5. A rule drawn under it; the pitch soaks in.
-  if (line) tl.fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.4, ease: EASE.soak, immediateRender: false }, titleAt + 0.55);
-  if (rule) tl.fromTo(rule, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: EASE.soak, immediateRender: false }, titleAt + 0.68);
+  // 5. A rule drawn under it and the pitch soaking in, while the last letters
+  //    are still landing — then the hold, so the pitch gets read.
+  if (line) tl.fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.36, ease: EASE.soak, immediateRender: false }, titleAt + 0.44);
+  if (rule) tl.fromTo(rule, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE.soak, immediateRender: false }, titleAt + 0.52);
+  // 6. The hold. One slow breath from the mark — nothing else moves, the page
+  //    is there to be read. Two half-cycles so it ends before the lift.
+  if (mark) tl.to(mark, { scale: 1.035, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 }, 2.35);
   // The way out, offered once the first beat has landed.
   if (skip) tl.fromTo(skip, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out", immediateRender: false }, 0.9);
   // Pin the end so `onDone` fires on the cue and not when the last tween happens to finish.
