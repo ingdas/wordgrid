@@ -1,7 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 40 (Pairs and the Logic Grid removed;
-the game is the word board again)._
+_Last updated 2026-08-26, after iteration 41 (product analytics through a
+self-hosted Umami: `analytics.ts`, off until configured)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -32,9 +32,9 @@ twist closing each) → Game. One side mode: **Endless**
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
 - **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
-  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (nine unit
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
   suites: engine, progress/key gating, quests, storage, debug,
-  i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
+  i18n, sdk, level tracking, audio, analytics), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
   board), `npm run audit` (ambiguity report for a human), `node
   scripts/gen-assets.mjs`
@@ -61,8 +61,9 @@ twist closing each) → Game. One side mode: **Endless**
   - `node scripts/dist.playtest.mjs` — the CrazyGames zip the build wrote:
     unpacked, served from a nested path inside a foreign iframe like the
     portal does; fails on an absolute path, a missing file, a request to any
-    host but the SDK's, a service-worker registration or a page error. Needs
-    no preview either.
+    host but the SDK's (and the Umami host the analytics meta tag names, if
+    configured), a service-worker registration or a page error. Needs no
+    preview either.
 - **Debug mode**: only on a page opened with `?debug` in the URL — not
   remembered, nothing stored; the scripts open `?debug` too. That page's
   **Settings → Developer** has a toggle to turn it off and on for the session.
@@ -128,6 +129,20 @@ twist closing each) → Game. One side mode: **Endless**
   finished attempts before a percentage is shown; `parseLevels` sanitises the
   server's answer. Off unless `VITE_STATS_URL` or the `<meta
   name="wordgrid:stats">` tag is set. Debug and Endless are never counted.
+- `analytics.ts` — product analytics through a self-hosted **Umami**: screens
+  as virtual pageviews (`/home`, `/game`, …), everything else as named events
+  with a small property bag (`level_start/win/loss`, `hint`, `rewarded`,
+  `continue_offer`, `early_call`, `tutorial`, `quest`, `achievement`,
+  `chapter_key`, `share`, `setting`, `storage`,
+  `progress_reset`, `endless_end` — the full list with properties is at the
+  top of the file). Off unless `VITE_UMAMI_SCRIPT` + `VITE_UMAMI_WEBSITE` or
+  the two `<meta name="wordgrid:umami-…">` tags are set. The tracker is
+  injected after mount on an idle slot with `data-auto-track="false"`; events
+  raised before it lands wait in a buffer (`BUFFER_CAP = 100`), a failed load
+  retries (`RETRY_MS`) and on `online`; `identify` gets the same per-install
+  id as level tracking (`stats.playerId`). Debug is filtered inside; Endless
+  *is* counted. `analyticsStatus()` feeds Settings → Developer → Analytics.
+  Nothing is ever read back.
 - `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -291,7 +306,10 @@ twist closing each) → Game. One side mode: **Endless**
   memory-boss backs carry no word in any attribute. The playtest asserts all
   of it.
 - Debug never leaks into a normal save (its own key, tray mounted only while
-  on); debug and Endless are never counted by level tracking.
+  on); debug and Endless are never counted by level tracking; debug is never
+  tracked by analytics either. An analytics property is an id, a number or an
+  enum — never copy, never a word the player typed, never a puzzle's answer.
+  New events go in `EventName` and the vocabulary comment in `analytics.ts`.
 - `npm run validate` is the gate for content: a new board that fails it
   doesn't build.
 
@@ -435,7 +453,12 @@ Ranked by expected impact. Nothing here is started.
 1. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
    is empty in both `index.html` and `docs/index.html`, so the whole feature
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
-   somewhere and point the tag at it.
+   somewhere and point the tag at it. **Analytics is in the same state**: the
+   `wordgrid:umami-script` / `wordgrid:umami-website` tags are empty until a
+   Umami is up (Coolify's template; set `TRACKER_SCRIPT_NAME`,
+   `COLLECT_API_ENDPOINT`, `DISABLE_TELEMETRY` on it, add one website, paste
+   the tracker URL and the website id). Then check Settings → Developer →
+   Analytics on the live page says the tracker loaded.
 2. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform. The upload itself is ready
    (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);

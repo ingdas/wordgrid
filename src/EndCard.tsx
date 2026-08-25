@@ -4,6 +4,7 @@ import { EASE, motionOn, stampIn, useGsap } from "./anim";
 import { fmtTime } from "./format";
 import { t } from "./i18n";
 import { renderShareCard, type ShareCardData } from "./sharecard";
+import { trackEvent } from "./analytics";
 import { playConfirm, playUi } from "./audio";
 
 const RATING_COUNT = 5; // end.rating.0 … end.rating.4 (see src/i18n)
@@ -117,10 +118,12 @@ export function EndCard({
     try {
       if (file && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text: shareText });
+        trackEvent("share", { won, method: "files" });
         return;
       }
       if (navigator.share) {
         await navigator.share({ text: shareText });
+        trackEvent("share", { won, method: "text" });
         return;
       }
     } catch {
@@ -131,6 +134,7 @@ export function EndCard({
     } catch {
       /* ignore */
     }
+    trackEvent("share", { won, method: "copy" });
     if (file) {
       const url = URL.createObjectURL(file);
       const a = document.createElement("a");

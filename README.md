@@ -265,6 +265,53 @@ how stale it is), and a missing, dead or nonsense server is never shown to the
 player. `scripts/stats.playtest.mjs` plays a whole level in a browser with the
 network cut to prove it.
 
+### Analytics
+
+Where players go and what they do there — screens, wins and losses per mode,
+hints spent, offers taken, where the tutorial loses people, settings changed —
+in a self-hosted [Umami](https://umami.is). Off by default and inert until
+configured, exactly like level tracking. The two are different pipes for
+different questions: level tracking is the one number the game reads *back*
+(the clear rate on the up-next card); analytics is everything else, one way,
+into a dashboard.
+
+- the client is [`src/analytics.ts`](./src/analytics.ts): it puts Umami's
+  tracker on the page after the game has mounted, on an idle slot, with
+  auto-tracking off. Screens go out as virtual pageviews (`/home`, `/game`, …)
+  and everything else as named events with a small property bag — the
+  vocabulary is listed at the top of the file. Events raised before the tracker
+  lands wait in a capped in-memory buffer; a blocked or unreachable tracker is
+  retried, and again when the connection comes back; nothing throws into the
+  game.
+- the server is your Umami. On Coolify that is the one-click Umami template
+  (Node + Postgres); in its environment set `TRACKER_SCRIPT_NAME` (renames
+  `script.js` — filter lists know the default), `COLLECT_API_ENDPOINT` (same
+  for `/api/send`) and `DISABLE_TELEMETRY=1`. Add one website in the dashboard;
+  both hosts (`ingdas.github.io` and the CrazyGames embed) report into it, and
+  `hostname` is a filter.
+
+Switch it on either way round:
+
+```bash
+VITE_UMAMI_SCRIPT=https://umami.example.com/<tracker>.js \
+VITE_UMAMI_WEBSITE=<website id> npm run build
+```
+
+or, without rebuilding, fill the `<meta name="wordgrid:umami-script">` and
+`<meta name="wordgrid:umami-website">` tags in `index.html` / `docs/index.html`.
+
+**Settings → Developer → Analytics** says whether it is configured, whether the
+tracker arrived, and how many events went through this session.
+
+What is collected: the same random per-install id level tracking uses (handed
+to Umami's `identify`, so one player stays one player across its salt rotation
+and inside the partitioned iframe), the screen, the event name and its
+properties — ids, numbers and enums, never copy, never a word the player typed.
+Umami itself sets no cookie and stores nothing in the browser: a visitor is a
+server-side hash of IP + user agent + a rotating salt. Debug play is never
+tracked, Do Not Track is honoured. Unlike level tracking, Endless *is* counted —
+mode adoption is the point. `scripts/analytics.test.mts` pins all of it.
+
 ### Automated playtest
 
 `scripts/playtest.mjs` drives a headless Chrome through the solve / lose /

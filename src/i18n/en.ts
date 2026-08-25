@@ -323,6 +323,10 @@ export const en: Record<string, string> = {
   "settings.debug.hint": "Free hints, auto-solve, every level open",
   "settings.tracking": "Level tracking",
   "settings.tracking.hint": "Who clears which level, and how often",
+  "settings.analytics": "Analytics",
+  "settings.analytics.off": "Not configured. Set VITE_UMAMI_SCRIPT and VITE_UMAMI_WEBSITE at build time, or fill the two <meta name=\"wordgrid:umami-…\"> tags — the game plays exactly the same either way.",
+  "settings.analytics.on": "Umami on {host} — {n} event(s) sent this session",
+  "settings.analytics.waiting": "Umami on {host} — tracker not loaded yet (blocked or offline), {n} event(s) waiting",
 
   // --- level tracking dashboard (Settings → Developer) ---------------------
   "track.title": "Level tracking",

@@ -69,6 +69,7 @@ import {
   requestRewarded,
 } from "./sdk";
 import { startStats, trackFinish } from "./stats";
+import { analyticsStatus, startAnalytics, trackEvent, trackScreen } from "./analytics";
 import { LevelStatsModal } from "./LevelStats";
 import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
 import { chapterPage } from "./theme";
@@ -111,6 +112,19 @@ function winEvents(
 }
 
 const noop = () => {};
+
+/**
+ * Report a setting to analytics whenever its value changes — not on mount, and
+ * not for a StrictMode double effect, which sees the same value twice.
+ */
+function useTrackSetting(name: string, value: string) {
+  const prev = useRef(value);
+  useEffect(() => {
+    if (prev.current === value) return;
+    prev.current = value;
+    trackEvent("setting", { name, value });
+  }, [name, value]);
+}
 
 const CALM_KEY = "wordgrid:calm";
 const readCalm = () => readItem(CALM_KEY) === "1";
@@ -169,6 +183,10 @@ export default function App() {
   // different complaints, and only one of them used to have an answer.
   const [sfxVol, setSfxVolState] = useState(() => getSfxVolume());
   const [musicVol, setMusicVolState] = useState(() => getMusicVolume());
+  useTrackSetting("sound", muted ? "off" : "on");
+  useTrackSetting("music", musicOn ? "on" : "off");
+  useTrackSetting("calm", calm ? "on" : "off");
+  useTrackSetting("locale", locale);
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -201,6 +219,9 @@ export default function App() {
     // pull the community numbers. Off entirely unless an endpoint is
     // configured, and never on the path of anything the player is waiting for.
     const stopStats = startStats();
+    // Product analytics (src/analytics.ts): same contract — off unless
+    // configured, loaded on an idle slot after this mount, never awaited.
+    const stopAnalytics = startAnalytics();
     let stopMirror: (() => void) | undefined;
     void initSdk().then(() => {
       // Once the platform is up, reconcile the save with its data module: the
@@ -214,12 +235,16 @@ export default function App() {
           setProgress(restored);
           setUnlockedAch({ icon: "💾", header: t("storage.restored"), label: t("storage.restored.body") });
         },
-        (durable) => setStorageWarn(!durable)
+        (durable) => {
+          setStorageWarn(!durable);
+          if (!durable) trackEvent("storage", { durable: false });
+        }
       );
     });
     return () => {
       stopMirror?.();
       stopStats();
+      stopAnalytics();
     };
   }, []);
 
@@ -302,6 +327,7 @@ export default function App() {
       }
       applyProgress((p) => ({ ...p, quests: state, hints: p.hints + reward }));
       if (!completed.length) return;
+      for (const q of completed) trackEvent("quest", { id: q.id, set: setDone });
       const first = completed[0];
       // After the win card has landed and after any achievement toast (1800ms).
       setTimeout(
@@ -367,6 +393,7 @@ export default function App() {
   }, []);
 
   const resetProgress = useCallback(() => {
+    trackEvent("progress_reset");
     removeItem("wordgrid:progress");
     const fresh = loadProgress();
     progressRef.current = fresh; // keep the write path's view in sync
@@ -409,6 +436,7 @@ export default function App() {
       );
       if (next === prev) return;
       happytime();
+      trackEvent("chapter_key", { chapter });
       // The keyword itself is the trophy — it is content, not a catalogue key.
       setUnlockedAch({ icon: "🔑", header: t("key.unlocked"), label: chapterKey(chapter) });
     },
@@ -456,6 +484,17 @@ export default function App() {
           stars: result.stars,
         });
       }
+      trackEvent("level_win", {
+        mode: playingDaily ? "daily" : "campaign",
+        level: playingDaily ? 0 : levelIndex + 1,
+        id,
+        stars: result.stars,
+        mistakes: result.mistakes,
+        timeS: Math.round(result.timeMs / 1000),
+        link: result.linkCorrect,
+        combo: result.maxCombo,
+        twist: playingDaily ? "none" : bossTwist(levelIndex) ?? "none",
+      });
       let unlocked: ReturnType<typeof evaluateUnlocks>["unlocked"] = [];
       applyProgress((p) => {
         const streak = p.streak + 1;
@@ -493,6 +532,7 @@ export default function App() {
         });
       });
       if (unlocked.length) {
+        for (const a of unlocked) trackEvent("achievement", { id: a.def.id, tier: a.tier });
         const top = unlocked[unlocked.length - 1];
         setTimeout(
           () => setUnlockedAch({ icon: top.def.icon, label: `${t(`ach.tier.${top.tier}`)} · ${t(top.def.titleKey)}` }),
@@ -536,6 +576,7 @@ export default function App() {
   // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
   const refillHints = useCallback(async (): Promise<boolean> => {
     const ok = await requestRewarded();
+    trackEvent("rewarded", { placement: "hints", result: ok ? "granted" : "declined" });
     if (!ok) return false;
     applyProgress((p) => ({ ...p, hints: p.hints + 3 }));
     return true;
@@ -553,6 +594,14 @@ export default function App() {
           timeMs: result.timeMs,
         });
       }
+      trackEvent("level_loss", {
+        mode: playingDaily ? "daily" : "campaign",
+        level: playingDaily ? 0 : levelIndex + 1,
+        id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
+        mistakes: result.mistakes,
+        timeS: Math.round(result.timeMs / 1000),
+        twist: playingDaily ? "none" : bossTwist(levelIndex) ?? "none",
+      });
       applyProgress((p) =>
         pushHistory({ ...p, streak: 0 }, {
           at: Date.now(),
@@ -632,6 +681,15 @@ export default function App() {
   const handleEndlessWin = useCallback(
     (result: { score: number; mistakes: number; linkCorrect: boolean; maxCombo: number }) => {
       happytime();
+      trackEvent("level_win", {
+        mode: "endless",
+        level: 0,
+        id: ENDLESS_POOL[endlessQueue.current[endlessPos] ?? 0]?.id,
+        mistakes: result.mistakes,
+        link: result.linkCorrect,
+        combo: result.maxCombo,
+        twist: "none",
+      });
       setEndlessSolved((n) => n + 1);
       setEndlessScore((s) => s + result.score);
       awardScore(result.score);
@@ -639,7 +697,7 @@ export default function App() {
       // minus the daily one (it isn't the daily).
       questEvents(winEvents(result, false));
     },
-    [awardScore, questEvents]
+    [awardScore, questEvents, endlessPos, ENDLESS_POOL]
   );
 
   const nextEndless = useCallback(() => {
@@ -657,6 +715,7 @@ export default function App() {
 
   const exitEndless = useCallback(() => {
     gameplayStop();
+    trackEvent("endless_end", { solved: endlessSolved });
     applyProgress((p) => (endlessSolved <= p.endlessBest ? p : { ...p, endlessBest: endlessSolved }));
     setEndless(false);
     setScreen("home");
@@ -699,6 +758,12 @@ export default function App() {
   useEffect(() => {
     setMusicScene(onBoss ? "boss" : onBoard ? "play" : "menu");
   }, [onBoard, onBoss]);
+
+  // Each screen is a page to analytics (`/home`, `/game`, …) — the same one
+  // twice in a row is one view, so a StrictMode double effect is harmless.
+  useEffect(() => {
+    trackScreen(screen);
+  }, [screen]);
 
   // Is the level Next would take you to a boss still shut behind its chapter key?
   const nextIsSealed =
@@ -1176,6 +1241,28 @@ function VolumeRow({
   );
 }
 
+/** Settings → Developer: the state of the analytics pipe (src/analytics.ts). */
+function AnalyticsRow() {
+  const s = analyticsStatus();
+  let host = s.script;
+  try {
+    if (s.script) host = new URL(s.script).host;
+  } catch {
+    /* show it as written */
+  }
+  const hint = !s.enabled
+    ? t("settings.analytics.off")
+    : s.loaded
+      ? t("settings.analytics.on", { host, n: s.handed })
+      : t("settings.analytics.waiting", { host, n: s.buffered });
+  return (
+    <div className="border-t border-ink/15 py-3">
+      <div className="text-sm font-bold text-ink">{t("settings.analytics")}</div>
+      <div className="break-words text-[0.7rem] text-ink-soft">{hint}</div>
+    </div>
+  );
+}
+
 function ToggleRow({
   label,
   hint,
@@ -1327,6 +1414,10 @@ function SettingsModal({
             <div className="text-sm font-bold text-ink">{t("settings.tracking")}</div>
             <div className="text-[0.7rem] text-ink-soft">{t("settings.tracking.hint")}</div>
           </button>
+          {/* The other pipe: is Umami configured, did its tracker arrive, and
+              how much has gone through it this session. Read-only — there is
+              nothing to open; the dashboard lives on the Umami host. */}
+          <AnalyticsRow />
         </div>
 
         <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">

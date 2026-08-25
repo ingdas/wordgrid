@@ -4,6 +4,7 @@ import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, de
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
 import { requestRewarded } from "./sdk";
 import { trackStart } from "./stats";
+import { trackEvent } from "./analytics";
 import { useModal } from "./modal";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
@@ -139,6 +140,9 @@ export default function Game({
   onTutorialDone,
 }: GameProps) {
   const boss = twist != null;
+  // What analytics files this board under (src/analytics.ts).
+  const trackMode = endless ? "endless" : daily ? "daily" : "campaign";
+  const trackLevel = endless || daily ? 0 : puzzleIndex + 1;
   // Endless/Zen mode never fails: no mistake cap, no second-chance/loss path.
   const maxMistakes = endless ? Number.POSITIVE_INFINITY : MAX_MISTAKES;
   // The emoji boss swaps in a bespoke picture board; every other twist plays the
@@ -262,6 +266,15 @@ export default function Game({
     trackedStart.current = true;
     trackStart({ id: levelRaw.id, level: daily ? 0 : puzzleIndex + 1, mode: daily ? "daily" : "campaign" });
   }, [endless, debug, daily, puzzleIndex, levelRaw.id]);
+
+  // Analytics counts every board, Endless included (mode adoption is the point
+  // there); debug play is filtered inside the module. Once per board dealt.
+  const trackedBoard = useRef<string | null>(null);
+  useEffect(() => {
+    if (trackedBoard.current === levelRaw.id) return;
+    trackedBoard.current = levelRaw.id;
+    trackEvent("level_start", { mode: trackMode, level: trackLevel, id: levelRaw.id, twist: twist ?? "none" });
+  }, [trackMode, trackLevel, levelRaw.id, twist]);
 
   // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {
@@ -447,6 +460,7 @@ export default function Game({
     if (coach === 1 && solved.length >= 1) {
       setCoach(2);
       onTutorialDone();
+      trackEvent("tutorial", { step: "completed" });
     }
   }, [coach, solved.length, onTutorialDone]);
 
@@ -578,7 +592,9 @@ export default function Game({
 
   // Second chance: a rewarded ad (instant true when no SDK) buys +2 tries once.
   const takeSecondChance = useCallback(async () => {
+    trackEvent("continue_offer", { choice: "watch" });
     const ok = await requestRewarded();
+    trackEvent("rewarded", { placement: "continue", result: ok ? "granted" : "declined" });
     if (!ok) return; // ad failed/declined — leave the offer up
     setSecondChanceUsed(true);
     setOffering(false);
@@ -587,6 +603,7 @@ export default function Game({
     setToast(t("game.continue.taken"));
   }, []);
   const declineSecondChance = useCallback(() => {
+    trackEvent("continue_offer", { choice: "decline" });
     setOffering(false);
     setStatus("lost");
   }, []);
@@ -628,7 +645,8 @@ export default function Game({
     setToast(t("game.hint.given", { theme: cat.name }));
     onUseHint();
     playHint();
-  }, [canHint, hintableCategories, onUseHint]);
+    trackEvent("hint", { kind: "theme", mode: trackMode, level: trackLevel });
+  }, [canHint, hintableCategories, onUseHint, trackMode, trackLevel]);
 
   // Finale hint: spend a token to reveal the next letter of the secret link.
   const canRevealLetter = hasHint && revealedLetters < puzzle.pivot.length;
@@ -637,7 +655,8 @@ export default function Game({
     setRevealedLetters((n) => Math.min(n + 1, puzzle.pivot.length));
     onUseHint();
     playHint();
-  }, [hasHint, puzzle.pivot.length, onUseHint]);
+    trackEvent("hint", { kind: "letter", mode: trackMode, level: trackLevel });
+  }, [hasHint, puzzle.pivot.length, onUseHint, trackMode, trackLevel]);
 
   // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
   const refill = useCallback(async () => {
@@ -784,6 +803,7 @@ export default function Game({
       // unsolved is one less clue you had — so it pays proportionally.
       const early = unsolvedCategories.length;
       const pts = 250 * (1 + early);
+      if (early > 0) trackEvent("early_call", { result: "hit", open: early });
       setScore((s) => s + pts);
       pushPop(early > 0 ? `+${pts}  🔑 early!` : "+250  🔑");
       playStar(2);
@@ -818,7 +838,8 @@ export default function Game({
     setEarlyCall(false);
     setStatus("playing");
     setToast(t("game.early.missed"));
-  }, [buzz]);
+    trackEvent("early_call", { result: "miss", open: unsolvedCategories.length });
+  }, [buzz, unsolvedCategories.length]);
 
   // Give up: reveal the word (counts as a miss → costs a star).
   const revealLinkWord = useCallback(() => {
@@ -1209,7 +1230,7 @@ export default function Game({
             step={coachHere.data}
             vars={{ theme: puzzle.categories[0].name }}
             onDone={() => { setCoach(-1); onTutorialDone(); }}
-            onSkip={() => { setCoach(-1); onTutorialDone(); }}
+            onSkip={() => { trackEvent("tutorial", { step: "skipped" }); setCoach(-1); onTutorialDone(); }}
           />
         )}
         </div>
@@ -1221,8 +1242,8 @@ export default function Game({
       {welcomeHere.rendered && (
         <WelcomeOverlay
           ref={welcomeHere.ref}
-          onStart={() => setCoach(1)}
-          onSkip={() => { setCoach(-1); onTutorialDone(); }}
+          onStart={() => { trackEvent("tutorial", { step: "started" }); setCoach(1); }}
+          onSkip={() => { trackEvent("tutorial", { step: "skipped" }); setCoach(-1); onTutorialDone(); }}
         />
       )}
 

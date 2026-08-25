@@ -9,7 +9,9 @@
 //            inside an iframe on a *different* origin (like the portal page):
 //            the game boots, both fonts come from the zip, no request to the
 //            game's origin fails, nothing is fetched from any host that isn't
-//            *.crazygames.com, no service worker is registered, no page error
+//            *.crazygames.com (or the Umami host the analytics meta tag names,
+//            when the build is configured), no service worker is registered,
+//            no page error
 //
 //   npm run build                      # writes the zip
 //   node scripts/dist.playtest.mjs     # ZIP=path/to/other.zip to check another
@@ -69,6 +71,17 @@ const files = new Set(entries);
 
 // --- paths in index.html ----------------------------------------------------------
 const html = readFileSync(join(dir, "index.html"), "utf8");
+// Analytics (src/analytics.ts) is the one other host the game may talk to, and
+// only when the build carries a tracker URL in its meta tag: allow that origin,
+// and nothing else. Unconfigured (the default), there is no such origin.
+const umamiOrigin = (() => {
+  const m = html.match(/<meta\s+name=["']wordgrid:umami-script["']\s+content=["']([^"']+)["']/);
+  try {
+    return m ? new URL(m[1]).origin : null;
+  } catch {
+    return null;
+  }
+})();
 const refs = [...html.matchAll(/\b(?:src|href)=["']([^"']+)["']/g)].map((m) => m[1]);
 const remoteScripts = [...html.matchAll(/<script[^>]+src=["'](https?:[^"']+)["']/g)].map(
   (m) => m[1],
@@ -155,6 +168,7 @@ page.on("request", (r) => {
   if (!/^https?:$/.test(u.protocol)) return; // data: favicon, about:blank
   if (u.origin === gameOrigin || u.origin === portalUrl.slice(0, -1)) return;
   if (u.hostname === "crazygames.com" || u.hostname.endsWith(".crazygames.com")) return;
+  if (umamiOrigin && u.origin === umamiOrigin) return;
   foreign.add(u.origin);
 });
 const pageErrors = [];

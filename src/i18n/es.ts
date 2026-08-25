@@ -313,6 +313,10 @@ export const es: Record<string, string> = {
   "settings.debug.hint": "Pistas gratis, resolver solo y todos los niveles abiertos",
   "settings.tracking": "Seguimiento de niveles",
   "settings.tracking.hint": "Quién supera cada nivel y con qué frecuencia",
+  "settings.analytics": "Analítica",
+  "settings.analytics.off": "Sin configurar. Define VITE_UMAMI_SCRIPT y VITE_UMAMI_WEBSITE al compilar, o rellena las dos etiquetas <meta name=\"wordgrid:umami-…\"> — el juego funciona igual en ambos casos.",
+  "settings.analytics.on": "Umami en {host} — {n} evento(s) enviados en esta sesión",
+  "settings.analytics.waiting": "Umami en {host} — el rastreador aún no ha cargado (bloqueado o sin conexión), {n} evento(s) en espera",
 
   // --- panel de seguimiento de niveles (Ajustes → Desarrollo) --------------
   "track.title": "Seguimiento de niveles",
