@@ -227,10 +227,14 @@ export default function Game({
   const startedAt = useRef(Date.now());
   const prevBest = useRef(bestMs); // captured once, before this run updates it
   // Tutorial helpers: this stays true for the whole run even after the coach
-  // marks the tutorial done (so the finale can still nudge a first-timer).
+  // marks the tutorial done (so the finale can still coach a first-timer).
   const isTutorialRun = useRef(tutorial).current;
   const coachMisses = useRef(0);
-  const finaleHinted = useRef(false);
+  // The finale's own coach card (step 3): shown once per run, dismissable; its
+  // wrong-word nudges escalate to free letters — see coachFinaleMiss.
+  const finaleCoached = useRef(false);
+  const finaleMisses = useRef(0);
+  const [finaleCoach, setFinaleCoach] = useState(false);
 
   // --- the press ----------------------------------------------------------
   // Handles the GSAP layer animates through (see src/anim.ts). The board and
@@ -281,16 +285,20 @@ export default function Game({
   const offerHere = usePresence(offering, null, sinkOut);
   const endHere = usePresence(status === "won" || status === "lost", status, sinkOut);
   const coachHere = usePresence(coach >= 1 && coach <= 2 && status === "playing", coach, dropOut);
+  const finaleCoachHere = usePresence(finaleCoach && status === "guessing" && linkGuess == null, null, dropOut);
   const welcomeHere = usePresence(coach === 0 && status === "playing", null, dialogOut);
   const briefHere = usePresence(brief && twist != null, twist, dialogOut);
 
-  // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
+  // First-timer's finale: the tap-to-spell step is new, and a toast is gone
+  // before the letter bank has been taken in. A third coach card sits under
+  // the panel instead and says what the clues are. Not for an early call —
+  // that is a choice the player made already knowing the word.
   useEffect(() => {
-    if (isTutorialRun && status === "guessing" && !finaleHinted.current) {
-      finaleHinted.current = true;
-      setToast(t("finale.firstTime"));
+    if (isTutorialRun && status === "guessing" && !earlyCall && !finaleCoached.current) {
+      finaleCoached.current = true;
+      setFinaleCoach(true);
     }
-  }, [isTutorialRun, status]);
+  }, [isTutorialRun, status, earlyCall]);
 
   // Deferred beats that change `status` (the early call landing, the give-up
   // reveal) go through `later` so a restart or an exit cancels them: an
@@ -725,7 +733,9 @@ export default function Game({
     setPeekArmed(false);
     setPeeking(null);
     coachMisses.current = 0;
-    finaleHinted.current = false;
+    finaleCoached.current = false;
+    finaleMisses.current = 0;
+    setFinaleCoach(false);
     setOrder(shuffle(spokeTiles));
     setDealKey((k) => k + 1);
   }, [spokeTiles, twist, clearTimers]);
@@ -741,11 +751,34 @@ export default function Game({
     return () => window.removeEventListener("keydown", onKey);
   }, [status, selected.length, submit, clearSelection]);
 
+  // A first-timer's wrong word. The finale never costs anything, so the coach
+  // does here what it does on the board: restate the clue once, then start
+  // handing over letters — one per miss, never the last one, which stays theirs
+  // to find. Nothing is spent: these are the tutorial's, not the hint bank's.
+  const coachFinaleMiss = useCallback(() => {
+    const n = finaleMisses.current++;
+    if (n === 0) {
+      setToast(t("coach.finale.nudge.1"));
+      return;
+    }
+    const cap = puzzle.pivot.length - 1;
+    if (revealedLetters >= cap) {
+      setToast(t("coach.finale.nudge.3"));
+      return;
+    }
+    setRevealedLetters(revealedLetters + 1);
+    setToast(t("coach.finale.nudge.2", { prefix: puzzle.pivot.slice(0, revealedLetters + 1) }));
+    playHint();
+  }, [puzzle.pivot, revealedLetters]);
+
   // Returns true if the typed guess is accepted; otherwise the caller shows an
   // inline "try again" (no penalty for retries).
   const submitLink = useCallback(
     (text: string): boolean => {
-      if (!linkMatches(text, puzzle.pivot, puzzle.accept)) return false;
+      if (!linkMatches(text, puzzle.pivot, puzzle.accept)) {
+        if (isTutorialRun && !earlyCall) coachFinaleMiss();
+        return false;
+      }
       setLinkGuess(text);
       // Naming the link early is the hard way to do it — every group still
       // unsolved is one less clue you had — so it pays proportionally.
@@ -763,7 +796,7 @@ export default function Game({
       }, 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length, later]
+    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length, later, isTutorialRun, earlyCall, coachFinaleMiss]
   );
 
   // One call per level, spent on opening: no free look at the letter count.
@@ -1095,6 +1128,23 @@ export default function Game({
           />
         )}
 
+        {/* Step 3 of the coach, for a first-timer's finale: every group name,
+            read out as a clue to the one word. In flow under the panel. */}
+        {finaleCoachHere.rendered && (
+          <Coach
+            ref={finaleCoachHere.ref}
+            step={3}
+            vars={{
+              a: puzzle.categories[0].name,
+              b: puzzle.categories[1].name,
+              c: puzzle.categories[2].name,
+              d: puzzle.categories[3].name,
+            }}
+            onDone={() => setFinaleCoach(false)}
+            onSkip={() => setFinaleCoach(false)}
+          />
+        )}
+
         {endHere.rendered && (
           <EndCard
             // Keyed off the held status, not the live one: a restart flips
@@ -1157,8 +1207,7 @@ export default function Game({
           <Coach
             ref={coachHere.ref}
             step={coachHere.data}
-            theme={puzzle.categories[0].name}
-            onNext={() => setCoach((c) => c + 1)}
+            vars={{ theme: puzzle.categories[0].name }}
             onDone={() => { setCoach(-1); onTutorialDone(); }}
             onSkip={() => { setCoach(-1); onTutorialDone(); }}
           />
@@ -1712,11 +1761,13 @@ function Controls({
 
 // Step 1 teaches with the tutorial board's own first theme rather than words
 // baked in here, so re-pinning the opening level can't leave the coach
-// describing a puzzle the player isn't looking at.
+// describing a puzzle the player isn't looking at. Step 3 does the same for
+// the finale: it reads the board's four group names out as the clues.
 const COACH: readonly (null | { key: string; cta: string | null })[] = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
   { key: "coach.1", cta: null }, // advances when the player solves any group
   { key: "coach.2", cta: "common.gotIt" },
+  { key: "coach.3", cta: "common.gotIt" }, // the finale; dismissed on its own
 ];
 
 const WELCOME_RULES = [
@@ -1797,16 +1848,14 @@ function WelcomeOverlay({
 function Coach({
   ref,
   step,
-  theme,
-  onNext,
+  vars,
   onDone,
   onSkip,
 }: {
   ref?: Ref<HTMLDivElement>;
   step: number;
-  /** The tutorial board's first category, so the copy matches the tiles. */
-  theme: string;
-  onNext: () => void;
+  /** What the step's copy fills in: the board's own group names, so it matches the tiles. */
+  vars: Record<string, string | number>;
   onDone: () => void;
   onSkip: () => void;
 }) {
@@ -1827,10 +1876,11 @@ function Coach({
         if (typeof ref === "function") ref(node);
         else if (ref) ref.current = node;
       }}
-      // Sticky: sits in-flow just below the board on tall screens, but pins to
-      // the bottom of the viewport on short ones so it's never off-screen.
+      // Steps 1–2 sit in-flow just below the board on tall screens, but pin to
+      // the bottom of the viewport on short ones so they're never off-screen.
+      // Step 3 stays in flow: pinned, it would sit on top of the letter bank.
       // Styled as a sticky note pinned to the puzzle page.
-      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-stamp"
+      className={`${step < 3 ? "sticky bottom-3 z-30 " : ""}mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-stamp`}
     >
       <div className="flex items-center gap-2">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">
@@ -1844,10 +1894,10 @@ function Coach({
           {t("common.skip")}
         </button>
       </div>
-      <p className="mt-2 text-sm leading-snug text-ink-soft">{t(`${c.key}.body`, { theme })}</p>
+      <p className="mt-2 text-sm leading-snug text-ink-soft">{t(`${c.key}.body`, vars)}</p>
       {c.cta && (
         <button
-          onClick={step === COACH.length - 1 ? onDone : onNext}
+          onClick={onDone}
           className="mt-3 w-full rounded-xl bg-ink py-2.5 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           {t(c.cta)}

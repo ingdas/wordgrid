@@ -40,7 +40,7 @@ export const PUZZLES: RawPuzzle[] = [
       { name: "Words for a celebrity", words: ["ICON", "LEGEND", "IDOL"] },
       { name: "Seen in the night sky", words: ["MOON", "COMET", "PLANET"] },
       { name: "Rewards for good work", words: ["MEDAL", "TROPHY", "RIBBON"] },
-      { name: "Symbols & shapes", words: ["HEART", "ARROW", "CROSS"] },
+      { name: "To be in a movie", words: ["ACT", "PERFORM", "APPEAR"] },
     ],
   },
   {

@@ -219,7 +219,9 @@ twist closing each) → Game. One side mode: **Endless**
   like → Ready flips to numbered backs → three armed peeks; clock starts at
   the flip; no shuffle; backs stay down through the early call); rewarded
   second chance (+2 tries, once); tutorial coach (welcome modal, sticky-note
-  steps, escalating nudges that never give the group away); `SolvedBanner`
+  steps, escalating nudges that never give the group away; a third card under
+  the finale reads the four group names out as the clues, and its misses hand
+  over free letters — never the last one); `SolvedBanner`
   prints the picture beside the word on the emoji boss; two columns at `lg`.
 - `LinkGuess.tsx` — the spell-the-link panel, three callers: finale, early
   call (`early` + `onMiss`), chapter key (`bank`, copy keys, `dismissKey`).
@@ -383,9 +385,9 @@ the hardest; *emoji* — the one bespoke board.
   33) — the finale lost a little, the whole middle of the board gained a
   deduction.
 - A loss keeps the link masked so the level is replayable.
-- The tutorial board is STAR with no compound-word group; coach copy derives
-  from `OPENING[0]`'s own first category, so re-pinning it can't strand the
-  coach.
+- The tutorial board is STAR with no compound-word group; coach copy (steps 1
+  and 3) derives from `OPENING[0]`'s own category names, so re-pinning it can't
+  strand the coach.
 
 **Meta and platform**
 - Daily is a deterministic seeded tour — same board for everyone, nothing

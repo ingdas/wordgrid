@@ -193,7 +193,6 @@ export const es: Record<string, string> = {
   "finale.a11y.slots": "{n} letras",
   "finale.a11y.letter": "Letra {letter}",
   "finale.a11y.letterUsed": "Letra {letter}, usada",
-  "finale.firstTime": "🎯 ¡Último paso! Los cuatro grupos apuntan a UNA palabra oculta — escríbela.",
 
   // --- end card -----------------------------------------------------------
   "end.rating.0": "Impecable ✨",
@@ -249,6 +248,12 @@ export const es: Record<string, string> = {
   "coach.nudge.1": "No es un grupo — ¿qué tres palabras encajan en “{theme}”? 🤔",
   "coach.nudge.2": "Sigue buscando — tres de estas encajan en “{theme}”.",
   "coach.nudge.3": "Pista: “{word}” es una de las tres. Encuentra sus dos compañeras.",
+  "coach.3.title": "Último paso: la palabra secreta",
+  "coach.3.body":
+    "Los nombres de los cuatro grupos son las pistas: una sola palabra encaja en “{a}”, “{b}”, “{c}” y “{d}”. Escríbela con las fichas de arriba. Fallar no cuesta nada, y te echaré una mano si te atascas.",
+  "coach.finale.nudge.1": "No es esa — la misma palabra tiene que encajar en los cuatro grupos. Vuelve a leer sus nombres y prueba otra.",
+  "coach.finale.nudge.2": "Una letra de regalo: empieza por “{prefix}”. ¡Sigue!",
+  "coach.finale.nudge.3": "Solo falta la última letra — ¿qué ficha completa la palabra?",
 
   // --- help / stats / history / settings ----------------------------------
   "help.title": "Cómo jugar",

@@ -41,7 +41,7 @@ const GROUPS = [
   ["ICON", "LEGEND", "IDOL"],
   ["MOON", "COMET", "PLANET"],
   ["MEDAL", "TROPHY", "RIBBON"],
-  ["HEART", "ARROW", "CROSS"],
+  ["ACT", "PERFORM", "APPEAR"],
 ];
 
 // --- the stats server ------------------------------------------------------
@@ -223,7 +223,7 @@ async function loseLevelOne(page) {
     ["ICON", "MOON", "MEDAL"],
     ["LEGEND", "COMET", "TROPHY"],
     ["IDOL", "PLANET", "RIBBON"],
-    ["ICON", "COMET", "HEART"],
+    ["ICON", "COMET", "APPEAR"],
   ];
   for (const group of wrong) {
     // A wrong guess leaves the three tiles selected, and the board only ever

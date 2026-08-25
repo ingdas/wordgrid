@@ -195,7 +195,6 @@ export const en: Record<string, string> = {
   "finale.a11y.slots": "{n} letters",
   "finale.a11y.letter": "Letter {letter}",
   "finale.a11y.letterUsed": "Letter {letter}, used",
-  "finale.firstTime": "🎯 Last step! All four groups point to ONE hidden word — tap it out.",
 
   // --- end card -----------------------------------------------------------
   "end.rating.0": "Flawless ✨",
@@ -257,6 +256,12 @@ export const en: Record<string, string> = {
   "coach.nudge.1": "Not a group — which three words fit “{theme}”? 🤔",
   "coach.nudge.2": "Keep looking — three of these words fit “{theme}”.",
   "coach.nudge.3": "Tip: “{word}” is one of the three. Find its two friends.",
+  "coach.3.title": "Last step: the secret word",
+  "coach.3.body":
+    "The four group names are the clues — one word fits “{a}”, “{b}”, “{c}” and “{d}”. Spell it with the tiles above. Wrong tries cost nothing, and I'll chip in if you get stuck.",
+  "coach.finale.nudge.1": "Not it — the same word has to fit all four group names. Read them again, then try another.",
+  "coach.finale.nudge.2": "A letter on the house: it starts “{prefix}”. Keep going!",
+  "coach.finale.nudge.3": "Only the last letter is missing — which tile finishes the word?",
 
   // --- help / stats / history / settings ----------------------------------
   "help.title": "How to play",

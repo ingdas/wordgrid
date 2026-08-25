@@ -19,7 +19,7 @@ const GROUPS = [
   ["ICON", "LEGEND", "IDOL"],
   ["MOON", "COMET", "PLANET"],
   ["MEDAL", "TROPHY", "RIBBON"],
-  ["HEART", "ARROW", "CROSS"],
+  ["ACT", "PERFORM", "APPEAR"],
 ];
 
 const b = await launchBrowser();
@@ -142,13 +142,16 @@ await p.screenshot({ path: `${SHOT}/r-hint.png` });
 // 4. Solve all four groups (coach advances after the first; the last group is
 //    submitted like any other — nothing solves itself)
 await solveGroup(GROUPS[0]);
-await clickText("button", "I'm on it"); // dismiss coach step 2
+await clickText("button", "Got it"); // dismiss coach step 2
 await sleep(200);
 await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
 const threeDown = await bodyText();
-log("last group waits to be submitted:", /HEART/.test(threeDown) && !/spell the secret word/i.test(threeDown));
-if (!/HEART/.test(threeDown)) note("The last group left the board before it was submitted.");
+// A tile of the last group, read from the fixture — hardcoding a word here
+// went stale the moment the tutorial board's fourth group changed.
+const lastTile = new RegExp(`\\b${GROUPS[3][0]}\\b`);
+log("last group waits to be submitted:", lastTile.test(threeDown) && !/spell the secret word/i.test(threeDown));
+if (!lastTile.test(threeDown)) note("The last group left the board before it was submitted.");
 if (/spell the secret word/i.test(threeDown)) note("The finale opened with a group still on the board.");
 await solveGroup(GROUPS[3]);
 await sleep(700); // the fourth banner lands → guessing
@@ -174,8 +177,46 @@ async function tapLetter(ch) {
   }
   return false;
 }
-// STAR: tap every letter from the bank (no free first letter).
-for (const ch of ["S", "T", "A", "R"]) {
+// 6b. A first-timer's finale comes with a third coach card that reads every
+//     group name out as a clue to the one word (derived from the board, so it
+//     names the last theme too) — a toast is gone before the bank sinks in.
+const finaleText = await bodyText();
+const finaleCoached = /last step/i.test(finaleText) && /to be in a movie/i.test(finaleText) && /words for a celebrity/i.test(finaleText);
+log("finale coach lists the group themes as clues:", finaleCoached);
+if (!finaleCoached) note("Tutorial finale coach card did not list the group themes as clues.");
+if (!/wrong tries cost nothing/i.test(finaleText)) note("Finale coach should say wrong tries are free.");
+
+// 6c. Wrong words escalate: the first miss restates the clue, the second hands
+//     over a free letter. The hint bank is untouched, and it never reaches the
+//     last letter, so the player always spells the ending themselves.
+const hintBadge = async () => {
+  for (const h of await p.$$("main button")) {
+    const txt = await h.evaluate((e) => e.innerText);
+    if (/reveal a letter/i.test(txt)) return (txt.match(/(\d+)\s*$/) || [])[1] ?? null;
+  }
+  return null;
+};
+const usedCount = async () => (await p.$$("main button[aria-label$=', used']")).length;
+const hintsBefore = await hintBadge();
+for (const ch of ["T", "S", "A", "R"]) { await tapLetter(ch); await sleep(120); } // TSAR: not the word
+await sleep(700);
+const afterMiss1 = await bodyText();
+log("first finale miss restates the clue:", /fit all four group names/i.test(afterMiss1));
+if (!/fit all four group names/i.test(afterMiss1)) note("First wrong link word in the tutorial did not get the coach's nudge.");
+if ((await usedCount()) !== 0) note("A wrong word left letters marked as used.");
+for (const ch of ["R", "A", "T", "S"]) { await tapLetter(ch); await sleep(120); } // RATS: not the word
+await sleep(700);
+const afterMiss2 = await bodyText();
+const freeLetter = /on the house/i.test(afterMiss2) && (await usedCount()) === 1;
+log("second finale miss gives a free letter:", freeLetter);
+if (!/on the house/i.test(afterMiss2)) note("Second wrong link word in the tutorial did not hand over a letter.");
+if ((await usedCount()) !== 1) note(`Expected exactly one bank letter locked by the free reveal, saw ${await usedCount()}.`);
+const hintsAfter = await hintBadge();
+log("hint bank untouched by the free letter:", hintsBefore, "→", hintsAfter);
+if (hintsBefore !== hintsAfter) note(`The tutorial's free letter spent a hint token (${hintsBefore} → ${hintsAfter}).`);
+await p.screenshot({ path: `${SHOT}/r5b-finale-coach.png` });
+// S is on the house now; spell the rest.
+for (const ch of ["T", "A", "R"]) {
   if (!(await tapLetter(ch))) note(`Could not tap letter ${ch} from the bank.`);
   await sleep(200);
 }
@@ -305,9 +346,9 @@ await sleep(500);
 // Four distinct non-groups → four mistakes → loss (each spans multiple groups).
 const WRONG = [
   ["ICON", "MOON", "MEDAL"],
-  ["ICON", "MOON", "HEART"],
+  ["ICON", "MOON", "APPEAR"],
   ["ICON", "COMET", "MEDAL"],
-  ["ICON", "COMET", "HEART"],
+  ["ICON", "COMET", "APPEAR"],
 ];
 for (const g of WRONG) {
   for (const w of g) await clickWord(w);
