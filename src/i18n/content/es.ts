@@ -1630,5 +1630,205 @@ export const content: LocaleContent = {
         { name: "Hospital", words: ["PABELLÓN", "QUIRÓFANO", "UCI"] },
       ],
     },
+    yard: {
+      title: "Barra libre",
+      pivot: "BARRA",
+      categories: [
+        { name: "Panadería", words: ["HOGAZA", "CHAPATA", "MOLLETE"] },
+        { name: "En el bar", words: ["CAMARERO", "TABURETE", "GRIFO"] },
+        { name: "Maquillaje", words: ["RÍMEL", "COLORETE", "DELINEADOR"] },
+        { name: "Gimnasia artística", words: ["ANILLAS", "POTRO", "TRAMPOLÍN"] },
+      ],
+    },
+    bow: {
+      title: "Nudo gordiano",
+      pivot: "NUDO",
+      categories: [
+        { name: "Tronco de árbol", words: ["VETA", "CORTEZA", "ASTILLA"] },
+        { name: "Estructura de un relato", words: ["PLANTEAMIENTO", "DESENLACE", "TRAMA"] },
+        { name: "Autopista", words: ["PEAJE", "CARRIL", "ROTONDA"] },
+        { name: "Medidas a bordo", words: ["MILLA", "BRAZA", "ESLORA"] },
+      ],
+    },
+    bill: {
+      title: "Dar caña",
+      pivot: "CAÑA",
+      categories: [
+        { name: "Cervecería", words: ["TERCIO", "JARRA", "ESPUMA"] },
+        { name: "Pesca", words: ["ANZUELO", "CARRETE", "CEBO"] },
+        { name: "Plantación de azúcar", words: ["INGENIO", "MELAZA", "RON"] },
+        { name: "Meter prisa", words: ["ACELERAR", "APRETAR", "ARREAR"] },
+      ],
+    },
+    party: {
+      title: "Pasta gansa",
+      pivot: "PASTA",
+      categories: [
+        { name: "Cocina italiana", words: ["ESPAGUETI", "MACARRÓN", "LASAÑA"] },
+        { name: "En la cartera", words: ["EFECTIVO", "BILLETE", "MONEDA"] },
+        { name: "Higiene dental", words: ["CEPILLO", "ENJUAGUE", "HILO"] },
+        { name: "A la hora del té", words: ["GALLETA", "BIZCOCHO", "MAGDALENA"] },
+      ],
+    },
+    pump: {
+      title: "Pecado capital",
+      pivot: "CAPITAL",
+      categories: [
+        { name: "Sedes de gobierno", words: ["MADRID", "LIMA", "BOGOTÁ"] },
+        { name: "Bolsa de valores", words: ["INVERSIÓN", "ACCIONISTA", "DIVIDENDO"] },
+        { name: "Siete pecados", words: ["SOBERBIA", "ENVIDIA", "PEREZA"] },
+        { name: "Pena de muerte", words: ["VERDUGO", "CADALSO", "GUILLOTINA"] },
+      ],
+    },
+    wheel: {
+      title: "Sobre ruedas",
+      pivot: "RUEDA",
+      categories: [
+        { name: "Taller mecánico", words: ["LLANTA", "EJE", "AMORTIGUADOR"] },
+        { name: "Ante los periodistas", words: ["PORTAVOZ", "MICRÓFONO", "COMUNICADO"] },
+        { name: "Comisaría", words: ["SOSPECHOSO", "TESTIGO", "COARTADA"] },
+        { name: "A rodajas", words: ["LIMÓN", "MERLUZA", "PIÑA"] },
+      ],
+    },
+    bridge: {
+      title: "Hacer puente",
+      pivot: "PUENTE",
+      categories: [
+        { name: "Para cruzar el río", words: ["TÚNEL", "BARCA", "VADO"] },
+        { name: "Fin de semana largo", words: ["FESTIVO", "ESCAPADA", "MALETA"] },
+        { name: "Dentista", words: ["IMPLANTE", "EMPASTE", "MUELA"] },
+        { name: "Partes de una canción", words: ["ESTRIBILLO", "ESTROFA", "INTRO"] },
+      ],
+    },
+    race: {
+      title: "Ratón de biblioteca",
+      pivot: "RATÓN",
+      categories: [
+        { name: "Roedores", words: ["HÁMSTER", "ARDILLA", "CASTOR"] },
+        { name: "Junto al ordenador", words: ["TECLADO", "MONITOR", "ALFOMBRILLA"] },
+        { name: "Devora libros", words: ["LECTOR", "BIBLIÓFILO", "EMPOLLÓN"] },
+        { name: "Pérez, el de los dientes", words: ["ALMOHADA", "MONEDA", "HADA"] },
+      ],
+    },
+    belt: {
+      title: "Apretarse el cinturón",
+      pivot: "CINTURÓN",
+      categories: [
+        { name: "Sujeta el pantalón", words: ["HEBILLA", "TIRANTES", "TRABILLA"] },
+        { name: "Seguridad en el coche", words: ["AIRBAG", "RETROVISOR", "FRENO"] },
+        { name: "Artes marciales", words: ["KÁRATE", "JUDO", "TAEKWONDO"] },
+        { name: "Tiempos de vacas flacas", words: ["AUSTERIDAD", "AHORRO", "RECORTE"] },
+      ],
+    },
+    dress: {
+      title: "Lío de faldas",
+      pivot: "FALDA",
+      categories: [
+        { name: "Armario", words: ["BLUSA", "PANTALÓN", "CHALECO"] },
+        { name: "Alta montaña", words: ["CUMBRE", "GLACIAR", "REFUGIO"] },
+        { name: "Carnicería", words: ["SOLOMILLO", "CHULETA", "MORCILLO"] },
+        { name: "Romance", words: ["AMANTE", "IDILIO", "ESCARCEO"] },
+      ],
+    },
+    horn: {
+      title: "Irse al cuerno",
+      pivot: "CUERNO",
+      categories: [
+        { name: "Con cornamenta", words: ["TORO", "CABRA", "CIERVO"] },
+        { name: "Infidelidad", words: ["ENGAÑO", "TRAICIÓN", "ADULTERIO"] },
+        { name: "Metales de la orquesta", words: ["TROMPETA", "TUBA", "TROMBÓN"] },
+        { name: "Bollería", words: ["CROISSANT", "NAPOLITANA", "ENSAIMADA"] },
+      ],
+    },
+    point: {
+      title: "Punto y aparte",
+      pivot: "PUNTO",
+      categories: [
+        { name: "Ortografía", words: ["COMA", "GUION", "PARÉNTESIS"] },
+        { name: "Tenis", words: ["SAQUE", "VOLEA", "REVÉS"] },
+        { name: "Labores", words: ["GANCHILLO", "LANA", "BORDADO"] },
+        { name: "Geometría", words: ["RECTA", "ÁNGULO", "VÉRTICE"] },
+      ],
+    },
+    punch: {
+      title: "Hacer cola",
+      pivot: "COLA",
+      categories: [
+        { name: "Peluquería", words: ["MOÑO", "TRENZA", "FLEQUILLO"] },
+        { name: "Ventanilla", words: ["TURNO", "ESPERA", "MOSTRADOR"] },
+        { name: "Manualidades", words: ["CARTULINA", "PURPURINA", "PLASTILINA"] },
+        { name: "Refrescos", words: ["GASEOSA", "TÓNICA", "LIMONADA"] },
+      ],
+    },
+    season: {
+      title: "Fuera de temporada",
+      pivot: "TEMPORADA",
+      categories: [
+        { name: "Liga de fútbol", words: ["JORNADA", "FICHAJE", "ASCENSO"] },
+        { name: "Serie de televisión", words: ["EPISODIO", "CAPÍTULO", "PROTAGONISTA"] },
+        { name: "Pasarela", words: ["COLECCIÓN", "TENDENCIA", "DISEÑADOR"] },
+        { name: "Cacería", words: ["VEDA", "ESCOPETA", "PERDIZ"] },
+      ],
+    },
+    space: {
+      title: "Espacio en blanco",
+      pivot: "ESPACIO",
+      categories: [
+        { name: "Cosmos", words: ["ASTRONAUTA", "GALAXIA", "COHETE"] },
+        { name: "Teclas", words: ["INTRO", "CONTROL", "MAYÚSCULAS"] },
+        { name: "Maquetación", words: ["MARGEN", "SANGRÍA", "INTERLINEADO"] },
+        { name: "Parrilla televisiva", words: ["TELEDIARIO", "CONCURSO", "TERTULIA"] },
+      ],
+    },
+    staff: {
+      title: "Con toda la plantilla",
+      pivot: "PLANTILLA",
+      categories: [
+        { name: "Vestuario del equipo", words: ["CAPITÁN", "PORTERO", "SUPLENTE"] },
+        { name: "Zapatería", words: ["SUELA", "CORDÓN", "TACÓN"] },
+        { name: "Papeleo", words: ["FORMULARIO", "IMPRESO", "CUESTIONARIO"] },
+        { name: "Arte urbano", words: ["AEROSOL", "MURAL", "PINTADA"] },
+      ],
+    },
+    wake: {
+      title: "Entre la espada y la pared",
+      pivot: "ESPADA",
+      categories: [
+        { name: "Caballero medieval", words: ["ESCUDO", "ARMADURA", "YELMO"] },
+        { name: "Baraja española", words: ["BASTOS", "OROS", "COPAS"] },
+        { name: "Plaza de toros", words: ["MULETA", "CAPOTE", "MONTERA"] },
+        { name: "Pescadería", words: ["ATÚN", "SARDINA", "BONITO"] },
+      ],
+    },
+    boot: {
+      title: "Ponerse las botas",
+      pivot: "BOTA",
+      categories: [
+        { name: "Calzado", words: ["ZAPATILLA", "SANDALIA", "MOCASÍN"] },
+        { name: "Bodega", words: ["SOLERA", "FINO", "CRIANZA"] },
+        { name: "Premio al que más marca", words: ["GOLEADOR", "DELANTERO", "PICHICHI"] },
+        { name: "Comer hasta hartarse", words: ["ATRACÓN", "BANQUETE", "FESTÍN"] },
+      ],
+    },
+    current: {
+      title: "De polo a polo",
+      pivot: "POLO",
+      categories: [
+        { name: "Ártico", words: ["ICEBERG", "IGLÚ", "FOCA"] },
+        { name: "Ropa de verano", words: ["CAMISETA", "BERMUDAS", "CHANCLAS"] },
+        { name: "Heladería", words: ["CUCURUCHO", "TARRINA", "GRANIZADO"] },
+        { name: "Se atraen o se repelen", words: ["IMÁN", "POSITIVO", "NEGATIVO"] },
+      ],
+    },
+    pilot: {
+      title: "Piloto automático",
+      pivot: "PILOTO",
+      categories: [
+        { name: "Aeropuerto", words: ["AZAFATA", "TORRE", "DESPEGUE"] },
+        { name: "Fórmula 1", words: ["ESCUDERÍA", "MONOPLAZA", "PODIO"] },
+        { name: "Estreno de una serie", words: ["GUION", "AUDIENCIA", "CADENA"] },
+        { name: "Luces del coche", words: ["INTERMITENTE", "FARO", "ANTINIEBLA"] },
+      ],
+    },
   },
 };
