@@ -1,14 +1,14 @@
 // Structural validation for every puzzle in every language: the campaign, the
 // emoji boss and the daily pool, the chapter keys and the campaign curve.
 //
-//   npm run validate                 every language
-//   npm run validate -- --locale de  one language (also `en`)
+//   npm run validate                 every shipped language (SHIPPED_LOCALES)
+//   npm run validate -- --locale nl  one language, shipped or not (also `en`)
 //
 // The English boards define the campaign's shape (the level order, the grades,
 // the twists); every other language fills the same slots with its own boards
 // (src/i18n/content), so most checks run per language against that language's
 // letters and cipher (src/i18n/script.ts).
-import { LOCALE_IDS, type Locale } from "../src/i18n/locales.ts";
+import { LOCALE_IDS, SHIPPED_LOCALES, type Locale } from "../src/i18n/locales.ts";
 import { loadContent } from "../src/i18n/index.ts";
 import { graphemes, rulesFor, setScriptLocale, type ScriptRules } from "../src/i18n/script.ts";
 import { localizeRaw, setActiveContent } from "../src/i18n/content/active.ts";
@@ -267,7 +267,7 @@ function checkLocale(id: Locale, content: LocaleContent | null, rules: ScriptRul
 }
 
 checkShape();
-const locales = (only ? [only] : [...LOCALE_IDS]).filter((l): l is Locale => (LOCALE_IDS as readonly string[]).includes(l));
+const locales = (only ? [only] : [...SHIPPED_LOCALES]).filter((l): l is Locale => (LOCALE_IDS as readonly string[]).includes(l));
 if (only && !locales.length) {
   console.log(`✗ unknown locale "${only}" — one of ${LOCALE_IDS.join(", ")}`);
   process.exit(1);

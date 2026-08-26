@@ -16,7 +16,7 @@
 // so t() can stay synchronous everywhere it is called.
 import { readItem, writeItem } from "../storage.ts";
 import { en } from "./en.ts";
-import { LOCALE_INFO, isLocale, localeInfo, matchLocale, type Locale } from "./locales.ts";
+import { LOCALE_INFO, SHIPPED_LOCALES, isShipped, localeInfo, matchLocale, type Locale } from "./locales.ts";
 import { setScriptLocale } from "./script.ts";
 import { setActiveContent } from "./content/active.ts";
 import type { LocaleContent } from "./content/types.ts";
@@ -24,8 +24,10 @@ import type { LocaleContent } from "./content/types.ts";
 export type { Locale } from "./locales.ts";
 export type Catalogue = Record<string, string>;
 
-/** Every language the game ships, for the picker. */
-export const LOCALES: { id: Locale; label: string }[] = LOCALE_INFO.map(({ id, label }) => ({ id, label }));
+/** Every language the game ships, for the picker (see SHIPPED_LOCALES). */
+export const LOCALES: { id: Locale; label: string }[] = LOCALE_INFO.filter((l) => SHIPPED_LOCALES.includes(l.id)).map(
+  ({ id, label }) => ({ id, label })
+);
 
 // One dynamic import per language — a static list, so Vite can split a chunk
 // per locale and bare node can resolve the same paths for the tests.
@@ -109,7 +111,7 @@ function urlLocale(): Locale | null {
 function storedLocale(): Locale | null {
   try {
     const stored = readItem(KEY);
-    return isLocale(stored) ? stored : null;
+    return isShipped(stored) ? stored : null;
   } catch {
     return null;
   }
@@ -152,7 +154,7 @@ function applyDocument(id: Locale) {
  * never leaves the game without copy.
  */
 export async function loadLocale(id: Locale): Promise<Locale> {
-  if (!isLocale(id)) id = "en";
+  if (!isShipped(id)) id = "en";
   let catalogue: Catalogue = en;
   let content: LocaleContent | null = null;
   if (id !== "en") {
@@ -181,7 +183,7 @@ export function getLocale(): Locale {
 
 /** The player chose a language in Settings: load it and remember it. */
 export async function setLocale(next: Locale): Promise<void> {
-  if (!isLocale(next)) return;
+  if (!isShipped(next)) return;
   await loadLocale(next);
   writeItem(KEY, next);
 }

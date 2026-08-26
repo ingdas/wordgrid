@@ -53,20 +53,35 @@ export function isLocale(x: unknown): x is Locale {
   return typeof x === "string" && (LOCALE_IDS as readonly string[]).includes(x);
 }
 
+/**
+ * The languages the game actually offers: those whose boards exist and pass
+ * `npm run validate`. The rest of LOCALE_IDS have the rails (a stub catalogue
+ * and content file, a chunk in the build) but would play English boards under
+ * a foreign menu, so the picker, the browser/platform detection and the tests
+ * leave them out until their content lands. Add a language here when its
+ * `content/<xx>.ts` validates clean.
+ */
+export const SHIPPED_LOCALES: readonly Locale[] = ["en", "es", "de", "fr", "it", "pt"];
+
+export function isShipped(x: unknown): x is Locale {
+  return isLocale(x) && SHIPPED_LOCALES.includes(x);
+}
+
 export function localeInfo(id: Locale): LocaleInfo {
   return LOCALE_INFO.find((l) => l.id === id) ?? LOCALE_INFO[0];
 }
 
 /**
  * Reduce any language tag the outside world hands us ("pt-BR", "en_US", "no",
- * "in", "zh-Hant") to a locale we ship, or null. Old ISO codes and the other
- * Norwegian tags are folded in; anything unknown is left to the caller's
- * fallback rather than guessed.
+ * "in", "zh-Hant") to a locale we SHIP, or null. Old ISO codes and the other
+ * Norwegian tags are folded in; anything unknown — or known but not shipped
+ * yet — is left to the caller's fallback rather than guessed.
  */
-export function matchLocale(tag: string | null | undefined): Locale | null {
+export function matchLocale(tag: string | null | undefined, shippedOnly = true): Locale | null {
   if (!tag) return null;
   const lang = tag.trim().toLowerCase().split(/[-_]/)[0];
   const alias: Record<string, Locale> = { no: "nb", nn: "nb", in: "id" };
   const id = alias[lang] ?? lang;
-  return isLocale(id) ? id : null;
+  if (!isLocale(id)) return null;
+  return shippedOnly && !isShipped(id) ? null : id;
 }

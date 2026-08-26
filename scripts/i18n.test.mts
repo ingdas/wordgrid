@@ -2,10 +2,10 @@
 // other locale that drops a key, invents one, or loses a {placeholder} fails
 // here rather than showing an English string (or a raw key) to a player.
 //
-//   node --experimental-strip-types scripts/i18n.test.mts            every locale
-//   node --experimental-strip-types scripts/i18n.test.mts --locale de one locale
+//   node --experimental-strip-types scripts/i18n.test.mts            every shipped locale
+//   node --experimental-strip-types scripts/i18n.test.mts --locale nl one locale, shipped or not
 import assert from "node:assert/strict";
-import { LOCALE_IDS, matchLocale, type Locale } from "../src/i18n/locales.ts";
+import { LOCALE_IDS, SHIPPED_LOCALES, matchLocale, type Locale } from "../src/i18n/locales.ts";
 import { loadCatalogue, loadLocale, plural, t } from "../src/i18n/index.ts";
 import { rulesFor, graphemes } from "../src/i18n/script.ts";
 import { en } from "../src/i18n/en.ts";
@@ -38,11 +38,13 @@ test("no key is left pointing at itself (t() would show the key)", () => {
 test("language tags from the platform and the browser resolve to shipped locales", () => {
   assert.equal(matchLocale("en-US"), "en");
   assert.equal(matchLocale("pt_BR"), "pt");
-  assert.equal(matchLocale("nb-NO"), "nb");
-  assert.equal(matchLocale("no"), "nb");
-  assert.equal(matchLocale("in"), "id");
+  assert.equal(matchLocale("nb-NO", false), "nb");
+  assert.equal(matchLocale("no", false), "nb");
+  assert.equal(matchLocale("in", false), "id");
   assert.equal(matchLocale("zh-Hant"), null);
   assert.equal(matchLocale(""), null);
+  // A known language whose boards aren't in yet is not offered.
+  assert.equal(matchLocale("nl"), SHIPPED_LOCALES.includes("nl") ? "nl" : null);
 });
 
 test("script rules: letters, ciphers and folding per writing system", () => {
@@ -74,7 +76,7 @@ test("plural() follows the language's own rules and falls back to .other", async
   assert.equal(t("missing.key"), "missing.key");
 });
 
-const locales = (only ? [only] : [...LOCALE_IDS]).filter((l): l is Locale => (LOCALE_IDS as readonly string[]).includes(l) && l !== "en");
+const locales = (only ? [only] : [...SHIPPED_LOCALES]).filter((l): l is Locale => (LOCALE_IDS as readonly string[]).includes(l) && l !== "en");
 if (only && !locales.length && only !== "en") throw new Error(`unknown locale "${only}"`);
 
 for (const id of locales) {
