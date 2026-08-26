@@ -1039,5 +1039,806 @@ export const content: LocaleContent = {
       BRÜCKE: "🌉", WAAGE: "⚖️", RAD: "🛞",
     },
   },
-  daily: {},
+  daily: {
+    key: {
+      title: "Schlüsselmoment",
+      pivot: "SCHLÜSSEL",
+      categories: [
+        { name: "Im Werkzeugkasten", words: ["ZANGE", "FEILE", "SÄGE"] },
+        { name: "Notenschrift", words: ["PAUSE", "TAKTSTRICH", "VORZEICHEN"] },
+        { name: "Geheimschrift", words: ["CODE", "CHIFFRE", "PASSWORT"] },
+        { name: "Verteilung", words: ["QUOTE", "ANTEIL", "PROZENTSATZ"] },
+      ],
+    },
+    board: {
+      title: "Schloss und Riegel",
+      pivot: "SCHLOSS",
+      categories: [
+        { name: "Adelssitz", words: ["BURG", "PALAST", "RESIDENZ"] },
+        { name: "An der Haustür", words: ["RIEGEL", "KLINKE", "SPION"] },
+        { name: "Am Gewehr", words: ["KOLBEN", "VISIER", "PATRONE"] },
+        { name: "An der Halskette", words: ["ÖSE", "ANHÄNGER", "GLIED"] },
+      ],
+    },
+    crown: {
+      title: "Unter der Haube",
+      pivot: "HAUBE",
+      categories: [
+        { name: "Vorne am Auto", words: ["KÜHLER", "STOSSSTANGE", "SCHEINWERFER"] },
+        { name: "Beim Friseur", words: ["FÖHN", "LOCKENWICKLER", "HAARSPRAY"] },
+        { name: "Über dem Herd", words: ["FETTFILTER", "LÜFTER", "DUNST"] },
+        { name: "Ordenstracht", words: ["SCHLEIER", "KUTTE", "ROSENKRANZ"] },
+      ],
+    },
+    train: {
+      title: "Freie Bahn",
+      pivot: "BAHN",
+      categories: [
+        { name: "Nahverkehr", words: ["BUS", "TRAM", "METRO"] },
+        { name: "Um die Erde", words: ["ORBIT", "SATELLIT", "UMLAUF"] },
+        { name: "Alle Neune!", words: ["KEGEL", "PUDEL", "KRANZ"] },
+        { name: "Im Schwimmbad", words: ["SPRUNGTURM", "BADEMEISTER", "PLANSCHBECKEN"] },
+      ],
+    },
+    watch: {
+      title: "Ins Auge gefasst",
+      pivot: "AUGE",
+      categories: [
+        { name: "Im Gesicht", words: ["NASE", "MUND", "OHR"] },
+        { name: "Beim Würfeln", words: ["PASCH", "BECHER", "SECHS"] },
+        { name: "An der Kartoffel", words: ["KNOLLE", "KEIM", "TRIEB"] },
+        { name: "Hat ein ruhiges Zentrum", words: ["ORKAN", "TAIFUN", "ZYKLON"] },
+      ],
+    },
+    band: {
+      title: "Enger schnallen",
+      pivot: "GÜRTEL",
+      categories: [
+        { name: "Rund um die Hüfte", words: ["HOSENTRÄGER", "SCHNALLE", "TAILLE"] },
+        { name: "Kampfsport", words: ["JUDO", "KARATE", "TAEKWONDO"] },
+        { name: "Im Sonnensystem", words: ["ASTEROID", "KOMET", "PLUTO"] },
+        { name: "Rund um die Stadt", words: ["UMGEHUNG", "VORORT", "STADTRAND"] },
+      ],
+    },
+    beam: {
+      title: "Balken biegen",
+      pivot: "BALKEN",
+      categories: [
+        { name: "Im Dachstuhl", words: ["SPARREN", "PFETTE", "FIRST"] },
+        { name: "Turngeräte", words: ["RECK", "BARREN", "PAUSCHENPFERD"] },
+        { name: "Statistik", words: ["MEDIAN", "STREUUNG", "HISTOGRAMM"] },
+        { name: "Heraldik", words: ["WAPPEN", "LÖWE", "HELMZIER"] },
+      ],
+    },
+    box: {
+      title: "Ab in den Kasten",
+      pivot: "KASTEN",
+      categories: [
+        { name: "Getränke in Flaschen", words: ["BIER", "SPRUDEL", "LIMO"] },
+        { name: "Am Fußballtor", words: ["PFOSTEN", "LATTE", "TORLINIE"] },
+        { name: "In der Turnhalle", words: ["SPROSSENWAND", "MATTE", "TRAMPOLIN"] },
+        { name: "Fernseher, umgangssprachlich", words: ["GLOTZE", "FLIMMERKISTE", "RÖHRE"] },
+      ],
+    },
+    cast: {
+      title: "Der große Wurf",
+      pivot: "WURF",
+      categories: [
+        { name: "Glücksspiel mit Augen", words: ["PASCH", "KNIFFEL", "BECHER"] },
+        { name: "Junge Tiere", words: ["WELPE", "FERKEL", "KÄTZCHEN"] },
+        { name: "Leichtathletik", words: ["SPEER", "DISKUS", "HÜRDE"] },
+        { name: "Voller Erfolg", words: ["COUP", "VOLLTREFFER", "GLANZLEISTUNG"] },
+      ],
+    },
+    charge: {
+      title: "Geladen",
+      pivot: "LADUNG",
+      categories: [
+        { name: "Elektrische Teilchen", words: ["PROTON", "ELEKTRON", "ION"] },
+        { name: "Im Frachtraum", words: ["CONTAINER", "PALETTE", "FASS"] },
+        { name: "Sprengstoff", words: ["DYNAMIT", "ZÜNDER", "LUNTE"] },
+        { name: "Vor Gericht erscheinen", words: ["ZEUGE", "TERMIN", "GERICHTSSAAL"] },
+      ],
+    },
+    coach: {
+      title: "Lehrjahre",
+      pivot: "LEHRE",
+      categories: [
+        { name: "Ausbildung im Handwerk", words: ["AZUBI", "GESELLE", "MEISTER"] },
+        { name: "Weltanschauung", words: ["DOKTRIN", "DOGMA", "IDEOLOGIE"] },
+        { name: "Messwerkzeug", words: ["MESSSCHIEBER", "ZOLLSTOCK", "WASSERWAAGE"] },
+        { name: "Was man daraus zieht", words: ["FAZIT", "MORAL", "EINSICHT"] },
+      ],
+    },
+    coat: {
+      title: "Mantel des Schweigens",
+      pivot: "MANTEL",
+      categories: [
+        { name: "Im Kleiderschrank", words: ["JACKE", "PARKA", "CAPE"] },
+        { name: "Am Fahrradreifen", words: ["SCHLAUCH", "VENTIL", "FELGE"] },
+        { name: "Aufbau der Erde", words: ["KRUSTE", "KERN", "MAGMA"] },
+        { name: "Zylindergeometrie", words: ["GRUNDFLÄCHE", "RADIUS", "HÖHE"] },
+      ],
+    },
+    count: {
+      title: "Titelverteidiger",
+      pivot: "TITEL",
+      categories: [
+        { name: "Auf dem Buchdeckel", words: ["AUTOR", "VERLAG", "KLAPPENTEXT"] },
+        { name: "Adel", words: ["GRAF", "BARON", "HERZOG"] },
+        { name: "Im Sport", words: ["MEISTERSCHAFT", "POKAL", "TROPHÄE"] },
+        { name: "Akademisch", words: ["DOKTOR", "PROFESSOR", "MAGISTER"] },
+      ],
+    },
+    draft: {
+      title: "Auf Probe",
+      pivot: "PROBE",
+      categories: [
+        { name: "Vor der Premiere", words: ["TEXT", "SOUFFLEUSE", "KOSTÜM"] },
+        { name: "Im Labor", words: ["REAGENZGLAS", "PIPETTE", "ANALYSE"] },
+        { name: "Zum Testen", words: ["MUSTER", "HÄPPCHEN", "VORFÜHRUNG"] },
+        { name: "Neu im Job", words: ["BEFRISTUNG", "EINARBEITUNG", "ARBEITSVERTRAG"] },
+      ],
+    },
+    drill: {
+      title: "Nadel im Heuhaufen",
+      pivot: "NADEL",
+      categories: [
+        { name: "Im Nähkästchen", words: ["FADEN", "FINGERHUT", "GARN"] },
+        { name: "Immergrün im Wald", words: ["HARZ", "TANNE", "FICHTE"] },
+        { name: "Am Plattenspieler", words: ["TONARM", "VINYL", "TELLER"] },
+        { name: "Beim Impfen", words: ["SPRITZE", "KANÜLE", "PFLASTER"] },
+      ],
+    },
+    duck: {
+      title: "Eine Ente aufgetischt",
+      pivot: "ENTE",
+      categories: [
+        { name: "Wasservögel", words: ["SCHWAN", "GANS", "REIHER"] },
+        { name: "Falschmeldung", words: ["GERÜCHT", "SCHWINDEL", "FAKE"] },
+        { name: "Kult-Autos", words: ["KÄFER", "TRABI", "MINI"] },
+        { name: "Im Krankenhaus", words: ["BETTPFANNE", "TROPF", "KRANKENSCHWESTER"] },
+      ],
+    },
+    fair: {
+      title: "Feine Gesellschaft",
+      pivot: "GESELLSCHAFT",
+      categories: [
+        { name: "Unternehmensformen", words: ["GMBH", "AG", "KONZERN"] },
+        { name: "Festlicher Abend", words: ["EMPFANG", "BALL", "GALA"] },
+        { name: "Alle Menschen", words: ["VOLK", "BEVÖLKERUNG", "ÖFFENTLICHKEIT"] },
+        { name: "Begleitung", words: ["GEFOLGE", "UMGANG", "BEISEIN"] },
+      ],
+    },
+    fall: {
+      title: "Auf jeden Fall",
+      pivot: "FALL",
+      categories: [
+        { name: "Hinunter", words: ["ABSTURZ", "PURZELBAUM", "STOLPERN"] },
+        { name: "Grammatik", words: ["NOMINATIV", "GENITIV", "DATIV"] },
+        { name: "Beim Kommissar", words: ["TATORT", "VERDÄCHTIGER", "ERMITTLUNG"] },
+        { name: "Beim Arzt", words: ["PATIENT", "DIAGNOSE", "SYMPTOM"] },
+      ],
+    },
+    file: {
+      title: "Das Heft in der Hand",
+      pivot: "HEFT",
+      categories: [
+        { name: "Schulsachen", words: ["FÜLLER", "LINEAL", "RANZEN"] },
+        { name: "Am Messer", words: ["KLINGE", "SCHNEIDE", "SCHEIDE"] },
+        { name: "Am Kiosk", words: ["MAGAZIN", "ILLUSTRIERTE", "COMIC"] },
+        { name: "Führung übernehmen", words: ["KONTROLLE", "KOMMANDO", "ZÜGEL"] },
+      ],
+    },
+    flat: {
+      title: "Raum für Neues",
+      pivot: "RAUM",
+      categories: [
+        { name: "Im Weltall", words: ["GALAXIE", "RAKETE", "ASTRONAUT"] },
+        { name: "In der Wohnung", words: ["KÜCHE", "FLUR", "KAMMER"] },
+        { name: "Umgebung einer Stadt", words: ["UMLAND", "GEGEND", "REGION"] },
+        { name: "Genügend Möglichkeiten", words: ["FREIHEIT", "TOLERANZ", "ERMESSEN"] },
+      ],
+    },
+    fly: {
+      title: "Die Fliege machen",
+      pivot: "FLIEGE",
+      categories: [
+        { name: "Insekten", words: ["MÜCKE", "WESPE", "MOTTE"] },
+        { name: "Zum Smoking", words: ["KUMMERBUND", "MANSCHETTENKNOPF", "EINSTECKTUCH"] },
+        { name: "Barttracht", words: ["SCHNAUZER", "KINNBART", "KOTELETTEN"] },
+        { name: "Sich davonmachen (umgangssprachlich)", words: ["ABHAUEN", "VERDUFTEN", "TÜRMEN"] },
+      ],
+    },
+    fold: {
+      title: "In Falten gelegt",
+      pivot: "FALTE",
+      categories: [
+        { name: "Zeichen des Alters im Gesicht", words: ["KRÄHENFÜSSE", "TRÄNENSACK", "ALTERSFLECK"] },
+        { name: "Beim Bügeln", words: ["DAMPF", "BÜGELBRETT", "STÄRKE"] },
+        { name: "Geologie", words: ["VERWERFUNG", "GEBIRGSBILDUNG", "SEDIMENT"] },
+        { name: "Am Rock", words: ["PLISSEE", "SAUM", "BUND"] },
+      ],
+    },
+    frame: {
+      title: "Aus dem Rahmen gefallen",
+      pivot: "RAHMEN",
+      categories: [
+        { name: "Um das Foto", words: ["PASSEPARTOUT", "LEISTE", "AUFHÄNGER"] },
+        { name: "Am Fahrrad", words: ["SATTEL", "LENKER", "PEDAL"] },
+        { name: "Das Umfeld", words: ["KONTEXT", "BEDINGUNG", "KULISSE"] },
+        { name: "Beim Türbau", words: ["ZARGE", "SCHWELLE", "STURZ"] },
+      ],
+    },
+    hand: {
+      title: "Flossen weg!",
+      pivot: "FLOSSE",
+      categories: [
+        { name: "Am Fisch", words: ["SCHUPPE", "KIEME", "GRÄTE"] },
+        { name: "Beim Taucher", words: ["MASKE", "SCHNORCHEL", "NEOPREN"] },
+        { name: "Damit greift man zu, salopp", words: ["PFOTE", "PRANKE", "KLAUE"] },
+        { name: "Am Flugzeug", words: ["LEITWERK", "TRAGFLÄCHE", "RUMPF"] },
+      ],
+    },
+    iron: {
+      title: "Eisenhart",
+      pivot: "EISEN",
+      categories: [
+        { name: "Metalle", words: ["KUPFER", "ZINK", "BLEI"] },
+        { name: "Beim Golf", words: ["PUTTER", "DRIVER", "ABSCHLAG"] },
+        { name: "Beim Hufschmied", words: ["HUF", "AMBOSS", "NAGEL"] },
+        { name: "Nährstoffe", words: ["VITAMIN", "KALZIUM", "JOD"] },
+      ],
+    },
+    jack: {
+      title: "Null Bock",
+      pivot: "BOCK",
+      categories: [
+        { name: "Männliche Tiere", words: ["HENGST", "EBER", "STIER"] },
+        { name: "In der Turnhalle", words: ["BARREN", "RECK", "RINGE"] },
+        { name: "Antrieb", words: ["LUST", "LAUNE", "ELAN"] },
+        { name: "Vorne beim Pferdegespann", words: ["PEITSCHE", "KUTSCHER", "ZÜGEL"] },
+      ],
+    },
+    lap: {
+      title: "Im Kreis gedreht",
+      pivot: "KREIS",
+      categories: [
+        { name: "Geometrie", words: ["RADIUS", "DURCHMESSER", "UMFANG"] },
+        { name: "Verwaltung", words: ["LANDRAT", "GEMEINDE", "BEZIRK"] },
+        { name: "Freunde", words: ["CLIQUE", "BEKANNTE", "GEFÄHRTEN"] },
+        { name: "Elektrik", words: ["SCHALTER", "WIDERSTAND", "SPULE"] },
+      ],
+    },
+    line: {
+      title: "Auf Linie",
+      pivot: "LINIE",
+      categories: [
+        { name: "Auf dem Papier", words: ["STRICH", "GERADE", "KURVE"] },
+        { name: "Bus und Bahn", words: ["ROUTE", "HALTESTELLE", "FAHRPLAN"] },
+        { name: "Auf die Figur achten", words: ["DIÄT", "KALORIEN", "TAILLE"] },
+        { name: "Abstammung", words: ["DYNASTIE", "GESCHLECHT", "STAMMBAUM"] },
+      ],
+    },
+    log: {
+      title: "Zu Protokoll",
+      pivot: "PROTOKOLL",
+      categories: [
+        { name: "In der Sitzung", words: ["TAGESORDNUNG", "BESCHLUSS", "ANWESENHEITSLISTE"] },
+        { name: "Diplomatie", words: ["ETIKETTE", "ZEREMONIE", "KNIGGE"] },
+        { name: "Datenübertragung", words: ["SERVER", "ROUTER", "DATENPAKET"] },
+        { name: "Strafzettel (österreichisch)", words: ["KNÖLLCHEN", "BUSSGELD", "PARKSÜNDER"] },
+      ],
+    },
+    march: {
+      title: "Marsch, marsch!",
+      pivot: "MARSCH",
+      categories: [
+        { name: "Musikstücke", words: ["WALZER", "POLKA", "HYMNE"] },
+        { name: "Feuchte Landschaft", words: ["MOOR", "SUMPF", "WATT"] },
+        { name: "Lange zu Fuß", words: ["WANDERUNG", "TREKKING", "PILGERWEG"] },
+        { name: "Kommandos", words: ["ACHTUNG", "HALT", "ABTRETEN"] },
+      ],
+    },
+    mine: {
+      title: "Goldgräberstimmung",
+      pivot: "MINE",
+      categories: [
+        { name: "Im Bleistift", words: ["GRAPHIT", "RADIERER", "SPITZER"] },
+        { name: "Bergwerk", words: ["STOLLEN", "SCHACHT", "KUMPEL"] },
+        { name: "Sprengfallen", words: ["BOMBE", "GRANATE", "TORPEDO"] },
+        { name: "Sprudelnde Einnahmequelle", words: ["GOLDESEL", "CASHCOW", "SELBSTLÄUFER"] },
+      ],
+    },
+    model: {
+      title: "Modellcharakter",
+      pivot: "MODELL",
+      categories: [
+        { name: "Auf dem Laufsteg", words: ["DESIGNER", "KOLLEKTION", "POSE"] },
+        { name: "Verkleinerte Nachbildung", words: ["MINIATUR", "REPLIK", "BAUSATZ"] },
+        { name: "In der Theorie", words: ["SCHEMA", "KONZEPT", "ABSTRAKTION"] },
+        { name: "Autotypen", words: ["LIMOUSINE", "KOMBI", "COUPÉ"] },
+      ],
+    },
+    net: {
+      title: "Netz und doppelter Boden",
+      pivot: "NETZ",
+      categories: [
+        { name: "Beim Fischer", words: ["KUTTER", "KÖDER", "REUSE"] },
+        { name: "Online", words: ["BROWSER", "DOMAIN", "WLAN"] },
+        { name: "Stromversorgung", words: ["LEITUNG", "TRAFO", "KRAFTWERK"] },
+        { name: "Beim Tennis", words: ["AUFSCHLAG", "VOLLEY", "GRUNDLINIE"] },
+      ],
+    },
+    patch: {
+      title: "Im Stich gelassen",
+      pivot: "STICH",
+      categories: [
+        { name: "Piesacken", words: ["MÜCKE", "BIENE", "WESPE"] },
+        { name: "Beim Skat", words: ["TRUMPF", "BUBE", "REIZEN"] },
+        { name: "Beim Nähen", words: ["FADEN", "SAUM", "NÄHMASCHINE"] },
+        { name: "Druckgrafik", words: ["RADIERUNG", "HOLZSCHNITT", "LITHOGRAFIE"] },
+      ],
+    },
+    pick: {
+      title: "Gabelfrühstück",
+      pivot: "GABEL",
+      categories: [
+        { name: "Auf dem gedeckten Tisch", words: ["MESSER", "LÖFFEL", "SERVIETTE"] },
+        { name: "Am Fahrrad", words: ["SPEICHE", "DYNAMO", "SCHUTZBLECH"] },
+        { name: "Beim Schach", words: ["ROCHADE", "PATT", "ZUGZWANG"] },
+        { name: "Auf dem Heuboden", words: ["HEU", "SENSE", "RECHEN"] },
+      ],
+    },
+    plant: {
+      title: "Ans Werk!",
+      pivot: "WERK",
+      categories: [
+        { name: "Fabrik", words: ["HALLE", "FLIESSBAND", "SCHLOT"] },
+        { name: "Tickt in der Uhr", words: ["ZAHNRAD", "UNRUH", "ZEIGER"] },
+        { name: "Kunst", words: ["GEMÄLDE", "SKULPTUR", "OPUS"] },
+        { name: "Vollbrachtes", words: ["TAT", "LEISTUNG", "HANDLUNG"] },
+      ],
+    },
+    plate: {
+      title: "Blendend",
+      pivot: "BLENDE",
+      categories: [
+        { name: "An der Kamera", words: ["VERSCHLUSS", "OBJEKTIV", "BELICHTUNG"] },
+        { name: "Mineralien", words: ["QUARZ", "GLIMMER", "FELDSPAT"] },
+        { name: "Im Auto", words: ["RÜCKSPIEGEL", "HANDSCHUHFACH", "ARMATUR"] },
+        { name: "Am Kleid", words: ["BESATZ", "PASPEL", "KNOPFLEISTE"] },
+      ],
+    },
+    pool: {
+      title: "Ruhige Kugel",
+      pivot: "KUGEL",
+      categories: [
+        { name: "Geometrische Körper", words: ["WÜRFEL", "KEGEL", "QUADER"] },
+        { name: "Munition", words: ["PATRONE", "HÜLSE", "MAGAZIN"] },
+        { name: "In der Eisdiele", words: ["WAFFEL", "SORTE", "HÖRNCHEN"] },
+        { name: "Am Weihnachtsbaum", words: ["LAMETTA", "STERN", "LICHTERKETTE"] },
+      ],
+    },
+    port: {
+      title: "Sicherer Hafen",
+      pivot: "HAFEN",
+      categories: [
+        { name: "Am Kai", words: ["KRAN", "MOLE", "DOCK"] },
+        { name: "Zuflucht", words: ["OBDACH", "ASYL", "UNTERSCHLUPF"] },
+        { name: "Der Bund fürs Leben", words: ["TRAUUNG", "HOCHZEIT", "STANDESAMT"] },
+        { name: "Vor dem Abflug", words: ["GATE", "TERMINAL", "ROLLFELD"] },
+      ],
+    },
+    range: {
+      title: "Heißer Herd",
+      pivot: "HERD",
+      categories: [
+        { name: "Küchengeräte", words: ["MIXER", "TOASTER", "KÜHLSCHRANK"] },
+        { name: "Beim Erdbeben", words: ["EPIZENTRUM", "BEBEN", "RICHTERSKALA"] },
+        { name: "Medizin", words: ["INFEKTION", "ENTZÜNDUNG", "ABSZESS"] },
+        { name: "Wo es brodelt", words: ["KRISENGEBIET", "BRENNPUNKT", "PULVERFASS"] },
+      ],
+    },
+    school: {
+      title: "Kurs halten",
+      pivot: "KURS",
+      categories: [
+        { name: "An der Börse", words: ["AKTIE", "DAX", "DIVIDENDE"] },
+        { name: "Zum Lernen", words: ["SEMINAR", "WORKSHOP", "LEKTION"] },
+        { name: "Auf dem Schiff", words: ["KOMPASS", "STEUERRAD", "NORDEN"] },
+        { name: "Politisches Programm", words: ["AUSRICHTUNG", "HALTUNG", "STRATEGIE"] },
+      ],
+    },
+    screen: {
+      title: "Schirmherrschaft",
+      pivot: "SCHIRM",
+      categories: [
+        { name: "Bei Regen", words: ["GUMMISTIEFEL", "REGENJACKE", "PFÜTZE"] },
+        { name: "Am Computer", words: ["TASTATUR", "DRUCKER", "FESTPLATTE"] },
+        { name: "Hoch über der Landezone", words: ["GURT", "REISSLEINE", "FREIFALL"] },
+        { name: "Zur Stehlampe gehört", words: ["GLÜHBIRNE", "SOCKEL", "DIMMER"] },
+      ],
+    },
+    shade: {
+      title: "Strahlemann",
+      pivot: "STRAHL",
+      categories: [
+        { name: "Licht", words: ["SCHIMMER", "GLANZ", "FUNKELN"] },
+        { name: "Aus dem Springbrunnen", words: ["FONTÄNE", "SPRITZER", "SCHWALL"] },
+        { name: "Geometrie", words: ["GERADE", "WINKEL", "VEKTOR"] },
+        { name: "Radioaktivität", words: ["ALPHA", "BETA", "GAMMA"] },
+      ],
+    },
+    shell: {
+      title: "Muschelsucher",
+      pivot: "MUSCHEL",
+      categories: [
+        { name: "Am Strand", words: ["SAND", "ALGE", "SEESTERN"] },
+        { name: "Am alten Telefon", words: ["WÄHLSCHEIBE", "HÖRER", "SCHNUR"] },
+        { name: "Damit hört man", words: ["TROMMELFELL", "LÄPPCHEN", "GEHÖRGANG"] },
+        { name: "Auf der Toilette", words: ["SPÜLUNG", "DECKEL", "BRILLE"] },
+      ],
+    },
+    shot: {
+      title: "Aufnahme läuft",
+      pivot: "AUFNAHME",
+      categories: [
+        { name: "Beim Fotografen", words: ["STATIV", "PORTRÄT", "SELFIE"] },
+        { name: "Im Tonstudio", words: ["MIKROFON", "MISCHPULT", "TAKE"] },
+        { name: "Im Krankenhaus", words: ["NOTFALL", "EINWEISUNG", "PATIENT"] },
+        { name: "In den Verein", words: ["MITGLIED", "BEITRITT", "SATZUNG"] },
+      ],
+    },
+    sign: {
+      title: "Schilder lesen",
+      pivot: "SCHILD",
+      categories: [
+        { name: "An der Straße", words: ["AMPEL", "ZEBRASTREIFEN", "LEITPLANKE"] },
+        { name: "Ritterrüstung", words: ["HELM", "LANZE", "KETTENHEMD"] },
+        { name: "An der Kleidung", words: ["ETIKETT", "AUFNÄHER", "NAMENSZUG"] },
+        { name: "Schutz", words: ["DECKUNG", "ABWEHR", "BARRIERE"] },
+      ],
+    },
+    slip: {
+      title: "Absatz finden",
+      pivot: "ABSATZ",
+      categories: [
+        { name: "Am Schuh", words: ["SCHNÜRSENKEL", "EINLAGE", "SCHAFT"] },
+        { name: "Im Text", words: ["ZEILE", "KAPITEL", "EINZUG"] },
+        { name: "Im Vertrieb", words: ["UMSATZ", "KUNDE", "MARKT"] },
+        { name: "An der Treppe", words: ["GELÄNDER", "PODEST", "HANDLAUF"] },
+      ],
+    },
+    square: {
+      title: "Mittel zum Zweck",
+      pivot: "MITTEL",
+      categories: [
+        { name: "In der Apotheke", words: ["SALBE", "TABLETTE", "TROPFEN"] },
+        { name: "Finanzen", words: ["BUDGET", "KAPITAL", "ETAT"] },
+        { name: "Statistik", words: ["DURCHSCHNITT", "MEDIAN", "SUMME"] },
+        { name: "Weg zum Ziel", words: ["METHODE", "INSTRUMENT", "WERKZEUG"] },
+      ],
+    },
+    stage: {
+      title: "Bühne frei",
+      pivot: "BÜHNE",
+      categories: [
+        { name: "Im Theater", words: ["KULISSE", "VORHANG", "RAMPENLICHT"] },
+        { name: "In der Autowerkstatt", words: ["WAGENHEBER", "GRUBE", "MECHANIKER"] },
+        { name: "Politik", words: ["PARLAMENT", "DEBATTE", "WAHLKAMPF"] },
+        { name: "Unter dem Giebel (süddeutsch)", words: ["SPEICHER", "GEBÄLK", "LUKE"] },
+      ],
+    },
+    stand: {
+      title: "Stabwechsel",
+      pivot: "STAB",
+      categories: [
+        { name: "Beim Zauberer", words: ["HUT", "KANINCHEN", "UMHANG"] },
+        { name: "Leichtathletik", words: ["HOCHSPRUNG", "SPRINT", "DISKUS"] },
+        { name: "Mitarbeiter", words: ["TEAM", "BELEGSCHAFT", "PERSONAL"] },
+        { name: "Beim Dirigenten", words: ["PARTITUR", "PULT", "ORCHESTER"] },
+      ],
+    },
+    stock: {
+      title: "Durch Mark und Bein",
+      pivot: "MARK",
+      categories: [
+        { name: "Anatomie", words: ["KNOCHEN", "RIPPE", "SCHÄDEL"] },
+        { name: "Alte Währung", words: ["PFENNIG", "GROSCHEN", "SCHILLING"] },
+        { name: "Aus der Tube", words: ["KETCHUP", "PÜREE", "PASTE"] },
+        { name: "Historische Region", words: ["GRENZLAND", "BRANDENBURG", "KURFÜRST"] },
+      ],
+    },
+    strike: {
+      title: "Sturm im Wasserglas",
+      pivot: "STURM",
+      categories: [
+        { name: "Wetter", words: ["BÖE", "GEWITTER", "HAGEL"] },
+        { name: "Fußballmannschaft", words: ["ABWEHR", "MITTELFELD", "TORWART"] },
+        { name: "Militär", words: ["SCHÜTZENGRABEN", "GEFECHT", "BELAGERUNG"] },
+        { name: "Gefühlswallung", words: ["EMPÖRUNG", "AUFRUHR", "PROTEST"] },
+      ],
+    },
+    suit: {
+      title: "Partei ergreifen",
+      pivot: "PARTEI",
+      categories: [
+        { name: "Im Bundestag", words: ["FRAKTION", "ABGEORDNETER", "OPPOSITION"] },
+        { name: "Vor Gericht", words: ["KLÄGER", "BEKLAGTER", "ANWALT"] },
+        { name: "Im Mietshaus", words: ["MIETER", "NACHBAR", "VERMIETER"] },
+        { name: "Beistand", words: ["UNTERSTÜTZUNG", "RÜCKENDECKUNG", "FÜRSPRACHE"] },
+      ],
+    },
+    tie: {
+      title: "Kettenreaktion",
+      pivot: "KETTE",
+      categories: [
+        { name: "Schmuck", words: ["ARMBAND", "BROSCHE", "OHRRING"] },
+        { name: "Am Fahrrad", words: ["RITZEL", "SCHALTUNG", "KURBEL"] },
+        { name: "Immer wieder derselbe Laden", words: ["FRANCHISE", "SUPERMARKT", "DISCOUNTER"] },
+        { name: "Berge am Horizont", words: ["MASSIV", "HÖHENZUG", "ALPEN"] },
+      ],
+    },
+    tip: {
+      title: "Harte Nuss",
+      pivot: "NUSS",
+      categories: [
+        { name: "Knabbereien", words: ["MANDEL", "CASHEW", "PISTAZIE"] },
+        { name: "Schwieriges Problem", words: ["RÄTSEL", "KNACKPUNKT", "KOPFZERBRECHEN"] },
+        { name: "Steckschlüsselsatz", words: ["RATSCHE", "BIT", "VERLÄNGERUNG"] },
+        { name: "Beim Metzger", words: ["FILET", "KEULE", "SCHULTER"] },
+      ],
+    },
+    toast: {
+      title: "Stück für Stück",
+      pivot: "STÜCK",
+      categories: [
+        { name: "Im Theater", words: ["DRAMA", "KOMÖDIE", "TRAGÖDIE"] },
+        { name: "Im Konzert", words: ["SONATE", "ETÜDE", "SINFONIE"] },
+        { name: "Portion", words: ["HAPPEN", "BROCKEN", "BISSEN"] },
+        { name: "Zählweise", words: ["EXEMPLAR", "EINHEIT", "ARTIKEL"] },
+      ],
+    },
+    top: {
+      title: "Über einen Kamm",
+      pivot: "KAMM",
+      categories: [
+        { name: "Im Bad", words: ["BÜRSTE", "FÖHN", "HAARGUMMI"] },
+        { name: "Am Berg", words: ["GRAT", "GIPFEL", "JOCH"] },
+        { name: "Am Hahn", words: ["SPORN", "SCHNABEL", "KEHLLAPPEN"] },
+        { name: "Auf der Welle", words: ["SCHAUMKRONE", "GISCHT", "BRANDUNG"] },
+      ],
+    },
+    story: {
+      title: "Volles Haus",
+      pivot: "HAUS",
+      categories: [
+        { name: "Gebäudeteile", words: ["DACH", "KELLER", "GARAGE"] },
+        { name: "Adelsdynastie", words: ["HABSBURG", "WINDSOR", "BOURBON"] },
+        { name: "Im Theater", words: ["PUBLIKUM", "ZUSCHAUER", "SAAL"] },
+        { name: "Bei der Schnecke", words: ["SCHLEIM", "FÜHLER", "KRIECHSOHLE"] },
+      ],
+    },
+    web: {
+      title: "Mausklick",
+      pivot: "MAUS",
+      categories: [
+        { name: "Nagetiere", words: ["RATTE", "EICHHÖRNCHEN", "MEERSCHWEINCHEN"] },
+        { name: "Am Computer", words: ["MONITOR", "DRUCKER", "LAUTSPRECHER"] },
+        { name: "Kosenamen", words: ["SCHATZ", "HASE", "SPATZ"] },
+        { name: "Geld, umgangssprachlich", words: ["KIES", "MONETEN", "ZASTER"] },
+      ],
+    },
+    wing: {
+      title: "Flanke von rechts",
+      pivot: "FLANKE",
+      categories: [
+        { name: "Fußball", words: ["ECKE", "KOPFBALL", "FREISTOSS"] },
+        { name: "Am Körper", words: ["HÜFTE", "RIPPE", "TAILLE"] },
+        { name: "Militär", words: ["FRONT", "NACHHUT", "VORHUT"] },
+        { name: "Turnen", words: ["HOCKE", "GRÄTSCHE", "WENDE"] },
+      ],
+    },
+    yard: {
+      title: "Auf der Strecke geblieben",
+      pivot: "STRECKE",
+      categories: [
+        { name: "Im Matheheft", words: ["DIAGONALE", "PARALLELE", "WINKELHALBIERENDE"] },
+        { name: "Rennsport", words: ["KURVE", "BOXENGASSE", "ZIELLINIE"] },
+        { name: "Jagd", words: ["WILD", "HIRSCH", "TROPHÄE"] },
+        { name: "Bei der Bahn", words: ["GLEIS", "TUNNEL", "BAHNHOF"] },
+      ],
+    },
+    bow: {
+      title: "Rückenwind",
+      pivot: "RÜCKEN",
+      categories: [
+        { name: "Am Körper", words: ["SCHULTER", "LENDE", "NACKEN"] },
+        { name: "Im Bücherregal", words: ["EINBAND", "UMSCHLAG", "LESEZEICHEN"] },
+        { name: "Im Gebirge", words: ["GRAT", "PASS", "HOCHEBENE"] },
+        { name: "Am Messer", words: ["KLINGE", "SCHNEIDE", "GRIFF"] },
+      ],
+    },
+    bill: {
+      title: "Im Schneckentempo",
+      pivot: "SCHNECKE",
+      categories: [
+        { name: "Kriecht im Garten", words: ["RAUPE", "WURM", "TAUSENDFÜSSLER"] },
+        { name: "Vom Bäcker", words: ["BREZEL", "KRAPFEN", "STRUDEL"] },
+        { name: "Im Innenohr", words: ["STEIGBÜGEL", "GLEICHGEWICHTSORGAN", "HÖRNERV"] },
+        { name: "An der Geige", words: ["STEG", "SAITE", "KINNHALTER"] },
+      ],
+    },
+    party: {
+      title: "Mit einer Stimme",
+      pivot: "STIMME",
+      categories: [
+        { name: "Beim Sprechen", words: ["KEHLE", "TIMBRE", "TONFALL"] },
+        { name: "Bei der Wahl", words: ["WAHLZETTEL", "URNE", "MEHRHEIT"] },
+        { name: "Im Chor", words: ["SOPRAN", "ALT", "TENOR"] },
+        { name: "Innerer Antrieb", words: ["GEWISSEN", "INTUITION", "BAUCHGEFÜHL"] },
+      ],
+    },
+    pump: {
+      title: "Birne weich",
+      pivot: "BIRNE",
+      categories: [
+        { name: "Obst", words: ["APFEL", "PFLAUME", "KIRSCHE"] },
+        { name: "Leuchtmittel", words: ["LED", "HALOGEN", "NEONRÖHRE"] },
+        { name: "Salopp für den Kopf", words: ["SCHÄDEL", "RÜBE", "DEZ"] },
+        { name: "Beim Boxtraining", words: ["SANDSACK", "SPRINGSEIL", "MUNDSCHUTZ"] },
+      ],
+    },
+    wheel: {
+      title: "Das Rad neu erfinden",
+      pivot: "RAD",
+      categories: [
+        { name: "Am Auto", words: ["REIFEN", "ACHSE", "NABE"] },
+        { name: "Beim Turnen", words: ["HANDSTAND", "SALTO", "SPAGAT"] },
+        { name: "Auf dem Schiff", words: ["RUDER", "STEUERMANN", "BUG"] },
+        { name: "Beim Pfau", words: ["SCHWANZFEDER", "PRACHT", "BALZ"] },
+      ],
+    },
+    bridge: {
+      title: "Brücken bauen",
+      pivot: "BRÜCKE",
+      categories: [
+        { name: "Über den Fluss", words: ["FÄHRE", "FLOSS", "FURT"] },
+        { name: "Beim Zahnarzt", words: ["PLOMBE", "IMPLANTAT", "PROTHESE"] },
+        { name: "Auf dem Schiff", words: ["RADAR", "FUNK", "SEEKARTE"] },
+        { name: "Liegt auf dem Parkett", words: ["LÄUFER", "VORLEGER", "BETTUMRANDUNG"] },
+      ],
+    },
+    race: {
+      title: "Viel Wirbel",
+      pivot: "WIRBEL",
+      categories: [
+        { name: "Im Rücken", words: ["RÜCKGRAT", "BANDSCHEIBE", "STEISSBEIN"] },
+        { name: "Im Wasser", words: ["STRUDEL", "SOG", "MAHLSTROM"] },
+        { name: "Am Schlagzeug", words: ["TROMMEL", "STICK", "HIHAT"] },
+        { name: "Aufregung", words: ["TRUBEL", "RUMMEL", "TAMTAM"] },
+      ],
+    },
+    belt: {
+      title: "Fest im Sattel",
+      pivot: "SATTEL",
+      categories: [
+        { name: "Beim Reiten", words: ["ZAUMZEUG", "TRENSE", "SPOREN"] },
+        { name: "Übergang im Gebirge", words: ["PASS", "JOCH", "SCHARTE"] },
+        { name: "Mitten im Gesicht", words: ["BRILLE", "SOMMERSPROSSEN", "NASENFLÜGEL"] },
+        { name: "Ganz oben am Haus", words: ["GIEBEL", "FIRST", "ZIEGEL"] },
+      ],
+    },
+    dress: {
+      title: "Mit der Rute",
+      pivot: "RUTE",
+      categories: [
+        { name: "Beim Angeln", words: ["KÖDER", "KESCHER", "BLINKER"] },
+        { name: "Jägersprache für den Schwanz", words: ["LUNTE", "BLUME", "WEDEL"] },
+        { name: "Nikolaus und Knecht Ruprecht", words: ["SACK", "STIEFEL", "MITRA"] },
+        { name: "Esoterik", words: ["PENDEL", "AURA", "TAROT"] },
+      ],
+    },
+    horn: {
+      title: "Ins Horn stoßen",
+      pivot: "HORN",
+      categories: [
+        { name: "Am Tier", words: ["GEWEIH", "STOSSZAHN", "STACHEL"] },
+        { name: "Blechbläser", words: ["TROMPETE", "TUBA", "POSAUNE"] },
+        { name: "Berggipfel", words: ["ZUGSPITZE", "WATZMANN", "EIGER"] },
+        { name: "Werkstoff", words: ["ELFENBEIN", "PERLMUTT", "SCHILDPATT"] },
+      ],
+    },
+    point: {
+      title: "Seitenwechsel",
+      pivot: "SEITE",
+      categories: [
+        { name: "Im Buch", words: ["VORWORT", "INHALTSVERZEICHNIS", "FUSSNOTE"] },
+        { name: "Am Rumpf", words: ["ACHSEL", "HÜFTE", "LEISTE"] },
+        { name: "Im Internet", words: ["LINK", "HOMEPAGE", "URL"] },
+        { name: "Aspekt", words: ["FACETTE", "BLICKWINKEL", "PERSPEKTIVE"] },
+      ],
+    },
+    punch: {
+      title: "Klappe, die Erste",
+      pivot: "KLAPPE",
+      categories: [
+        { name: "Am Filmset", words: ["REGISSEUR", "KAMERA", "STATIST"] },
+        { name: "Damit redet man, grob gesagt", words: ["SCHNAUZE", "MAUL", "GOSCHE"] },
+        { name: "Am Herzen", words: ["KAMMER", "VORHOF", "AORTA"] },
+        { name: "Am Saxofon", words: ["MUNDSTÜCK", "RIEMEN", "TRICHTER"] },
+      ],
+    },
+    season: {
+      title: "Staffelübergabe",
+      pivot: "STAFFEL",
+      categories: [
+        { name: "Fernsehserie", words: ["FOLGE", "CLIFFHANGER", "PILOTFILM"] },
+        { name: "Leichtathletik", words: ["STARTBLOCK", "STADION", "WECHSELZONE"] },
+        { name: "Luftwaffe", words: ["GESCHWADER", "KAMPFJET", "FLIEGERASS"] },
+        { name: "Je mehr, desto günstiger", words: ["RABATT", "TARIF", "MENGE"] },
+      ],
+    },
+    space: {
+      title: "Federleicht",
+      pivot: "FEDER",
+      categories: [
+        { name: "Am Vogel", words: ["SCHNABEL", "KRALLE", "KROPF"] },
+        { name: "Im Füller", words: ["TINTE", "KAPPE", "KONVERTER"] },
+        { name: "Dämpft den Stoß", words: ["STOSSDÄMPFER", "LATTENROST", "TRAMPOLIN"] },
+        { name: "Schreibende Zunft", words: ["POET", "KOLUMNIST", "ESSAYIST"] },
+      ],
+    },
+    staff: {
+      title: "In Führung",
+      pivot: "FÜHRUNG",
+      categories: [
+        { name: "Chefetage", words: ["VORSTAND", "MANAGEMENT", "DIREKTION"] },
+        { name: "Im Museum", words: ["GUIDE", "RUNDGANG", "EXPONAT"] },
+        { name: "Im Spiel vorne", words: ["VORSPRUNG", "TABELLENSPITZE", "TOR"] },
+        { name: "Im Gefängnis", words: ["BEWÄHRUNG", "HAFT", "STRAFERLASS"] },
+      ],
+    },
+    wake: {
+      title: "Zünglein an der Waage",
+      pivot: "WAAGE",
+      categories: [
+        { name: "In der Küche", words: ["MESSBECHER", "SIEB", "KELLE"] },
+        { name: "Sternzeichen", words: ["WIDDER", "KREBS", "SKORPION"] },
+        { name: "Beim Turnen", words: ["HANDSTAND", "SPAGAT", "KOPFSTAND"] },
+        { name: "Gleichgewicht", words: ["BALANCE", "AUSGLEICH", "EBENMASS"] },
+      ],
+    },
+    boot: {
+      title: "Kohle machen",
+      pivot: "KOHLE",
+      categories: [
+        { name: "Bergbau", words: ["ZECHE", "FLÖZ", "FÖRDERTURM"] },
+        { name: "Geld, umgangssprachlich", words: ["MÄUSE", "KNETE", "PENUNZE"] },
+        { name: "Zeichenutensilien", words: ["KREIDE", "PASTELL", "TUSCHE"] },
+        { name: "Beim Grillen", words: ["ROST", "ANZÜNDER", "GLUT"] },
+      ],
+    },
+    current: {
+      title: "Bart ab",
+      pivot: "BART",
+      categories: [
+        { name: "Im Gesicht", words: ["STOPPELN", "KINN", "OBERLIPPE"] },
+        { name: "Passt ins Schloss", words: ["ZACKE", "KERBE", "PROFIL"] },
+        { name: "Beim Wal", words: ["BLAS", "FLUKE", "PLANKTON"] },
+        { name: "Hat schon Staub angesetzt", words: ["KALAUER", "SCHENKELKLOPFER", "FLACHWITZ"] },
+      ],
+    },
+    pilot: {
+      title: "Pilotprojekt",
+      pivot: "PILOT",
+      categories: [
+        { name: "Im Cockpit", words: ["KAPITÄN", "STEWARDESS", "FUNKGERÄT"] },
+        { name: "Fernsehen", words: ["SERIE", "FOLGE", "SENDER"] },
+        { name: "Versuchsphase", words: ["TEST", "VERSUCH", "ERPROBUNG"] },
+        { name: "Im Rennwagen", words: ["FORMEL", "BOXENSTOPP", "HELM"] },
+      ],
+    },
+  },
 };
