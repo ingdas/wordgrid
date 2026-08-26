@@ -38,6 +38,12 @@ let verbBus: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 /** True while the tab/iframe is hidden — see `ready()`. */
 let backgrounded = false;
+/** True while a platform ad owns the screen (and the speakers). */
+let adPlaying = false;
+/** Nothing sounds while either is true; each is lifted on its own. */
+function silenced() {
+  return backgrounded || adPlaying;
+}
 
 const SFX_VOL_KEY = "wordgrid:sfxvol";
 const MUSIC_VOL_KEY = "wordgrid:musicvol";
@@ -69,7 +75,7 @@ export function initAudio() {
       ctx = new AC();
       buildGraph(ctx);
     }
-    if (ctx.state === "suspended" && !backgrounded) ctx.resume().catch(() => {});
+    if (ctx.state === "suspended" && !silenced()) ctx.resume().catch(() => {});
   } catch {
     ctx = null;
   }
@@ -143,9 +149,7 @@ function whiteNoise(c: AudioContext, seconds: number) {
   return buf;
 }
 
-/** Pause all audio output (tab hidden / game backgrounded). */
-export function suspendAudio() {
-  backgrounded = true;
+function hush() {
   // Whatever was still ringing is gone as far as the budget is concerned: a
   // node stopped inside a suspended context may not fire `onended` until the
   // context runs again, and a budget that never came back down would leave the
@@ -158,9 +162,8 @@ export function suspendAudio() {
   }
 }
 
-/** Resume audio after a suspend (tab visible again). */
-export function resumeAudio() {
-  backgrounded = false;
+function wake() {
+  if (silenced()) return; // the other reason to be quiet still stands
   try {
     if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
     // The clock froze while we were away; don't let the scheduler try to
@@ -169,6 +172,29 @@ export function resumeAudio() {
   } catch {
     /* ignore */
   }
+}
+
+/** Pause all audio output (tab hidden / game backgrounded). */
+export function suspendAudio() {
+  backgrounded = true;
+  hush();
+}
+
+/** Resume audio after a suspend (tab visible again). */
+export function resumeAudio() {
+  backgrounded = false;
+  wake();
+}
+
+/**
+ * A platform ad is on screen (true) or has just left (false). The ad has the
+ * speakers while it plays — the CrazyGames ad guidelines want the game muted
+ * for exactly that window, not from the moment an ad was *requested*.
+ */
+export function setAdPlaying(on: boolean) {
+  adPlaying = on;
+  if (on) hush();
+  else wake();
 }
 
 // ------------------------------------------------------- switches & dials --
@@ -226,7 +252,7 @@ function rampBus(bus: GainNode | null, to: number, seconds: number) {
  */
 function ready() {
   initAudio();
-  if (!ctx || muted || backgrounded) return false;
+  if (!ctx || muted || silenced()) return false;
   return true;
 }
 
@@ -758,7 +784,7 @@ export function stopMusic() {
 
 function schedule() {
   const c = ctx;
-  if (!c || !musicOn || backgrounded) return;
+  if (!c || !musicOn || silenced()) return;
   const spStep = 60 / SCENES[scene].bpm / 4; // one sixteenth
   // First tick, or the clock froze under us while the tab was hidden.
   if (nextNoteTime < c.currentTime) nextNoteTime = c.currentTime + 0.06;

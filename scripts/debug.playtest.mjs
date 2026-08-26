@@ -22,6 +22,12 @@ const note = (s) => { issues.push(s); console.log("ISSUE:", s); };
 
 const b = await launchBrowser();
 const p = await b.newPage();
+// Keep the SDK script out of this run. On localhost the real SDK initialises in
+// its "local" mode — fake ads between boards, a working data module — which is
+// not the SDK-less flow these checks describe. (playtest.mjs checks the real
+// SDK handshake separately, on its own page.)
+await p.setRequestInterception(true);
+p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 1 });
 const errors = [];
 p.on("console", (m) => {

@@ -49,6 +49,7 @@ import {
   startMusic,
   suspendAudio,
   resumeAudio,
+  setAdPlaying,
   setMusicScene,
   getSfxVolume,
   setSfxVolume,
@@ -67,6 +68,7 @@ import {
   happytime,
   showInterstitial,
   requestRewarded,
+  onAdBreak,
 } from "./sdk";
 import { startStats, trackFinish } from "./stats";
 import { analyticsStatus, startAnalytics, trackEvent, trackScreen } from "./analytics";
@@ -211,6 +213,9 @@ export default function App() {
   }, [unlockedAch]);
 
   useEffect(() => {
+    // The SDK script is `async` and must be initialised before it will take a
+    // call, so these two (and a first launch's gameplayStart below) are queued
+    // by src/sdk.ts and delivered, in order, the moment init settles.
     loadingStart();
     // The bundle is already parsed by the time React mounts, so loading is
     // effectively done here — tell the platform we're interactive.
@@ -248,20 +253,38 @@ export default function App() {
     };
   }, []);
 
-  // Platform QA: pause the session + audio when the tab/iframe is hidden.
+  // Pause the audio when the tab/iframe is hidden. Only the audio: the SDK's
+  // gameplay session deliberately isn't touched here — the platform's docs say
+  // a focus change or a tab switch is not a game break, so gameplayStop is
+  // reserved for a board ending or a menu opening.
   useEffect(() => {
     const onVis = () => {
-      if (document.hidden) {
-        gameplayStop();
-        suspendAudio();
-      } else {
-        resumeAudio();
-        if (screen === "game") gameplayStart();
-      }
+      if (document.hidden) suspendAudio();
+      else resumeAudio();
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [screen]);
+  }, []);
+
+  // An ad is on screen: the game is muted for exactly that long (not from the
+  // request — an unfilled ad must change nothing), and the page is held so
+  // nothing can be clicked under it.
+  const [adBusy, setAdBusy] = useState(false);
+  useEffect(() => onAdBreak(setAdPlaying), []);
+  /**
+   * The between-boards ad break. Blocks the page, asks the platform, and only
+   * then restarts the gameplay session — so the next board never starts, and
+   * gameplayStart is never sent, while an ad might be showing.
+   */
+  const adBreak = useCallback(async () => {
+    setAdBusy(true);
+    try {
+      await showInterstitial();
+    } finally {
+      setAdBusy(false);
+    }
+    gameplayStart();
+  }, []);
 
   // On a direct-to-game first launch, start the SDK gameplay session and unlock
   // audio on the player's first tap (there's no Play button gesture to do it).
@@ -435,7 +458,6 @@ export default function App() {
         p.keys.includes(chapter) ? p : { ...solveKey(p, chapter), score: p.score + 500, hints: p.hints + 2 }
       );
       if (next === prev) return;
-      happytime();
       trackEvent("chapter_key", { chapter });
       // The keyword itself is the trophy — it is content, not a catalogue key.
       setUnlockedAch({ icon: "🔑", header: t("key.unlocked"), label: chapterKey(chapter) });
@@ -469,7 +491,12 @@ export default function App() {
       score: number;
       maxCombo: number;
     }) => {
-      happytime();
+      // The board is over: the win card is a break to the platform. Whatever
+      // Next does restarts the session (see adBreak).
+      gameplayStop();
+      // happytime is the platform's celebration, and its docs ask for it
+      // sparingly — so a boss falling, not every one of a hundred boards.
+      if (!playingDaily && bossTwist(levelIndex) !== null) happytime();
       // The daily plays from its own pool: it feeds streaks/score/history but
       // never writes campaign stars or best times (its ids aren't levels).
       const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
@@ -576,7 +603,7 @@ export default function App() {
   // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
   const refillHints = useCallback(async (): Promise<boolean> => {
     const ok = await requestRewarded();
-    trackEvent("rewarded", { placement: "hints", result: ok ? "granted" : "declined" });
+    trackEvent("rewarded", { placement: "hints", result: ok ? "granted" : "failed" });
     if (!ok) return false;
     applyProgress((p) => ({ ...p, hints: p.hints + 3 }));
     return true;
@@ -584,6 +611,7 @@ export default function App() {
 
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
+      gameplayStop(); // the loss card is a break; a retry restarts the session
       if (!debug) {
         trackFinish({
           id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
@@ -626,12 +654,11 @@ export default function App() {
   // like any other. (Endless and the daily have their own Next; they ignore it.)
   const nextIndex = nextLevelIndex(progress, levelIndex);
 
-  const nextLevel = useCallback(() => {
+  const nextLevel = useCallback(async () => {
     if (nextIndex === null) return;
-    showInterstitial(); // between-level ad break (no-op without the SDK)
+    await adBreak(); // the ad plays over the win card; the next board waits
     setLevelIndex(nextIndex);
-    gameplayStart();
-  }, [nextIndex]);
+  }, [nextIndex, adBreak]);
 
   const exitToLevels = useCallback(() => {
     gameplayStop();
@@ -680,7 +707,7 @@ export default function App() {
 
   const handleEndlessWin = useCallback(
     (result: { score: number; mistakes: number; linkCorrect: boolean; maxCombo: number }) => {
-      happytime();
+      gameplayStop();
       trackEvent("level_win", {
         mode: "endless",
         level: 0,
@@ -700,8 +727,8 @@ export default function App() {
     [awardScore, questEvents, endlessPos, ENDLESS_POOL]
   );
 
-  const nextEndless = useCallback(() => {
-    showInterstitial();
+  const nextEndless = useCallback(async () => {
+    await adBreak();
     setEndlessPos((pos) => {
       let np = pos + 1;
       if (np >= endlessQueue.current.length) {
@@ -710,8 +737,7 @@ export default function App() {
       }
       return np;
     });
-    gameplayStart();
-  }, []);
+  }, [adBreak]);
 
   const exitEndless = useCallback(() => {
     gameplayStop();
@@ -780,6 +806,21 @@ export default function App() {
         }
       />
       <div className="grain" />
+
+      {adBusy && (
+        // Held page during an ad break: the platform draws the ad over the
+        // iframe; this keeps the board under it from taking a tap, and says
+        // what is happening if the request takes a second.
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-paper/50 pb-10"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="rounded-full border border-ink/20 bg-paper px-4 py-1.5 text-xs font-semibold text-ink-soft shadow-stamp-sm">
+            {t("ad.break")}
+          </span>
+        </div>
+      )}
 
       {!intro && shownScreen.key === "home" && (
           <ScreenWrap key="home" ref={shownScreen.ref}>
@@ -856,6 +897,7 @@ export default function App() {
               onRefillHints={refillHints}
               onWin={endless ? handleEndlessWin : handleWin}
               onLoss={endless ? noop : handleLoss}
+              onRestart={gameplayStart}
               onExit={endless ? exitEndless : playingDaily ? exitToHome : exitToLevels}
               // "Next level" used to walk straight into the level after this
               // one — including a boss whose door is still sealed, which made
@@ -1020,7 +1062,7 @@ function StatsModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("stats.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1147,7 +1189,7 @@ function HistoryModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("history.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1347,7 +1389,7 @@ function SettingsModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1546,7 +1588,7 @@ function HelpModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("help.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel

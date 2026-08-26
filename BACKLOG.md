@@ -1,7 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 41 (product analytics through a
-self-hosted Umami: `analytics.ts`, off until configured)._
+_Last updated 2026-08-26, after iteration 42 (CrazyGames submission audit:
+the SDK is actually initialised now, and the ad and gameplay rules are
+followed)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -152,13 +153,23 @@ twist closing each) → Game. One side mode: **Endless**
   tier labels, achievement titles, boss rules and briefings are keys. Puzzle *content* stays English on purpose (see
   Decisions). `scripts/i18n.test.mts` fails on a missing/stray key or a lost
   `{placeholder}`.
-- `sdk.ts` — defensive CrazyGames v3 wrapper. Off-platform the script loads
-  but is disabled, so every call throws/rejects `sdkDisabled`: the wrapper
-  swallows both, latches "unusable", and every rewarded failure path (no SDK,
-  disabled, ad error, no callback in `AD_CALLBACK_TIMEOUT_MS = 5 s`) resolves
-  **true** so watch-&-continue and hint refills always pay out.
-  `MIN_AD_GAP_MS = 60 s` between interstitials, none in a session's first
-  minute. `sdkData()` is the data module `storage.ts` mirrors through.
+- `sdk.ts` — the only module that touches `window.CrazyGames` (v3). Three
+  phases: `waiting` (script not landed / init pending — calls **queue** and
+  replay in order), `ready`, `off` (no SDK in `SDK_WAIT_MS = 15 s`, or
+  `environment === "disabled"` / `sdkDisabled` — latched, calls dropped).
+  `initSdk()` waits for the async script and runs `init()` once; a call made
+  before it arms the SDK on sight. **Never treat `sdkNotInitialized` as
+  fatal** — that is what iteration 42 fixed: the first shipped wrapper
+  latched dead on it and `init()` was never called on the platform.
+  `gameplayStart/Stop` send transitions only. `adsMode()`: `ads` (a video
+  plays) · `free` (no ad system: off-platform, or `adsDisabledBasicLaunch`) ·
+  `blocked` (`hasAdblock`, or an adblock ad error); `subscribeAds` for React.
+  `requestRewarded` → true on `adFinished` or in `free`; **false** on
+  `adError`/unfilled/blocked/`AD_REQUEST_TIMEOUT_MS = 10 s` silence.
+  `showInterstitial()` resolves when the ad is over; `onAdBreak(fn)` fires
+  true/false while one is on screen (App mutes with it). `MIN_AD_GAP_MS =
+  60 s`, seeded at load. `sdkData()` — null until `ready` — is the data
+  module `storage.ts` mirrors through. `shareUrl()` for the share card.
 - `audio.ts` — everything synthesized, no files. Mixer: sfx and music buses
   under a make-up gain and limiter, one shared generated reverb on a send,
   stings duck the music, a voice budget and per-sound rate gate. Music is
@@ -201,8 +212,12 @@ twist closing each) → Game. One side mode: **Endless**
   = daily id, level 0). Daily via `overrideRaw`; Endless (campaign + daily
   pool, no-fail, `endlessBest`, gated on a finished campaign); the sheets (settings: sound + level, music + level, calm,
   locale, Developer → debug toggle + level tracking, reset; stats; history;
-  how-to-play); the storage banner; music scene; `visibilitychange` pause;
-  rewarded `refillHints` (+3).
+  how-to-play); the storage banner; music scene; `visibilitychange` pauses
+  the **audio only** (never `gameplayStop` — a focus change isn't a break to
+  the platform); `adBreak()` (the between-boards interstitial: `adBusy` scrim,
+  await the ad, then `gameplayStart`) used by `nextLevel` and `nextEndless`;
+  `gameplayStop` in every win/loss handler; `happytime` only when a boss
+  falls; rewarded `refillHints` (+3).
 - `Intro.tsx` — the opening plate. Mounted by App in front of the first
   screen (the tutorial board or Home) while `intro` is set; any tap or key
   fast-forwards the run (and is the gesture that unlocks audio), `onDone`
@@ -293,7 +308,9 @@ twist closing each) → Game. One side mode: **Endless**
 ## Engineering rules
 
 - Persisted state goes through `storage.ts`; copy goes through `i18n/`;
-  progress writes go through `applyProgress`. Grep before adding an exception.
+  progress writes go through `applyProgress`; the platform goes through
+  `sdk.ts` (never `window.CrazyGames` directly, never a call that assumes
+  init has happened). Grep before adding an exception.
 - **No side effects inside React state updaters** (StrictMode double-invokes
   them). Compute from a ref, act in the handler.
 - **Every deferred beat is cancellable** and cleared on new board / unmount.
@@ -424,8 +441,17 @@ the hardest; *emoji* — the one bespoke board.
   key we have nothing for).
 - Level tracking is **off by default**, shows a dash under `MIN_SAMPLE`, and
   treats the server's answer as untrusted input.
-- Rewarded-ad failure paths **resolve true**: never strand a player behind an
-  ad that couldn't load.
+- Rewarded ads follow the platform's ad rules, not ours: an ad that **didn't
+  play pays nothing** (adError/unfilled/blocked/silence → false, toast "no ad
+  available", offer stays up). The one exception is *no ad system at all* —
+  no SDK, a disabled domain, or `adsDisabledBasicLaunch` — where the reward
+  is given, because a dead "watch" button is a QA rejection. Buttons read
+  `adsMode()` and only show 🎬 / say "Watch" where a video plays; under an
+  ad blocker the second chance isn't offered and the refill says why.
+- `happytime` is for a **boss** falling only (the docs: "sparingly").
+- Escape is not a gameplay key (it leaves fullscreen); dialogs still close on
+  it, as dialogs do. The rotate-to-portrait hint needs `pointer: coarse`, so
+  an 800×450 desktop embed never sees it.
 - **The service worker is for the standalone site.** `main.tsx` registers it
   only when the game is the top-level page, the upload zip leaves `sw.js` out,
   and `activate` clears only `wordgrid-*` caches — CacheStorage is per origin,

@@ -40,7 +40,7 @@
 //   level_loss      mode, level, id, mistakes, timeS, twist
 //   endless_end     solved                          an Endless run ended
 //   hint            kind (theme | letter), mode, level
-//   rewarded        placement (hints | continue), result (granted | declined)
+//   rewarded        placement (hints | continue), result (granted | failed)
 //   continue_offer  choice (watch | decline)        the second-chance card
 //   early_call      result (hit | miss), open       groups still open at the call
 //   tutorial        step (started | skipped | completed)

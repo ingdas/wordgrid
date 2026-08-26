@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { EASE, motionOn, pressDown, punch, rattle, release, stampIn } from "./anim";
 import gsap from "gsap";
 import { buildLetterBank } from "./letters";
 import { playDeselect, playSelect } from "./audio";
+import { adsMode, subscribeAds } from "./sdk";
 import { t } from "./i18n";
 
 // The spell-the-link finale: tap (or type) letters from a bank into the
@@ -55,6 +56,8 @@ export function LinkGuess({
   onReveal: () => void;
 }) {
   const bank = useMemo(() => providedBank ?? buildLetterBank(pivot), [providedBank, pivot]);
+  // Whether the refill is a video to watch, a free top-up, or unavailable.
+  const ads = useSyncExternalStore(subscribeAds, adsMode, adsMode);
   // Indices of bank tiles the player has tapped, in order (the suffix after the
   // free/ revealed prefix). Cleared whenever the revealed prefix grows.
   const [taps, setTaps] = useState<number[]>([]);
@@ -229,12 +232,18 @@ export function LinkGuess({
         >
           {t("finale.undo")}
         </button>
-        {hintBank === 0 && !unlimited && !resolved ? (
+        {hintBank === 0 && !unlimited && !resolved && ads === "blocked" ? (
+          // An ad blocker: say why there's no refill rather than offer a dead button.
+          <p role="status" className="max-w-[16rem] text-center text-xs font-semibold text-ink-soft">
+            {t("game.hint.refill.blocked")}
+          </p>
+        ) : hintBank === 0 && !unlimited && !resolved ? (
           <button
             onClick={onRefill}
             className="flex items-center gap-2 rounded-full bg-press px-4 py-2 text-xs font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
           >
-            {t("finale.refill")}
+            {/* Only promise a video where one plays. */}
+            {t(ads === "ads" ? "finale.refill" : "finale.refill.free")}
           </button>
         ) : (
           <button

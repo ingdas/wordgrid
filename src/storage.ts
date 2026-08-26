@@ -21,7 +21,7 @@
 //   3. An in-memory map — always written, so a session with no durable storage
 //      at all is still *coherent* while it lasts. `isDurable()` says whether
 //      that's all we've got, and the UI owes the player a warning when it is.
-import { sdkData } from "./sdk.ts";
+import { sdkData, sdkUnavailable } from "./sdk.ts";
 
 /** Every key the game persists. The mirror copies exactly these. */
 export const KEYS = [
@@ -283,7 +283,8 @@ export function startSdkMirror(onAdopt: () => void, onSettled: (durable: boolean
     // Ordinary storage works, so the player has a durable home either way; say
     // so now, but keep waiting for the platform store to push a copy to.
     if (local() !== null) report(true);
-    if (++tries >= MIRROR_TRIES) {
+    // The SDK has given its answer and it is "no": nothing to wait for.
+    if (sdkUnavailable() || ++tries >= MIRROR_TRIES) {
       report(isDurable());
       stopped = true;
       return;

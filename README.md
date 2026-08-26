@@ -225,6 +225,41 @@ save is pushed up before the browser can lose it. When *nothing* durable is
 available the session still plays out of memory, and says so in a banner rather
 than pretending it saved.
 
+### CrazyGames SDK
+
+Everything the platform hears goes through [`src/sdk.ts`](./src/sdk.ts), and
+nothing else touches `window.CrazyGames`. The v3 SDK **must be initialised
+before any call** — until `init()` resolves every method throws
+`sdkNotInitialized` — and its script is `async`, so it may land before or after
+React mounts. The wrapper waits for the script, runs `init()` once, and
+*queues* anything asked of it in the meantime (loading, the first launch's
+`gameplayStart`), replaying it in order the moment init settles. Off-platform
+the SDK loads but reports `environment: "disabled"`; that latches once and the
+game plays as if there were no SDK. On `localhost` it runs in `"local"` mode
+with fake ads, which is how the flows below are tested by hand.
+
+What is sent, and when — the platform's requirements, not ours:
+
+- `gameplayStart` / `gameplayStop` around every board, **transitions only**,
+  and never on a tab switch (the docs say a focus change is not a break).
+- `happytime` when a **boss** falls — sparingly, as asked.
+- An interstitial between boards, through `adBreak` in `App`: the page is held,
+  the game mutes **while the ad is on screen** (not on the request), and the
+  next board — and its `gameplayStart` — waits until the ad is gone.
+- Rewarded ads for the hint refill and the second chance. An ad that finished
+  pays; an ad that failed, went unfilled or is blocked pays **nothing**; and
+  where there is **no ad system at all** — no SDK, a disabled domain, or the
+  platform answering `adsDisabledBasicLaunch` — the reward is simply given,
+  because a dead "watch" button is what QA rejects. `adsMode()` tells the
+  buttons which world they are in, so they only promise a video (🎬) where one
+  plays, and under an ad blocker they say why there's no refill instead of
+  doing nothing.
+- The share card links to the game's CrazyGames page (`inviteLink`) on the
+  platform, and to the page without its query elsewhere — never `?debug`.
+
+`scripts/sdk.test.mts` pins all of it against a double that behaves like the
+real object (throws before init, `"uninitialized"` → `"crazygames"`).
+
 ### Level tracking
 
 How many people have solved a level, and how often an attempt on it ends in a

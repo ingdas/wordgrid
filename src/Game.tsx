@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import gsap from "gsap";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
-import { requestRewarded } from "./sdk";
+import { requestRewarded, adsMode, subscribeAds, shareUrl, type AdsMode } from "./sdk";
 import { trackStart } from "./stats";
 import { trackEvent } from "./analytics";
 import { useModal } from "./modal";
@@ -107,6 +107,8 @@ interface GameProps {
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
+  /** The board is being dealt again after a loss — a gameplay session resumes. */
+  onRestart?: () => void;
   /** Teaser for the next level's button, when it isn't just "the next one". */
   nextLabel?: string;
   onHelp: () => void;
@@ -135,6 +137,7 @@ export default function Game({
   onLoss,
   onExit,
   onNext,
+  onRestart,
   nextLabel,
   onHelp,
   onTutorialDone,
@@ -212,6 +215,10 @@ export default function Game({
   // continue (+2 tries) before the run actually ends.
   const [offering, setOffering] = useState(false);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+  // Which world the rewarded buttons are in — a real ad, a free reward (no ad
+  // system here), or blocked. Decides their copy, and whether the second
+  // chance is offered at all.
+  const ads = useSyncExternalStore(subscribeAds, adsMode, adsMode);
   // Memory boss: the board studies face-up until you say you're Ready, then
   // every tile flips. No countdown — the player decides when the lights go out,
   // which is what keeps a memory boss chill instead of a reflex test.
@@ -579,23 +586,30 @@ export default function Game({
     if (next === maxMistakes - 1) playWarn(0.34);
     if (next >= maxMistakes) {
       setSelected([]);
-      // Offer a one-time rewarded continue before ending the run.
-      if (!secondChanceUsed) setOffering(true);
+      // Offer a one-time rewarded continue before ending the run — unless an
+      // ad blocker means the offer could never be honoured, in which case it
+      // isn't made (the ad guidelines: unavailable, not a dead button).
+      if (!secondChanceUsed && ads !== "blocked") setOffering(true);
       else setStatus("lost");
     }
-  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes, tiles, remainingSpokes]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, ads, coach, puzzle, maxMistakes, tiles, remainingSpokes]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
     setSelected([]);
   }, [selected.length]);
 
-  // Second chance: a rewarded ad (instant true when no SDK) buys +2 tries once.
+  // Second chance: a rewarded ad buys +2 tries once. Off the platform there is
+  // no ad to watch and the tries are simply given; on it, an ad that didn't
+  // play pays nothing, and the offer stays up to try again.
   const takeSecondChance = useCallback(async () => {
     trackEvent("continue_offer", { choice: "watch" });
     const ok = await requestRewarded();
-    trackEvent("rewarded", { placement: "continue", result: ok ? "granted" : "declined" });
-    if (!ok) return; // ad failed/declined — leave the offer up
+    trackEvent("rewarded", { placement: "continue", result: ok ? "granted" : "failed" });
+    if (!ok) {
+      setToast(t("game.ad.none"));
+      return;
+    }
     setSecondChanceUsed(true);
     setOffering(false);
     mistakesRef.current = Math.max(0, mistakesRef.current - 2);
@@ -664,6 +678,8 @@ export default function Game({
     if (ok) {
       setToast(t("game.hint.refilled"));
       playCorrect(0);
+    } else {
+      setToast(t("game.ad.none"));
     }
   }, [onRefillHints]);
 
@@ -721,6 +737,7 @@ export default function Game({
 
   const restart = useCallback(() => {
     clearTimers(); // nothing from the finished run may land on the fresh one
+    onRestart?.(); // the loss card was a break; the board is live again
     reported.current = false;
     startedAt.current = Date.now();
     setNow(Date.now());
@@ -757,18 +774,20 @@ export default function Game({
     setFinaleCoach(false);
     setOrder(shuffle(spokeTiles));
     setDealKey((k) => k + 1);
-  }, [spokeTiles, twist, clearTimers]);
+  }, [spokeTiles, twist, clearTimers, onRestart]);
 
-  // Keyboard shortcuts: Enter submits, Escape clears.
+  // Keyboard shortcut: Enter submits. (Escape used to clear the selection; it
+  // is the browser's key for leaving fullscreen, and CrazyGames' guidelines ask
+  // games not to bind it — the Clear button is a tap away. Dialogs still close
+  // on Escape, which is what a dialog does.)
   useEffect(() => {
     if (status !== "playing") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" && selected.length === 3) submit();
-      else if (e.key === "Escape" && selected.length) clearSelection();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [status, selected.length, submit, clearSelection]);
+  }, [status, selected.length, submit]);
 
   // A first-timer's wrong word. The finale never costs anything, so the coach
   // does here what it does on the board: restate the clue once, then start
@@ -1120,6 +1139,7 @@ export default function Game({
             hintBank={hintBank}
             unlimited={debug}
             showRefill={hintBank === 0 && !debug}
+            ads={ads}
             onSubmit={submit}
             onClear={clearSelection}
             onHint={revealCategory}
@@ -1128,7 +1148,7 @@ export default function Game({
         )}
 
         {offerHere.rendered && (
-          <ContinueOffer ref={offerHere.ref} onAccept={takeSecondChance} onDecline={declineSecondChance} />
+          <ContinueOffer ref={offerHere.ref} ads={ads} onAccept={takeSecondChance} onDecline={declineSecondChance} />
         )}
 
         {status === "guessing" && (
@@ -1298,7 +1318,9 @@ function buildShare(opts: {
   const detail = opts.won
     ? `${opts.linkCorrect ? "🔑✅" : "🔑❌"}  ⏱️ ${fmtTime(opts.timeMs)}${opts.mistakes ? `  ❌${opts.mistakes}` : ""}`
     : t("share.soClose");
-  return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: location.href })}`;
+  // On CrazyGames the link is the game's page there, not the bare iframe URL;
+  // elsewhere it is the page without its query (never `?debug`).
+  return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: shareUrl() })}`;
 }
 
 /**
@@ -1600,10 +1622,13 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
 
 function ContinueOffer({
   ref,
+  ads,
   onAccept,
   onDecline,
 }: {
   ref?: Ref<HTMLDivElement>;
+  /** "ads": a video buys the tries; "free": they're simply given (no ad system here). */
+  ads: AdsMode;
   onAccept: () => Promise<void>;
   onDecline: () => void;
 }) {
@@ -1632,18 +1657,22 @@ function ContinueOffer({
       <div className="text-4xl">😮‍💨</div>
       <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("game.continue.title")}</h3>
       <p className="mt-1 text-sm text-ink-soft">{t("game.continue.body")}</p>
-      <button
-        onClick={accept}
-        disabled={pending}
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
-      >
-        <span aria-hidden>🎬</span> {t(pending ? "game.continue.loading" : "game.continue.accept")}
-      </button>
-      <div>
+      {/* Two answers, one size: the ad guidelines want the way out as visible
+          as the way in — same size, same type, same ink — not a small grey
+          link under a big gold button. */}
+      <div className="mt-4 flex flex-col items-center gap-3">
+        <button
+          onClick={accept}
+          disabled={pending}
+          className="inline-flex min-w-[15rem] items-center justify-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
+        >
+          {ads === "ads" && <span aria-hidden>🎬</span>}
+          {t(pending ? "game.continue.loading" : ads === "ads" ? "game.continue.accept" : "game.continue.accept.free")}
+        </button>
         <button
           onClick={onDecline}
           disabled={pending}
-          className="mt-3 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
+          className="inline-flex min-w-[15rem] items-center justify-center rounded-full border-2 border-ink/70 bg-paper px-7 py-3 text-base font-bold text-ink transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-40"
         >
           {t("game.continue.decline")}
         </button>
@@ -1703,6 +1732,7 @@ function Controls({
   hintBank,
   unlimited,
   showRefill,
+  ads,
   onSubmit,
   onClear,
   onHint,
@@ -1718,6 +1748,8 @@ function Controls({
   /** Debug: the bank is bottomless, so the badge reads ∞ and never empties. */
   unlimited?: boolean;
   showRefill?: boolean;
+  /** Whether the refill is an ad to watch, a free top-up, or unavailable. */
+  ads: AdsMode;
   onSubmit: () => void;
   onClear: () => void;
   onHint: () => void;
@@ -1751,12 +1783,23 @@ function Controls({
           {t("game.submit")}
         </button>
       </div>
-      {showRefill ? (
+      {showRefill && ads === "blocked" ? (
+        // An ad blocker: the refill can't be earned here, and the game says
+        // so in place instead of offering a button that does nothing.
+        <p role="status" className="max-w-xs text-center text-xs font-semibold text-ink-soft">
+          {t("game.hint.refill.blocked")}
+        </p>
+      ) : showRefill ? (
         <button
           onClick={onRefill}
           className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
         >
-          <span className="text-base" aria-hidden>🎬</span>
+          {/* The clapperboard promises a video; only show it where one plays. */}
+          {ads === "ads" && (
+            <span className="text-base" aria-hidden>
+              🎬
+            </span>
+          )}
           {t("game.hint.refill")}
         </button>
       ) : (
@@ -1822,7 +1865,7 @@ function WelcomeOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={t("welcome.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-5"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/45 p-5"
     >
       <div
         data-panel

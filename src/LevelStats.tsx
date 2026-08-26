@@ -141,7 +141,7 @@ export function LevelStatsModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("track.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel

@@ -24,6 +24,12 @@ const GROUPS = [
 
 const b = await launchBrowser();
 const p = await b.newPage();
+// Keep the SDK script out of this run. On localhost the real SDK initialises in
+// its "local" mode — fake ads between boards, a working data module — which is
+// not the SDK-less flow these checks describe. (playtest.mjs checks the real
+// SDK handshake separately, on its own page.)
+await p.setRequestInterception(true);
+p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 2 });
 const errors = [];
 // Ignore network noise from the (optional) CrazyGames SDK script, which can't
@@ -362,6 +368,12 @@ await sleep(300);
 const offered = /second chance|don't stop now/i.test(await bodyText());
 log("second-chance offer shown:", offered);
 if (!offered) note("Second-chance offer did not appear after running out of guesses.");
+// With the SDK kept out there is no ad system, so the offer must not promise a
+// video: no clapperboard, and "Continue" rather than "Watch & continue".
+const offerText = await bodyText();
+log("offer promises no video off-platform:", !/watch/i.test(offerText) && !/🎬/.test(offerText));
+if (/watch/i.test(offerText)) note("The second-chance offer says 'watch' where no ad can play.");
+await p.screenshot({ path: `${SHOT}/r10-offer.png` });
 await clickText("button", "No thanks");
 await sleep(400);
 const lostText = await bodyText();
@@ -470,6 +482,35 @@ if (embed.down > 0) note(`Index overflows the 1280x720 embed by ${embed.down}px 
 if (embed.across > 0) note(`Index scrolls horizontally at 1280x720 by ${embed.across}px.`);
 if (!embed.pane) note("Index has no internal scroll pane at lg; the page will scroll instead.");
 await p.screenshot({ path: `${SHOT}/r11-embed.png` });
+
+// 13. The real SDK, on a page that is allowed to load it. --------------------
+// The v3 SDK throws `sdkNotInitialized` from every call until init() resolves,
+// and its script is async, so the wrapper has to wait for it and initialise it
+// before anything else — the first shipped version never did, and every
+// platform call was lost. On localhost a working handshake ends in the SDK's
+// "local" environment with nothing in the console. Skipped when the script
+// can't be fetched (offline), which is the only reason it may be absent.
+{
+  const q = await b.newPage();
+  const sdkErrors = [];
+  q.on("console", (m) => {
+    if (/CrazySDK|sdkNotInitialized|sdkDisabled/i.test(m.text())) sdkErrors.push(m.text());
+  });
+  await q.goto(BASE, { waitUntil: "networkidle0" });
+  await sleep(3500);
+  const sdk = await q.evaluate(() => ({
+    present: !!window.CrazyGames?.SDK,
+    env: window.CrazyGames?.SDK?.environment ?? null,
+  }));
+  if (!sdk.present) {
+    log("real SDK: script not fetched (offline?) — handshake check skipped");
+  } else {
+    log("real SDK initialised:", sdk.env, "| SDK console errors:", sdkErrors.length);
+    if (sdk.env !== "local") note(`Real SDK never initialised on localhost (environment "${sdk.env}", expected "local").`);
+    if (sdkErrors.length) note(`The SDK logged ${sdkErrors.length} error(s): ${sdkErrors[0]}`);
+  }
+  await q.close();
+}
 
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");

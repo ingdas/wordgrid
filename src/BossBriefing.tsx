@@ -62,7 +62,7 @@ export function BossBriefing({
       role="dialog"
       aria-modal="true"
       aria-label={t("boss.brief.a11y", { what: name })}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-5"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/55 p-5"
     >
       <div
         data-panel
