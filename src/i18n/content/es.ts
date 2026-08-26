@@ -1029,5 +1029,606 @@ export const content: LocaleContent = {
       CAJA: "📦",
     },
   },
-  daily: {},
+  daily: {
+    key: {
+      title: "Mensaje cifrado",
+      pivot: "CÓDIGO",
+      categories: [
+        { name: "Sistemas de signos", words: ["MORSE", "BRAILLE", "JEROGLÍFICO"] },
+        { name: "Ramas del derecho", words: ["PENAL", "CIVIL", "MERCANTIL"] },
+        { name: "Para entrar en la cuenta", words: ["CONTRASEÑA", "PIN", "USUARIO"] },
+        { name: "Lo escribe un programador", words: ["SOFTWARE", "ALGORITMO", "COMPILADOR"] },
+      ],
+    },
+    board: {
+      title: "Sobre el tablero",
+      pivot: "TABLERO",
+      categories: [
+        { name: "Juegos de mesa", words: ["AJEDREZ", "PARCHÍS", "DAMAS"] },
+        { name: "Frente al conductor", words: ["VOLANTE", "VELOCÍMETRO", "GUANTERA"] },
+        { name: "Baloncesto", words: ["ARO", "CANASTA", "TRIPLE"] },
+        { name: "En el aula", words: ["TIZA", "PUPITRE", "BORRADOR"] },
+      ],
+    },
+    crown: {
+      title: "En la cresta de la ola",
+      pivot: "CRESTA",
+      categories: [
+        { name: "Del gallo", words: ["ESPOLÓN", "PLUMAJE", "CACAREO"] },
+        { name: "Rompe en la orilla", words: ["OLEAJE", "ROMPIENTE", "RESACA"] },
+        { name: "Estética punk", words: ["IMPERDIBLE", "TACHUELA", "CHUPA"] },
+        { name: "Relieve", words: ["LADERA", "COLLADO", "DESFILADERO"] },
+      ],
+    },
+    train: {
+      title: "Perder el tren",
+      pivot: "TREN",
+      categories: [
+        { name: "Transporte urbano", words: ["METRO", "TRANVÍA", "AUTOBÚS"] },
+        { name: "Piezas de un avión", words: ["CABINA", "HÉLICE", "ALERÓN"] },
+        { name: "Vivir a lo grande", words: ["LUJO", "DERROCHE", "OSTENTACIÓN"] },
+        { name: "Piernas", words: ["MUSLO", "GEMELO", "PANTORRILLA"] },
+      ],
+    },
+    watch: {
+      title: "Bajar la guardia",
+      pivot: "GUARDIA",
+      categories: [
+        { name: "Cuerpo de policía", words: ["COMISARIO", "INSPECTOR", "AGENTE"] },
+        { name: "Hacen la ronda de noche", words: ["VIGÍA", "CENTINELA", "SERENO"] },
+        { name: "Boxeo", words: ["GUANTE", "CUADRILÁTERO", "ASALTO"] },
+        { name: "Hospital de madrugada", words: ["URGENCIAS", "CAMILLA", "GOTERO"] },
+      ],
+    },
+    band: {
+      title: "Banda sonora",
+      pivot: "BANDA",
+      categories: [
+        { name: "Tocan juntos", words: ["ORQUESTA", "CUARTETO", "CHARANGA"] },
+        { name: "Crimen organizado", words: ["MAFIA", "CÁRTEL", "PANDILLA"] },
+        { name: "En la radio", words: ["DIAL", "SINTONÍA", "EMISORA"] },
+        { name: "Tiras de tela", words: ["FAJA", "CINTA", "FAJÍN"] },
+      ],
+    },
+    beam: {
+      title: "En el punto de mira",
+      pivot: "FOCO",
+      categories: [
+        { name: "Iluminan el concierto", words: ["REFLECTOR", "LÁSER", "ESTROBOSCOPIO"] },
+        { name: "Cámara de fotos", words: ["OBJETIVO", "DIAFRAGMA", "NITIDEZ"] },
+        { name: "Epidemia", words: ["BROTE", "CONTAGIO", "CUARENTENA"] },
+        { name: "Centro de atención", words: ["EJE", "NÚCLEO", "MEOLLO"] },
+      ],
+    },
+    box: {
+      title: "De cajón",
+      pivot: "CAJÓN",
+      categories: [
+        { name: "Muebles", words: ["CÓMODA", "ESCRITORIO", "MESILLA"] },
+        { name: "Evidente", words: ["OBVIO", "LÓGICO", "CLARO"] },
+        { name: "Flamenco", words: ["TABLAO", "CANTAOR", "ZAPATEADO"] },
+        { name: "Batiburrillo", words: ["REVOLTIJO", "MEZCLA", "POPURRÍ"] },
+      ],
+    },
+    cast: {
+      title: "Cuestión de reparto",
+      pivot: "REPARTO",
+      categories: [
+        { name: "Rodaje", words: ["ACTOR", "PROTAGONISTA", "EXTRA"] },
+        { name: "Entrega a domicilio", words: ["MENSAJERO", "PEDIDO", "FURGONETA"] },
+        { name: "Herencia", words: ["TESTAMENTO", "HEREDERO", "LEGADO"] },
+        { name: "Mesa de póker", words: ["CRUPIER", "MAZO", "APUESTA"] },
+      ],
+    },
+    charge: {
+      title: "A la carga",
+      pivot: "CARGA",
+      categories: [
+        { name: "Transporte de mercancías", words: ["REMOLQUE", "PALÉ", "CONTENEDOR"] },
+        { name: "Partículas", words: ["ELECTRÓN", "PROTÓN", "IÓN"] },
+        { name: "Ataque a caballo", words: ["CABALLERÍA", "LANZA", "HÚSAR"] },
+        { name: "Para disparar", words: ["PÓLVORA", "CARTUCHO", "GATILLO"] },
+      ],
+    },
+    coach: {
+      title: "Obra maestra",
+      pivot: "MAESTRO",
+      categories: [
+        { name: "Primaria", words: ["RECREO", "DEBERES", "ALUMNO"] },
+        { name: "Dirige la orquesta", words: ["BATUTA", "PARTITURA", "ATRIL"] },
+        { name: "Ajedrez", words: ["GAMBITO", "ALFIL", "PEÓN"] },
+        { name: "En la obra", words: ["ALBAÑIL", "ANDAMIO", "CAPATAZ"] },
+      ],
+    },
+    coat: {
+      title: "De capa caída",
+      pivot: "CAPA",
+      categories: [
+        { name: "Superhéroes", words: ["ANTIFAZ", "SUPERPODER", "VILLANO"] },
+        { name: "Atmósfera", words: ["OZONO", "ESTRATOSFERA", "TROPOSFERA"] },
+        { name: "Pintar una pared", words: ["IMPRIMACIÓN", "BARNIZ", "ESMALTE"] },
+        { name: "Se apilan en la tarta", words: ["BIZCOCHO", "NATA", "RELLENO"] },
+      ],
+    },
+    count: {
+      title: "En suma",
+      pivot: "SUMA",
+      categories: [
+        { name: "Aritmética", words: ["RESTA", "MULTIPLICACIÓN", "DIVISIÓN"] },
+        { name: "Mucho dinero", words: ["FORTUNA", "DINERAL", "CAPITAL"] },
+        { name: "De lo más alto", words: ["SUPREMO", "MÁXIMO", "EXTREMO"] },
+        { name: "En pocas palabras", words: ["RESUMEN", "SÍNTESIS", "CONCLUSIÓN"] },
+      ],
+    },
+    draft: {
+      title: "Primer plano",
+      pivot: "PLANO",
+      categories: [
+        { name: "Estudio de arquitectura", words: ["ALZADO", "MAQUETA", "ESCUADRA"] },
+        { name: "Sin relieve", words: ["LLANO", "LISO", "HORIZONTAL"] },
+        { name: "Rodaje", words: ["SECUENCIA", "ENCUADRE", "FOTOGRAMA"] },
+        { name: "Geometría", words: ["RECTA", "VÉRTICE", "PARALELA"] },
+      ],
+    },
+    drill: {
+      title: "Órdenes son órdenes",
+      pivot: "INSTRUCCIÓN",
+      categories: [
+        { name: "Cuartel", words: ["RECLUTA", "DESFILE", "UNIFORME"] },
+        { name: "Montar un mueble", words: ["DIAGRAMA", "TORNILLO", "PICTOGRAMA"] },
+        { name: "Formación", words: ["TITULACIÓN", "ESTUDIOS", "CULTURA"] },
+        { name: "Juzgado", words: ["SUMARIO", "DILIGENCIA", "IMPUTADO"] },
+      ],
+    },
+    duck: {
+      title: "Pagar el pato",
+      pivot: "PATO",
+      categories: [
+        { name: "Aves acuáticas", words: ["CISNE", "GARZA", "OCA"] },
+        { name: "Carnes", words: ["TERNERA", "CORDERO", "CERDO"] },
+        { name: "Torpe", words: ["DESMAÑADO", "ZOQUETE", "MANAZAS"] },
+        { name: "Hora del baño", words: ["BAÑERA", "ESPONJA", "JABÓN"] },
+      ],
+    },
+    fair: {
+      title: "Lo justo y necesario",
+      pivot: "JUSTO",
+      categories: [
+        { name: "Equitativo", words: ["IMPARCIAL", "ECUÁNIME", "HONRADO"] },
+        { name: "Talla pequeña", words: ["CEÑIDO", "ESTRECHO", "APRETADO"] },
+        { name: "Exacto", words: ["PRECISO", "CLAVADO", "MILIMÉTRICO"] },
+        { name: "Apenas suficiente", words: ["ESCASO", "RASPADO", "LIMITADO"] },
+      ],
+    },
+    fall: {
+      title: "Caída libre",
+      pivot: "CAÍDA",
+      categories: [
+        { name: "Tras un tropiezo", words: ["MORATÓN", "RASGUÑO", "ESGUINCE"] },
+        { name: "Bolsa a la baja", words: ["BAJISTA", "PÉRDIDAS", "PÁNICO"] },
+        { name: "Problemas capilares", words: ["CALVICIE", "ALOPECIA", "PELUQUÍN"] },
+        { name: "Fin de un imperio", words: ["DECADENCIA", "RUINA", "OCASO"] },
+      ],
+    },
+    file: {
+      title: "Ficha técnica",
+      pivot: "FICHA",
+      categories: [
+        { name: "Parchís", words: ["DADO", "CASILLA", "TURNO"] },
+        { name: "Expediente policial", words: ["HUELLA", "DETENIDO", "ATESTADO"] },
+        { name: "Mercado de verano", words: ["TRASPASO", "CLÁUSULA", "CESIÓN"] },
+        { name: "Biblioteca", words: ["CATÁLOGO", "ESTANTERÍA", "PRÉSTAMO"] },
+      ],
+    },
+    flat: {
+      title: "Piso piloto",
+      pivot: "PISO",
+      categories: [
+        { name: "Inmobiliaria", words: ["ALQUILER", "INQUILINO", "CASERO"] },
+        { name: "Niveles de un edificio", words: ["SÓTANO", "ENTRESUELO", "AZOTEA"] },
+        { name: "Tarta nupcial", words: ["GLASEADO", "FONDANT", "NOVIOS"] },
+        { name: "Pavimentos", words: ["TARIMA", "TERRAZO", "LINÓLEO"] },
+      ],
+    },
+    fly: {
+      title: "Por si las moscas",
+      pivot: "MOSCA",
+      categories: [
+        { name: "Insectos", words: ["MOSQUITO", "AVISPA", "ABEJORRO"] },
+        { name: "Pesos del boxeo", words: ["GALLO", "WELTER", "MEDIO"] },
+        { name: "Desconfiado", words: ["RECELOSO", "ESCAMADO", "SUSPICAZ"] },
+        { name: "Pesca en el río", words: ["CAÑA", "SEDAL", "CARRETE"] },
+      ],
+    },
+    fold: {
+      title: "Doble o nada",
+      pivot: "DOBLE",
+      categories: [
+        { name: "Se parecen", words: ["GEMELO", "CLON", "IMITADOR"] },
+        { name: "Tenis", words: ["RAQUETA", "SAQUE", "PAREJA"] },
+        { name: "En la barra", words: ["CHUPITO", "JARRA", "HIELO"] },
+        { name: "Habitación de hotel", words: ["SUITE", "INDIVIDUAL", "RECEPCIÓN"] },
+      ],
+    },
+    frame: {
+      title: "Salirse del marco",
+      pivot: "MARCO",
+      categories: [
+        { name: "Taller del pintor", words: ["LIENZO", "CABALLETE", "ÓLEO"] },
+        { name: "Monedas de antes", words: ["PESETA", "LIRA", "ESCUDO"] },
+        { name: "Ventana", words: ["VIDRIO", "PERSIANA", "POSTIGO"] },
+        { name: "Contexto", words: ["ÁMBITO", "ENTORNO", "ESCENARIO"] },
+      ],
+    },
+    hand: {
+      title: "De su puño y letra",
+      pivot: "PUÑO",
+      categories: [
+        { name: "Pelea", words: ["BOFETÓN", "PATADA", "CABEZAZO"] },
+        { name: "Camisa", words: ["CUELLO", "BOTÓN", "MANGA"] },
+        { name: "Partes de una espada", words: ["FILO", "VAINA", "GUARDA"] },
+        { name: "Escrito a mano", words: ["CALIGRAFÍA", "FIRMA", "RÚBRICA"] },
+      ],
+    },
+    iron: {
+      title: "Salud de hierro",
+      pivot: "HIERRO",
+      categories: [
+        { name: "Metales", words: ["ACERO", "COBRE", "ZINC"] },
+        { name: "Golf", words: ["HOYO", "GREEN", "BIRDIE"] },
+        { name: "Inquebrantable", words: ["ROBUSTO", "RESISTENTE", "INDESTRUCTIBLE"] },
+        { name: "Rancho", words: ["GANADO", "VAQUERO", "CORRAL"] },
+      ],
+    },
+    jack: {
+      title: "Cuatro gatos",
+      pivot: "GATO",
+      categories: [
+        { name: "Felinos", words: ["TIGRE", "LEÓN", "LINCE"] },
+        { name: "En el maletero", words: ["TRIÁNGULO", "CHALECO", "REPUESTO"] },
+        { name: "Juegos de lápiz y papel", words: ["AHORCADO", "BARCOS", "SUDOKU"] },
+        { name: "Gentilicios", words: ["MADRILEÑO", "GADITANO", "BILBAÍNO"] },
+      ],
+    },
+    lap: {
+      title: "Etapa reina",
+      pivot: "ETAPA",
+      categories: [
+        { name: "Vuelta ciclista", words: ["ESPRÍNTER", "ESCALADOR", "GREGARIO"] },
+        { name: "Edades de la vida", words: ["INFANCIA", "ADOLESCENCIA", "VEJEZ"] },
+        { name: "Camino de Santiago", words: ["PEREGRINO", "ALBERGUE", "CREDENCIAL"] },
+        { name: "Lanzamiento espacial", words: ["PROPULSOR", "COMBUSTIBLE", "ÓRBITA"] },
+      ],
+    },
+    line: {
+      title: "En fila india",
+      pivot: "FILA",
+      categories: [
+        { name: "Localidades del teatro", words: ["PLATEA", "PALCO", "ANFITEATRO"] },
+        { name: "Aguardar en la ventanilla", words: ["ESPERA", "TURNO", "PACIENCIA"] },
+        { name: "Miembros de un partido", words: ["MILITANTE", "AFILIADO", "SIMPATIZANTE"] },
+        { name: "Hoja de cálculo", words: ["COLUMNA", "CELDA", "FÓRMULA"] },
+      ],
+    },
+    log: {
+      title: "Quedar registrado",
+      pivot: "REGISTRO",
+      categories: [
+        { name: "Operación policial", words: ["CACHEO", "REDADA", "ORDEN"] },
+        { name: "Trámites oficiales", words: ["DNI", "EMPADRONAMIENTO", "CERTIFICADO"] },
+        { name: "Niveles de la lengua", words: ["COLOQUIAL", "FORMAL", "VULGAR"] },
+        { name: "Rastro de un programa", words: ["SERVIDOR", "ERROR", "HISTORIAL"] },
+      ],
+    },
+    march: {
+      title: "Vida muelle",
+      pivot: "MUELLE",
+      categories: [
+        { name: "Puerto", words: ["AMARRE", "ESTIBADOR", "BOYA"] },
+        { name: "Colchonería", words: ["SOMIER", "LÁTEX", "VISCOELÁSTICA"] },
+        { name: "Cómodo", words: ["PLÁCIDO", "REGALADO", "ACOMODADO"] },
+        { name: "Dentro de un reloj de cuerda", words: ["ENGRANAJE", "PIÑÓN", "ÁNCORA"] },
+      ],
+    },
+    mine: {
+      title: "Una mina de oro",
+      pivot: "MINA",
+      categories: [
+        { name: "Bajo tierra con casco", words: ["CARBÓN", "GALERÍA", "VAGONETA"] },
+        { name: "Arsenal", words: ["TORPEDO", "MISIL", "OBÚS"] },
+        { name: "Estuche escolar", words: ["GRAFITO", "SACAPUNTAS", "GOMA"] },
+        { name: "Negocio redondo", words: ["CHOLLO", "TESORO", "BICOCA"] },
+      ],
+    },
+    model: {
+      title: "Modelo a seguir",
+      pivot: "MODELO",
+      categories: [
+        { name: "Semana de la moda", words: ["PASARELA", "DISEÑADOR", "DESFILE"] },
+        { name: "A escala", words: ["MAQUETA", "MINIATURA", "RÉPLICA"] },
+        { name: "Digno de imitar", words: ["EJEMPLO", "REFERENTE", "ARQUETIPO"] },
+        { name: "Concesionario", words: ["VERSIÓN", "MARCA", "MATRÍCULA"] },
+      ],
+    },
+    net: {
+      title: "Punto por punto",
+      pivot: "MALLA",
+      categories: [
+        { name: "Ropa de gimnasio", words: ["LEGGINS", "SUDADERA", "CHÁNDAL"] },
+        { name: "Armadura medieval", words: ["YELMO", "CORAZA", "GUANTELETE"] },
+        { name: "Cercados", words: ["ALAMBRADA", "VERJA", "SETO"] },
+        { name: "Gráficos 3D", words: ["RENDER", "POLÍGONO", "TEXTURA"] },
+      ],
+    },
+    patch: {
+      title: "Poner un parche",
+      pivot: "PARCHE",
+      categories: [
+        { name: "Pirata", words: ["LORO", "GARFIO", "ABORDAJE"] },
+        { name: "Software", words: ["ACTUALIZACIÓN", "DESCARGA", "INSTALADOR"] },
+        { name: "Percusión", words: ["BAQUETA", "TIMBAL", "REDOBLE"] },
+        { name: "Dejar de fumar", words: ["CHICLE", "VOLUNTAD", "ABSTINENCIA"] },
+      ],
+    },
+    pick: {
+      title: "La roja",
+      pivot: "SELECCIÓN",
+      categories: [
+        { name: "Fútbol de países", words: ["MUNDIAL", "EUROCOPA", "HIMNO"] },
+        { name: "Darwin", words: ["EVOLUCIÓN", "ESPECIE", "ADAPTACIÓN"] },
+        { name: "Buscar personal", words: ["CANDIDATO", "ASPIRANTE", "VACANTE"] },
+        { name: "Los mejores textos", words: ["ANTOLOGÍA", "RECOPILACIÓN", "COMPENDIO"] },
+      ],
+    },
+    plant: {
+      title: "Irse por las ramas",
+      pivot: "RAMA",
+      categories: [
+        { name: "Árbol", words: ["TRONCO", "CORTEZA", "SAVIA"] },
+        { name: "Ciencias", words: ["QUÍMICA", "GEOLOGÍA", "ASTRONOMÍA"] },
+        { name: "Empresa con oficinas", words: ["SUCURSAL", "FILIAL", "DELEGACIÓN"] },
+        { name: "Parentesco", words: ["ANTEPASADO", "DESCENDIENTE", "LINAJE"] },
+      ],
+    },
+    plate: {
+      title: "Plato fuerte",
+      pivot: "PLATO",
+      categories: [
+        { name: "Vajilla", words: ["CUENCO", "TAZA", "JARRA"] },
+        { name: "Cocina", words: ["RECETA", "GUISO", "ESTOFADO"] },
+        { name: "Bicicleta", words: ["PIÑÓN", "BIELA", "MANETA"] },
+        { name: "Cabina del DJ", words: ["VINILO", "MEZCLADOR", "CASCOS"] },
+      ],
+    },
+    pool: {
+      title: "De bote en bote",
+      pivot: "BOTE",
+      categories: [
+        { name: "Embarcaciones", words: ["LANCHA", "CANOA", "PIRAGUA"] },
+        { name: "Envases", words: ["TARRO", "FRASCO", "LATA"] },
+        { name: "Loterías", words: ["PRIMITIVA", "SORTEO", "QUINIELA"] },
+        { name: "Se deja en el bar", words: ["PROPINA", "MONEDA", "CALDERILLA"] },
+      ],
+    },
+    port: {
+      title: "Llegar a buen puerto",
+      pivot: "PUERTO",
+      categories: [
+        { name: "Frente al mar", words: ["FARO", "ESPIGÓN", "DIQUE"] },
+        { name: "Subida en bici", words: ["CUESTA", "PENDIENTE", "DESNIVEL"] },
+        { name: "Conexiones del ordenador", words: ["USB", "HDMI", "CONECTOR"] },
+        { name: "A salvo", words: ["REFUGIO", "ABRIGO", "AMPARO"] },
+      ],
+    },
+    range: {
+      title: "Alta gama",
+      pivot: "GAMA",
+      categories: [
+        { name: "Colores", words: ["PALETA", "DEGRADADO", "ESPECTRO"] },
+        { name: "Catálogo", words: ["SURTIDO", "VARIEDAD", "OFERTA"] },
+        { name: "Cérvidos", words: ["CIERVO", "CORZO", "RENO"] },
+        { name: "Lujo", words: ["PREMIUM", "EXCLUSIVO", "SELECTO"] },
+      ],
+    },
+    school: {
+      title: "Volver al cole",
+      pivot: "COLEGIO",
+      categories: [
+        { name: "Mochila escolar", words: ["ESTUCHE", "CARTULINA", "MERIENDA"] },
+        { name: "Profesiones liberales", words: ["ABOGADO", "ARQUITECTO", "FARMACÉUTICO"] },
+        { name: "Día de elecciones", words: ["ESCRUTINIO", "INTERVENTOR", "SUFRAGIO"] },
+        { name: "Vaticano", words: ["CARDENAL", "CÓNCLAVE", "FUMATA"] },
+      ],
+    },
+    screen: {
+      title: "En pantalla",
+      pivot: "PANTALLA",
+      categories: [
+        { name: "Cine", words: ["ESTRENO", "PALOMITAS", "TRÁILER"] },
+        { name: "Lámpara", words: ["BOMBILLA", "CASQUILLO", "FLEXO"] },
+        { name: "Fraude", words: ["TESTAFERRO", "BLANQUEO", "ESTAFA"] },
+        { name: "Baloncesto", words: ["PÍVOT", "REBOTE", "ZONA"] },
+      ],
+    },
+    shade: {
+      title: "Ni sombra",
+      pivot: "SOMBRA",
+      categories: [
+        { name: "Maquillaje", words: ["PINTALABIOS", "DELINEADOR", "POLVOS"] },
+        { name: "Plaza de toros", words: ["TENDIDO", "BARRERA", "ANDANADA"] },
+        { name: "Falta de certeza", words: ["DUDA", "SOSPECHA", "RECELO"] },
+        { name: "Fantasmas", words: ["ESPECTRO", "APARICIÓN", "ÁNIMA"] },
+      ],
+    },
+    shell: {
+      title: "Cápsula del tiempo",
+      pivot: "CÁPSULA",
+      categories: [
+        { name: "Misión espacial", words: ["ASTRONAUTA", "COHETE", "ÓRBITA"] },
+        { name: "Farmacia", words: ["COMPRIMIDO", "JARABE", "PASTILLA"] },
+        { name: "Desayuno con cafeína", words: ["CAFETERA", "EXPRESO", "MOLINILLO"] },
+        { name: "Abrir una botella", words: ["TAPÓN", "SACACORCHOS", "BRINDIS"] },
+      ],
+    },
+    shot: {
+      title: "Toma y daca",
+      pivot: "TOMA",
+      categories: [
+        { name: "Rodaje", words: ["CLAQUETA", "DIRECTOR", "PLATÓ"] },
+        { name: "Electricidad doméstica", words: ["CLAVIJA", "REGLETA", "FUSIBLE"] },
+        { name: "Nuevo presidente", words: ["JURAMENTO", "INVESTIDURA", "DISCURSO"] },
+        { name: "Bomberos", words: ["HIDRANTE", "EXTINTOR", "ESCALERA"] },
+      ],
+    },
+    sign: {
+      title: "Signo de los tiempos",
+      pivot: "SIGNO",
+      categories: [
+        { name: "Zodiaco", words: ["ARIES", "TAURO", "GÉMINIS"] },
+        { name: "Puntuación", words: ["COMA", "INTERROGACIÓN", "EXCLAMACIÓN"] },
+        { name: "Operaciones", words: ["MÁS", "MENOS", "IGUAL"] },
+        { name: "Indicios", words: ["SÍNTOMA", "PRESAGIO", "AUGURIO"] },
+      ],
+    },
+    slip: {
+      title: "Sin falta",
+      pivot: "FALTA",
+      categories: [
+        { name: "Fútbol", words: ["PENALTI", "TARJETA", "FUERA"] },
+        { name: "No venir a clase", words: ["JUSTIFICANTE", "ABSENTISMO", "PELLAS"] },
+        { name: "Ortografía", words: ["TILDE", "ERRATA", "DICTADO"] },
+        { name: "Escasez", words: ["CARENCIA", "DÉFICIT", "PENURIA"] },
+      ],
+    },
+    square: {
+      title: "Cuadrado perfecto",
+      pivot: "CUADRADO",
+      categories: [
+        { name: "Polígonos", words: ["RECTÁNGULO", "PENTÁGONO", "TRAPECIO"] },
+        { name: "Potencias", words: ["RAÍZ", "EXPONENTE", "CUBO"] },
+        { name: "Fornido", words: ["MUSCULOSO", "CORPULENTO", "MACIZO"] },
+        { name: "Estrecho de miras", words: ["RÍGIDO", "INFLEXIBLE", "CERRADO"] },
+      ],
+    },
+    stage: {
+      title: "Montar una escena",
+      pivot: "ESCENA",
+      categories: [
+        { name: "Teatro", words: ["ACTO", "BASTIDORES", "APUNTADOR"] },
+        { name: "Investigación del crimen", words: ["FORENSE", "CADÁVER", "PRECINTO"] },
+        { name: "Numerito", words: ["BERRINCHE", "PATALETA", "DRAMA"] },
+        { name: "Movida cultural", words: ["VANGUARDIA", "UNDERGROUND", "INDIE"] },
+      ],
+    },
+    stand: {
+      title: "Al pie de la letra",
+      pivot: "PIE",
+      categories: [
+        { name: "Anatomía", words: ["METATARSO", "JUANETE", "EMPEINE"] },
+        { name: "Medidas anglosajonas", words: ["PULGADA", "YARDA", "MILLA"] },
+        { name: "Bajo la foto del periódico", words: ["TITULAR", "COLUMNA", "EPÍGRAFE"] },
+        { name: "Sostienen la estatua", words: ["PEDESTAL", "PEANA", "ZÓCALO"] },
+      ],
+    },
+    stock: {
+      title: "Sin reservas",
+      pivot: "RESERVA",
+      categories: [
+        { name: "Espacio protegido", words: ["PARQUE", "FAUNA", "GUARDABOSQUES"] },
+        { name: "Al llegar al hotel", words: ["HABITACIÓN", "CANCELACIÓN", "CONFIRMACIÓN"] },
+        { name: "Vino", words: ["CRIANZA", "BARRICA", "AÑADA"] },
+        { name: "Banquillo", words: ["CANTERANO", "CONVOCATORIA", "ALINEACIÓN"] },
+      ],
+    },
+    strike: {
+      title: "Paro cardíaco",
+      pivot: "PARO",
+      categories: [
+        { name: "Sindicatos", words: ["PIQUETE", "MANIFESTACIÓN", "CONVENIO"] },
+        { name: "Oficina de empleo", words: ["SUBSIDIO", "PRESTACIÓN", "DEMANDANTE"] },
+        { name: "Emergencia cardíaca", words: ["INFARTO", "DESFIBRILADOR", "REANIMACIÓN"] },
+        { name: "Pájaros pequeños", words: ["GORRIÓN", "JILGUERO", "PETIRROJO"] },
+      ],
+    },
+    suit: {
+      title: "Traje a medida",
+      pivot: "TRAJE",
+      categories: [
+        { name: "Sastrería", words: ["CHALECO", "AMERICANA", "CORBATA"] },
+        { name: "Playa", words: ["BIKINI", "CHANCLAS", "SOMBRILLA"] },
+        { name: "Torero", words: ["MONTERA", "MULETA", "ESTOQUE"] },
+        { name: "Carnaval", words: ["MÁSCARA", "CONFETI", "COMPARSA"] },
+      ],
+    },
+    tie: {
+      title: "Estrechar lazos",
+      pivot: "LAZO",
+      categories: [
+        { name: "Envolver un regalo", words: ["ENVOLTORIO", "CELO", "TARJETA"] },
+        { name: "Vaqueros", words: ["ESPUELA", "POTRO", "TORO"] },
+        { name: "Vínculos", words: ["AMISTAD", "HERMANDAD", "COMPLICIDAD"] },
+        { name: "En el coto", words: ["CEPO", "SEÑUELO", "ESCOPETA"] },
+      ],
+    },
+    tip: {
+      title: "De punta en blanco",
+      pivot: "PUNTA",
+      categories: [
+        { name: "Que pincha", words: ["AFILADO", "AGUDO", "PUNZANTE"] },
+        { name: "Costa", words: ["CABO", "PENÍNSULA", "ACANTILADO"] },
+        { name: "Hora de más tráfico", words: ["ATASCO", "BOCINA", "RETENCIÓN"] },
+        { name: "Ballet", words: ["TUTÚ", "BAILARINA", "PIRUETA"] },
+      ],
+    },
+    toast: {
+      title: "Jugar en bolsa",
+      pivot: "BOLSA",
+      categories: [
+        { name: "Para cargar la compra", words: ["CESTA", "MOCHILA", "CAPAZO"] },
+        { name: "Mercado de valores", words: ["ACCIONISTA", "COTIZACIÓN", "ÍNDICE"] },
+        { name: "Alrededor de los ojos", words: ["OJERA", "PÁRPADO", "PESTAÑA"] },
+        { name: "Oportunidades", words: ["BECA", "EMPLEO", "VACANTE"] },
+      ],
+    },
+    top: {
+      title: "Ir de tapas",
+      pivot: "TAPA",
+      categories: [
+        { name: "Cacharros de cocina", words: ["OLLA", "SARTÉN", "PUCHERO"] },
+        { name: "En la barra del bar", words: ["CROQUETA", "ACEITUNA", "BOQUERÓN"] },
+        { name: "Partes de un libro", words: ["PORTADA", "CONTRAPORTADA", "ENCUADERNACIÓN"] },
+        { name: "Zapatero remendón", words: ["SUELA", "HORMA", "BETÚN"] },
+      ],
+    },
+    story: {
+      title: "Cuento chino",
+      pivot: "CUENTO",
+      categories: [
+        { name: "Infantil", words: ["HADA", "PRINCESA", "OGRO"] },
+        { name: "Mentira", words: ["CAMELO", "INVENCIÓN", "MILONGA"] },
+        { name: "Hacerse la víctima", words: ["TEATRO", "POSTUREO", "DRAMATISMO"] },
+        { name: "Maestros del relato corto", words: ["POE", "BORGES", "CORTÁZAR"] },
+      ],
+    },
+    web: {
+      title: "Tener tela",
+      pivot: "TELA",
+      categories: [
+        { name: "Tejidos", words: ["LINO", "SEDA", "ALGODÓN"] },
+        { name: "Ocho patas", words: ["TARÁNTULA", "ESCORPIÓN", "VIUDA"] },
+        { name: "Dinero", words: ["PASTA", "PLATA", "PARNÉ"] },
+        { name: "Pintor", words: ["PINCEL", "CABALLETE", "PALETA"] },
+      ],
+    },
+    wing: {
+      title: "Con alas propias",
+      pivot: "ALA",
+      categories: [
+        { name: "Avión", words: ["FUSELAJE", "TURBINA", "RADAR"] },
+        { name: "Sombrerería", words: ["VISERA", "FIELTRO", "BOINA"] },
+        { name: "Posiciones en el campo", words: ["EXTREMO", "LATERAL", "DELANTERO"] },
+        { name: "Hospital", words: ["PABELLÓN", "QUIRÓFANO", "UCI"] },
+      ],
+    },
+  },
 };
