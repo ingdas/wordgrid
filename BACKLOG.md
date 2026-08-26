@@ -520,6 +520,7 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
+| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host | `82ebb22` |
 | 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | `9f87486` |
 | 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
 | 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
