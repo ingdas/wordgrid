@@ -809,7 +809,7 @@ export const content: LocaleContent = {
       pivot: "TREMPE",
       categories: [
         { name: "Métallurgie", words: ["ACIER", "RECUIT", "ALLIAGE"] },
-        { name: "Une raclée", words: ["FESSÉE", "ROSSÉE", "RACLÉE"] },
+        { name: "Une bonne correction", words: ["FESSÉE", "ROSSÉE", "RACLÉE"] },
         { name: "De ce calibre", words: ["ENVERGURE", "ÉTOFFE", "VALEUR"] },
         { name: "Sorti de la douche tout habillé", words: ["MOUILLÉ", "HUMIDE", "IMBIBÉ"] },
       ],
@@ -838,9 +838,9 @@ export const content: LocaleContent = {
       title: "La voie royale",
       pivot: "VOIE",
       categories: [
-        { name: "Chemin de fer", words: ["RAIL", "TRAVERSE", "AIGUILLAGE"] },
+        { name: "Sous les roues du train", words: ["RAIL", "TRAVERSE", "AIGUILLAGE"] },
         { name: "Sur l'autoroute", words: ["FILE", "COULOIR", "BANDE"] },
-        { name: "Le moyen d'y arriver", words: ["MOYEN", "CHEMIN", "MÉTHODE"] },
+        { name: "Comment y parvenir", words: ["MOYEN", "CHEMIN", "MÉTHODE"] },
         { name: "Pour respirer", words: ["BRONCHES", "TRACHÉE", "POUMON"] },
       ],
     },
@@ -851,7 +851,7 @@ export const content: LocaleContent = {
         { name: "Pour s'asseoir à plusieurs", words: ["BANQUETTE", "TABOURET", "POUF"] },
         { name: "Groupes d'animaux", words: ["TROUPEAU", "MEUTE", "ESSAIM"] },
         { name: "Sur la carte marine", words: ["RÉCIF", "ÉCUEIL", "ATOLL"] },
-        { name: "Dans l'atelier", words: ["ÉTABLI", "ATELIER", "OUTILLAGE"] },
+        { name: "Chez le menuisier", words: ["ÉTABLI", "ATELIER", "OUTILLAGE"] },
       ],
     },
     grade: {
@@ -869,7 +869,7 @@ export const content: LocaleContent = {
       pivot: "PALETTE",
       categories: [
         { name: "Chez le peintre", words: ["CHEVALET", "PINCEAU", "TOILE"] },
-        { name: "Dans l'entrepôt", words: ["CARTON", "CHARIOT", "TRANSPALETTE"] },
+        { name: "Dans l'entrepôt", words: ["CARTON", "CHARIOT", "RAYONNAGE"] },
         { name: "À la boucherie", words: ["ÉCHINE", "JARRET", "RÔTI"] },
         { name: "Un large choix", words: ["GAMME", "ÉVENTAIL", "ASSORTIMENT"] },
       ],
@@ -890,7 +890,7 @@ export const content: LocaleContent = {
       categories: [
         { name: "Séduction", words: ["ATTRAIT", "GRÂCE", "MAGNÉTISME"] },
         { name: "Arbres de nos forêts", words: ["HÊTRE", "CHÊNE", "BOULEAU"] },
-        { name: "Sortilège", words: ["ENVOÛTEMENT", "SORTILÈGE", "ENCHANTEMENT"] },
+        { name: "Chez la sorcière", words: ["ENVOÛTEMENT", "SORTILÈGE", "ENCHANTEMENT"] },
         { name: "En pleine santé", words: ["VIGUEUR", "FORME", "VITALITÉ"] },
       ],
     },
@@ -908,7 +908,7 @@ export const content: LocaleContent = {
       title: "La crème de la crème",
       pivot: "CRÈME",
       categories: [
-        { name: "Produits laitiers", words: ["LAIT", "BEURRE", "YAOURT"] },
+        { name: "Au rayon frais", words: ["LAIT", "BEURRE", "YAOURT"] },
         { name: "Sur l'étagère de la salle de bains", words: ["LOTION", "BAUME", "ONGUENT"] },
         { name: "Les meilleurs", words: ["ÉLITE", "GRATIN", "FLEURON"] },
         { name: "Couleurs", words: ["BEIGE", "ÉCRU", "IVOIRE"] },
@@ -921,7 +921,7 @@ export const content: LocaleContent = {
         { name: "Un défaut", words: ["MANIE", "FAIBLESSE", "PENCHANT"] },
         { name: "Pas droit", words: ["TORDU", "OBLIQUE", "PENCHÉ"] },
         { name: "Chez le charcutier", words: ["CÔTE", "ÉCHINE", "JAMBON"] },
-        { name: "Le flanc du navire", words: ["BÂBORD", "TRIBORD", "FLANC"] },
+        { name: "De part et d'autre du navire", words: ["BÂBORD", "TRIBORD", "FLANC"] },
       ],
     },
     run: {
@@ -958,7 +958,7 @@ export const content: LocaleContent = {
       title: "Sautes d'humeur",
       pivot: "HUMEUR",
       categories: [
-        { name: "État d'esprit", words: ["MORAL", "ÉTAT", "DISPOSITION"] },
+        { name: "Comment on se sent", words: ["MORAL", "ÉTAT", "DISPOSITION"] },
         { name: "Grincheux", words: ["IRRITATION", "GROGNE", "MAUSSADERIE"] },
         { name: "Médecine antique", words: ["BILE", "SANG", "FLEGME"] },
         { name: "Dans l'œil", words: ["RÉTINE", "CORNÉE", "IRIS"] },
@@ -1025,6 +1025,822 @@ export const content: LocaleContent = {
       ],
     },
   },
-  emoji: null,
-  daily: {},
+  emoji: {
+    title: "Avoir la pêche",
+    pivot: "PÊCHE",
+    categories: [
+      { name: "Pour attraper un poisson", words: ["CANNE", "MOUCHE", "CUILLÈRE"] },
+      { name: "Un coup qui fait mal", words: ["PAIN", "TARTE", "CHÂTAIGNE"] },
+      { name: "Des teintes", words: ["ORANGE", "OLIVE", "AUBERGINE"] },
+      { name: "En pleine forme", words: ["FRITE", "BANANE", "PILE"] },
+    ],
+    emoji: {
+      CANNE: "🦯", MOUCHE: "🪰", CUILLÈRE: "🥄",
+      PAIN: "🍞", TARTE: "🥧", CHÂTAIGNE: "🌰",
+      ORANGE: "🍊", OLIVE: "🫒", AUBERGINE: "🍆",
+      FRITE: "🍟", BANANE: "🍌", PILE: "🔋",
+    },
+  },
+  daily: {
+    key: {
+      title: "Sous clé",
+      pivot: "CLÉ",
+      categories: [
+        { name: "Pour fermer une porte", words: ["SERRURE", "CADENAS", "VERROU"] },
+        { name: "Dans la boîte à outils", words: ["MARTEAU", "TOURNEVIS", "PERCEUSE"] },
+        { name: "Sur une partition", words: ["PORTÉE", "BÉMOL", "DIÈSE"] },
+        { name: "La solution", words: ["RÉPONSE", "SECRET", "EXPLICATION"] },
+      ],
+    },
+    board: {
+      title: "À table !",
+      pivot: "TABLE",
+      categories: [
+        { name: "Dans la salle à manger", words: ["CHAISE", "BUFFET", "NAPPE"] },
+        { name: "Un bon repas", words: ["FESTIN", "BANQUET", "RÉGAL"] },
+        { name: "En cours de maths", words: ["MULTIPLICATION", "DIVISION", "CALCUL"] },
+        { name: "Au début d'un livre", words: ["SOMMAIRE", "PRÉFACE", "INDEX"] },
+      ],
+    },
+    crown: {
+      title: "Tête couronnée",
+      pivot: "COURONNE",
+      categories: [
+        { name: "Les attributs du roi", words: ["SCEPTRE", "TRÔNE", "HERMINE"] },
+        { name: "Chez le dentiste", words: ["PLOMBAGE", "CARIE", "MOLAIRE"] },
+        { name: "Monnaies d'Europe", words: ["FLORIN", "ROUBLE", "ZLOTY"] },
+        { name: "Déposée au monument", words: ["GERBE", "BOUQUET", "HOMMAGE"] },
+      ],
+    },
+    train: {
+      title: "Réaction en chaîne",
+      pivot: "CHAÎNE",
+      categories: [
+        { name: "Autour du cou", words: ["COLLIER", "PENDENTIF", "MÉDAILLON"] },
+        { name: "À la télé", words: ["PROGRAMME", "ÉMISSION", "TÉLÉCOMMANDE"] },
+        { name: "Sommets alignés", words: ["ALPES", "PYRÉNÉES", "ANDES"] },
+        { name: "À l'usine", words: ["MONTAGE", "OUVRIER", "ROBOT"] },
+      ],
+    },
+    watch: {
+      title: "Prenez garde",
+      pivot: "GARDE",
+      categories: [
+        { name: "Escrime", words: ["FLEURET", "SABRE", "ÉPÉE"] },
+        { name: "Ils protègent une personnalité", words: ["VIGILE", "GORILLE", "ESCORTE"] },
+        { name: "Pendant que les parents travaillent", words: ["NOUNOU", "CRÈCHE", "BABYSITTER"] },
+        { name: "Attention !", words: ["PRUDENCE", "VIGILANCE", "MÉFIANCE"] },
+      ],
+    },
+    band: {
+      title: "Bande à part",
+      pivot: "BANDE",
+      categories: [
+        { name: "Une joyeuse équipe", words: ["CLIQUE", "TROUPE", "GANG"] },
+        { name: "Chez le pharmacien", words: ["COMPRESSE", "SPARADRAP", "GAZE"] },
+        { name: "Astérix et Tintin", words: ["ALBUM", "BULLE", "CASE"] },
+        { name: "Sur l'autoroute", words: ["GLISSIÈRE", "BRETELLE", "PÉAGE"] },
+      ],
+    },
+    beam: {
+      title: "Dans mon rayon",
+      pivot: "RAYON",
+      categories: [
+        { name: "De la lumière", words: ["FAISCEAU", "LUEUR", "HALO"] },
+        { name: "Sur une roue de vélo", words: ["JANTE", "MOYEU", "PNEU"] },
+        { name: "Au supermarché", words: ["CADDIE", "PROMOTION", "VENDEUR"] },
+        { name: "Dans la ruche", words: ["ALVÉOLE", "MIEL", "CIRE"] },
+      ],
+    },
+    box: {
+      title: "Faire un carton",
+      pivot: "CARTON",
+      categories: [
+        { name: "Pour emballer", words: ["SCOTCH", "FICELLE", "EMBALLAGE"] },
+        { name: "Une réussite éclatante", words: ["TRIOMPHE", "TABAC", "SUCCÈS"] },
+        { name: "Ce que brandit l'arbitre", words: ["SIFFLET", "JAUNE", "ROUGE"] },
+        { name: "Au stand de tir", words: ["CIBLE", "FUSIL", "VISÉE"] },
+      ],
+    },
+    cast: {
+      title: "Distribution des rôles",
+      pivot: "DISTRIBUTION",
+      categories: [
+        { name: "Au générique", words: ["ACTEUR", "RÉALISATEUR", "SCÉNARISTE"] },
+        { name: "Le facteur passe", words: ["COURRIER", "TOURNÉE", "COLIS"] },
+        { name: "Grandes surfaces", words: ["HYPERMARCHÉ", "SUPÉRETTE", "ENSEIGNE"] },
+        { name: "Dans le moteur", words: ["COURROIE", "SOUPAPE", "PISTON"] },
+      ],
+    },
+    charge: {
+      title: "À charge de revanche",
+      pivot: "CHARGE",
+      categories: [
+        { name: "Un fardeau", words: ["POIDS", "BOULET", "CROIX"] },
+        { name: "Pour la batterie", words: ["CÂBLE", "VOLT", "ADAPTATEUR"] },
+        { name: "Foncer sur l'ennemi", words: ["ASSAUT", "ATTAQUE", "RUÉE"] },
+        { name: "Ce que retient le procureur", words: ["PREUVE", "ACCUSATION", "TÉMOIGNAGE"] },
+      ],
+    },
+    coach: {
+      title: "Suivez le guide",
+      pivot: "GUIDE",
+      categories: [
+        { name: "En haute montagne", words: ["SHERPA", "ALPINISTE", "CORDÉE"] },
+        { name: "Pour visiter la ville", words: ["BROCHURE", "DÉPLIANT", "PLAN"] },
+        { name: "Chez les scouts", words: ["ÉCLAIREUR", "LOUVETEAU", "JAMBOREE"] },
+        { name: "Pour diriger un cheval", words: ["RÊNE", "BRIDE", "MORS"] },
+      ],
+    },
+    coat: {
+      title: "Sous le manteau",
+      pivot: "MANTEAU",
+      categories: [
+        { name: "Contre le froid", words: ["DOUDOUNE", "PARKA", "CABAN"] },
+        { name: "Les couches de la Terre", words: ["CROÛTE", "NOYAU", "MAGMA"] },
+        { name: "Autour de l'âtre", words: ["CHENET", "TISONNIER", "SOUFFLET"] },
+        { name: "En cachette", words: ["CLANDESTIN", "SECRET", "DISCRET"] },
+      ],
+    },
+    count: {
+      title: "Le compte est bon",
+      pivot: "COMPTE",
+      categories: [
+        { name: "À la banque", words: ["ÉPARGNE", "LIVRET", "DÉCOUVERT"] },
+        { name: "Pour se connecter", words: ["IDENTIFIANT", "PROFIL", "PSEUDO"] },
+        { name: "Faire le total", words: ["ADDITION", "SOMME", "CALCUL"] },
+        { name: "S'expliquer", words: ["JUSTIFICATION", "EXPLICATION", "BILAN"] },
+      ],
+    },
+    draft: {
+      title: "Version originale",
+      pivot: "VERSION",
+      categories: [
+        { name: "En cours de latin", words: ["TRADUCTION", "THÈME", "DÉCLINAISON"] },
+        { name: "Chaque témoin a la sienne", words: ["RÉCIT", "TÉMOIGNAGE", "INTERPRÉTATION"] },
+        { name: "Le logiciel évolue", words: ["BÊTA", "CORRECTIF", "ÉDITION"] },
+        { name: "La même chanson, autrement", words: ["REMIX", "REPRISE", "ADAPTATION"] },
+      ],
+    },
+    drill: {
+      title: "Exercice de style",
+      pivot: "EXERCICE",
+      categories: [
+        { name: "À la salle de sport", words: ["ABDOS", "SQUAT", "ÉTIREMENT"] },
+        { name: "Dans le cahier d'école", words: ["DICTÉE", "PROBLÈME", "RÉDACTION"] },
+        { name: "À la caserne", words: ["MANŒUVRE", "PARADE", "REVUE"] },
+        { name: "L'année comptable", words: ["BUDGET", "BILAN", "CLÔTURE"] },
+      ],
+    },
+    duck: {
+      title: "Le grand plongeon",
+      pivot: "PLONGEON",
+      categories: [
+        { name: "Oiseaux d'eau", words: ["CYGNE", "HÉRON", "GRÈBE"] },
+        { name: "Du haut de la piscine", words: ["TREMPLIN", "SAUT", "VRILLE"] },
+        { name: "Le gardien de but s'étire", words: ["ARRÊT", "PARADE", "RÉFLEXE"] },
+        { name: "Les affaires vont mal", words: ["FAILLITE", "DÉGRINGOLADE", "KRACH"] },
+      ],
+    },
+    fair: {
+      title: "C'est la foire",
+      pivot: "FOIRE",
+      categories: [
+        { name: "Fête foraine", words: ["MANÈGE", "STAND", "TOMBOLA"] },
+        { name: "Salon professionnel", words: ["EXPOSANT", "PAVILLON", "BADGE"] },
+        { name: "Un vrai désordre", words: ["CHAOS", "PAGAILLE", "BAZAR"] },
+        { name: "Marché aux bestiaux", words: ["MAQUIGNON", "BÉTAIL", "ENCLOS"] },
+      ],
+    },
+    fall: {
+      title: "Descente aux enfers",
+      pivot: "DESCENTE",
+      categories: [
+        { name: "Ski alpin", words: ["SLALOM", "GÉANT", "COMBINÉ"] },
+        { name: "La police débarque", words: ["PERQUISITION", "RAFLE", "RAID"] },
+        { name: "Il tient l'alcool", words: ["BUVEUR", "SOIFFARD", "PILIER"] },
+        { name: "Au pied du lit", words: ["TAPIS", "CARPETTE", "MOQUETTE"] },
+      ],
+    },
+    file: {
+      title: "Dossier classé",
+      pivot: "DOSSIER",
+      categories: [
+        { name: "Sur une chaise", words: ["ASSISE", "PIED", "BARREAU"] },
+        { name: "Pour une demande administrative", words: ["FORMULAIRE", "JUSTIFICATIF", "ATTESTATION"] },
+        { name: "Sur l'ordinateur", words: ["FICHIER", "RÉPERTOIRE", "CORBEILLE"] },
+        { name: "Dans un magazine", words: ["ENQUÊTE", "REPORTAGE", "RUBRIQUE"] },
+      ],
+    },
+    flat: {
+      title: "Studio meublé",
+      pivot: "STUDIO",
+      categories: [
+        { name: "Un petit logement", words: ["CHAMBRE", "LOYER", "KITCHENETTE"] },
+        { name: "Où l'on tourne un film", words: ["PROJECTEUR", "CAMÉRA", "DÉCOR"] },
+        { name: "Chez le photographe", words: ["PORTRAIT", "FLASH", "POSE"] },
+        { name: "Pour enregistrer un disque", words: ["MICRO", "CASQUE", "CONSOLE"] },
+      ],
+    },
+    fly: {
+      title: "Faire mouche",
+      pivot: "MOUCHE",
+      categories: [
+        { name: "Petites bêtes qui volent", words: ["MOUSTIQUE", "TAON", "GUÊPE"] },
+        { name: "Catégories de boxe", words: ["PLUME", "COQ", "LOURD"] },
+        { name: "Pour ferrer la truite", words: ["LEURRE", "HAMEÇON", "MOULINET"] },
+        { name: "Sur le visage de la marquise", words: ["POUDRE", "PERRUQUE", "ÉVENTAIL"] },
+      ],
+    },
+    fold: {
+      title: "Ça ne fait pas un pli",
+      pivot: "PLI",
+      categories: [
+        { name: "Origami", words: ["GRUE", "PAPIER", "COCOTTE"] },
+        { name: "Aux cartes", words: ["LEVÉE", "ATOUT", "DONNE"] },
+        { name: "Du courrier", words: ["LETTRE", "ENVELOPPE", "RECOMMANDÉ"] },
+        { name: "Une habitude", words: ["ROUTINE", "MANIE", "COUTUME"] },
+      ],
+    },
+    frame: {
+      title: "Dans le cadre",
+      pivot: "CADRE",
+      categories: [
+        { name: "Autour d'un tableau", words: ["BAGUETTE", "DORURE", "PASSEPARTOUT"] },
+        { name: "Sur un vélo", words: ["SELLE", "GUIDON", "PÉDALE"] },
+        { name: "Dans l'entreprise", words: ["DIRECTEUR", "MANAGER", "RESPONSABLE"] },
+        { name: "Ce qui borne l'action", words: ["CONTEXTE", "LIMITE", "PÉRIMÈTRE"] },
+      ],
+    },
+    hand: {
+      title: "Haut les mains",
+      pivot: "MAIN",
+      categories: [
+        { name: "Au poker", words: ["PAIRE", "BRELAN", "QUINTE"] },
+        { name: "Un coup de pouce", words: ["AIDE", "SOUTIEN", "ASSISTANCE"] },
+        { name: "Le long de l'escalier", words: ["RAMPE", "BALUSTRADE", "RAMBARDE"] },
+        { name: "Interdit au football", words: ["FAUTE", "PÉNALTY", "SANCTION"] },
+      ],
+    },
+    iron: {
+      title: "Fonte des neiges",
+      pivot: "FONTE",
+      categories: [
+        { name: "Casseroles lourdes", words: ["POÊLON", "MARMITE", "CHAUDRON"] },
+        { name: "Au printemps, en montagne", words: ["DÉGEL", "RUISSELLEMENT", "AVALANCHE"] },
+        { name: "Imprimerie", words: ["CARACTÈRE", "POLICE", "GLYPHE"] },
+        { name: "À la salle de muscu", words: ["HALTÈRE", "BARRE", "DÉVELOPPÉ"] },
+      ],
+    },
+    jack: {
+      title: "Valet de cœur",
+      pivot: "VALET",
+      categories: [
+        { name: "Cartes", words: ["DAME", "ROI", "AS"] },
+        { name: "Domestiques", words: ["MAJORDOME", "LAQUAIS", "SERVITEUR"] },
+        { name: "Il porte le costume pendant la nuit", words: ["CINTRE", "PORTEMANTEAU", "PENDERIE"] },
+        { name: "Dans la ferme d'autrefois", words: ["PALEFRENIER", "JOURNALIER", "MÉTAYER"] },
+      ],
+    },
+    lap: {
+      title: "La boucle est bouclée",
+      pivot: "BOUCLE",
+      categories: [
+        { name: "Cheveux", words: ["FRISETTE", "ANGLAISE", "MÈCHE"] },
+        { name: "Sur une ceinture", words: ["ARDILLON", "CUIR", "LANIÈRE"] },
+        { name: "En informatique", words: ["ITÉRATION", "ALGORITHME", "RÉPÉTITION"] },
+        { name: "Un fleuve qui serpente", words: ["MÉANDRE", "COURBE", "SINUOSITÉ"] },
+      ],
+    },
+    line: {
+      title: "En ligne",
+      pivot: "LIGNE",
+      categories: [
+        { name: "Géométrie", words: ["SEGMENT", "DROITE", "DIAGONALE"] },
+        { name: "Au téléphone", words: ["COMBINÉ", "TONALITÉ", "APPEL"] },
+        { name: "Silhouette", words: ["TAILLE", "MINCEUR", "RÉGIME"] },
+        { name: "Dans le métro", words: ["RAME", "STATION", "CORRESPONDANCE"] },
+      ],
+    },
+    log: {
+      title: "À la une",
+      pivot: "JOURNAL",
+      categories: [
+        { name: "Au kiosque", words: ["QUOTIDIEN", "GAZETTE", "MAGAZINE"] },
+        { name: "Écrit chaque soir", words: ["INTIME", "CONFIDENCE", "CARNET"] },
+        { name: "Le 20 heures", words: ["PRÉSENTATEUR", "REPORTAGE", "MÉTÉO"] },
+        { name: "Ce que consigne le capitaine", words: ["ESCALE", "CAP", "ROUTE"] },
+      ],
+    },
+    march: {
+      title: "Défilé de mode",
+      pivot: "DÉFILÉ",
+      categories: [
+        { name: "Sur le podium", words: ["MANNEQUIN", "COUTURIER", "COLLECTION"] },
+        { name: "Le 14 juillet", words: ["PARADE", "FANFARE", "TROUPES"] },
+        { name: "Entre deux falaises", words: ["GORGE", "CANYON", "RAVIN"] },
+        { name: "Dans la rue, avec des pancartes", words: ["MANIFESTATION", "CORTÈGE", "SLOGAN"] },
+      ],
+    },
+    mine: {
+      title: "Mine de rien",
+      pivot: "MINE",
+      categories: [
+        { name: "Sur le visage", words: ["TEINT", "EXPRESSION", "AIR"] },
+        { name: "Un crayon à papier", words: ["GRAPHITE", "BOIS", "GOMME"] },
+        { name: "Ça explose", words: ["BOMBE", "GRENADE", "DYNAMITE"] },
+        { name: "Gisement", words: ["CHARBON", "GALERIE", "WAGONNET"] },
+      ],
+    },
+    model: {
+      title: "Modèle réduit",
+      pivot: "MODÈLE",
+      categories: [
+        { name: "Sur le podium", words: ["MANNEQUIN", "TOP", "ÉGÉRIE"] },
+        { name: "À suivre", words: ["EXEMPLE", "RÉFÉRENCE", "IDÉAL"] },
+        { name: "Petite copie", words: ["MAQUETTE", "MINIATURE", "RÉPLIQUE"] },
+        { name: "Chez le concessionnaire", words: ["BERLINE", "BREAK", "COUPÉ"] },
+      ],
+    },
+    net: {
+      title: "Coup de filet",
+      pivot: "FILET",
+      categories: [
+        { name: "Au tennis", words: ["RAQUETTE", "SERVICE", "VOLÉE"] },
+        { name: "Chez le boucher", words: ["ENTRECÔTE", "RUMSTECK", "BAVETTE"] },
+        { name: "Presque plus d'eau au robinet", words: ["GOUTTE", "FUITE", "ÉCOULEMENT"] },
+        { name: "Au-dessus des sièges du train", words: ["BAGAGE", "VALISE", "SAC"] },
+      ],
+    },
+    patch: {
+      title: "Au carré",
+      pivot: "CARRÉ",
+      categories: [
+        { name: "Formes", words: ["CERCLE", "TRIANGLE", "LOSANGE"] },
+        { name: "Combinaisons au poker", words: ["FULL", "BRELAN", "QUINTE"] },
+        { name: "À bord d'un navire", words: ["CABINE", "COURSIVE", "CALE"] },
+        { name: "Chez le coiffeur", words: ["FRANGE", "DÉGRADÉ", "BRUSHING"] },
+      ],
+    },
+    pick: {
+      title: "À pic",
+      pivot: "PIC",
+      categories: [
+        { name: "Sommets", words: ["CIME", "AIGUILLE", "DENT"] },
+        { name: "Oiseaux des bois", words: ["GEAI", "HUPPE", "GRIVE"] },
+        { name: "Outils du mineur", words: ["PIOCHE", "PELLE", "LAMPE"] },
+        { name: "Le moment le plus haut", words: ["APOGÉE", "RECORD", "MAXIMUM"] },
+      ],
+    },
+    plant: {
+      title: "Myope comme une taupe",
+      pivot: "TAUPE",
+      categories: [
+        { name: "Sous la pelouse", words: ["GALERIE", "TUNNEL", "TERRIER"] },
+        { name: "Infiltré", words: ["ESPION", "AGENT", "INDIC"] },
+        { name: "Beige grisé", words: ["GRÈGE", "MASTIC", "SABLE"] },
+        { name: "En prépa scientifique", words: ["KHÔLLE", "CONCOURS", "POLYTECHNIQUE"] },
+      ],
+    },
+    plate: {
+      title: "Dans son assiette",
+      pivot: "ASSIETTE",
+      categories: [
+        { name: "Sur la table", words: ["COUVERT", "BOL", "SERVIETTE"] },
+        { name: "Chez le percepteur", words: ["IMPÔT", "BASE", "TAUX"] },
+        { name: "Bien tenir en selle", words: ["ÉQUILIBRE", "POSTURE", "APLOMB"] },
+        { name: "Pas en forme", words: ["PATRAQUE", "FIÉVREUX", "GROGGY"] },
+      ],
+    },
+    pool: {
+      title: "Le grand bassin",
+      pivot: "BASSIN",
+      categories: [
+        { name: "Dans le jardin public", words: ["FONTAINE", "NÉNUPHAR", "CARPE"] },
+        { name: "Anatomie", words: ["HANCHE", "SACRUM", "FÉMUR"] },
+        { name: "Le Nord minier", words: ["HOUILLE", "TERRIL", "CORON"] },
+        { name: "Dans le port", words: ["DOCK", "QUAI", "ÉCLUSE"] },
+      ],
+    },
+    port: {
+      title: "Bon port",
+      pivot: "PORT",
+      categories: [
+        { name: "Où accostent les bateaux", words: ["JETÉE", "DIGUE", "PHARE"] },
+        { name: "Derrière l'ordinateur", words: ["USB", "HDMI", "CONNECTEUR"] },
+        { name: "Obligatoire sur le chantier", words: ["CASQUE", "GILET", "HARNAIS"] },
+        { name: "Frais d'envoi", words: ["AFFRANCHISSEMENT", "EXPÉDITION", "LIVRAISON"] },
+      ],
+    },
+    range: {
+      title: "Haut de gamme",
+      pivot: "GAMME",
+      categories: [
+        { name: "Sur le piano", words: ["OCTAVE", "ARPÈGE", "SOLFÈGE"] },
+        { name: "Dans le catalogue du constructeur", words: ["SÉRIE", "OPTION", "FINITION"] },
+        { name: "Chez le peintre", words: ["NUANCE", "TEINTE", "DÉGRADÉ"] },
+        { name: "Le luxe", words: ["PRESTIGE", "PREMIUM", "STANDING"] },
+      ],
+    },
+    school: {
+      title: "Un peu de classe",
+      pivot: "CLASSE",
+      categories: [
+        { name: "À l'école", words: ["TABLEAU", "PUPITRE", "CRAIE"] },
+        { name: "Première ou seconde, dans le train", words: ["WAGON", "BILLET", "CONTRÔLEUR"] },
+        { name: "Élégance", words: ["CHIC", "DISTINCTION", "ALLURE"] },
+        { name: "Rangs de la société", words: ["BOURGEOISIE", "PROLÉTARIAT", "NOBLESSE"] },
+      ],
+    },
+    screen: {
+      title: "Crever l'écran",
+      pivot: "ÉCRAN",
+      categories: [
+        { name: "Au cinéma", words: ["PROJECTION", "SÉANCE", "SALLE"] },
+        { name: "Sur le bureau", words: ["MONITEUR", "CLAVIER", "SOURIS"] },
+        { name: "Contre les coups de soleil", words: ["CRÈME", "PARASOL", "CHAPEAU"] },
+        { name: "Pour détourner l'attention", words: ["LEURRE", "DIVERSION", "FEINTE"] },
+      ],
+    },
+    shade: {
+      title: "L'ombre d'un doute",
+      pivot: "OMBRE",
+      categories: [
+        { name: "Sous le parasol", words: ["FRAÎCHEUR", "ABRI", "STORE"] },
+        { name: "Poissons de rivière", words: ["TRUITE", "BROCHET", "GARDON"] },
+        { name: "Derrière les barreaux", words: ["CELLULE", "DÉTENU", "MATON"] },
+        { name: "Dans la trousse de maquillage", words: ["FARD", "MASCARA", "POUDRE"] },
+      ],
+    },
+    shell: {
+      title: "Sortir de sa coquille",
+      pivot: "COQUILLE",
+      categories: [
+        { name: "Fruits de mer", words: ["BULOT", "PALOURDE", "BIGORNEAU"] },
+        { name: "Dans un œuf", words: ["JAUNE", "BLANC", "GERME"] },
+        { name: "Erreur dans le journal", words: ["FAUTE", "ERRATUM", "BOURDE"] },
+        { name: "Petites embarcations", words: ["BARQUE", "CANOT", "ESQUIF"] },
+      ],
+    },
+    shot: {
+      title: "Piqûre de rappel",
+      pivot: "PIQÛRE",
+      categories: [
+        { name: "Chez l'infirmière", words: ["SERINGUE", "VACCIN", "AIGUILLE"] },
+        { name: "Bêtes qui piquent", words: ["FRELON", "ABEILLE", "SCORPION"] },
+        { name: "Sur la machine à coudre", words: ["OURLET", "CANETTE", "SURJET"] },
+        { name: "Pour ne pas oublier", words: ["RAPPEL", "MÉMO", "ALARME"] },
+      ],
+    },
+    sign: {
+      title: "Bon signe",
+      pivot: "SIGNE",
+      categories: [
+        { name: "Se faire comprendre sans parler", words: ["GESTE", "MIMIQUE", "HOCHEMENT"] },
+        { name: "Zodiaque", words: ["BÉLIER", "GÉMEAUX", "VIERGE"] },
+        { name: "Ponctuation", words: ["VIRGULE", "TIRET", "APOSTROPHE"] },
+        { name: "Ce qui annonce l'avenir", words: ["INDICE", "PRÉSAGE", "AUGURE"] },
+      ],
+    },
+    slip: {
+      title: "Planche de salut",
+      pivot: "PLANCHE",
+      categories: [
+        { name: "Chez le menuisier", words: ["SCIE", "RABOT", "ÉTABLI"] },
+        { name: "Sports de glisse", words: ["SURF", "SKATE", "SNOWBOARD"] },
+        { name: "Une page de BD", words: ["VIGNETTE", "STRIP", "DESSINATEUR"] },
+        { name: "Le monde du théâtre", words: ["RIDEAU", "COULISSES", "RÉPLIQUE"] },
+      ],
+    },
+    square: {
+      title: "Sur la place",
+      pivot: "PLACE",
+      categories: [
+        { name: "Au centre du village", words: ["MAIRIE", "KIOSQUE", "MARCHÉ"] },
+        { name: "Pour s'asseoir dans le train", words: ["FAUTEUIL", "RÉSERVATION", "NUMÉRO"] },
+        { name: "Un travail", words: ["SITUATION", "EMBAUCHE", "BOULOT"] },
+        { name: "Le rang", words: ["PODIUM", "CLASSEMENT", "MÉDAILLE"] },
+      ],
+    },
+    stage: {
+      title: "Entrée en scène",
+      pivot: "SCÈNE",
+      categories: [
+        { name: "Au théâtre", words: ["ESTRADE", "LOGE", "SOUFFLEUR"] },
+        { name: "Une dispute", words: ["ESCLANDRE", "CRISE", "COLÈRE"] },
+        { name: "Là où la police enquête", words: ["CRIME", "INDICE", "EMPREINTE"] },
+        { name: "Découpage d'un film", words: ["PLAN", "SÉQUENCE", "MONTAGE"] },
+      ],
+    },
+    stand: {
+      title: "Tribune libre",
+      pivot: "TRIBUNE",
+      categories: [
+        { name: "Au stade", words: ["GRADIN", "SUPPORTER", "VIRAGE"] },
+        { name: "Dans le journal, un avis", words: ["ÉDITORIAL", "OPINION", "CHRONIQUE"] },
+        { name: "Il prend la parole", words: ["MICRO", "DISCOURS", "PODIUM"] },
+        { name: "À l'Assemblée nationale", words: ["DÉPUTÉ", "HÉMICYCLE", "PERCHOIR"] },
+      ],
+    },
+    stock: {
+      title: "Sous réserve",
+      pivot: "RÉSERVE",
+      categories: [
+        { name: "Dans l'entrepôt", words: ["STOCK", "INVENTAIRE", "RAYONNAGE"] },
+        { name: "Parc naturel", words: ["FAUNE", "PROTECTION", "BIODIVERSITÉ"] },
+        { name: "Ne pas trop en dire", words: ["PUDEUR", "DISCRÉTION", "MODESTIE"] },
+        { name: "Sur l'étiquette d'un bon vin", words: ["MILLÉSIME", "CRU", "APPELLATION"] },
+      ],
+    },
+    strike: {
+      title: "Force de frappe",
+      pivot: "FRAPPE",
+      categories: [
+        { name: "Sur le ring", words: ["UPPERCUT", "DIRECT", "JAB"] },
+        { name: "Sur le clavier", words: ["SAISIE", "DACTYLO", "MAJUSCULE"] },
+        { name: "Devant le but", words: ["TIR", "LOB", "REPRISE"] },
+        { name: "Mauvais garçon", words: ["LOUBARD", "RACAILLE", "VAURIEN"] },
+      ],
+    },
+    suit: {
+      title: "Tenue correcte exigée",
+      pivot: "TENUE",
+      categories: [
+        { name: "Ce qu'on porte", words: ["COSTUME", "UNIFORME", "ENSEMBLE"] },
+        { name: "Bonne conduite", words: ["DISCIPLINE", "CORRECTION", "MAINTIEN"] },
+        { name: "La voiture colle à la route", words: ["ADHÉRENCE", "STABILITÉ", "SUSPENSION"] },
+        { name: "Le marché résiste", words: ["RÉSISTANCE", "FERMETÉ", "SOLIDITÉ"] },
+      ],
+    },
+    tie: {
+      title: "Le lien qui unit",
+      pivot: "LIEN",
+      categories: [
+        { name: "Pour nouer", words: ["SANGLE", "CORDELETTE", "LACET"] },
+        { name: "Relation", words: ["AMITIÉ", "COMPLICITÉ", "ATTACHEMENT"] },
+        { name: "Sur une page web", words: ["URL", "HYPERTEXTE", "CLIC"] },
+        { name: "En famille", words: ["PARENTÉ", "COUSINAGE", "FILIATION"] },
+      ],
+    },
+    tip: {
+      title: "Un bon conseil",
+      pivot: "CONSEIL",
+      categories: [
+        { name: "Un avis utile", words: ["ASTUCE", "RECOMMANDATION", "SUGGESTION"] },
+        { name: "À la mairie", words: ["MAIRE", "ADJOINT", "ÉLU"] },
+        { name: "Le gouvernement se réunit", words: ["MINISTRE", "PREMIER", "DÉCRET"] },
+        { name: "Au sommet de l'entreprise", words: ["ADMINISTRATEUR", "ACTIONNAIRE", "PRÉSIDENT"] },
+      ],
+    },
+    toast: {
+      title: "Coupe du monde",
+      pivot: "COUPE",
+      categories: [
+        { name: "Ce que soulève le vainqueur", words: ["TROPHÉE", "VICTOIRE", "FINALE"] },
+        { name: "Chez le coiffeur", words: ["CISEAUX", "SHAMPOING", "TONDEUSE"] },
+        { name: "Champagne !", words: ["BULLES", "TOAST", "TRINQUER"] },
+        { name: "Dans la forêt", words: ["BÛCHERON", "TRONÇONNEUSE", "ABATTAGE"] },
+      ],
+    },
+    top: {
+      title: "Au sommet",
+      pivot: "SOMMET",
+      categories: [
+        { name: "En montagne", words: ["CRÊTE", "COL", "GLACIER"] },
+        { name: "Rencontre des chefs d'État", words: ["DIPLOMATIE", "COMMUNIQUÉ", "DÉLÉGATION"] },
+        { name: "Géométrie", words: ["ANGLE", "ARÊTE", "FACE"] },
+        { name: "Au plus haut de sa carrière", words: ["ZÉNITH", "APOTHÉOSE", "GLOIRE"] },
+      ],
+    },
+    story: {
+      title: "Quelle histoire !",
+      pivot: "HISTOIRE",
+      categories: [
+        { name: "Raconté le soir", words: ["CONTE", "FABLE", "LÉGENDE"] },
+        { name: "En cours, on étudie le passé", words: ["DATE", "RÈGNE", "RÉVOLUTION"] },
+        { name: "Des mensonges", words: ["BOBARD", "SALADE", "BARATIN"] },
+        { name: "Des ennuis", words: ["EMBROUILLE", "COMPLICATION", "PÉPIN"] },
+      ],
+    },
+    web: {
+      title: "Sur la toile",
+      pivot: "TOILE",
+      categories: [
+        { name: "Chez le peintre", words: ["CHEVALET", "PINCEAU", "HUILE"] },
+        { name: "L'araignée", words: ["SOIE", "FIL", "VENIN"] },
+        { name: "Sur Internet", words: ["SITE", "NAVIGATEUR", "DOMAINE"] },
+        { name: "Aller au cinéma", words: ["FILM", "POPCORN", "BLOCKBUSTER"] },
+      ],
+    },
+    wing: {
+      title: "Sous son aile",
+      pivot: "AILE",
+      categories: [
+        { name: "Sur un oiseau", words: ["PLUMAGE", "SERRE", "JABOT"] },
+        { name: "Sur un avion", words: ["COCKPIT", "RÉACTEUR", "FUSELAGE"] },
+        { name: "Sur une voiture", words: ["CAPOT", "PORTIÈRE", "CARROSSERIE"] },
+        { name: "Dans un château", words: ["DONJON", "TOURELLE", "CHAPELLE"] },
+      ],
+    },
+    yard: {
+      title: "Jardin secret",
+      pivot: "JARDIN",
+      categories: [
+        { name: "Derrière la maison", words: ["PELOUSE", "HAIE", "POTAGER"] },
+        { name: "Pour les tout-petits", words: ["MATERNELLE", "BAC", "COMPTINE"] },
+        { name: "Ce qu'on garde pour soi", words: ["INTIMITÉ", "PRIVÉ", "REFUGE"] },
+        { name: "Au zoo", words: ["SINGE", "LION", "ZÈBRE"] },
+      ],
+    },
+    bow: {
+      title: "Plusieurs cordes à son arc",
+      pivot: "ARC",
+      categories: [
+        { name: "Tir sportif", words: ["CARQUOIS", "EMPENNAGE", "VISEUR"] },
+        { name: "Architecture", words: ["OGIVE", "COLONNE", "PORTIQUE"] },
+        { name: "Le soudeur au travail", words: ["SOUDURE", "ÉTINCELLE", "MASQUE"] },
+        { name: "Un bout de cercle", words: ["DEGRÉ", "COURBE", "CIRCONFÉRENCE"] },
+      ],
+    },
+    bill: {
+      title: "Clouer le bec",
+      pivot: "BEC",
+      categories: [
+        { name: "Le canard en a", words: ["PALME", "DUVET", "PLUMES"] },
+        { name: "Éclairage d'autrefois", words: ["LAMPION", "CHANDELLE", "LANTERNE"] },
+        { name: "Parties d'un pichet", words: ["ANSE", "GOULOT", "PANSE"] },
+        { name: "Faire taire", words: ["BÂILLON", "MUSELIÈRE", "CHUT"] },
+      ],
+    },
+    party: {
+      title: "Parti pris",
+      pivot: "PARTI",
+      categories: [
+        { name: "Politique", words: ["GAUCHE", "DROITE", "CENTRE"] },
+        { name: "Bon à marier", words: ["PRÉTENDANT", "FIANCÉ", "SOUPIRANT"] },
+        { name: "Se décider", words: ["RÉSOLUTION", "DÉCISION", "CHOIX"] },
+        { name: "Un avis tout fait", words: ["PRÉJUGÉ", "PRÉVENTION", "BIAIS"] },
+      ],
+    },
+    pump: {
+      title: "En grande pompe",
+      pivot: "POMPE",
+      categories: [
+        { name: "À la station-service", words: ["ESSENCE", "GAZOLE", "PISTOLET"] },
+        { name: "Dans le placard à chaussures", words: ["BASKET", "MOCASSIN", "ESCARPIN"] },
+        { name: "À la salle de sport", words: ["TRACTION", "GAINAGE", "FENTE"] },
+        { name: "Cérémonie fastueuse", words: ["FASTE", "APPARAT", "SOLENNITÉ"] },
+      ],
+    },
+    wheel: {
+      title: "La roue tourne",
+      pivot: "ROUE",
+      categories: [
+        { name: "Sur une voiture", words: ["ESSIEU", "ENJOLIVEUR", "CRIC"] },
+        { name: "Gymnastique au sol", words: ["ROULADE", "SALTO", "FLIP"] },
+        { name: "Supplices d'autrefois", words: ["ÉCARTÈLEMENT", "BÛCHER", "PILORI"] },
+        { name: "La fortune tourne", words: ["HASARD", "DESTIN", "CHANCE"] },
+      ],
+    },
+    bridge: {
+      title: "Jeter une passerelle",
+      pivot: "PASSERELLE",
+      categories: [
+        { name: "Franchir la rivière à pied", words: ["GUÉ", "PASSAGE", "PILOTIS"] },
+        { name: "Pour monter dans l'avion", words: ["EMBARQUEMENT", "PORTE", "TARMAC"] },
+        { name: "D'où commande le capitaine", words: ["BARRE", "GOUVERNAIL", "TIMONERIE"] },
+        { name: "Changer de filière", words: ["RÉORIENTATION", "ÉQUIVALENCE", "TRANSITION"] },
+      ],
+    },
+    race: {
+      title: "Mise à l'épreuve",
+      pivot: "ÉPREUVE",
+      categories: [
+        { name: "Chez le photographe", words: ["NÉGATIF", "PELLICULE", "DÉVELOPPEMENT"] },
+        { name: "Au bac", words: ["EXAMEN", "ORAL", "COPIE"] },
+        { name: "Aux Jeux olympiques", words: ["RELAIS", "DÉCATHLON", "QUALIFICATION"] },
+        { name: "Un moment difficile", words: ["CALVAIRE", "DEUIL", "TOURMENT"] },
+      ],
+    },
+    belt: {
+      title: "Se serrer la ceinture",
+      pivot: "CEINTURE",
+      categories: [
+        { name: "Pour tenir le pantalon", words: ["BRETELLE", "PASSANT", "SANGLE"] },
+        { name: "Judo", words: ["TATAMI", "KIMONO", "IPPON"] },
+        { name: "Sécurité routière", words: ["AIRBAG", "RADAR", "LIMITATION"] },
+        { name: "Autour d'une ville", words: ["PÉRIPHÉRIQUE", "BANLIEUE", "ROCADE"] },
+      ],
+    },
+    dress: {
+      title: "Robe de soirée",
+      pivot: "ROBE",
+      categories: [
+        { name: "Dans le dressing", words: ["JUPE", "CHEMISIER", "TAILLEUR"] },
+        { name: "Pour décrire un vin", words: ["NEZ", "ARÔME", "TANIN"] },
+        { name: "Pelage du cheval", words: ["ALEZAN", "BAI", "PIE"] },
+        { name: "Au palais de justice", words: ["AVOCAT", "JUGE", "GREFFIER"] },
+      ],
+    },
+    horn: {
+      title: "Cornes de brume",
+      pivot: "CORNE",
+      categories: [
+        { name: "Le bœuf en a", words: ["SABOT", "MUSEAU", "MUFLE"] },
+        { name: "Sous le pied", words: ["CALLOSITÉ", "DURILLON", "AMPOULE"] },
+        { name: "Signal au port", words: ["SIRÈNE", "BOUÉE", "BALISE"] },
+        { name: "Abondance", words: ["PROFUSION", "FOISON", "PLÉTHORE"] },
+      ],
+    },
+    point: {
+      title: "Point final",
+      pivot: "POINT",
+      categories: [
+        { name: "Sur une figure géométrique", words: ["MILIEU", "ORIGINE", "INTERSECTION"] },
+        { name: "Ce que marque le joueur", words: ["BUT", "PANIER", "ESSAI"] },
+        { name: "Tricot et broderie", words: ["MAILLE", "CROIX", "JERSEY"] },
+        { name: "Fin de phrase", words: ["EXCLAMATION", "INTERROGATION", "SUSPENSION"] },
+      ],
+    },
+    punch: {
+      title: "Marron glacé",
+      pivot: "MARRON",
+      categories: [
+        { name: "Sous les arbres en automne", words: ["GLAND", "NOIX", "CHAMPIGNON"] },
+        { name: "Nuances de brun", words: ["CHOCOLAT", "CAFÉ", "CANNELLE"] },
+        { name: "Un coup de poing", words: ["GNON", "BEIGNE", "PAIN"] },
+        { name: "Il exerce sans diplôme", words: ["CHARLATAN", "IMPOSTEUR", "USURPATEUR"] },
+      ],
+    },
+    season: {
+      title: "En saison",
+      pivot: "SAISON",
+      categories: [
+        { name: "Les quatre de l'année", words: ["PRINTEMPS", "ÉTÉ", "HIVER"] },
+        { name: "Une série télé", words: ["ÉPISODE", "GÉNÉRIQUE", "INTRIGUE"] },
+        { name: "Le calendrier du championnat", words: ["MATCH", "JOURNÉE", "TRANSFERT"] },
+        { name: "Les touristes arrivent", words: ["HÔTEL", "PLAGE", "VACANCIER"] },
+      ],
+    },
+    space: {
+      title: "Espace vital",
+      pivot: "ESPACE",
+      categories: [
+        { name: "Là-haut", words: ["ASTRONAUTE", "GALAXIE", "FUSÉE"] },
+        { name: "De la place", words: ["VIDE", "INTERVALLE", "ÉCART"] },
+        { name: "Sur le clavier", words: ["ENTRÉE", "TABULATION", "ÉCHAP"] },
+        { name: "Verdure en ville", words: ["SQUARE", "ESPLANADE", "PROMENADE"] },
+      ],
+    },
+    staff: {
+      title: "À bâtons rompus",
+      pivot: "BÂTON",
+      categories: [
+        { name: "Sur les pistes", words: ["SKI", "LUGE", "TÉLÉSIÈGE"] },
+        { name: "Dans la trousse de maquillage", words: ["ROUGE", "GLOSS", "KHÔL"] },
+        { name: "Empêcher d'avancer", words: ["OBSTACLE", "ENTRAVE", "FREIN"] },
+        { name: "La récompense suprême", words: ["CONSÉCRATION", "TRIOMPHE", "COURONNEMENT"] },
+      ],
+    },
+    wake: {
+      title: "La veille au soir",
+      pivot: "VEILLE",
+      categories: [
+        { name: "Le jour d'avant", words: ["HIER", "PRÉCÉDENT", "AUPARAVANT"] },
+        { name: "Debout toute la nuit", words: ["INSOMNIE", "NOCTAMBULE", "FÊTARD"] },
+        { name: "Garder un œil sur les risques", words: ["ALERTE", "SURVEILLANCE", "SENTINELLE"] },
+        { name: "L'ordinateur somnole", words: ["HIBERNATION", "PAUSE", "ÉCONOMIE"] },
+      ],
+    },
+    boot: {
+      title: "Bottes de sept lieues",
+      pivot: "BOTTE",
+      categories: [
+        { name: "Pour marcher dans la boue", words: ["CUISSARDE", "GALOCHE", "CAOUTCHOUC"] },
+        { name: "Au marché, liés en bouquet", words: ["RADIS", "POIREAU", "CAROTTE"] },
+        { name: "Un coup d'épée", words: ["ESTOCADE", "RIPOSTE", "ASSAUT"] },
+        { name: "Dans la grange", words: ["FOIN", "MEULE", "FOURCHE"] },
+      ],
+    },
+    current: {
+      title: "Contre vents et marées",
+      pivot: "MARÉE",
+      categories: [
+        { name: "Sur la côte", words: ["ÉCUME", "ROCHER", "ALGUE"] },
+        { name: "Pétrolier échoué", words: ["MAZOUT", "PÉTROLE", "POLLUTION"] },
+        { name: "Sur l'étal du poissonnier", words: ["SOLE", "CABILLAUD", "HUÎTRE"] },
+        { name: "Des gens à perte de vue", words: ["FOULE", "COHUE", "MULTITUDE"] },
+      ],
+    },
+    pilot: {
+      title: "Pilote automatique",
+      pivot: "PILOTE",
+      categories: [
+        { name: "Dans le cockpit", words: ["COMMANDANT", "ALTIMÈTRE", "HÉLICE"] },
+        { name: "Formule 1", words: ["CIRCUIT", "PADDOCK", "CHICANE"] },
+        { name: "Le premier épisode", words: ["LANCEMENT", "CASTING", "DIFFUSION"] },
+        { name: "Projet test", words: ["ESSAI", "PROTOTYPE", "EXPÉRIMENTATION"] },
+      ],
+    },
+  },
 };
