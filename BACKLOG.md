@@ -33,9 +33,9 @@ twist closing each) → Game. One side mode: **Endless**
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
 - **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
-  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (eleven unit
   suites: engine, progress/key gating, quests, storage, debug,
-  i18n, sdk, level tracking, audio, analytics), `npm run validate` (puzzle structure,
+  i18n, sdk, level tracking, audio, analytics, umami-levels), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
   board — for every shipped language; `-- --locale xx` for one), `npm run
   audit` (ambiguity report for a human, English), `node scripts/gen-assets.mjs`
@@ -147,6 +147,19 @@ twist closing each) → Game. One side mode: **Endless**
   `scripts/browser.mjs` — a suite must not depend on it or write test events
   into the real dashboard. `analyticsStatus()` feeds Settings → Developer →
   Analytics. Nothing is ever read back.
+- `umamiLevels.ts` — the one thing read *back* out of Umami: the community
+  clear rate on the level index. A share slug (`wordgrid:umami-share` /
+  `VITE_UMAMI_SHARE`) mints a read-only token with no credential
+  (`GET /api/share/{slug}`), then two `event-data/values` reads grouped by the
+  `level` property (win, then loss) become `plays`/`wins`. **The 100-row cap on
+  that endpoint is why `analytics.ts` sends `level` for campaign boards only** —
+  pinned by a test that fails if the campaign outgrows 100. Umami counts events,
+  not people, so `players`/`solvers` stay 0 and the dashboard hides them
+  (`Snapshot.people`). Degradation is the whole design: bounded requests, the
+  second read skipped when the first fails, an escalating cooldown that survives
+  a reload (15 min → 24 h, `Retry-After` honoured, a missing share rests a day),
+  jittered refresh in `stats.ts`, and the answer treated as untrusted input.
+  `stats.ts` picks the source: the reference server if configured, else this.
 - `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -520,10 +533,13 @@ Ranked by expected impact. Nothing here is started.
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
-4. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
-   is empty in both `index.html` and `docs/index.html`, so the whole feature
-   is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
-   somewhere and point the tag at it. (**Analytics is done**: it points at the
+4. **[platform] The community clear rate needs a share slug.** The reader is
+   built and tested (`src/umamiLevels.ts`), but `<meta
+   name="wordgrid:umami-share">` is empty, so the level index shows no rate
+   line. Enable the website's Share URL in Umami (scoped to Events) and paste
+   the slug. `server/stats-server.mjs` is now the *alternative* rather than the
+   plan: it is the only source that can count distinct people, and nothing else
+   needs it. (**Analytics is done**: it points at the
    owner's Umami at `umami.ingel.ing` and is collecting — see the *Analytics*
    section of the README. Its tracker keeps Umami's default `script.js` /
    `/api/send` names, which are the ones filter lists know; if a chunk of

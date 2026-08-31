@@ -52,8 +52,12 @@
 //   storage         durable                         nothing durable to save to
 //   progress_reset  —
 //
-// `mode` is campaign | daily | endless; `level` is the 1-based campaign number
-// and 0 for the daily and Endless. Unlike level tracking, Endless *is* counted
+// `mode` is campaign | daily | endless. `level` is the 1-based campaign number
+// and is **present only for campaign boards** — the daily and Endless have no
+// level number, and keeping the property to exactly 100 distinct values is what
+// lets the whole per-level aggregate be read back in one query (see
+// src/umamiLevels.ts, which explains the 100-row cap that depends on it).
+// Unlike level tracking, Endless *is* counted
 // here — mode adoption is exactly what analytics is for; Endless is left out of
 // level tracking only because it has no loss state and therefore no rate.
 //
@@ -155,6 +159,21 @@ function cfg(): AnalyticsConfig | null {
 /** Is anything being collected at all? Everything else keys off this. */
 export function analyticsEnabled(): boolean {
   return cfg() !== null;
+}
+
+/**
+ * The API origin and website id — for `src/umamiLevels.ts`, the one module that
+ * reads an aggregate back out of Umami (the level index's clear-rate line).
+ * Null when analytics isn't configured, which is also "no community numbers".
+ */
+export function umamiTarget(): { origin: string; website: string } | null {
+  const c = cfg();
+  if (!c) return null;
+  try {
+    return { origin: new URL(c.script).origin, website: c.website };
+  } catch {
+    return null;
+  }
 }
 
 // --- the tracker -----------------------------------------------------------

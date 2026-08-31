@@ -520,7 +520,8 @@ export default function App() {
       }
       trackEvent("level_win", {
         mode: playingDaily ? "daily" : "campaign",
-        level: playingDaily ? 0 : levelIndex + 1,
+        // Campaign only: see the `level` note in src/analytics.ts.
+        level: playingDaily ? undefined : levelIndex + 1,
         id,
         stars: result.stars,
         mistakes: result.mistakes,
@@ -631,7 +632,7 @@ export default function App() {
       }
       trackEvent("level_loss", {
         mode: playingDaily ? "daily" : "campaign",
-        level: playingDaily ? 0 : levelIndex + 1,
+        level: playingDaily ? undefined : levelIndex + 1,
         id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
         mistakes: result.mistakes,
         timeS: Math.round(result.timeMs / 1000),
@@ -717,7 +718,6 @@ export default function App() {
       gameplayStop();
       trackEvent("level_win", {
         mode: "endless",
-        level: 0,
         id: ENDLESS_POOL[endlessQueue.current[endlessPos] ?? 0]?.id,
         mistakes: result.mistakes,
         link: result.linkCorrect,

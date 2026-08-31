@@ -363,6 +363,44 @@ is collecting. Two notes on that deployment:
 - events from a development machine arrive with **`hostname: localhost`**;
   filter it out in the dashboard to see only real players.
 
+#### The community clear rate
+
+The one number the game reads *back* — "62% of players clear this one" on the
+level index — comes out of the same Umami, through
+[`src/umamiLevels.ts`](./src/umamiLevels.ts). It needs a **share slug**, because
+that is how Umami hands out a read-only token with no credential in it:
+
+1. in Umami, the website's **Settings → Share URL → enable**; if you scope the
+   share, include **Events**;
+2. copy the slug out of the URL (`…/share/<slug>/<name>`) into
+   `<meta name="wordgrid:umami-share">`, or build with `VITE_UMAMI_SHARE`.
+
+Two `GET`s do it: `event-data/values` grouped by the `level` property, once for
+`level_win` and once for `level_loss` — `plays` is their sum, `wins` is the
+first. Nothing new is collected to support this.
+
+Know what you are turning on, and what it can't do:
+
+- **the share link is public.** It ships in the game's bundle, so anyone can
+  read that part of your dashboard. Scope the share to Events.
+- **no distinct-person counts.** Umami aggregates count events, so `plays` and
+  `wins` are real while `players`/`solvers` come back zero, and the author's
+  dashboard drops its "Solvers" tile rather than print a mislabelled number.
+  The in-game line is unaffected: it was always attempts, not people.
+- **the aggregate query returns the top 100 rows**, which is exactly the
+  campaign's size — which is why `analytics.ts` sends `level` only for campaign
+  boards. `scripts/umamiLevels.test.mts` fails if the campaign outgrows that.
+
+**If the analytics box falls over, nothing happens to the game.** Every read is
+bounded and swallowed; the last good numbers keep showing, dated; the index
+simply loses its rate line; and the reader gets *quieter* rather than busier —
+the second read is skipped when the first fails, failures escalate a cooldown of
+15 min → 1 h → 6 h → 24 h that **survives a reload**, `429`/`503` honour
+`Retry-After`, a missing share rests for a day instead of retrying all
+afternoon, and the refresh is jittered so a thousand players returning after a
+deploy don't ask in the same second. Settings → Developer → Level tracking shows
+the source, the last error and "resting" when it is deliberately quiet.
+
 **Settings → Developer → Analytics** says whether it is configured, whether the
 tracker arrived, and how many events went through this session.
 
