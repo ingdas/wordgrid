@@ -532,7 +532,15 @@ Ranked by expected impact. Nothing here is started.
 5. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform. The upload itself is ready
    (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);
-   what is owed is the run through their preview tool with that file.
+   what is owed is the run through their preview tool with that file. Two
+   things to confirm there, both new since the zip was first checked: that the
+   analytics tracker loads inside their iframe (the embed now reaches a second
+   host besides the SDK's CDN — nothing in their technical requirements forbids
+   it, but it hasn't been seen working there), and whether they want a privacy
+   note, since those requirements ask for a T&C/Privacy Policy notice from a
+   game that "collects additional personal data beyond the events in our SDK".
+   Umami is cookieless and stores no personal data, so this is a judgment call
+   the owner should make deliberately rather than by omission.
 6. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
@@ -591,7 +599,7 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 | # | What | Commits |
 |---|---|---|
 | 42 | CrazyGames submission audit. The SDK is actually initialised now (`sdk.ts`: wait for the async script, `init()` once, queue-and-replay calls made before it; only `sdkDisabled` is fatal — a pre-init `sdkNotInitialized` had latched it dead and `init()` never ran); the rotate hint needs `pointer: coarse`; gameplayStart/Stop at board boundaries only (never on a tab switch), `happytime` on a boss only; interstitials hold the page and mute only while showing; rewarded ads pay only when watched, free where no ad system exists (`adsMode()` drives the button copy); equal-size second-chance buttons; Escape dropped as a gameplay key; safe-area padding; scrollable dialog scrims; `shareUrl()`; playtests keep the SDK script out and check the real handshake separately | `db3b821` |
-| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host | `82ebb22` |
+| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host. Pointed at the owner's instance and verified live; `?debug` loads no tracker and every suite blocks the host through `blockOffsite` | `82ebb22` `ea318de` |
 | 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | `9f87486` |
 | 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
 | 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
