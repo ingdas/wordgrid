@@ -21,7 +21,7 @@ import { createServer } from "node:http";
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join, normalize, posix, resolve } from "node:path";
-import { launchBrowser } from "./browser.mjs";
+import { blockOffsite, launchBrowser } from "./browser.mjs";
 
 const ZIP = resolve(process.env.ZIP || "docs/art/wordgrid-crazygames.zip");
 const SHOT = process.env.SHOT;
@@ -151,6 +151,10 @@ log(`serving the zip at ${gameUrl}, embedded from ${portalUrl}`);
 
 const browser = await launchBrowser();
 const page = await browser.newPage();
+// The zip may legitimately name an analytics host (see `umamiOrigin` below);
+// blocking it keeps this suite hermetic while the foreign-host check still
+// proves the request went somewhere allowed.
+await blockOffsite(page);
 await page.setViewport({ width: 1280, height: 760, deviceScaleFactor: 1 });
 
 const failed = [];

@@ -345,7 +345,12 @@ function inject(): void {
  * analytics is off. Returns a stop function (tests; StrictMode).
  */
 export function startAnalytics(): () => void {
-  if (!analyticsEnabled() || started) return () => {};
+  // A `?debug` page is the owner's: it sends nothing (every `track*` is a
+  // no-op), so fetching a tracker for it would be pure waste — and it keeps the
+  // headless suites, which all open `?debug`, off the analytics host entirely.
+  // Debug turned on mid-session stops the events, not the already-loaded
+  // tracker; a session that *starts* in debug never loads one at all.
+  if (!analyticsEnabled() || isDebug() || started) return () => {};
   started = true;
   whenIdle(inject);
 

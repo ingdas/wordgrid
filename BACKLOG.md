@@ -141,9 +141,12 @@ twist closing each) → Game. One side mode: **Endless**
   injected after mount on an idle slot with `data-auto-track="false"`; events
   raised before it lands wait in a buffer (`BUFFER_CAP = 100`), a failed load
   retries (`RETRY_MS`) and on `online`; `identify` gets the same per-install
-  id as level tracking (`stats.playerId`). Debug is filtered inside; Endless
-  *is* counted. `analyticsStatus()` feeds Settings → Developer → Analytics.
-  Nothing is ever read back.
+  id as level tracking (`stats.playerId`). Endless *is* counted. A `?debug`
+  page never even loads the tracker (`startAnalytics` returns early), and every
+  headless suite blocks the configured host through `blockOffsite` in
+  `scripts/browser.mjs` — a suite must not depend on it or write test events
+  into the real dashboard. `analyticsStatus()` feeds Settings → Developer →
+  Analytics. Nothing is ever read back.
 - `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -520,12 +523,12 @@ Ranked by expected impact. Nothing here is started.
 4. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
    is empty in both `index.html` and `docs/index.html`, so the whole feature
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
-   somewhere and point the tag at it. **Analytics is in the same state**: the
-   `wordgrid:umami-script` / `wordgrid:umami-website` tags are empty until a
-   Umami is up (Coolify's template; set `TRACKER_SCRIPT_NAME`,
-   `COLLECT_API_ENDPOINT`, `DISABLE_TELEMETRY` on it, add one website, paste
-   the tracker URL and the website id). Then check Settings → Developer →
-   Analytics on the live page says the tracker loaded.
+   somewhere and point the tag at it. (**Analytics is done**: it points at the
+   owner's Umami at `umami.ingel.ing` and is collecting — see the *Analytics*
+   section of the README. Its tracker keeps Umami's default `script.js` /
+   `/api/send` names, which are the ones filter lists know; if a chunk of
+   players goes missing, rename both with `TRACKER_SCRIPT_NAME` and
+   `COLLECT_API_ENDPOINT` on the server and update the meta tag to match.)
 5. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform. The upload itself is ready
    (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);

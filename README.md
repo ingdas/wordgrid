@@ -351,6 +351,18 @@ VITE_UMAMI_WEBSITE=<website id> npm run build
 or, without rebuilding, fill the `<meta name="wordgrid:umami-script">` and
 `<meta name="wordgrid:umami-website">` tags in `index.html` / `docs/index.html`.
 
+**As shipped it points at `https://umami.ingel.ing`** (the owner's instance) and
+is collecting. Two notes on that deployment:
+
+- the tracker keeps Umami's **default names** — `script.js` and `/api/send` —
+  which are the two strings ad-blocker filter lists match on. The custom domain
+  avoids the worst of it, but if the dashboard's numbers look low against the
+  CrazyGames portal's own play counts, rename both (`TRACKER_SCRIPT_NAME` and
+  `COLLECT_API_ENDPOINT` in the server's environment) and change the meta tag to
+  the new script URL.
+- events from a development machine arrive with **`hostname: localhost`**;
+  filter it out in the dashboard to see only real players.
+
 **Settings → Developer → Analytics** says whether it is configured, whether the
 tracker arrived, and how many events went through this session.
 

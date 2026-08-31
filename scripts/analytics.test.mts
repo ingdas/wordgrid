@@ -284,6 +284,24 @@ await test("stop: the listener is gone and a second script is never added", asyn
 
 // --- what must never be tracked ---------------------------------------------
 
+await test("a session that starts in debug never even fetches the tracker", async () => {
+  const { mod, scripts } = await load({ script: SCRIPT, website: WEBSITE });
+  setDebug(true);
+  try {
+    const stop = mod.startAnalytics();
+    await tick();
+    assert.deepEqual(scripts, [], "a ?debug page must not put an analytics script on the page");
+    // ...and it stays quiet, rather than buffering for a tracker that never comes.
+    mod.trackScreen("home");
+    mod.trackEvent("level_win", { mode: "campaign", level: 1, stars: 3 });
+    assert.equal(mod.analyticsStatus().buffered, 0);
+    stop();
+  } finally {
+    setDebug(false);
+    resetDebugCache();
+  }
+});
+
 await test("debug play is never tracked", async () => {
   const { mod, scripts, win } = await load({ script: SCRIPT, website: WEBSITE });
   const stop = mod.startAnalytics();
