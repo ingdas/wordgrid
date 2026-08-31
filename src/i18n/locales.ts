@@ -60,8 +60,12 @@ export function isLocale(x: unknown): x is Locale {
  * a foreign menu, so the picker, the browser/platform detection and the tests
  * leave them out until their content lands. Add a language here when its
  * `content/<xx>.ts` validates clean.
+ *
+ * Italian is the near miss: its 100 campaign boards and its emoji boss are
+ * written, its 80 daily boards are not — and a language that falls through to
+ * the English daily pool is the exact failure this list exists to prevent.
  */
-export const SHIPPED_LOCALES: readonly Locale[] = ["en", "es", "de", "fr", "it", "pt"];
+export const SHIPPED_LOCALES: readonly Locale[] = ["en", "es", "de", "fr", "pt"];
 
 export function isShipped(x: unknown): x is Locale {
   return isLocale(x) && SHIPPED_LOCALES.includes(x);
