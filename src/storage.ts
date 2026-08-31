@@ -21,7 +21,7 @@
 //   3. An in-memory map — always written, so a session with no durable storage
 //      at all is still *coherent* while it lasts. `isDurable()` says whether
 //      that's all we've got, and the UI owes the player a warning when it is.
-import { sdkData } from "./sdk.ts";
+import { sdkData, sdkUnavailable } from "./sdk.ts";
 
 /** Every key the game persists. The mirror copies exactly these. */
 export const KEYS = [
@@ -147,6 +147,46 @@ export function isDurable(): boolean {
   return local() !== null || sdkData() !== null;
 }
 
+// ---------------------------------------------------------------------------
+// Per-visit state
+// ---------------------------------------------------------------------------
+
+// A second, deliberately short-lived tier: `sessionStorage` lives exactly as
+// long as the tab, which is the right lifetime for "has this already happened
+// this visit" — the opening animation is the one user. It is never mirrored to
+// the platform store (a visit is not progress) and, like everything else here,
+// it degrades to the in-memory map when the embed refuses it, so a partitioned
+// iframe still gets the once-per-visit behaviour for as long as the page lives.
+const session = new Map<string, string>();
+
+function sessionStore(): Storage | null {
+  try {
+    return (globalThis as { sessionStorage?: Storage }).sessionStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function readSession(key: string): string | null {
+  try {
+    const v = sessionStore()?.getItem(key);
+    if (v != null) return v;
+  } catch {
+    /* refused — fall through to memory */
+  }
+  return session.has(key) ? session.get(key)! : null;
+}
+
+/** Never throws. */
+export function writeSession(key: string, value: string): void {
+  session.set(key, value);
+  try {
+    sessionStore()?.setItem(key, value);
+  } catch {
+    /* quota or a store that only pretends to work */
+  }
+}
+
 /**
  * Reconcile with the platform store, once it exists.
  *
@@ -243,7 +283,8 @@ export function startSdkMirror(onAdopt: () => void, onSettled: (durable: boolean
     // Ordinary storage works, so the player has a durable home either way; say
     // so now, but keep waiting for the platform store to push a copy to.
     if (local() !== null) report(true);
-    if (++tries >= MIRROR_TRIES) {
+    // The SDK has given its answer and it is "no": nothing to wait for.
+    if (sdkUnavailable() || ++tries >= MIRROR_TRIES) {
       report(isDurable());
       stopped = true;
       return;
@@ -262,4 +303,5 @@ export function startSdkMirror(onAdopt: () => void, onSettled: (durable: boolean
 export function resetStorageCache(): void {
   localOk = null;
   memory.clear();
+  session.clear();
 }

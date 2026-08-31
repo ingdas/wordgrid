@@ -65,8 +65,6 @@ await page.evaluate((cleared) => {
       history: [],
       score: 8400,
       endlessBest: 0,
-      pairsBest: 14,
-      deductionSolved: ["logic-1", "logic-2"],
       keys: [0],
     }),
   );

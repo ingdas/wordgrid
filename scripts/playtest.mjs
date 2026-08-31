@@ -19,11 +19,17 @@ const GROUPS = [
   ["ICON", "LEGEND", "IDOL"],
   ["MOON", "COMET", "PLANET"],
   ["MEDAL", "TROPHY", "RIBBON"],
-  ["HEART", "ARROW", "CROSS"],
+  ["ACT", "PERFORM", "APPEAR"],
 ];
 
 const b = await launchBrowser();
 const p = await b.newPage();
+// Keep the SDK script out of this run. On localhost the real SDK initialises in
+// its "local" mode — fake ads between boards, a working data module — which is
+// not the SDK-less flow these checks describe. (playtest.mjs checks the real
+// SDK handshake separately, on its own page.)
+await p.setRequestInterception(true);
+p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 2 });
 const errors = [];
 // Ignore network noise from the (optional) CrazyGames SDK script, which can't
@@ -36,9 +42,10 @@ p.on("console", (m) => {
 p.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
 
 await p.goto(BASE, { waitUntil: "networkidle0" });
-await p.evaluate(() => localStorage.clear());
+// A fresh visit as well as a fresh save: the opening plays once per visit, and
+// this first load has already spent it.
+await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
 await p.reload({ waitUntil: "networkidle0" });
-await sleep(500);
 
 async function clickText(sel, text) {
   for (const h of await p.$$(sel)) {
@@ -64,6 +71,30 @@ async function solveGroup(group) {
   await sleep(500);
 }
 const bodyText = () => p.$eval("body", (e) => e.innerText);
+
+// 0. The opening. It owns the first paint for about four seconds — the plate
+//    stamps its `data-intro` with the time it started, so the run is measured
+//    from the page's own clock rather than from when the navigation settled.
+const introMs = await p.evaluate(
+  () =>
+    new Promise((resolve) => {
+      const plate = document.querySelector("[data-intro]");
+      if (!plate) return resolve(-1);
+      const started = Number(plate.getAttribute("data-intro")) || performance.now();
+      const tick = () => {
+        if (!document.querySelector("[data-intro]")) return resolve(Math.round(performance.now() - started));
+        if (performance.now() - started > 8000) return resolve(-2);
+        setTimeout(tick, 50);
+      };
+      tick();
+    }),
+);
+log("opening animation on launch:", introMs >= 0 ? `${introMs}ms` : introMs === -1 ? "did not play" : "never finished");
+if (introMs === -1) note("The opening animation did not play on a fresh launch.");
+if (introMs === -2) note("The opening animation never finished (nothing to play under it).");
+if (introMs > 4300) note(`The opening ran ${introMs}ms — it has to be over in about four seconds.`);
+if (introMs >= 0 && introMs < 2000) note(`The opening ran only ${introMs}ms — it should be a real sequence, not a flash.`);
+await sleep(700); // the tutorial board deals in under the lifted plate
 
 // 1. First launch drops straight into the tutorial game — no menu.
 if (await clickText("button", "Play")) note("First launch showed a Play menu instead of starting the game.");
@@ -114,13 +145,22 @@ log("hint revealed a category theme:", /words for a celebrity/i.test(afterHint))
 if (!/words for a celebrity/i.test(afterHint)) note("Hint did not reveal a category theme.");
 await p.screenshot({ path: `${SHOT}/r-hint.png` });
 
-// 4. Solve groups (coach advances after the first; group 4 auto-solves)
+// 4. Solve all four groups (coach advances after the first; the last group is
+//    submitted like any other — nothing solves itself)
 await solveGroup(GROUPS[0]);
-await clickText("button", "I'm on it"); // dismiss coach step 2
+await clickText("button", "Got it"); // dismiss coach step 2
 await sleep(200);
 await solveGroup(GROUPS[1]);
 await solveGroup(GROUPS[2]);
-await sleep(1200); // auto-solve final group → guessing
+const threeDown = await bodyText();
+// A tile of the last group, read from the fixture — hardcoding a word here
+// went stale the moment the tutorial board's fourth group changed.
+const lastTile = new RegExp(`\\b${GROUPS[3][0]}\\b`);
+log("last group waits to be submitted:", lastTile.test(threeDown) && !/spell the secret word/i.test(threeDown));
+if (!lastTile.test(threeDown)) note("The last group left the board before it was submitted.");
+if (/spell the secret word/i.test(threeDown)) note("The finale opened with a group still on the board.");
+await solveGroup(GROUPS[3]);
+await sleep(700); // the fourth banner lands → guessing
 
 // 4c. Solved groups keep showing their words during the finale.
 const dispNow = await bodyText();
@@ -143,8 +183,46 @@ async function tapLetter(ch) {
   }
   return false;
 }
-// STAR: tap every letter from the bank (no free first letter).
-for (const ch of ["S", "T", "A", "R"]) {
+// 6b. A first-timer's finale comes with a third coach card that reads every
+//     group name out as a clue to the one word (derived from the board, so it
+//     names the last theme too) — a toast is gone before the bank sinks in.
+const finaleText = await bodyText();
+const finaleCoached = /last step/i.test(finaleText) && /to be in a movie/i.test(finaleText) && /words for a celebrity/i.test(finaleText);
+log("finale coach lists the group themes as clues:", finaleCoached);
+if (!finaleCoached) note("Tutorial finale coach card did not list the group themes as clues.");
+if (!/wrong tries cost nothing/i.test(finaleText)) note("Finale coach should say wrong tries are free.");
+
+// 6c. Wrong words escalate: the first miss restates the clue, the second hands
+//     over a free letter. The hint bank is untouched, and it never reaches the
+//     last letter, so the player always spells the ending themselves.
+const hintBadge = async () => {
+  for (const h of await p.$$("main button")) {
+    const txt = await h.evaluate((e) => e.innerText);
+    if (/reveal a letter/i.test(txt)) return (txt.match(/(\d+)\s*$/) || [])[1] ?? null;
+  }
+  return null;
+};
+const usedCount = async () => (await p.$$("main button[aria-label$=', used']")).length;
+const hintsBefore = await hintBadge();
+for (const ch of ["T", "S", "A", "R"]) { await tapLetter(ch); await sleep(120); } // TSAR: not the word
+await sleep(700);
+const afterMiss1 = await bodyText();
+log("first finale miss restates the clue:", /fit all four group names/i.test(afterMiss1));
+if (!/fit all four group names/i.test(afterMiss1)) note("First wrong link word in the tutorial did not get the coach's nudge.");
+if ((await usedCount()) !== 0) note("A wrong word left letters marked as used.");
+for (const ch of ["R", "A", "T", "S"]) { await tapLetter(ch); await sleep(120); } // RATS: not the word
+await sleep(700);
+const afterMiss2 = await bodyText();
+const freeLetter = /on the house/i.test(afterMiss2) && (await usedCount()) === 1;
+log("second finale miss gives a free letter:", freeLetter);
+if (!/on the house/i.test(afterMiss2)) note("Second wrong link word in the tutorial did not hand over a letter.");
+if ((await usedCount()) !== 1) note(`Expected exactly one bank letter locked by the free reveal, saw ${await usedCount()}.`);
+const hintsAfter = await hintBadge();
+log("hint bank untouched by the free letter:", hintsBefore, "→", hintsAfter);
+if (hintsBefore !== hintsAfter) note(`The tutorial's free letter spent a hint token (${hintsBefore} → ${hintsAfter}).`);
+await p.screenshot({ path: `${SHOT}/r5b-finale-coach.png` });
+// S is on the house now; spell the rest.
+for (const ch of ["T", "A", "R"]) {
   if (!(await tapLetter(ch))) note(`Could not tap letter ${ch} from the bank.`);
   await sleep(200);
 }
@@ -219,6 +297,10 @@ await p.screenshot({ path: `${SHOT}/r8-history.png` });
 await p.evaluate(() => localStorage.setItem("wordgrid:tutorial", "1"));
 await p.goto(BASE + "?debug", { waitUntil: "networkidle0" }); // unlock all levels for the test
 await sleep(400);
+// Same visit, back at the menu: the opening has had its one run.
+const replayed = (await p.$("[data-intro]")) != null;
+log("opening does not replay within the visit:", !replayed);
+if (replayed) note("The opening animation replayed on a later return to the menu in the same visit.");
 await clickText("button", "Browse all"); // Home's CTA now plays; the map is its own link
 await sleep(500);
 const bossNode = await p.$("button[aria-label^='Play the boss']");
@@ -256,34 +338,6 @@ else {
   await sleep(300);
 }
 
-// 10b. Logic Grid: paint a level's real solution and check the board accepts
-//      it. The clue semantics are unit-tested in scripts/deduction.test.mts;
-//      this covers the component actually wiring them up.
-{
-  const { DEDUCTION_LEVELS } = await import("../src/deductionLevels.ts");
-  const lv = DEDUCTION_LEVELS[0];
-  await p.goto(BASE, { waitUntil: "networkidle0" });
-  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("wordgrid:tutorial", "1"); });
-  await p.reload({ waitUntil: "networkidle0" });
-  await sleep(500);
-  await clickText("button", "Logic");
-  await sleep(500);
-  for (let k = 0; k < 4; k++) {
-    const brush = await p.$(`button[aria-label="Group ${k + 1} brush"]`);
-    if (!brush) { note("Logic Grid brush palette missing."); break; }
-    await brush.click();
-    for (let cell = 0; cell < lv.solution.length; cell++) {
-      if (lv.solution[cell] !== k) continue;
-      await (await p.$(`[data-cell="${cell}"]`)).click();
-    }
-  }
-  await sleep(500);
-  const solvedIt = /Deduced!/.test(await bodyText());
-  log("logic grid accepts its own solution:", solvedIt);
-  if (!solvedIt) note("Logic Grid rejected the solution it ships with.");
-  await p.screenshot({ path: `${SHOT}/r10-logic.png` });
-}
-
 // 11. On a loss, the secret link must STAY hidden (so it can be guessed on replay)
 await p.evaluate(() => {
   localStorage.clear();
@@ -298,9 +352,9 @@ await sleep(500);
 // Four distinct non-groups → four mistakes → loss (each spans multiple groups).
 const WRONG = [
   ["ICON", "MOON", "MEDAL"],
-  ["ICON", "MOON", "HEART"],
+  ["ICON", "MOON", "APPEAR"],
   ["ICON", "COMET", "MEDAL"],
-  ["ICON", "COMET", "HEART"],
+  ["ICON", "COMET", "APPEAR"],
 ];
 for (const g of WRONG) {
   for (const w of g) await clickWord(w);
@@ -314,6 +368,12 @@ await sleep(300);
 const offered = /second chance|don't stop now/i.test(await bodyText());
 log("second-chance offer shown:", offered);
 if (!offered) note("Second-chance offer did not appear after running out of guesses.");
+// With the SDK kept out there is no ad system, so the offer must not promise a
+// video: no clapperboard, and "Continue" rather than "Watch & continue".
+const offerText = await bodyText();
+log("offer promises no video off-platform:", !/watch/i.test(offerText) && !/🎬/.test(offerText));
+if (/watch/i.test(offerText)) note("The second-chance offer says 'watch' where no ad can play.");
+await p.screenshot({ path: `${SHOT}/r10-offer.png` });
 await clickText("button", "No thanks");
 await sleep(400);
 const lostText = await bodyText();
@@ -338,8 +398,8 @@ await p.screenshot({ path: `${SHOT}/r10-loss.png` });
     ids.forEach((id) => (stars[id] = 3));
     localStorage.setItem("wordgrid:progress", JSON.stringify({
       stars, streak: 5, bestStreak: 5, linksGuessed: 5, best: {}, daily: { lastDate: "", streak: 0 },
-      achievements: [], hints: 3, history: [], score: 2000, endlessBest: 0, pairsBest: 0,
-      deductionSolved: [], seen: ids, keys: [],
+      achievements: [], hints: 3, history: [], score: 2000, endlessBest: 0,
+      seen: ids, keys: [],
     }));
   }, CH1);
   await p.reload({ waitUntil: "networkidle0" });
@@ -422,6 +482,35 @@ if (embed.down > 0) note(`Index overflows the 1280x720 embed by ${embed.down}px 
 if (embed.across > 0) note(`Index scrolls horizontally at 1280x720 by ${embed.across}px.`);
 if (!embed.pane) note("Index has no internal scroll pane at lg; the page will scroll instead.");
 await p.screenshot({ path: `${SHOT}/r11-embed.png` });
+
+// 13. The real SDK, on a page that is allowed to load it. --------------------
+// The v3 SDK throws `sdkNotInitialized` from every call until init() resolves,
+// and its script is async, so the wrapper has to wait for it and initialise it
+// before anything else — the first shipped version never did, and every
+// platform call was lost. On localhost a working handshake ends in the SDK's
+// "local" environment with nothing in the console. Skipped when the script
+// can't be fetched (offline), which is the only reason it may be absent.
+{
+  const q = await b.newPage();
+  const sdkErrors = [];
+  q.on("console", (m) => {
+    if (/CrazySDK|sdkNotInitialized|sdkDisabled/i.test(m.text())) sdkErrors.push(m.text());
+  });
+  await q.goto(BASE, { waitUntil: "networkidle0" });
+  await sleep(3500);
+  const sdk = await q.evaluate(() => ({
+    present: !!window.CrazyGames?.SDK,
+    env: window.CrazyGames?.SDK?.environment ?? null,
+  }));
+  if (!sdk.present) {
+    log("real SDK: script not fetched (offline?) — handshake check skipped");
+  } else {
+    log("real SDK initialised:", sdk.env, "| SDK console errors:", sdkErrors.length);
+    if (sdk.env !== "local") note(`Real SDK never initialised on localhost (environment "${sdk.env}", expected "local").`);
+    if (sdkErrors.length) note(`The SDK logged ${sdkErrors.length} error(s): ${sdkErrors[0]}`);
+  }
+  await q.close();
+}
 
 await b.close();
 console.log("\n=== CONSOLE ERRORS ===");

@@ -12,7 +12,6 @@
 //   • hints cost nothing and the bank can be topped up on demand
 //   • an in-game tool panel: solve one group, auto-solve the board, reveal
 //     every theme, peek at the secret link, force a loss (Game.tsx)
-//   • the Logic Grid can paint its own solution (Deduction.tsx)
 //   • the index can clear the next level outright (LevelSelect.tsx)
 //
 // The URL is parsed once per load and the answer cached in module scope; the

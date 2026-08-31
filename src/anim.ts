@@ -8,13 +8,12 @@
  * away, and the only continuous motion anywhere is a card breathing while it
  * waits to be noticed.
  *
- * Framer Motion still owns mount/unmount and layout (`AnimatePresence`,
- * `layout`) because that's what it's good at. This module owns the beats — the
- * moments the game reacts to something you did — because those want timelines,
- * staggers and imperative control from an event handler, which is what GSAP is
- * good at. The split is deliberate: nothing here animates a property that a
- * `motion.*` component is also driving on the same node, or the two would take
- * turns writing the same transform.
+ * Two kinds of thing live here. The React plumbing (`usePresence`, `useSwitch`,
+ * `useGsap`) closes the one gap between React and an imperative library — React
+ * tears a node out the moment its condition goes false, so something has to
+ * hold it long enough to leave. The beats are everything else: the moments the
+ * game reacts to something you did, which want timelines, staggers and control
+ * from an event handler, which is what GSAP is good at.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DependencyList, type RefObject } from "react";
 import gsap from "gsap";
@@ -382,6 +381,164 @@ export const dialogOut: Exit = (el) => {
   tl.to(el, { opacity: 0, duration: 0.24, ease: "power2.in" }, 0);
   return tl;
 };
+
+// ---------------------------------------------------------------------------
+// The opening
+// ---------------------------------------------------------------------------
+
+/** How long the opening runs before the plate lifts, in seconds. */
+export const OPENING_S = 3.6;
+
+/**
+ * The press run — the game's opening, played once per visit.
+ *
+ * It tells the whole premise without a word of copy: four blank word tiles in
+ * the four group colours are dealt onto the page, swept together into one
+ * point, and the press's mark comes down on that point — four groups, one
+ * link. The title is then set letter by letter under it, as the link reveal
+ * sets its word, a rule is drawn and the one-line pitch soaks in. Everything
+ * arrives the way everything else in the game arrives: stamped.
+ *
+ * The dealing and the sweep are one motion, not two. Each tile rests for a
+ * sixth of a second after it lands, then visibly winds up — lifts and leans
+ * away from the centre — before it dives, and the sweep ripples left to right
+ * on the same stagger as the deal, so the first tile is already leaning while
+ * the last is still landing. (A first cut let the whole row settle and then
+ * eased the pull in from a standstill; the half-second in between read as the
+ * animation having stalled.) The mark hits as the first tile arrives and its
+ * glyph punches for each of the three that follow, so they read as swallowed.
+ *
+ * The page then *holds*: the title and the pitch are in by about 2.1 s and the
+ * plate doesn't lift until 3.6, because a line you can't finish reading is
+ * worse than none — the first cut lifted the plate the moment the pitch had
+ * soaked in, and it went unread. The mark breathes once through the hold so
+ * the page reads as waiting for you rather than as stuck.
+ *
+ * The caller marks the parts (`data-open-tile`, `-stage`, `-ring`, `-mark`,
+ * `-glyph`, `-letter`, `-line`, `-rule`, `-skip`) and owns the plate itself;
+ * `onDone` fires at `OPENING_S`, which is the cue to lift it (see `liftOut`)
+ * and let the screen underneath stamp itself in. The whole thing, lift
+ * included, is about four seconds — the last one and a half of them the hold.
+ */
+export function openingIn(scope: HTMLElement, opts: { onDone: () => void }) {
+  const q = <T extends HTMLElement>(sel: string) => [...scope.querySelectorAll<T>(sel)];
+  const tiles = q("[data-open-tile]");
+  const stage = scope.querySelector<HTMLElement>("[data-open-stage]");
+  const ring = scope.querySelector<HTMLElement>("[data-open-ring]");
+  const mark = scope.querySelector<HTMLElement>("[data-open-mark]");
+  const glyph = scope.querySelector<HTMLElement>("[data-open-glyph]");
+  const letters = q("[data-open-letter]");
+  const line = scope.querySelector<HTMLElement>("[data-open-line]");
+  const rule = scope.querySelector<HTMLElement>("[data-open-rule]");
+  const skip = scope.querySelector<HTMLElement>("[data-open-skip]");
+  const later = [ring, mark, ...letters, line, rule, skip].filter((el): el is HTMLElement => !!el);
+
+  // Measure before anything is posed: a `fromTo` writes its start values the
+  // moment it is built, and a tile already lifted 40px up would report the
+  // wrong centre.
+  const home = stage?.getBoundingClientRect();
+  const offsets = tiles.map((tile) => {
+    const r = tile.getBoundingClientRect();
+    return home
+      ? { x: home.left + home.width / 2 - (r.left + r.width / 2), y: home.top + home.height / 2 - (r.top + r.height / 2) }
+      : { x: 0, y: 0 };
+  });
+
+  // The deal and the sweep share one stagger, so they interleave.
+  const DEAL_AT = 0.05;
+  const STEP = 0.09;
+  const DEAL_DUR = 0.5;
+  const REST = 0.17;
+  const WIND_DUR = 0.16;
+  const DIVE_DUR = 0.34;
+  const sweepAt = (i: number) => DEAL_AT + DEAL_DUR + REST + i * STEP;
+  const arriveAt = (i: number) => sweepAt(i) + WIND_DUR + DIVE_DUR;
+  const markAt = arriveAt(0) - 0.07; // the stamp ease hits the page ~11% in
+
+  const tl = gsap.timeline({ onComplete: opts.onDone });
+  // Nothing shows before its cue.
+  gsap.set(later, { opacity: 0 });
+
+  // 1. Four tiles dealt onto the page, left to right.
+  if (tiles.length)
+    tl.fromTo(
+      tiles,
+      { y: -44, scale: 0.8, opacity: 0, rotate: () => gsap.utils.random(-9, 9) },
+      { y: 0, scale: 1, opacity: 1, rotate: 0, duration: DEAL_DUR, ease: EASE.stamp, stagger: STEP },
+      DEAL_AT
+    );
+  // 2. …each winds up — lifts, leans away from the middle — and dives for it.
+  tiles.forEach((tile, i) => {
+    const away = offsets[i].x === 0 ? 0 : -Math.sign(offsets[i].x) * 10;
+    tl.to(
+      tile,
+      {
+        keyframes: [
+          { x: away, y: -8, scale: 1.1, rotate: away * 0.6, duration: WIND_DUR, ease: "power2.out" },
+          {
+            x: offsets[i].x,
+            y: offsets[i].y,
+            scale: 0.25,
+            rotate: gsap.utils.random(-40, 40),
+            opacity: 0,
+            duration: DIVE_DUR,
+            ease: "power2.in",
+          },
+        ],
+      },
+      sweepAt(i)
+    );
+  });
+  // 3. The mark comes down as the first one arrives — and the paper rings.
+  if (mark)
+    tl.fromTo(
+      mark,
+      { scale: 2.4, rotate: -34, opacity: 0 },
+      { scale: 1, rotate: 0, opacity: 1, duration: 0.62, ease: EASE.stamp, immediateRender: false },
+      markAt
+    );
+  if (ring)
+    tl.fromTo(
+      ring,
+      { scale: 0.7, opacity: 0.7 },
+      { scale: 1.9, opacity: 0, duration: 0.7, ease: EASE.press, immediateRender: false },
+      markAt + 0.08
+    );
+  // …and swallows the three behind it.
+  if (glyph)
+    tiles.slice(1).forEach((_, k) =>
+      tl.fromTo(
+        glyph,
+        { scale: 1 },
+        { scale: 1.45, duration: 0.09, ease: EASE.press, yoyo: true, repeat: 1, immediateRender: false },
+        arriveAt(k + 1) - 0.04
+      )
+    );
+  // 4. The title, set one letter at a time.
+  const titleAt = markAt + 0.22;
+  if (letters.length)
+    tl.fromTo(
+      letters,
+      { scale: 1.6, y: -6, opacity: 0, rotate: () => gsap.utils.random(-9, 9) },
+      { scale: 1, y: 0, opacity: 1, rotate: 0, duration: 0.4, ease: EASE.stamp, stagger: 0.06, immediateRender: false },
+      titleAt
+    );
+  // 5. A rule drawn under it and the pitch soaking in, while the last letters
+  //    are still landing — then the hold, so the pitch gets read.
+  if (line) tl.fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.36, ease: EASE.soak, immediateRender: false }, titleAt + 0.44);
+  if (rule) tl.fromTo(rule, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE.soak, immediateRender: false }, titleAt + 0.52);
+  // 6. The hold. One slow breath from the mark — nothing else moves, the page
+  //    is there to be read. Two half-cycles so it ends before the lift.
+  if (mark) tl.to(mark, { scale: 1.035, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 1 }, 2.35);
+  // The way out, offered once the first beat has landed.
+  if (skip) tl.fromTo(skip, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out", immediateRender: false }, 0.9);
+  // Pin the end so `onDone` fires on the cue and not when the last tween happens to finish.
+  tl.to({}, { duration: 0.01 }, OPENING_S - 0.01);
+  return tl;
+}
+
+/** The plate lifting off the page: up toward you and gone. */
+export const liftOut: Exit = (el) => gsap.to(el, { opacity: 0, scale: 1.04, duration: 0.28, ease: "power2.in" });
 
 // ---------------------------------------------------------------------------
 // Beats

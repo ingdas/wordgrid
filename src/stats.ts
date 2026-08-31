@@ -154,7 +154,7 @@ function randomId(): string {
 }
 
 let player: string | null = null;
-function playerId(): string {
+export function playerId(): string {
   if (player) return player;
   const stored = readItem(PLAYER_KEY);
   player = stored && stored.length >= 8 ? stored : randomId();

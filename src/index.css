@@ -37,12 +37,24 @@
 
 :root {
   color-scheme: light;
+  /* Newsprint grain, used by the page (`.grain`) and the opening's plate. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 html,
 body,
 #root {
   height: 100%;
+}
+
+/* The viewport tag opts into the whole screen (`viewport-fit=cover`), so on a
+   notched phone — and in the CrazyGames app, which runs games full-screen —
+   the page has to keep its own content out from under the notch and the home
+   indicator. Zero everywhere else, so the desktop embed is untouched. */
+#root {
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
 }
 
 body {
@@ -82,7 +94,18 @@ body {
   pointer-events: none;
   opacity: 0.05;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: var(--grain);
+}
+
+/* The opening's plate is opaque paper over the page, so it carries its own
+   grain — the same stock, or the lift-off would reveal a different sheet. */
+.intro-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: var(--grain);
 }
 
 /* Pinch-zoom stays available (the viewport tag no longer blocks it); this
@@ -98,6 +121,22 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Dialog scrims. A panel taller than the viewport — an 800×450 embed, a phone
+   on its side — has to scroll inside the scrim, not be clipped at both ends,
+   which is what `place-items: center` on a grid did (it centres the overflow
+   out of reach). A flex column with auto margins centres the panel when it
+   fits and lets it sit at the top, scrollable, when it doesn't. The vertical
+   padding leaves room for the mark that overhangs a panel's top edge. */
+.dialog-scrim {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+.dialog-scrim > [data-panel] {
+  margin-top: auto;
+  margin-bottom: auto;
+  flex-shrink: 0;
+}
+
 /* Visually hidden but available to assistive tech */
 .sr-only {
   position: absolute;
@@ -111,12 +150,14 @@ button:focus-visible {
   border: 0;
 }
 
-/* Rotate-to-portrait hint: only on short, wide viewports (phones in landscape).
-   Tablets (tall enough) and desktops never trigger it. */
+/* Rotate-to-portrait hint: only on a short, wide *touch* viewport — a phone
+   turned sideways. Tablets (tall enough) never trigger it, and neither does a
+   desktop: `pointer: coarse` keeps it off an 800×450 browser window, which is
+   the smallest embed CrazyGames' QA checks and has nothing to rotate. */
 .rotate-hint {
   display: none;
 }
-@media (orientation: landscape) and (max-height: 500px) {
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   .rotate-hint {
     position: fixed;
     inset: 0;

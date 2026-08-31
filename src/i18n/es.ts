@@ -2,8 +2,8 @@
 // build on any missing or stray key, and on a placeholder that doesn't survive
 // translation.
 //
-// The boards themselves live in src/i18n/content/es.ts — a board of English
-// words can't be translated, only rewritten, so Spanish has its own.
+// The word puzzles themselves stay English (a board of English words can't be
+// translated, only rewritten); this covers the interface around them.
 export const es: Record<string, string> = {
   // --- shared -------------------------------------------------------------
   "app.name": "WordGrid",
@@ -22,6 +22,10 @@ export const es: Record<string, string> = {
   "common.moves.one": "{n} movimiento",
   "common.moves.other": "{n} movimientos",
 
+  // --- opening ------------------------------------------------------------
+  "intro.tagline": "Cuatro grupos ocultos. Una palabra secreta.",
+  "intro.skip": "Toca para saltar",
+
   // --- home ---------------------------------------------------------------
   "home.taglineBefore": "Cuatro grupos ocultos.",
   "home.taglineHighlight": "Una palabra secreta",
@@ -39,11 +43,6 @@ export const es: Record<string, string> = {
   "home.mode.endless.best": "récord {n}",
   "home.mode.endless.empty": "sin fallos",
   "home.mode.endless.locked": "supera todos los niveles",
-  "home.mode.pairs": "Parejas",
-  "home.mode.pairs.best": "{n} mov.",
-  "home.mode.pairs.empty": "gira y empareja",
-  "home.mode.logic": "Lógica",
-  "home.mode.logic.stat": "{n}/{total} resueltos",
   "home.howToPlay": "Cómo jugar",
   "home.achievements": "Logros",
   "home.history": "Historial",
@@ -146,6 +145,9 @@ export const es: Record<string, string> = {
   "game.submit": "Enviar grupo",
   "game.hint": "Revelar el tema de un grupo",
   "game.hint.refill": "Sin pistas — recargar (+3)",
+  "game.hint.refill.blocked": "Recargar requiere un anuncio, y este navegador los bloquea.",
+  "game.ad.none": "No hay ningún anuncio disponible ahora — inténtalo en un momento.",
+  "ad.break": "Pausa publicitaria…",
   "game.hint.given": "Pista: un grupo es “{theme}”.",
   "game.hint.refilled": "¡+3 pistas! 💡",
   "game.groupFound": "Grupo encontrado: {theme}. {n} de 4.",
@@ -170,6 +172,7 @@ export const es: Record<string, string> = {
   "game.continue.title": "¡Casi lo tienes, no lo dejes ahora!",
   "game.continue.body": "Acepta una segunda oportunidad y recupera dos intentos.",
   "game.continue.accept": "Ver y continuar (+2)",
+  "game.continue.accept.free": "Continuar (+2)",
   "game.continue.loading": "Cargando…",
   "game.continue.decline": "No, gracias — terminar",
   "game.continue.taken": "¡Segunda oportunidad! Dos intentos más. 🎬",
@@ -190,11 +193,11 @@ export const es: Record<string, string> = {
   "finale.undo": "⌫ Deshacer",
   "finale.revealLetter": "💡 Revelar una letra",
   "finale.refill": "🎬 Recargar pistas (+3)",
+  "finale.refill.free": "Recargar pistas (+3)",
   "finale.giveUp": "Rendirse (cuesta una estrella)",
   "finale.a11y.slots": "{n} letras",
   "finale.a11y.letter": "Letra {letter}",
   "finale.a11y.letterUsed": "Letra {letter}, usada",
-  "finale.firstTime": "🎯 ¡Último paso! Los cuatro grupos apuntan a UNA palabra oculta — escríbela.",
 
   // --- end card -----------------------------------------------------------
   "end.rating.0": "Impecable ✨",
@@ -253,6 +256,12 @@ export const es: Record<string, string> = {
   "coach.nudge.1": "No es un grupo — ¿qué tres palabras encajan en “{theme}”? 🤔",
   "coach.nudge.2": "Sigue buscando — tres de estas encajan en “{theme}”.",
   "coach.nudge.3": "Pista: “{word}” es una de las tres. Encuentra sus dos compañeras.",
+  "coach.3.title": "Último paso: la palabra secreta",
+  "coach.3.body":
+    "Los nombres de los cuatro grupos son las pistas: una sola palabra encaja en “{a}”, “{b}”, “{c}” y “{d}”. Escríbela con las fichas de arriba. Fallar no cuesta nada, y te echaré una mano si te atascas.",
+  "coach.finale.nudge.1": "No es esa — la misma palabra tiene que encajar en los cuatro grupos. Vuelve a leer sus nombres y prueba otra.",
+  "coach.finale.nudge.2": "Una letra de regalo: empieza por “{prefix}”. ¡Sigue!",
+  "coach.finale.nudge.3": "Solo falta la última letra — ¿qué ficha completa la palabra?",
 
   // --- help / stats / history / settings ----------------------------------
   "help.title": "Cómo jugar",
@@ -312,6 +321,10 @@ export const es: Record<string, string> = {
   "settings.debug.hint": "Pistas gratis, resolver solo y todos los niveles abiertos",
   "settings.tracking": "Seguimiento de niveles",
   "settings.tracking.hint": "Quién supera cada nivel y con qué frecuencia",
+  "settings.analytics": "Analítica",
+  "settings.analytics.off": "Sin configurar. Define VITE_UMAMI_SCRIPT y VITE_UMAMI_WEBSITE al compilar, o rellena las dos etiquetas <meta name=\"wordgrid:umami-…\"> — el juego funciona igual en ambos casos.",
+  "settings.analytics.on": "Umami en {host} — {n} evento(s) enviados en esta sesión",
+  "settings.analytics.waiting": "Umami en {host} — el rastreador aún no ha cargado (bloqueado o sin conexión), {n} evento(s) en espera",
 
   // --- panel de seguimiento de niveles (Ajustes → Desarrollo) --------------
   "track.title": "Seguimiento de niveles",
@@ -365,8 +378,6 @@ export const es: Record<string, string> = {
   "quest.link.title": "Acierta una palabra secreta",
   "quest.combo.title": "Consigue un combo ×3",
   "quest.daily.title": "Resuelve el reto diario",
-  "quest.logic.title": "Resuelve una cuadrícula lógica",
-  "quest.pairs.title": "Completa un tablero de Parejas",
   "quest.complete": "Misión cumplida · +1 💡",
   "quest.set": "¡Las tres misiones!",
   "quest.set.body": "+{n} 💡 de bonus",
@@ -383,99 +394,6 @@ export const es: Record<string, string> = {
   "storage.warn.body": "Este navegador bloquea el almacenamiento del juego: las estrellas y la racha de esta sesión se pierden al cerrar la pestaña.",
   "storage.restored": "Progreso recuperado",
   "storage.restored.body": "Tu partida ha vuelto desde CrazyGames",
-
-  // --- pairs --------------------------------------------------------------
-  "pairs.title": "Parejas",
-  "pairs.best": "· récord {n}",
-  "pairs.fewestWins": "· gana quien haga menos",
-  "pairs.newBoard": "🔀 Nuevo",
-  "pairs.matching": "Gira dos cartas — combinan si comparten tema.",
-  "pairs.coupling": "¡Quedan cuatro! Toca una y luego una carta de su grupo.",
-  "pairs.couplingHeld": "Ahora toca una carta del grupo al que se une.",
-  "pairs.spell": "Escribe la palabra que une a las últimas cuatro.",
-  "pairs.wrongCouple": "Ese grupo no — inténtalo otra vez.",
-  "pairs.cleared": "¡Tablero completado!",
-  "pairs.spelled": "🔑 ¡La escribiste!",
-  "pairs.revealed": "Revelada por esta vez.",
-  "pairs.newBest": "¡Nuevo récord!",
-  "pairs.showWord": "Muéstrame la palabra",
-  "pairs.a11y.faceDown": "Carta boca abajo",
-  "pairs.a11y.progress": "Grupos completados",
-
-  // --- logic grid ---------------------------------------------------------
-  "logic.title": "Cuadrícula lógica",
-  "logic.solved": "{n}/{total} resueltos",
-  "logic.puzzle": "Puzle {n} / {total}",
-  "logic.rules":
-    "Cuatro grupos ocultos de 3 casillas — de cualquier forma, no tienen que tocarse. Cada pista habla del grupo de su propia casilla. Deduce y colorea las 12.",
-  "logic.a11y.prev": "Puzle anterior",
-  "logic.a11y.next": "Puzle siguiente",
-  "logic.a11y.brush": "Pincel del grupo {n}",
-  "logic.a11y.eraser": "Borrador",
-  "logic.a11y.tile": "Casilla",
-  "logic.a11y.tileClue": "Casilla, pista: {clue}",
-  "logic.a11y.noClue": "Casilla, sin pista",
-  "logic.a11y.satisfied": ", cumplida",
-  "logic.a11y.violated": ", NO cumplida",
-  "logic.a11y.uncoloured": ", sin color",
-  "logic.a11y.lineClue": "Pista de {line}: {clue}",
-  "logic.sizes": "Cada grupo necesita exactamente 3 casillas.",
-  "logic.notYet": "Aún no está — revisa las pistas con ✕ de abajo.",
-  "logic.win.title": "¡Deducido!",
-  "logic.win.body":
-    "Los cuatro grupos colocados con pura lógica — todas las pistas cuadran y ningún otro coloreado encaja.",
-  "logic.tier.1": "Fácil",
-  "logic.tier.2": "Media",
-  "logic.tier.3": "Difícil",
-  "logic.row": "Fila",
-  "logic.col": "Columna",
-  "logic.axis.row": "fila",
-  "logic.axis.col": "columna",
-  "logic.at": "Fila {row}, columna {col}",
-  "logic.clue.deg.0": "Ninguna vecina está en mi grupo",
-  "logic.clue.deg.1": "Una vecina está en mi grupo",
-  "logic.clue.deg.2": "Dos vecinas están en mi grupo",
-  "logic.clue.dir": "La casilla de {where} está en mi grupo",
-  "logic.clue.dirNot": "La casilla de {where} no está en mi grupo",
-  "logic.clue.line.0": "Ninguno de mis compañeros está en mi {axis}",
-  "logic.clue.line.1": "Uno de mis compañeros está en mi {axis}",
-  "logic.clue.line.2": "Mis dos compañeros están en mi {axis}",
-  "logic.clue.parity": "Contándome, un número impar de mi {axis} está en mi grupo",
-  "logic.clue.corners.0": "Ninguno de mis compañeros está en una esquina",
-  "logic.clue.corners.1": "Uno de mis compañeros está en una esquina",
-  "logic.clue.corners.2": "Mis dos compañeros están en las esquinas",
-  "logic.clue.rainbow": "No hay dos casillas de esta {axis} en el mismo grupo",
-  "logic.clue.onepair": "Exactamente una pareja de esta {axis} comparte grupo",
-  "logic.dir.up": "arriba",
-  "logic.dir.down": "abajo",
-  "logic.dir.left": "la izquierda",
-  "logic.dir.right": "la derecha",
-  "logic.dir.upLeft": "arriba a la izquierda",
-  "logic.dir.upRight": "arriba a la derecha",
-  "logic.dir.downLeft": "abajo a la izquierda",
-  "logic.dir.downRight": "abajo a la derecha",
-  "logic.bad.deg.0": "{at} no admite vecinas en su grupo — tu coloreado le da {found}.",
-  "logic.bad.deg.1": "{at} necesita exactamente una vecina en su grupo — tu coloreado le da {found}.",
-  "logic.bad.deg.2": "{at} necesita dos vecinas en su grupo — tu coloreado le da {found}.",
-  "logic.bad.dir": "{at} dice que la casilla de {where} está en su grupo — en tu coloreado no lo está.",
-  "logic.bad.dirNot": "{at} dice que la casilla de {where} no está en su grupo — en tu coloreado sí lo está.",
-  "logic.bad.line": "{at} necesita {n} de su grupo en el resto de su {axis} — tu coloreado pone {found}.",
-  "logic.bad.parity":
-    "{at} necesita un número impar de su {axis} en su grupo, contándose — tu coloreado da {found}.",
-  "logic.bad.corners": "{at} necesita {n} de su grupo en las esquinas — tu coloreado pone {found}.",
-  "logic.bad.rainbow": "{at} debe tener cuatro grupos distintos — tu coloreado repite {found}.",
-  "logic.bad.rainbow.pair": "una pareja",
-  "logic.bad.rainbow.pairs": "{n} parejas",
-  "logic.bad.onepair": "{at} debe tener exactamente una pareja — tu coloreado tiene {found}.",
-  "logic.key.deg": "n de mis 4 vecinas comparten mi grupo (nunca en diagonal)",
-  "logic.key.dir": "esa casilla es mía (≠ no lo es)",
-  "logic.key.diag": "esa diagonal es mía (≠ no lo es)",
-  "logic.key.lineRow": "n compañeros en mi fila",
-  "logic.key.lineCol": "n compañeros en mi columna",
-  "logic.key.parity": "número impar en esa línea, contándome",
-  "logic.key.corners": "n compañeros en una esquina",
-  "logic.key.rainbow": "esa línea entera son grupos distintos",
-  "logic.key.onepair": "esa línea tiene exactamente una pareja",
 
   // --- difficulty tiers, chapters, bosses ---------------------------------
   "tier.1": "Fácil",

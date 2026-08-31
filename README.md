@@ -20,7 +20,7 @@ word, then build all four groups of three around it.
    level, and it pays a bonus for every group you hadn't found yet.
 5. Fewer mistakes earn more **stars** (3 max per level).
 6. **Three daily quests** ride along on the home screen — "solve 2 puzzles",
-   "hit a ×3 combo", "clear a Pairs board" — drawn fresh at midnight and paid
+   "hit a ×3 combo", "name a secret link" — drawn fresh at midnight and paid
    in hints (1 each, +2 for all three).
 
 There are **100 levels** across twelve chapters, each closing on a **boss** that
@@ -115,6 +115,15 @@ rubber stamp on paper), a rejected guess **rattles** the board like a shoved
 sheet, and the confetti is punched-paper chads that flutter edge-on as they
 fall. The beats worth knowing about:
 
+- **The opening** is the press run: four blank word tiles in the four group
+  colours are dealt onto the page, pulled together into one point, and the
+  press's mark comes down on it — four groups, one link, with no copy. The
+  title is then set letter by letter and the plate lifts off the first screen,
+  which stamps itself in underneath. It runs once per visit (a tap or key
+  fast-forwards it), in front of the tutorial board on a first launch and in
+  front of Home after; coming back to the menu never replays it. About four
+  seconds, the last one and a half of them a hold so the pitch gets read, and
+  cut entirely under Calm or a reduced-motion preference.
 - **A solved group** is one move, not two. The three tiles you picked are
   photocopied where they stand, the banner is stamped onto the page, and the
   copies are flown into it — so the group visibly *becomes* the banner instead
@@ -147,7 +156,7 @@ which is the failure mode that setting exists to prevent.
 ```bash
 npm install
 npm run dev       # local dev server
-npm run build     # type-check + build to /docs
+npm run build     # type-check + build to /docs (+ the CrazyGames upload zip in /docs/art)
 npm test          # unit tests for the pure game engine (src/engine.ts)
 npm run validate  # structurally check every puzzle (13 unique tiles, link fits)
 npm run audit     # flag spokes that may be ambiguous, for human review
@@ -171,6 +180,28 @@ npm run submission                # covers + screenshots (COVERS=1 for art only)
 npm run clip                      # gameplay.webm
 ```
 
+The game build is in the pack too. `npm run build` ends by zipping what it just
+built — minus the pack itself, the GitHub Pages files, the share-preview image
+and the service worker — into `docs/art/wordgrid-crazygames.zip`, with a
+`dist.json` beside it (size, listing, SHA-256) that the page's **Build**
+section reads and links. That is the file for the CrazyGames upload form:
+`index.html` at the root, every path relative, the SDK loaded from its CDN and
+nothing fetched from anywhere else. It is written by
+[`scripts/dist-zip.mts`](./scripts/dist-zip.mts) rather than the `zip` CLI so
+that the same sources always give the same bytes — otherwise every build would
+churn a half-megabyte binary in the committed `docs/`.
+
+```bash
+npm run build && node scripts/dist.playtest.mjs   # check the zip the build wrote
+```
+
+The check unpacks the zip, serves it from a nested path and loads it inside an
+iframe on a different origin — the way the portal does — and fails on an
+absolute path, a file `index.html` asks for that isn't in the archive, a request
+to any host that isn't the SDK's, a service-worker registration, or a page
+error. (The worker is for the standalone site: `main.tsx` only registers it when
+the game is the top-level page, so inside the embed nothing is asked for.)
+
 The covers are rendered from branded HTML in `scripts/submission-art.mjs`. Every
 one of them shows the same picture: four words, one from each group of a real
 board, all pointing at the masked link they share — a riddle the viewer can
@@ -193,8 +224,7 @@ turn it off and back on for the session. It gives you:
 - a **🛠 tool tray** in the bottom-left corner: *solve a group*, *auto-solve
   level* (which wins it outright, stars and all), *reveal all themes*, *peek at
   the link*, *+5 hints* and *force a loss*;
-- on the level index, *clear next level* and *+10 hints*; on the Logic Grid,
-  *auto-solve grid*.
+- on the level index, *clear next level* and *+10 hints*.
 
 Nothing about it leaks into a normal save: the tray is only mounted while debug
 is on, the Settings switch only on a page opened with `?debug`, and nothing
@@ -210,6 +240,41 @@ reconciled: a save the platform still holds is adopted back, and a local-only
 save is pushed up before the browser can lose it. When *nothing* durable is
 available the session still plays out of memory, and says so in a banner rather
 than pretending it saved.
+
+### CrazyGames SDK
+
+Everything the platform hears goes through [`src/sdk.ts`](./src/sdk.ts), and
+nothing else touches `window.CrazyGames`. The v3 SDK **must be initialised
+before any call** — until `init()` resolves every method throws
+`sdkNotInitialized` — and its script is `async`, so it may land before or after
+React mounts. The wrapper waits for the script, runs `init()` once, and
+*queues* anything asked of it in the meantime (loading, the first launch's
+`gameplayStart`), replaying it in order the moment init settles. Off-platform
+the SDK loads but reports `environment: "disabled"`; that latches once and the
+game plays as if there were no SDK. On `localhost` it runs in `"local"` mode
+with fake ads, which is how the flows below are tested by hand.
+
+What is sent, and when — the platform's requirements, not ours:
+
+- `gameplayStart` / `gameplayStop` around every board, **transitions only**,
+  and never on a tab switch (the docs say a focus change is not a break).
+- `happytime` when a **boss** falls — sparingly, as asked.
+- An interstitial between boards, through `adBreak` in `App`: the page is held,
+  the game mutes **while the ad is on screen** (not on the request), and the
+  next board — and its `gameplayStart` — waits until the ad is gone.
+- Rewarded ads for the hint refill and the second chance. An ad that finished
+  pays; an ad that failed, went unfilled or is blocked pays **nothing**; and
+  where there is **no ad system at all** — no SDK, a disabled domain, or the
+  platform answering `adsDisabledBasicLaunch` — the reward is simply given,
+  because a dead "watch" button is what QA rejects. `adsMode()` tells the
+  buttons which world they are in, so they only promise a video (🎬) where one
+  plays, and under an ad blocker they say why there's no refill instead of
+  doing nothing.
+- The share card links to the game's CrazyGames page (`inviteLink`) on the
+  platform, and to the page without its query elsewhere — never `?debug`.
+
+`scripts/sdk.test.mts` pins all of it against a double that behaves like the
+real object (throws before init, `"uninitialized"` → `"crazygames"`).
 
 ### Level tracking
 
@@ -251,12 +316,59 @@ how stale it is), and a missing, dead or nonsense server is never shown to the
 player. `scripts/stats.playtest.mjs` plays a whole level in a browser with the
 network cut to prove it.
 
+### Analytics
+
+Where players go and what they do there — screens, wins and losses per mode,
+hints spent, offers taken, where the tutorial loses people, settings changed —
+in a self-hosted [Umami](https://umami.is). Off by default and inert until
+configured, exactly like level tracking. The two are different pipes for
+different questions: level tracking is the one number the game reads *back*
+(the clear rate on the up-next card); analytics is everything else, one way,
+into a dashboard.
+
+- the client is [`src/analytics.ts`](./src/analytics.ts): it puts Umami's
+  tracker on the page after the game has mounted, on an idle slot, with
+  auto-tracking off. Screens go out as virtual pageviews (`/home`, `/game`, …)
+  and everything else as named events with a small property bag — the
+  vocabulary is listed at the top of the file. Events raised before the tracker
+  lands wait in a capped in-memory buffer; a blocked or unreachable tracker is
+  retried, and again when the connection comes back; nothing throws into the
+  game.
+- the server is your Umami. On Coolify that is the one-click Umami template
+  (Node + Postgres); in its environment set `TRACKER_SCRIPT_NAME` (renames
+  `script.js` — filter lists know the default), `COLLECT_API_ENDPOINT` (same
+  for `/api/send`) and `DISABLE_TELEMETRY=1`. Add one website in the dashboard;
+  both hosts (`ingdas.github.io` and the CrazyGames embed) report into it, and
+  `hostname` is a filter.
+
+Switch it on either way round:
+
+```bash
+VITE_UMAMI_SCRIPT=https://umami.example.com/<tracker>.js \
+VITE_UMAMI_WEBSITE=<website id> npm run build
+```
+
+or, without rebuilding, fill the `<meta name="wordgrid:umami-script">` and
+`<meta name="wordgrid:umami-website">` tags in `index.html` / `docs/index.html`.
+
+**Settings → Developer → Analytics** says whether it is configured, whether the
+tracker arrived, and how many events went through this session.
+
+What is collected: the same random per-install id level tracking uses (handed
+to Umami's `identify`, so one player stays one player across its salt rotation
+and inside the partitioned iframe), the screen, the event name and its
+properties — ids, numbers and enums, never copy, never a word the player typed.
+Umami itself sets no cookie and stores nothing in the browser: a visitor is a
+server-side hash of IP + user agent + a rotating salt. Debug play is never
+tracked, Do Not Track is honoured. Unlike level tracking, Endless *is* counted —
+mode adoption is the point. `scripts/analytics.test.mts` pins all of it.
+
 ### Automated playtest
 
 `scripts/playtest.mjs` drives a headless Chrome through the solve / lose /
 reduced-motion flows and asserts on the DOM (including that the pivot is never
-distinguishable by colour mid-game). `scripts/pairs.test.mjs`,
-`scripts/debug.playtest.mjs`, `scripts/iteration33.playtest.mjs` (quests,
+distinguishable by colour mid-game). `scripts/debug.playtest.mjs`,
+`scripts/iteration33.playtest.mjs` (quests,
 the link mask, modal focus, storage-less play) and `scripts/stats.playtest.mjs`
 (level tracking against a live server, played offline) cover the rest. See
 [`BACKLOG.md`](./BACKLOG.md) for how to run them and the latest findings.

@@ -12,8 +12,7 @@
     "clip": "node scripts/gen-clip.mjs",
     "validate": "node --experimental-strip-types scripts/validate.mts",
     "audit": "node --experimental-strip-types scripts/audit.mts",
-    "gen:deduction": "node --experimental-strip-types scripts/gen-deduction.mts",
-    "test": "node --experimental-strip-types scripts/engine.test.mts && node --experimental-strip-types scripts/deduction.test.mts && node --experimental-strip-types scripts/progress.test.mts && node --experimental-strip-types scripts/quests.test.mts && node --experimental-strip-types scripts/storage.test.mts && node --experimental-strip-types scripts/debug.test.mts && node --experimental-strip-types scripts/i18n.test.mts && node --experimental-strip-types scripts/sdk.test.mts && node --experimental-strip-types scripts/stats.test.mts && node --experimental-strip-types scripts/audio.test.mts"
+    "test": "node --experimental-strip-types scripts/engine.test.mts && node --experimental-strip-types scripts/progress.test.mts && node --experimental-strip-types scripts/quests.test.mts && node --experimental-strip-types scripts/storage.test.mts && node --experimental-strip-types scripts/debug.test.mts && node --experimental-strip-types scripts/i18n.test.mts && node --experimental-strip-types scripts/sdk.test.mts && node --experimental-strip-types scripts/stats.test.mts && node --experimental-strip-types scripts/audio.test.mts && node --experimental-strip-types scripts/analytics.test.mts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.2.9",
@@ -24,6 +23,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^26.3.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

@@ -24,6 +24,14 @@
          exists so the committed docs/ build can be switched on without one.
          Anonymous either way: a random per-install id, the level, the outcome. -->
     <meta name="wordgrid:stats" content="" />
+    <!-- Product analytics (src/analytics.ts): a self-hosted Umami. Both empty =
+         off: no script is loaded, nothing is collected. Fill them with the
+         tracker script's full URL (whatever TRACKER_SCRIPT_NAME made it) and
+         the website id from the Umami dashboard; build-time VITE_UMAMI_SCRIPT /
+         VITE_UMAMI_WEBSITE win over these tags. Cookieless and anonymous: the
+         per-install id, the screens, the events — never a word the player typed. -->
+    <meta name="wordgrid:umami-script" content="" />
+    <meta name="wordgrid:umami-website" content="" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />

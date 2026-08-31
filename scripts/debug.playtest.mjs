@@ -4,14 +4,13 @@
 //   npm install --no-save puppeteer
 //   BASE=http://localhost:4173/ node scripts/debug.playtest.mjs
 //
-// Five checks:
+// Four checks:
 //   1. debug mode exists only on a page opened with `?debug`: no tray and no
 //      Settings switch without it, nothing written to storage with it, and
 //      that page's Settings toggle turns it off and back on live
 //   2. the in-game tools: reveal every theme, peek at the link, auto-solve
 //   3. hints are free (the bank reads ∞ and never goes down)
 //   4. the index tool clears the next level for real (stars are persisted)
-//   5. the Logic Grid paints its own solution
 import { launchBrowser } from "./browser.mjs";
 
 const BASE = process.env.BASE || "http://localhost:4173/";
@@ -23,6 +22,12 @@ const note = (s) => { issues.push(s); console.log("ISSUE:", s); };
 
 const b = await launchBrowser();
 const p = await b.newPage();
+// Keep the SDK script out of this run. On localhost the real SDK initialises in
+// its "local" mode — fake ads between boards, a working data module — which is
+// not the SDK-less flow these checks describe. (playtest.mjs checks the real
+// SDK handshake separately, on its own page.)
+await p.setRequestInterception(true);
+p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 1 });
 const errors = [];
 p.on("console", (m) => {
@@ -227,24 +232,6 @@ async function freshDebugSave(hints = 3) {
   log("hint bank topped up:", hints);
   if (!(hints >= 13)) note("'+10 hints' did not top the bank up.");
   if (SHOT) await p.screenshot({ path: `${SHOT}/debug-index.png` });
-}
-
-// 5. The Logic Grid solves itself.
-{
-  await freshDebugSave();
-  if (!(await clickText("button", "Logic"))) note("Home has no Logic Grid button.");
-  await sleep(700);
-  await useTool("Auto-solve grid");
-  await sleep(800);
-  const grid = await bodyText();
-  log("logic grid auto-solved:", /deduced/i.test(grid));
-  if (!/deduced/i.test(grid)) note("'Auto-solve grid' did not solve the grid.");
-  const solvedIds = await p.evaluate(
-    () => (JSON.parse(localStorage.getItem("wordgrid:progress") || "{}").deductionSolved || []).length
-  );
-  log("logic solve recorded:", solvedIds);
-  if (solvedIds < 1) note("A debug-solved grid was not recorded as solved.");
-  if (SHOT) await p.screenshot({ path: `${SHOT}/debug-logic.png` });
 }
 
 await b.close();

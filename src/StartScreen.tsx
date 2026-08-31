@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import gsap from "gsap";
 import { EASE, motionOn, pressDown, release, useGsap } from "./anim";
 import { LEVELS } from "./puzzles";
-import { DEDUCTION_LEVELS } from "./deductionLevels";
 import {
   MAX_STARS,
   totalStars,
@@ -26,8 +25,6 @@ import {
 import { getLocale, t } from "./i18n";
 import { playConfirm, playUi } from "./audio";
 
-const DEDUCTION_COUNT = DEDUCTION_LEVELS.length;
-
 function fmtCountdown(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
@@ -40,8 +37,6 @@ export default function StartScreen({
   onLevels,
   onDaily,
   onEndless,
-  onPairs,
-  onDeduction,
   onHelp,
   onStats,
   onHistory,
@@ -56,8 +51,6 @@ export default function StartScreen({
   onLevels: () => void;
   onDaily: () => void;
   onEndless: () => void;
-  onPairs: () => void;
-  onDeduction: () => void;
   onHelp: () => void;
   onStats: () => void;
   onHistory: () => void;
@@ -84,9 +77,14 @@ export default function StartScreen({
   // A streak only counts while it's still alive (cleared today or yesterday).
   const streakNow = liveDailyStreak(progress, now);
   const countdown = fmtCountdown(msUntilNextDaily(now));
-  // Endless is the campaign's payoff, so the tile shows as a locked door until
-  // every level is cleared rather than disappearing — you can see what's coming.
+  // Endless is the campaign's payoff, so it shows as a locked door until every
+  // level is cleared rather than disappearing — you can see what's coming.
   const endlessOpen = endlessUnlocked(progress);
+  const endlessStat = !endlessOpen
+    ? t("home.mode.endless.locked")
+    : progress.endlessBest > 0
+      ? t("home.mode.endless.best", { n: progress.endlessBest })
+      : t("home.mode.endless.empty");
   const dateLabel = now.toLocaleDateString(getLocale(), { weekday: "short", month: "short", day: "numeric" });
 
   /**
@@ -259,50 +257,21 @@ export default function StartScreen({
         >
           {t("home.browseLevels", { n: LEVELS.length })}
         </button>
-        <div className="grid w-full grid-cols-3 gap-2">
-          {[
-            {
-              icon: endlessOpen ? "🧘" : "🔒",
-              label: t("home.mode.endless"),
-              stat: !endlessOpen
-                ? t("home.mode.endless.locked")
-                : progress.endlessBest > 0
-                  ? t("home.mode.endless.best", { n: progress.endlessBest })
-                  : t("home.mode.endless.empty"),
-              onClick: onEndless,
-              locked: !endlessOpen,
-            },
-            {
-              icon: "🃏",
-              label: t("home.mode.pairs"),
-              stat: progress.pairsBest > 0 ? t("home.mode.pairs.best", { n: progress.pairsBest }) : t("home.mode.pairs.empty"),
-              onClick: onPairs,
-              locked: false,
-            },
-            {
-              icon: "🧩",
-              label: t("home.mode.logic"),
-              stat: t("home.mode.logic.stat", { n: progress.deductionSolved.length, total: DEDUCTION_COUNT }),
-              onClick: onDeduction,
-              locked: false,
-            },
-          ].map((m) => (
-            <button
-              key={m.label}
-              onClick={m.locked ? undefined : () => { playConfirm(); m.onClick(); }}
-              disabled={m.locked}
-              aria-label={m.locked ? `${m.label}, ${t("levels.locked")}` : undefined}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-ink/30 bg-white py-2.5 text-sm font-bold text-ink transition ${
-                m.locked ? "cursor-not-allowed opacity-60" : "hover:bg-cream active:scale-95"
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden>{m.icon}</span> {m.label}
-              </span>
-              <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-ink-soft">{m.stat}</span>
-            </button>
-          ))}
-        </div>
+        {/* The one side mode, on its own row: the door reads as a door when
+            it is not one tile among three. */}
+        <button
+          onClick={endlessOpen ? () => { playConfirm(); onEndless(); } : undefined}
+          disabled={!endlessOpen}
+          aria-label={endlessOpen ? undefined : `${t("home.mode.endless")}, ${t("levels.locked")}`}
+          className={`flex w-full items-center justify-between rounded-2xl border border-ink/30 bg-white px-4 py-2.5 text-sm font-bold text-ink transition ${
+            endlessOpen ? "hover:bg-cream active:scale-95" : "cursor-not-allowed opacity-60"
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden>{endlessOpen ? "🧘" : "🔒"}</span> {t("home.mode.endless")}
+          </span>
+          <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-ink-soft">{endlessStat}</span>
+        </button>
 
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
           {[
@@ -325,8 +294,7 @@ export default function StartScreen({
       <div className="flex w-full flex-col items-center lg:col-start-1 lg:row-start-2">
       {/* Three goals that expire at midnight. Everything else the game counts
           (stars, tiers, lifetime score) accumulates forever and so says nothing
-          about today; these are the reason to come back, and the nudge that
-          gets a campaign player to open a mode they've never tried. */}
+          about today; these are the reason to come back. */}
       <div data-enter className="mt-8 w-full max-w-xs rounded-2xl border border-ink/20 bg-white px-4 py-3 lg:mt-6">
         <div className="flex items-baseline justify-between">
           <span className="font-display text-sm font-bold text-ink">{t("quest.title")}</span>

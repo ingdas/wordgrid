@@ -338,6 +338,55 @@
         color: var(--press);
         font-weight: 700;
       }
+
+      /* --- the upload zip --- */
+      .build .field__body {
+        white-space: normal; /* a listing, not pasted prose */
+      }
+      .build .field__head {
+        flex-wrap: wrap;
+      }
+      .field a.field__copy {
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .field a.field__copy[aria-disabled="true"] {
+        background: var(--ink-soft);
+        pointer-events: none;
+      }
+      .listing {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12.5px;
+        columns: 2 320px;
+        column-gap: 28px;
+      }
+      .listing li {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 3px 0;
+        border-bottom: 1px dotted var(--rule);
+        break-inside: avoid;
+      }
+      .listing .size {
+        color: var(--ink-soft);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .build__sum {
+        margin: 14px 0 0;
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+      .build__sum:empty {
+        display: none;
+      }
+      .build__sum code {
+        word-break: break-all;
+      }
     </style>
   </head>
   <body>
@@ -349,12 +398,13 @@
           <h1>WordGrid</h1>
         </div>
         <p class="lede">
-          Everything a game portal asks for, in one page: the copy to paste into each field, the art
-          that goes with it, and the technical answers a reviewer tends to ask. Every image and the
-          clip are generated from the live game, so nothing here can drift from what a player
-          actually sees.
+          Everything a game portal asks for, in one page: the build to upload, the copy to paste
+          into each field, the art that goes with it, and the technical answers a reviewer tends to
+          ask. The build, every image and the clip are generated from the live game, so nothing here
+          can drift from what a player actually sees.
         </p>
         <nav class="jump">
+          <a href="#build">Build</a>
           <a href="#copy">Copy</a>
           <a href="#tags">Tags</a>
           <a href="#covers">Covers</a>
@@ -365,6 +415,63 @@
           <a href="../">Play the game →</a>
         </nav>
       </header>
+
+      <!-- ================= BUILD ================= -->
+      <section id="build">
+        <h2>Game build</h2>
+        <p class="note">
+          The game itself, packed the way the upload form wants it: one zip with
+          <code>index.html</code> at its root, every path relative, the SDK loaded from its own
+          CDN and nothing else fetched from anywhere. <code>npm run build</code> writes it next to
+          the game every time, so it can't be older than the site it sits on.
+        </p>
+
+        <div class="field build" id="build-card">
+          <div class="field__head">
+            <span class="field__name">CrazyGames upload</span>
+            <span class="field__count" data-build-meta>reading the manifest…</span>
+            <a class="field__copy" href="wordgrid-crazygames.zip" download data-build-link>
+              Download zip
+            </a>
+          </div>
+          <div class="field__body">
+            <ul class="listing" data-build-list></ul>
+            <p class="build__sum" data-build-sum></p>
+          </div>
+        </div>
+
+        <div class="prose">
+          <ul>
+            <li>
+              <strong>In:</strong> <code>index.html</code>, the hashed JavaScript and CSS, the
+              Inter and Fraunces font files (bundled, so no font request leaves the page), the web
+              manifest and its icons. Nothing loads from outside except
+              <code>https://sdk.crazygames.com/crazygames-sdk-v3.js</code>, which the portal
+              requires to be taken from its CDN rather than shipped.
+            </li>
+            <li>
+              <strong>Out:</strong> this submission pack, the GitHub Pages files, the
+              share-preview image (only ever referenced by an absolute URL), and the service
+              worker — a portal's iframe has nothing to install, and on a games host shared by
+              every title a worker's cache housekeeping is everyone's business. The game only
+              registers it when it is the top-level page, so nothing is asked for and nothing 404s.
+            </li>
+            <li>
+              <strong>Limits:</strong> the portal allows 50 MB for the initial download (20 MB to
+              be eligible for the mobile homepage), 250 MB in total and 1,500 files. This zip is a
+              small fraction of every one of them.
+            </li>
+            <li>
+              <strong>Checked:</strong> <code>node scripts/dist.playtest.mjs</code> unpacks the
+              zip, serves it from a nested path inside a foreign iframe — the way the portal does —
+              and fails on an absolute path, a missing file, a request to any host that isn't the
+              SDK's, a service-worker registration, or a page error. Every build of the zip is
+              reproducible: the same sources give the same bytes, and <code>dist.json</code>
+              beside it carries the SHA-256 to quote when a version is uploaded.
+            </li>
+          </ul>
+        </div>
+      </section>
 
       <!-- ================= COPY ================= -->
       <section id="copy">
@@ -426,7 +533,7 @@
             <span class="field__count"></span>
             <button class="field__copy" type="button">Copy</button>
           </div>
-          <div class="field__body"><p><strong>WordGrid is a word puzzle about the one word you can't see.</strong></p><p>Every board deals twelve words that split into four groups of three — and a masked secret link at the top, one ? per letter, so you know its length from the first move. That hidden word belongs to all four groups at once.</p><p>Pick three words that share a theme and hit Submit; the secret link joins them to make a group of four. Clear all four groups without spending your four mistakes, then spell the link to win. Spotted it early? Call it with groups still open — one shot per level, and it pays a bonus for every group you hadn't found yet.</p><p>100 levels across twelve chapters, and the difficulty isn't a straight climb: every chapter opens on a breather, works up, and finishes on a boss that changes the rules and tells you exactly how. One scrambles every tile into an anagram. One takes the vowels out. One turns the board face-down and makes you group from memory. One replaces all twelve words with pictures, where the first name you think of is rarely the right one. One salts in impostor tiles that belong to no group at all. One boards up each group you solve so you can't read your own progress back.</p><p>Every chapter also hides a key: each level in it gives up one letter, and spelling the word those letters make is what opens that chapter's boss door.</p><p>Come back tomorrow for the Daily Challenge — its own pool of puzzles, its own streak — plus three quests drawn fresh at midnight and paid in hints. When you want a different kind of thinking there's Pairs, a memory mode played on the same boards, and the Logic Grid: thirty pure-deduction puzzles with no vocabulary in them at all. Clear the campaign and Endless opens up.</p><p>No account, no install. Chase the stars, keep the streak alive, and find out what links them all.</p></div>
+          <div class="field__body"><p><strong>WordGrid is a word puzzle about the one word you can't see.</strong></p><p>Every board deals twelve words that split into four groups of three — and a masked secret link at the top, one ? per letter, so you know its length from the first move. That hidden word belongs to all four groups at once.</p><p>Pick three words that share a theme and hit Submit; the secret link joins them to make a group of four. Clear all four groups without spending your four mistakes, then spell the link to win. Spotted it early? Call it with groups still open — one shot per level, and it pays a bonus for every group you hadn't found yet.</p><p>100 levels across twelve chapters, and the difficulty isn't a straight climb: every chapter opens on a breather, works up, and finishes on a boss that changes the rules and tells you exactly how. One scrambles every tile into an anagram. One takes the vowels out. One turns the board face-down and makes you group from memory. One replaces all twelve words with pictures, where the first name you think of is rarely the right one. One salts in impostor tiles that belong to no group at all. One boards up each group you solve so you can't read your own progress back.</p><p>Every chapter also hides a key: each level in it gives up one letter, and spelling the word those letters make is what opens that chapter's boss door.</p><p>Come back tomorrow for the Daily Challenge — its own pool of puzzles, its own streak — plus three quests drawn fresh at midnight and paid in hints. Clear the campaign and Endless opens up.</p><p>No account, no install. Chase the stars, keep the streak alive, and find out what links them all.</p></div>
         </div>
 
         <div class="field">
@@ -435,7 +542,7 @@
             <span class="field__count"></span>
             <button class="field__copy" type="button">Copy</button>
           </div>
-          <div class="field__body"><p>Twelve words hide four groups of three, and one secret word belongs to all four. Pick three words that share a theme; the hidden link joins them into a group. Clear four groups on four mistakes, then spell the link to win.</p><p>100 levels across twelve chapters, each closing on a boss that rewrites the rules — scrambled tiles, missing vowels, a board played from memory, twelve pictures instead of words, impostor tiles, a blackout. Plus a Daily Challenge with its own streak, daily quests, a memory mode, and thirty logic-grid puzzles. No account needed.</p></div>
+          <div class="field__body"><p>Twelve words hide four groups of three, and one secret word belongs to all four. Pick three words that share a theme; the hidden link joins them into a group. Clear four groups on four mistakes, then spell the link to win.</p><p>100 levels across twelve chapters, each closing on a boss that rewrites the rules — scrambled tiles, missing vowels, a board played from memory, twelve pictures instead of words, impostor tiles, a blackout. Plus a Daily Challenge with its own streak, daily quests, and Endless once the campaign is done. No account needed.</p></div>
         </div>
 
         <h3>Instructions / controls</h3>
@@ -483,8 +590,7 @@
             Interface in <strong>English</strong> and <strong>Spanish</strong>, picked up from the
             browser and switchable in Settings. The word puzzles themselves stay English — a board of
             English words can only be rewritten, not translated — but a translated interface makes
-            every menu, boss rule and result screen readable, and it fully unlocks the Logic Grid,
-            which is pure deduction with no vocabulary in it. Spanish store copy is
+            every menu, boss rule and result screen readable. Spanish store copy is
             <a class="plain" href="#es">at the bottom of this page</a>.
           </p>
         </div>
@@ -636,44 +742,28 @@
               <a href="screen-6-boss-briefing-1280x720.png" download>Download</a>
             </figcaption>
           </figure>
-          <figure>
-            <img src="screen-8-logic-1280x720.png" alt="The Logic Grid" loading="lazy" />
-            <figcaption>
-              <span class="file">screen-8-logic-1280x720.png</span>
-              <span class="use">The Logic Grid, part-deduced</span>
-              <a href="screen-8-logic-1280x720.png" download>Download</a>
-            </figcaption>
-          </figure>
-          <figure>
-            <img src="screen-9-pairs-1280x720.png" alt="Pairs" loading="lazy" />
-            <figcaption>
-              <span class="file">screen-9-pairs-1280x720.png</span>
-              <span class="use">Pairs, part-matched</span>
-              <a href="screen-9-pairs-1280x720.png" download>Download</a>
-            </figcaption>
-          </figure>
           <figure class="tall">
-            <img src="screen-10-home-780x1688.png" alt="Home on a phone" loading="lazy" />
+            <img src="screen-8-home-780x1688.png" alt="Home on a phone" loading="lazy" />
             <figcaption>
-              <span class="file">screen-10-home-780x1688.png</span>
+              <span class="file">screen-8-home-780x1688.png</span>
               <span class="use">Home, on a phone</span>
-              <a href="screen-10-home-780x1688.png" download>Download</a>
+              <a href="screen-8-home-780x1688.png" download>Download</a>
             </figcaption>
           </figure>
           <figure class="tall">
-            <img src="screen-11-board-780x1688.png" alt="A board on a phone" loading="lazy" />
+            <img src="screen-9-board-780x1688.png" alt="A board on a phone" loading="lazy" />
             <figcaption>
-              <span class="file">screen-11-board-780x1688.png</span>
+              <span class="file">screen-9-board-780x1688.png</span>
               <span class="use">Mid-board, on a phone</span>
-              <a href="screen-11-board-780x1688.png" download>Download</a>
+              <a href="screen-9-board-780x1688.png" download>Download</a>
             </figcaption>
           </figure>
           <figure class="tall">
-            <img src="screen-12-finale-780x1688.png" alt="The finale on a phone" loading="lazy" />
+            <img src="screen-10-finale-780x1688.png" alt="The finale on a phone" loading="lazy" />
             <figcaption>
-              <span class="file">screen-12-finale-780x1688.png</span>
+              <span class="file">screen-10-finale-780x1688.png</span>
               <span class="use">The spelling finale, on a phone</span>
-              <a href="screen-12-finale-780x1688.png" download>Download</a>
+              <a href="screen-10-finale-780x1688.png" download>Download</a>
             </figcaption>
           </figure>
         </div>
@@ -735,8 +825,9 @@
               memory, and says so in a banner rather than pretending it saved.
             </li>
             <li>
-              <strong>Offline:</strong> a service worker caches the shell, so the game keeps playing
-              after the first load with no network.
+              <strong>Offline:</strong> on the standalone site a service worker caches the shell,
+              so the game keeps playing after the first load with no network. Inside a portal's
+              iframe no worker is registered — the portal page needs the network anyway.
             </li>
             <li>
               <strong>Accounts / data:</strong> none. No login, no third-party analytics, no personal
@@ -779,7 +870,7 @@
             <span class="field__count"></span>
             <button class="field__copy" type="button">Copy</button>
           </div>
-          <div class="field__body"><p><strong>WordGrid es un juego de palabras sobre la palabra que no puedes ver.</strong></p><p>Cada tablero reparte doce palabras que se dividen en cuatro grupos de tres, y arriba queda una palabra secreta oculta: una ? por letra, así que conoces su longitud desde el primer movimiento. Esa palabra pertenece a los cuatro grupos.</p><p>Elige tres palabras que compartan un tema y pulsa Enviar: la palabra secreta se une a ellas y completa el grupo. Encuentra los cuatro grupos sin gastar tus cuatro fallos y escribe la palabra secreta para ganar. ¿La has visto pronto? Anúnciala con grupos aún abiertos: un solo intento por nivel, con bonificación por cada grupo que te quedaba.</p><p>100 niveles en doce capítulos, y la dificultad no sube en línea recta: cada capítulo empieza suave, aprieta y termina en un jefe que cambia las reglas y te dice exactamente cómo. Uno mezcla las letras de cada ficha. Otro quita todas las vocales. Otro pone el tablero boca abajo y te hace agrupar de memoria. Otro sustituye las doce palabras por imágenes, donde el primer nombre que se te ocurre casi nunca es el bueno. Otro cuela fichas impostoras que no son de ningún grupo. Otro tapa cada grupo que resuelves para que no puedas repasar tu propio avance.</p><p>Cada capítulo esconde además una llave: cada nivel entrega una letra, y ordenarlas es lo que abre la puerta del jefe.</p><p>Vuelve mañana por el Reto diario, con su propia racha, y por las tres misiones que se sortean a medianoche y se pagan en pistas. Si te apetece otro tipo de reto están Parejas, un modo de memoria sobre los mismos tableros, y la Cuadrícula lógica: treinta puzles de pura deducción, sin vocabulario. Termina la campaña y se abre el modo Sin fin.</p><p>Sin cuenta y sin instalar. Persigue las estrellas, mantén viva la racha y descubre qué las une a todas.</p></div>
+          <div class="field__body"><p><strong>WordGrid es un juego de palabras sobre la palabra que no puedes ver.</strong></p><p>Cada tablero reparte doce palabras que se dividen en cuatro grupos de tres, y arriba queda una palabra secreta oculta: una ? por letra, así que conoces su longitud desde el primer movimiento. Esa palabra pertenece a los cuatro grupos.</p><p>Elige tres palabras que compartan un tema y pulsa Enviar: la palabra secreta se une a ellas y completa el grupo. Encuentra los cuatro grupos sin gastar tus cuatro fallos y escribe la palabra secreta para ganar. ¿La has visto pronto? Anúnciala con grupos aún abiertos: un solo intento por nivel, con bonificación por cada grupo que te quedaba.</p><p>100 niveles en doce capítulos, y la dificultad no sube en línea recta: cada capítulo empieza suave, aprieta y termina en un jefe que cambia las reglas y te dice exactamente cómo. Uno mezcla las letras de cada ficha. Otro quita todas las vocales. Otro pone el tablero boca abajo y te hace agrupar de memoria. Otro sustituye las doce palabras por imágenes, donde el primer nombre que se te ocurre casi nunca es el bueno. Otro cuela fichas impostoras que no son de ningún grupo. Otro tapa cada grupo que resuelves para que no puedas repasar tu propio avance.</p><p>Cada capítulo esconde además una llave: cada nivel entrega una letra, y ordenarlas es lo que abre la puerta del jefe.</p><p>Vuelve mañana por el Reto diario, con su propia racha, y por las tres misiones que se sortean a medianoche y se pagan en pistas. Termina la campaña y se abre el modo Sin fin.</p><p>Sin cuenta y sin instalar. Persigue las estrellas, mantén viva la racha y descubre qué las une a todas.</p></div>
         </div>
 
         <div class="field">
@@ -798,8 +889,9 @@
           <code>npm run submission</code> rebuilds the covers and screenshots,
           <code>npm run clip</code> rebuilds the video. Both drive the real build, and take their
           boards straight from <code>src/puzzles.ts</code> — so re-ordering the campaign can't leave
-          the art quietly lying about the game. This page is
-          <code>public/art/index.html</code>; edit the copy there.
+          the art quietly lying about the game. The upload zip and its <code>dist.json</code> are
+          build output (<code>scripts/dist-zip.mts</code>, run by <code>npm run build</code>), not
+          checked in here. This page is <code>public/art/index.html</code>; edit the copy there.
         </p>
       </footer>
     </div>
@@ -838,6 +930,46 @@
           }, 1600);
         });
       }
+
+      // The upload card reads dist.json, which the build writes beside the zip
+      // (scripts/dist-zip.mts). Under `vite dev` neither exists yet: say so
+      // instead of offering a link that 404s.
+      (async () => {
+        const card = document.getElementById("build-card");
+        const meta = card.querySelector("[data-build-meta]");
+        const link = card.querySelector("[data-build-link]");
+        const list = card.querySelector("[data-build-list]");
+        const sum = card.querySelector("[data-build-sum]");
+        const kb = (n) =>
+          n < 1e6 ? (n / 1e3).toFixed(1) + " kB" : (n / 1e6).toFixed(2) + " MB";
+        try {
+          const res = await fetch("dist.json", { cache: "no-store" });
+          if (!res.ok) throw new Error(String(res.status));
+          const m = await res.json();
+          link.href = m.file;
+          meta.textContent = `${kb(m.bytes)} · ${m.entries.length} files · v${m.version}`;
+          for (const e of m.entries) {
+            const li = document.createElement("li");
+            const file = document.createElement("span");
+            file.className = "file";
+            file.textContent = e.path;
+            const size = document.createElement("span");
+            size.className = "size";
+            size.textContent = kb(e.bytes);
+            li.append(file, size);
+            list.append(li);
+          }
+          const code = document.createElement("code");
+          code.textContent = m.sha256;
+          sum.append(`${m.file} · ${kb(m.unpacked)} unpacked · sha256 `, code);
+        } catch {
+          meta.textContent = "not built yet";
+          link.setAttribute("aria-disabled", "true");
+          link.removeAttribute("href");
+          sum.textContent =
+            "npm run build writes wordgrid-crazygames.zip and this listing next to the game.";
+        }
+      })();
     </script>
   </body>
 </html>

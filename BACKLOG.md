@@ -1,7 +1,8 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 37 (GSAP replaces Framer Motion;
-one animation library, −41 kB gzip)._
+_Last updated 2026-08-26, after iteration 42 (CrazyGames submission audit:
+the SDK is actually initialised now, and the ad and gameplay rules are
+followed)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -22,9 +23,8 @@ of 12 words that sort into 4 themed groups of three, all joined by one hidden
 **link word** (the "pivot", e.g. STAR) that is spelled at the end. Flow: first
 launch → straight into the guided tutorial; afterwards Home (Daily hero card,
 quests, mode row) → Level index (100 levels, 12 chapters, a boss with its own
-twist closing each) → Game. Side modes on the same boards: **Pairs** (memory
-matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
-(unlocked by finishing the campaign).
+twist closing each) → Game. One side mode: **Endless**
+(the campaign boards plus the daily pool, unlocked by finishing the campaign).
 
 ## Session bootstrap
 
@@ -32,13 +32,13 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   standing instruction — no branches, no waiting for review). The production
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
-- **Commands**: `npm run build` (tsc + vite → `docs/`), `npm test` (ten unit
-  suites: engine, deduction, progress/key gating, quests, storage, debug,
-  i18n, sdk, level tracking, audio), `npm run validate` (puzzle structure,
+- **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
+  suites: engine, progress/key gating, quests, storage, debug,
+  i18n, sdk, level tracking, audio, analytics), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
-  board — for every language; `-- --locale xx` for one), `npm run audit`
-  (ambiguity report for a human, English), `npm run
-  gen:deduction` (regenerate Logic Grid levels), `node scripts/gen-assets.mjs`
+  board — for every shipped language; `-- --locale xx` for one), `npm run
+  audit` (ambiguity report for a human, English), `node scripts/gen-assets.mjs`
   (og-image + icons), `npm run submission` / `npm run clip` (store art — see
   README).
 - **Headless playtests — all five must pass with zero issues before a push.**
@@ -51,16 +51,20 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
     full flow: tutorial, boss briefing, keys, loss path, unlock reveal, the
     720p embed fitting without page scroll, unsolved titles never shown, the
     pivot never distinguishable by colour.
-  - `BASE=… node scripts/pairs.test.mjs` — a Pairs run plus the two
-    iteration-24 timer/stale-state repros.
   - `BASE=… node scripts/debug.playtest.mjs` — the tool tray, free hints,
-    auto-solve, the index and Logic Grid tools.
+    auto-solve, the index tool.
   - `BASE=… node scripts/iteration33.playtest.mjs` — quests paying out, the
     letter-counting link mask, Tab trapped in a dialog, play with a throwing
     `localStorage`.
   - `node scripts/stats.playtest.mjs` — level tracking against the real
     reference server, a level played offline; it serves `docs/` and runs the
     server itself, so it needs no preview.
+  - `node scripts/dist.playtest.mjs` — the CrazyGames zip the build wrote:
+    unpacked, served from a nested path inside a foreign iframe like the
+    portal does; fails on an absolute path, a missing file, a request to any
+    host but the SDK's (and the Umami host the analytics meta tag names, if
+    configured), a service-worker registration or a page error. Needs no
+    preview either.
 - **Debug mode**: only on a page opened with `?debug` in the URL — not
   remembered, nothing stored; the scripts open `?debug` too. That page's
   **Settings → Developer** has a toggle to turn it off and on for the session.
@@ -93,17 +97,14 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   `levelTitle(index)` — use it, not `LEVELS[i].title`, because the emoji slot
   substitutes its board.
 - `dailyPuzzles.ts` — the 80-puzzle daily-only pool (no pivot shared with the
-  campaign). Also feeds Endless and Pairs.
-- `deductionLevels.ts` / `deductionRules.ts` — the 30 pre-generated Logic Grid
-  levels (`logic-1…30`) and the clue rules shared by the generator and the
-  screen.
+  campaign). Also feeds Endless.
 - `engine.ts` — pure, unit-tested: `evaluateGuess` (one-away), `computeStars`,
   `linkMatches` (case/plural/synonyms via `accept`), `scrambleWord`,
   `cipherWord` (vowel-stripping; imported back by `puzzles.ts` with an
   explicit `.ts` extension so node scripts can load it), `shuffle`, `guessKey`.
 - `progress.ts` — `Progress` schema: `stars`, `streak`, `bestStreak`,
   `linksGuessed`, `best`, `daily{lastDate,streak}`, `achievements`, `hints`,
-  `history`, `score`, `endlessBest`, `pairsBest`, `deductionSolved`, `seen`,
+  `history`, `score`, `endlessBest`, `seen`,
   `banked`, `keys`, `quests`. `isUnlocked` (`LOOKAHEAD = 3` + debug + the
   chapter-key boss gate), `endlessUnlocked` (every campaign level cleared, or
   debug), the key helpers (`bankedLetters`/`keyReady`/`keySolved`/`solveKey`/
@@ -112,11 +113,13 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   debug-blind, both migrated), `dailyPuzzle()` (fixed seeded tour, same for
   everyone, no repeat in 80 days), `liveDailyStreak` (only a run cleared today
   or yesterday counts). Rules pinned in `scripts/progress.test.mts`.
-- `quests.ts` — `QUEST_POOL` (7), `QUESTS_PER_DAY = 3`, a date-seeded draw that
+- `quests.ts` — `QUEST_POOL` (5), `QUESTS_PER_DAY = 3`, a date-seeded draw that
   never exactly repeats yesterday's, `recordQuest` pays once. `QUEST_REWARD =
   1` hint, `QUEST_SET_BONUS = 2`, `COMBO_TARGET = 3`. State rides in
   `Progress.quests`; events are raised in `App.tsx`.
-- `storage.ts` — **every** persisted read/write. `localStorage` when a real
+- `storage.ts` — **every** persisted read/write (plus `readSession`/
+  `writeSession`, the per-visit tier — `sessionStorage` with a memory
+  fallback, never mirrored). `localStorage` when a real
   probe write works, the CrazyGames data module when the SDK is there
   (`startSdkMirror` polls `MIRROR_TRIES = 12` × `MIRROR_GAP_MS = 700`, then
   reconciles both ways — adopts a key only the platform has, pushes up a key
@@ -127,6 +130,20 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   finished attempts before a percentage is shown; `parseLevels` sanitises the
   server's answer. Off unless `VITE_STATS_URL` or the `<meta
   name="wordgrid:stats">` tag is set. Debug and Endless are never counted.
+- `analytics.ts` — product analytics through a self-hosted **Umami**: screens
+  as virtual pageviews (`/home`, `/game`, …), everything else as named events
+  with a small property bag (`level_start/win/loss`, `hint`, `rewarded`,
+  `continue_offer`, `early_call`, `tutorial`, `quest`, `achievement`,
+  `chapter_key`, `share`, `setting`, `storage`,
+  `progress_reset`, `endless_end` — the full list with properties is at the
+  top of the file). Off unless `VITE_UMAMI_SCRIPT` + `VITE_UMAMI_WEBSITE` or
+  the two `<meta name="wordgrid:umami-…">` tags are set. The tracker is
+  injected after mount on an idle slot with `data-auto-track="false"`; events
+  raised before it lands wait in a buffer (`BUFFER_CAP = 100`), a failed load
+  retries (`RETRY_MS`) and on `online`; `identify` gets the same per-install
+  id as level tracking (`stats.playerId`). Debug is filtered inside; Endless
+  *is* counted. `analyticsStatus()` feeds Settings → Developer → Analytics.
+  Nothing is ever read back.
 - `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -152,13 +169,23 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   `scripts/i18n.test.mts` fails on a missing/stray key or a lost
   `{placeholder}`; `npm run validate -- --locale xx` holds a language's boards
   to the same rules as English (plus script and inflection checks).
-- `sdk.ts` — defensive CrazyGames v3 wrapper. Off-platform the script loads
-  but is disabled, so every call throws/rejects `sdkDisabled`: the wrapper
-  swallows both, latches "unusable", and every rewarded failure path (no SDK,
-  disabled, ad error, no callback in `AD_CALLBACK_TIMEOUT_MS = 5 s`) resolves
-  **true** so watch-&-continue and hint refills always pay out.
-  `MIN_AD_GAP_MS = 60 s` between interstitials, none in a session's first
-  minute. `sdkData()` is the data module `storage.ts` mirrors through.
+- `sdk.ts` — the only module that touches `window.CrazyGames` (v3). Three
+  phases: `waiting` (script not landed / init pending — calls **queue** and
+  replay in order), `ready`, `off` (no SDK in `SDK_WAIT_MS = 15 s`, or
+  `environment === "disabled"` / `sdkDisabled` — latched, calls dropped).
+  `initSdk()` waits for the async script and runs `init()` once; a call made
+  before it arms the SDK on sight. **Never treat `sdkNotInitialized` as
+  fatal** — that is what iteration 42 fixed: the first shipped wrapper
+  latched dead on it and `init()` was never called on the platform.
+  `gameplayStart/Stop` send transitions only. `adsMode()`: `ads` (a video
+  plays) · `free` (no ad system: off-platform, or `adsDisabledBasicLaunch`) ·
+  `blocked` (`hasAdblock`, or an adblock ad error); `subscribeAds` for React.
+  `requestRewarded` → true on `adFinished` or in `free`; **false** on
+  `adError`/unfilled/blocked/`AD_REQUEST_TIMEOUT_MS = 10 s` silence.
+  `showInterstitial()` resolves when the ad is over; `onAdBreak(fn)` fires
+  true/false while one is on screen (App mutes with it). `MIN_AD_GAP_MS =
+  60 s`, seeded at load. `sdkData()` — null until `ready` — is the data
+  module `storage.ts` mirrors through. `shareUrl()` for the share card.
 - `audio.ts` — everything synthesized, no files. Mixer: sfx and music buses
   under a make-up gain and limiter, one shared generated reverb on a send,
   stings duck the music, a voice budget and per-sound rate gate. Music is
@@ -169,7 +196,10 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   by `scripts/audio.test.mts`.
 - `anim.ts` — all motion, GSAP. `EASE` (incl. the hand-authored stamp
   `CustomEase`), `setReduceMotion`/`motionOn` (one module flag, kept in step
-  with the system preference and the Calm switch by App), hooks
+  with the system preference and the Calm switch by App), the opening
+  (`openingIn` — the press run, `OPENING_S = 3.6` s before the plate lifts with
+  `liftOut`; played once per visit by `Intro.tsx`, gated on a `sessionStorage`
+  flag through `storage.ts`'s `readSession`/`writeSession`), hooks
   `usePresence` (holds a leaving node mounted **and carries a payload frozen
   at its last present value**), `useSwitch` (one screen at a time),
   `useGsap`, `useOdometer` (score count-up written straight to the DOM),
@@ -190,21 +220,31 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 
 ### Screens (`src/`)
 
-- `App.tsx` — screen router (home / levels / game / pairs / deduction) and
+- `App.tsx` — screen router (home / levels / game) and
   progress state. **All progress writes go through `applyProgress(mutate)`**;
   side effects (save, achievements, toasts, quest events) run in the handler,
   never inside a React updater. `handleWin` (stars/streak/best/+1 hint/score,
   achievements, history; a daily win never writes campaign stars — history id
   = daily id, level 0). Daily via `overrideRaw`; Endless (campaign + daily
-  pool, no-fail, `endlessBest`, gated on a finished campaign); Pairs and
-  Logic routing; the sheets (settings: sound + level, music + level, calm,
+  pool, no-fail, `endlessBest`, gated on a finished campaign); the sheets (settings: sound + level, music + level, calm,
   locale, Developer → debug toggle + level tracking, reset; stats; history;
-  how-to-play); the storage banner; music scene; `visibilitychange` pause;
-  rewarded `refillHints` (+3).
+  how-to-play); the storage banner; music scene; `visibilitychange` pauses
+  the **audio only** (never `gameplayStop` — a focus change isn't a break to
+  the platform); `adBreak()` (the between-boards interstitial: `adBusy` scrim,
+  await the ad, then `gameplayStart`) used by `nextLevel` and `nextEndless`;
+  `gameplayStop` in every win/loss handler; `happytime` only when a boss
+  falls; rewarded `refillHints` (+3).
+- `Intro.tsx` — the opening plate. Mounted by App in front of the first
+  screen (the tutorial board or Home) while `intro` is set; any tap or key
+  fast-forwards the run (and is the gesture that unlocks audio), `onDone`
+  drops the plate and mounts the screen under it. Never replays within a
+  visit — the flag is per tab session, so a reload doesn't replay it either,
+  and the next visit does. Calm / reduced motion cut it entirely. The main
+  playtest reads its duration off `data-intro`.
 - `StartScreen.tsx` — Daily hero (7-day streak strip, countdown, Solve CTA),
   the quests card, Continue · L{n} (plays that level; the index is the link
-  under it), mode row (Endless — a locked door until the campaign is done ·
-  Pairs · Logic), each stat with its unit. Two columns at `lg`.
+  under it), the Endless
+  door (locked until the campaign is done), each stat with its unit. Two columns at `lg`.
 - `LevelSelect.tsx` — the level **index**: an Up-next card (chapter, tier,
   boss rule, community clear rate, Play), then twelve chapter sections in
   their own ink, each split into `LevelRow` (solved: numeral · title · dotted
@@ -225,7 +265,9 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   like → Ready flips to numbered backs → three armed peeks; clock starts at
   the flip; no shuffle; backs stay down through the early call); rewarded
   second chance (+2 tries, once); tutorial coach (welcome modal, sticky-note
-  steps, escalating nudges that never give the group away); `SolvedBanner`
+  steps, escalating nudges that never give the group away; a third card under
+  the finale reads the four group names out as the clues, and its misses hand
+  over free letters — never the last one); `SolvedBanner`
   prints the picture beside the word on the emoji boss; two columns at `lg`.
 - `LinkGuess.tsx` — the spell-the-link panel, three callers: finale, early
   call (`early` + `onMiss`), chapter key (`bank`, copy keys, `dismissKey`).
@@ -234,25 +276,6 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   rule strip reopens it) and `BossRules` (reused by how-to-play). Copy:
   `twist.<twist>.rule` / `.brief.a` / `.brief.b`.
 - `EndCard.tsx` — win/loss card, stars, ratings, share.
-- `Pairs.tsx` — 🃏 matching → coupling (the four leftovers; a wrong couple
-  flashes red and stays in hand, still costs a move) → spell the link.
-  Fewest moves = `pairsBest`. All timers go through a cancellable `later()`;
-  tap guards read refs, not closure state. Face-down cards never leak their
-  word.
-- `Deduction.tsx` — 🧩 Logic Grid. A 3×4/4×3 grid, four hidden groups of
-  three in any shape (15,400 partitions); eight clue kinds drawn as icon +
-  value with a per-board key (`deg`, `dir`, `diag`, `line`, `parity`,
-  `corners` on tiles; `rainbow`, `onepair` on row/column headers). Paint by
-  tap or drag; live ✓/✕ badge per clue; a full wrong board shakes and opens a
-  plain-words problem panel. Generator (`scripts/gen-deduction.mts`) keeps
-  only boards a human-style forced-inference solver cracks, minimises clues,
-  proves uniqueness by brute force, and orders levels as a vocabulary ramp
-  (`BANDS`); the tier chip reports measured inference depth. **Adding a clue
-  kind**: a `countScope` entry (or pair/line rule) in `deductionRules.ts`
-  (shared by the generator, the screen and `scripts/deduction.test.mts`),
-  wording in `clueText`/`violationText` and a `LEGEND` row in
-  `Deduction.tsx`, a `BANDS` slot in `scripts/gen-deduction.mts`, then
-  `npm run gen:deduction`.
 - `LevelStats.tsx` — Settings → Developer → Level tracking dashboard, plus
   `useCommunityStats()` for the Up-next card's clear-rate line.
 - `DebugPanel.tsx` — the 🛠 tray, bottom-left, mounted only in debug mode;
@@ -267,14 +290,18 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 
 ### Elsewhere
 
-- `scripts/` — `validate.mts`, `audit.mts`, `gen-deduction.mts`, the ten
-  `*.test.mts` unit suites, the five `*.playtest.mjs` / `pairs.test.mjs`
-  browser suites, `browser.mjs` (Chrome launcher), `gen-assets.mjs`,
-  `gen-submission.mjs` + `submission-art.mjs`, `gen-clip.mjs`.
+- `scripts/` — `validate.mts`, `audit.mts`, the nine `*.test.mts` unit
+  suites, the five `*.playtest.mjs` browser suites, `browser.mjs` (Chrome
+  launcher), `gen-assets.mjs`, `gen-submission.mjs` + `submission-art.mjs`,
+  `gen-clip.mjs`, `dist-zip.mts` (a dependency-free, byte-reproducible ZIP
+  writer and the Vite plugin that runs it at the end of every build; `EXCLUDE`
+  says what stays out) + `dist.playtest.mjs`.
 - `server/stats-server.mjs` — dependency-free Node + SQLite reference server
   for level tracking (`POST /events`, `GET /levels`, `/levels.csv`,
   `/health`).
-- `public/art/` — the submission pack, served at `<site>/art/`.
+- `public/art/` — the submission pack, served at `<site>/art/`. Its **Build**
+  section links `wordgrid-crazygames.zip` and reads `dist.json`; both are build
+  output in `docs/art/`, never in `public/`.
 
 ## Hard requirements (owner)
 
@@ -297,7 +324,9 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
 ## Engineering rules
 
 - Persisted state goes through `storage.ts`; copy goes through `i18n/`;
-  progress writes go through `applyProgress`. Grep before adding an exception.
+  progress writes go through `applyProgress`; the platform goes through
+  `sdk.ts` (never `window.CrazyGames` directly, never a call that assumes
+  init has happened). Grep before adding an exception.
 - **No side effects inside React state updaters** (StrictMode double-invokes
   them). Compute from a ref, act in the handler.
 - **Every deferred beat is cancellable** and cleared on new board / unmount.
@@ -310,7 +339,10 @@ matching), **Logic Grid** (pure deduction, 30 abstract levels), **Endless**
   memory-boss backs carry no word in any attribute. The playtest asserts all
   of it.
 - Debug never leaks into a normal save (its own key, tray mounted only while
-  on); debug and Endless are never counted by level tracking.
+  on); debug and Endless are never counted by level tracking; debug is never
+  tracked by analytics either. An analytics property is an id, a number or an
+  enum — never copy, never a word the player typed, never a puzzle's answer.
+  New events go in `EventName` and the vocabulary comment in `analytics.ts`.
 - `npm run validate` is the gate for content: a new board that fails it
   doesn't build.
 
@@ -378,8 +410,9 @@ the hardest; *emoji* — the one bespoke board.
 - Twist deal rules: no adjacent repeats; emoji exactly once (it swaps in the
   one bespoke board); memory never beside blackout; cipher never beside
   scramble.
-- **Memory boss ≠ Pairs.** Pairs is a flip-two mode on its own screen; the
-  memory boss is the normal grouping game on a board you can no longer read.
+- **The memory boss is not a matching game.** It is the normal grouping game
+  on a board you can no longer read; the flip-two Pairs mode that once sat
+  beside it was a separate screen, never its base, and is gone (see below).
 
 **Level index**
 - It is an **index, not a map**: solved levels are named rows in aligned
@@ -403,25 +436,45 @@ the hardest; *emoji* — the one bespoke board.
   33) — the finale lost a little, the whole middle of the board gained a
   deduction.
 - A loss keeps the link masked so the level is replayable.
-- The tutorial board is STAR with no compound-word group; coach copy derives
-  from `OPENING[0]`'s own first category, so re-pinning it can't strand the
-  coach.
+- The tutorial board is STAR with no compound-word group; coach copy (steps 1
+  and 3) derives from `OPENING[0]`'s own category names, so re-pinning it can't
+  strand the coach.
 
 **Meta and platform**
 - Daily is a deterministic seeded tour — same board for everyone, nothing
   stored; a daily win never touches campaign stars.
-- Quests are a **pure function of the date**, paid in hints the moment a goal
-  is met (no claim button); a `pairs`/`logic` draw is the only nudge into a
-  side mode.
+- Quests are a **pure function of the date**, paid in hints the moment a goal is met (no claim button).
 - Endless is locked behind a finished campaign — it's the payoff, not a
-  fourth mode on day one.
+  second mode on day one.
+- **Pairs and the Logic Grid were removed (iteration 40, owner's call).** The
+  game is the word board; two unrelated side modes on the home screen split
+  the pitch and the player's attention. Both screens, the 30 generated levels,
+  the generator, their tests and store shots are in git at `d2f4f8a`. Their
+  quests (`pairs`, `logic`) and save fields (`pairsBest`, `deductionSolved`)
+  went with them — an old save's stray keys are dropped by `loadProgress`.
 - Storage: the "nothing durable" banner waits ~8 s for the async SDK; a live
   save is never overwritten by a stale platform copy (adoption only fills a
   key we have nothing for).
 - Level tracking is **off by default**, shows a dash under `MIN_SAMPLE`, and
   treats the server's answer as untrusted input.
-- Rewarded-ad failure paths **resolve true**: never strand a player behind an
-  ad that couldn't load.
+- Rewarded ads follow the platform's ad rules, not ours: an ad that **didn't
+  play pays nothing** (adError/unfilled/blocked/silence → false, toast "no ad
+  available", offer stays up). The one exception is *no ad system at all* —
+  no SDK, a disabled domain, or `adsDisabledBasicLaunch` — where the reward
+  is given, because a dead "watch" button is a QA rejection. Buttons read
+  `adsMode()` and only show 🎬 / say "Watch" where a video plays; under an
+  ad blocker the second chance isn't offered and the refill says why.
+- `happytime` is for a **boss** falling only (the docs: "sparingly").
+- Escape is not a gameplay key (it leaves fullscreen); dialogs still close on
+  it, as dialogs do. The rotate-to-portrait hint needs `pointer: coarse`, so
+  an 800×450 desktop embed never sees it.
+- **The service worker is for the standalone site.** `main.tsx` registers it
+  only when the game is the top-level page, the upload zip leaves `sw.js` out,
+  and `activate` clears only `wordgrid-*` caches — CacheStorage is per origin,
+  and both `ingdas.github.io` and a portal's games host are shared origins.
+- **Puzzle content is not localized.** A board of English words can only be
+  rewritten per language, not translated; a locale unlocks every menu, rule and
+  result screen.
 - **Puzzle content is localized by rewriting, never translating** (iteration
   38 reversed the earlier "stays English" decision for the CrazyGames rollout).
   A board of English words can't be translated, so every language writes its
@@ -467,10 +520,16 @@ Ranked by expected impact. Nothing here is started.
 4. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
    is empty in both `index.html` and `docs/index.html`, so the whole feature
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
-   somewhere and point the tag at it.
+   somewhere and point the tag at it. **Analytics is in the same state**: the
+   `wordgrid:umami-script` / `wordgrid:umami-website` tags are empty until a
+   Umami is up (Coolify's template; set `TRACKER_SCRIPT_NAME`,
+   `COLLECT_API_ENDPOINT`, `DISABLE_TELEMETRY` on it, add one website, paste
+   the tracker URL and the website id). Then check Settings → Developer →
+   Analytics on the live page says the tracker loaded.
 5. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
-   module and ads all correctly no-op off-platform; final QA against their
-   preview tool is still owed at submission time.
+   module and ads all correctly no-op off-platform. The upload itself is ready
+   (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);
+   what is owed is the run through their preview tool with that file.
 6. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
@@ -528,6 +587,11 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
+| 42 | CrazyGames submission audit. The SDK is actually initialised now (`sdk.ts`: wait for the async script, `init()` once, queue-and-replay calls made before it; only `sdkDisabled` is fatal — a pre-init `sdkNotInitialized` had latched it dead and `init()` never ran); the rotate hint needs `pointer: coarse`; gameplayStart/Stop at board boundaries only (never on a tab switch), `happytime` on a boss only; interstitials hold the page and mute only while showing; rewarded ads pay only when watched, free where no ad system exists (`adsMode()` drives the button copy); equal-size second-chance buttons; Escape dropped as a gameplay key; safe-area padding; scrollable dialog scrims; `shareUrl()`; playtests keep the SDK script out and check the real handshake separately | `db3b821` |
+| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host | `82ebb22` |
+| 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | `9f87486` |
+| 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
+| 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |
 | 37 | GSAP for the beats, then Framer Motion retired entirely; `anim.ts`, `usePresence`, shared `dialogIn`; found and fixed a chapter-key DOM leak | `2dd039e` `d400a92` `a6f89ee` |
 | 36 | Audio pass: mixer, limiter, reverb send, FM bells, sounds for silent moments, three music scenes, per-bus volume | `9e169e8` |
 | 35 | Emoji boss rebuilt: the name is the answer, the picture misleads; banner names the picture; validate checks emoji maps | `c55d0ca` `31b2222` |

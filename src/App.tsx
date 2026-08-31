@@ -5,6 +5,7 @@ import {
   dialogIn,
   dialogOut,
   dropOut,
+  liftOut,
   motionOn,
   riseOut,
   screenOut,
@@ -38,7 +39,7 @@ import {
 import { recordQuest, QUEST_SET_BONUS, COMBO_TARGET, type QuestDef, type QuestEvent } from "./quests";
 import { debugRequested, isDebug, setDebug } from "./debug";
 import { useModal } from "./modal";
-import { readItem, writeItem, removeItem, startSdkMirror } from "./storage";
+import { readItem, writeItem, removeItem, readSession, writeSession, startSdkMirror } from "./storage";
 import {
   initAudio,
   isMuted,
@@ -48,6 +49,7 @@ import {
   startMusic,
   suspendAudio,
   resumeAudio,
+  setAdPlaying,
   setMusicScene,
   getSfxVolume,
   setSfxVolume,
@@ -67,8 +69,10 @@ import {
   showInterstitial,
   requestRewarded,
   platformLocale,
+  onAdBreak,
 } from "./sdk";
 import { startStats, trackFinish } from "./stats";
+import { analyticsStatus, startAnalytics, trackEvent, trackScreen } from "./analytics";
 import { LevelStatsModal } from "./LevelStats";
 import { ACHIEVEMENTS, evaluateUnlocks, achievementStatus, TIER_COLORS } from "./achievements";
 import { chapterPage } from "./theme";
@@ -77,10 +81,9 @@ import StartScreen from "./StartScreen";
 import LevelSelect from "./LevelSelect";
 import Game from "./Game";
 import { BossRules } from "./BossBriefing";
-import Pairs from "./Pairs";
-import Deduction from "./Deduction";
+import { Intro } from "./Intro";
 
-type Screen = "home" | "levels" | "game" | "pairs" | "deduction";
+type Screen = "home" | "levels" | "game";
 
 /**
  * What the win card's "Next" button should say. Most players never open the
@@ -113,8 +116,27 @@ function winEvents(
 
 const noop = () => {};
 
+/**
+ * Report a setting to analytics whenever its value changes — not on mount, and
+ * not for a StrictMode double effect, which sees the same value twice.
+ */
+function useTrackSetting(name: string, value: string) {
+  const prev = useRef(value);
+  useEffect(() => {
+    if (prev.current === value) return;
+    prev.current = value;
+    trackEvent("setting", { name, value });
+  }, [name, value]);
+}
+
 const CALM_KEY = "wordgrid:calm";
 const readCalm = () => readItem(CALM_KEY) === "1";
+
+// The opening has played this visit. Session-scoped on purpose: a visit is the
+// unit — coming back to the menu from a level, or from any side mode, must not
+// replay it, and neither should a reload mid-session — but the next time the
+// game is opened it runs again, for the returning player as much as the new one.
+const INTRO_KEY = "wordgrid:intro";
 
 export default function App() {
   const systemReduce = useSystemReduceMotion();
@@ -124,6 +146,14 @@ export default function App() {
   // including the ones fired from event handlers deep in a screen that was
   // never handed the flag as a prop.
   useReduceMotion(reduce);
+  // The opening: the press run in src/Intro.tsx, in front of whichever screen
+  // the visit starts on — the tutorial board on a first launch, Home after.
+  // Decorative, so Calm and the system's reduced-motion preference cut it
+  // entirely rather than showing a still of it.
+  const [intro, setIntro] = useState(() => motionOn() && readSession(INTRO_KEY) !== "1");
+  useEffect(() => {
+    writeSession(INTRO_KEY, "1");
+  }, []);
   // The interactive coached tutorial runs once, on the player's first level.
   const [tutorialPending, setTutorialPending] = useState(() => !readItem("wordgrid:tutorial"));
   // First-ever launch drops straight into the tutorial level rather than the
@@ -157,6 +187,10 @@ export default function App() {
   // different complaints, and only one of them used to have an answer.
   const [sfxVol, setSfxVolState] = useState(() => getSfxVolume());
   const [musicVol, setMusicVolState] = useState(() => getMusicVolume());
+  useTrackSetting("sound", muted ? "off" : "on");
+  useTrackSetting("music", musicOn ? "on" : "off");
+  useTrackSetting("calm", calm ? "on" : "off");
+  useTrackSetting("locale", locale);
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -181,6 +215,9 @@ export default function App() {
   }, [unlockedAch]);
 
   useEffect(() => {
+    // The SDK script is `async` and must be initialised before it will take a
+    // call, so these two (and a first launch's gameplayStart below) are queued
+    // by src/sdk.ts and delivered, in order, the moment init settles.
     loadingStart();
     // The bundle is already parsed by the time React mounts, so loading is
     // effectively done here — tell the platform we're interactive.
@@ -189,6 +226,9 @@ export default function App() {
     // pull the community numbers. Off entirely unless an endpoint is
     // configured, and never on the path of anything the player is waiting for.
     const stopStats = startStats();
+    // Product analytics (src/analytics.ts): same contract — off unless
+    // configured, loaded on an idle slot after this mount, never awaited.
+    const stopAnalytics = startAnalytics();
     let stopMirror: (() => void) | undefined;
     void initSdk().then(() => {
       // On CrazyGames the site is already in the player's language; follow it
@@ -207,29 +247,51 @@ export default function App() {
           setProgress(restored);
           setUnlockedAch({ icon: "💾", header: t("storage.restored"), label: t("storage.restored.body") });
         },
-        (durable) => setStorageWarn(!durable)
+        (durable) => {
+          setStorageWarn(!durable);
+          if (!durable) trackEvent("storage", { durable: false });
+        }
       );
     });
     return () => {
       stopMirror?.();
       stopStats();
+      stopAnalytics();
     };
   }, []);
 
-  // Platform QA: pause the session + audio when the tab/iframe is hidden.
+  // Pause the audio when the tab/iframe is hidden. Only the audio: the SDK's
+  // gameplay session deliberately isn't touched here — the platform's docs say
+  // a focus change or a tab switch is not a game break, so gameplayStop is
+  // reserved for a board ending or a menu opening.
   useEffect(() => {
     const onVis = () => {
-      if (document.hidden) {
-        gameplayStop();
-        suspendAudio();
-      } else {
-        resumeAudio();
-        if (screen === "game") gameplayStart();
-      }
+      if (document.hidden) suspendAudio();
+      else resumeAudio();
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [screen]);
+  }, []);
+
+  // An ad is on screen: the game is muted for exactly that long (not from the
+  // request — an unfilled ad must change nothing), and the page is held so
+  // nothing can be clicked under it.
+  const [adBusy, setAdBusy] = useState(false);
+  useEffect(() => onAdBreak(setAdPlaying), []);
+  /**
+   * The between-boards ad break. Blocks the page, asks the platform, and only
+   * then restarts the gameplay session — so the next board never starts, and
+   * gameplayStart is never sent, while an ad might be showing.
+   */
+  const adBreak = useCallback(async () => {
+    setAdBusy(true);
+    try {
+      await showInterstitial();
+    } finally {
+      setAdBusy(false);
+    }
+    gameplayStart();
+  }, []);
 
   // On a direct-to-game first launch, start the SDK gameplay session and unlock
   // audio on the player's first tap (there's no Play button gesture to do it).
@@ -262,7 +324,7 @@ export default function App() {
     return { prev, next };
   }, []);
 
-  /** Points earned outside the campaign — Endless, Pairs, the logic grid. */
+  /** Points earned outside the campaign — Endless. */
   const awardScore = useCallback(
     (points: number) => {
       applyProgress((p) => ({ ...p, score: p.score + points }));
@@ -295,6 +357,7 @@ export default function App() {
       }
       applyProgress((p) => ({ ...p, quests: state, hints: p.hints + reward }));
       if (!completed.length) return;
+      for (const q of completed) trackEvent("quest", { id: q.id, set: setDone });
       const first = completed[0];
       // After the win card has landed and after any achievement toast (1800ms).
       setTimeout(
@@ -360,6 +423,7 @@ export default function App() {
   }, []);
 
   const resetProgress = useCallback(() => {
+    trackEvent("progress_reset");
     removeItem("wordgrid:progress");
     const fresh = loadProgress();
     progressRef.current = fresh; // keep the write path's view in sync
@@ -401,7 +465,7 @@ export default function App() {
         p.keys.includes(chapter) ? p : { ...solveKey(p, chapter), score: p.score + 500, hints: p.hints + 2 }
       );
       if (next === prev) return;
-      happytime();
+      trackEvent("chapter_key", { chapter });
       // The keyword itself is the trophy — it is content, not a catalogue key.
       setUnlockedAch({ icon: "🔑", header: t("key.unlocked"), label: chapterKey(chapter) });
     },
@@ -434,7 +498,12 @@ export default function App() {
       score: number;
       maxCombo: number;
     }) => {
-      happytime();
+      // The board is over: the win card is a break to the platform. Whatever
+      // Next does restarts the session (see adBreak).
+      gameplayStop();
+      // happytime is the platform's celebration, and its docs ask for it
+      // sparingly — so a boss falling, not every one of a hundred boards.
+      if (!playingDaily && bossTwist(levelIndex) !== null) happytime();
       // The daily plays from its own pool: it feeds streaks/score/history but
       // never writes campaign stars or best times (its ids aren't levels).
       const id = playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id;
@@ -449,6 +518,17 @@ export default function App() {
           stars: result.stars,
         });
       }
+      trackEvent("level_win", {
+        mode: playingDaily ? "daily" : "campaign",
+        level: playingDaily ? 0 : levelIndex + 1,
+        id,
+        stars: result.stars,
+        mistakes: result.mistakes,
+        timeS: Math.round(result.timeMs / 1000),
+        link: result.linkCorrect,
+        combo: result.maxCombo,
+        twist: playingDaily ? "none" : bossTwist(levelIndex) ?? "none",
+      });
       let unlocked: ReturnType<typeof evaluateUnlocks>["unlocked"] = [];
       applyProgress((p) => {
         const streak = p.streak + 1;
@@ -486,6 +566,7 @@ export default function App() {
         });
       });
       if (unlocked.length) {
+        for (const a of unlocked) trackEvent("achievement", { id: a.def.id, tier: a.tier });
         const top = unlocked[unlocked.length - 1];
         setTimeout(
           () => setUnlockedAch({ icon: top.def.icon, label: `${t(`ach.tier.${top.tier}`)} · ${t(top.def.titleKey)}` }),
@@ -529,6 +610,7 @@ export default function App() {
   // Rewarded refill: an empty hint bank offers "watch an ad → +3 hints".
   const refillHints = useCallback(async (): Promise<boolean> => {
     const ok = await requestRewarded();
+    trackEvent("rewarded", { placement: "hints", result: ok ? "granted" : "failed" });
     if (!ok) return false;
     applyProgress((p) => ({ ...p, hints: p.hints + 3 }));
     return true;
@@ -536,6 +618,7 @@ export default function App() {
 
   const handleLoss = useCallback(
     (result: { timeMs: number; mistakes: number; title: string }) => {
+      gameplayStop(); // the loss card is a break; a retry restarts the session
       if (!debug) {
         trackFinish({
           id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
@@ -546,6 +629,14 @@ export default function App() {
           timeMs: result.timeMs,
         });
       }
+      trackEvent("level_loss", {
+        mode: playingDaily ? "daily" : "campaign",
+        level: playingDaily ? 0 : levelIndex + 1,
+        id: playingDaily ? dailyRaw?.id ?? "daily" : LEVELS[levelIndex].id,
+        mistakes: result.mistakes,
+        timeS: Math.round(result.timeMs / 1000),
+        twist: playingDaily ? "none" : bossTwist(levelIndex) ?? "none",
+      });
       applyProgress((p) =>
         pushHistory({ ...p, streak: 0 }, {
           at: Date.now(),
@@ -570,12 +661,11 @@ export default function App() {
   // like any other. (Endless and the daily have their own Next; they ignore it.)
   const nextIndex = nextLevelIndex(progress, levelIndex);
 
-  const nextLevel = useCallback(() => {
+  const nextLevel = useCallback(async () => {
     if (nextIndex === null) return;
-    showInterstitial(); // between-level ad break (no-op without the SDK)
+    await adBreak(); // the ad plays over the win card; the next board waits
     setLevelIndex(nextIndex);
-    gameplayStart();
-  }, [nextIndex]);
+  }, [nextIndex, adBreak]);
 
   const exitToLevels = useCallback(() => {
     gameplayStop();
@@ -624,7 +714,16 @@ export default function App() {
 
   const handleEndlessWin = useCallback(
     (result: { score: number; mistakes: number; linkCorrect: boolean; maxCombo: number }) => {
-      happytime();
+      gameplayStop();
+      trackEvent("level_win", {
+        mode: "endless",
+        level: 0,
+        id: ENDLESS_POOL[endlessQueue.current[endlessPos] ?? 0]?.id,
+        mistakes: result.mistakes,
+        link: result.linkCorrect,
+        combo: result.maxCombo,
+        twist: "none",
+      });
       setEndlessSolved((n) => n + 1);
       setEndlessScore((s) => s + result.score);
       awardScore(result.score);
@@ -632,11 +731,11 @@ export default function App() {
       // minus the daily one (it isn't the daily).
       questEvents(winEvents(result, false));
     },
-    [awardScore, questEvents]
+    [awardScore, questEvents, endlessPos, ENDLESS_POOL]
   );
 
-  const nextEndless = useCallback(() => {
-    showInterstitial();
+  const nextEndless = useCallback(async () => {
+    await adBreak();
     setEndlessPos((pos) => {
       let np = pos + 1;
       if (np >= endlessQueue.current.length) {
@@ -645,78 +744,19 @@ export default function App() {
       }
       return np;
     });
-    gameplayStart();
-  }, []);
-
-  // --- Pairs (memory) mode -------------------------------------------------
-  const playPairs = useCallback(() => {
-    initAudio();
-    startMusic();
-    setPlayingDaily(false);
-    setScreen("pairs");
-    gameplayStart();
-  }, []);
-
-  const exitPairs = useCallback(() => {
-    gameplayStop();
-    setScreen("home");
-  }, []);
-
-  // --- Deduction Grid mode -------------------------------------------------
-  const playDeduction = useCallback(() => {
-    initAudio();
-    startMusic();
-    setPlayingDaily(false);
-    setScreen("deduction");
-    gameplayStart();
-  }, []);
-
-  const exitDeduction = useCallback(() => {
-    gameplayStop();
-    setScreen("home");
-  }, []);
-
-  const handleDeductionSolve = useCallback(
-    (id: string) => {
-      happytime();
-      applyProgress((p) =>
-        p.deductionSolved.includes(id)
-          ? p
-          : {
-              ...p,
-              deductionSolved: [...p.deductionSolved, id],
-              score: p.score + 500, // a solved logic grid is worth a chunk of points
-            }
-      );
-      questEvents(["logic"]);
-    },
-    [applyProgress, questEvents]
-  );
-
-  // Each cleared Pairs board feeds lifetime score and the fewest-moves best.
-  const handlePairsFinish = useCallback(
-    (result: { moves: number; score: number }) => {
-      happytime();
-      applyProgress((p) => ({
-        ...p,
-        score: p.score + result.score,
-        pairsBest: p.pairsBest === 0 ? result.moves : Math.min(p.pairsBest, result.moves),
-      }));
-      questEvents(["pairs"]);
-    },
-    [applyProgress, questEvents]
-  );
+  }, [adBreak]);
 
   const exitEndless = useCallback(() => {
     gameplayStop();
+    trackEvent("endless_end", { solved: endlessSolved });
     applyProgress((p) => (endlessSolved <= p.endlessBest ? p : { ...p, endlessBest: endlessSolved }));
     setEndless(false);
     setScreen("home");
   }, [endlessSolved, applyProgress]);
 
   // Playing a campaign level stains the page with that chapter's paper stock,
-  // so chapter 6 doesn't look like chapter 1. The daily, Endless, Pairs and
-  // every menu keep the plain cream — the stain means "you are in chapter N",
+  // so chapter 6 doesn't look like chapter 1. The daily, Endless and every
+  // menu keep the plain cream — the stain means "you are in chapter N",
   // and it would say nothing if it were everywhere.
   const page =
     screen === "game" && !playingDaily && !endless ? chapterPage(chapterOfLevel(levelIndex)) : null;
@@ -742,12 +782,21 @@ export default function App() {
   const settingsHere = usePresence(showSettings, null, dialogOut);
   const achHere = usePresence(unlockedAch != null, unlockedAch, riseOut);
   const warnHere = usePresence(storageWarn, null, dropOut);
+  // The plate stays up through its lift-off while the first screen mounts
+  // under it, so the hand-over is an overlap and never a blank page.
+  const introHere = usePresence(intro, null, liftOut);
 
-  const onBoard = screen === "game" || screen === "pairs" || screen === "deduction";
+  const onBoard = screen === "game";
   const onBoss = screen === "game" && !endless && !playingDaily && bossTwist(levelIndex) !== null;
   useEffect(() => {
     setMusicScene(onBoss ? "boss" : onBoard ? "play" : "menu");
   }, [onBoard, onBoss]);
+
+  // Each screen is a page to analytics (`/home`, `/game`, …) — the same one
+  // twice in a row is one view, so a StrictMode double effect is harmless.
+  useEffect(() => {
+    trackScreen(screen);
+  }, [screen]);
 
   // Is the level Next would take you to a boss still shut behind its chapter key?
   const nextIsSealed =
@@ -765,7 +814,22 @@ export default function App() {
       />
       <div className="grain" />
 
-      {shownScreen.key === "home" && (
+      {adBusy && (
+        // Held page during an ad break: the platform draws the ad over the
+        // iframe; this keeps the board under it from taking a tap, and says
+        // what is happening if the request takes a second.
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-paper/50 pb-10"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="rounded-full border border-ink/20 bg-paper px-4 py-1.5 text-xs font-semibold text-ink-soft shadow-stamp-sm">
+            {t("ad.break")}
+          </span>
+        </div>
+      )}
+
+      {!intro && shownScreen.key === "home" && (
           <ScreenWrap key="home" ref={shownScreen.ref}>
             <StartScreen
               progress={progress}
@@ -773,8 +837,6 @@ export default function App() {
               onLevels={openLevels}
               onDaily={playDaily}
               onEndless={playEndless}
-              onPairs={playPairs}
-              onDeduction={playDeduction}
               onHelp={() => setShowHelp(true)}
               onStats={() => setShowStats(true)}
               onHistory={() => setShowHistory(true)}
@@ -787,7 +849,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "levels" && (
+      {!intro && shownScreen.key === "levels" && (
           <ScreenWrap key="levels" ref={shownScreen.ref}>
             <LevelSelect
               progress={progress}
@@ -812,30 +874,7 @@ export default function App() {
           </ScreenWrap>
       )}
 
-      {shownScreen.key === "pairs" && (
-          <ScreenWrap key="pairs" ref={shownScreen.ref}>
-            <Pairs
-              reduce={reduce}
-              best={progress.pairsBest}
-              onFinish={handlePairsFinish}
-              onExit={exitPairs}
-            />
-          </ScreenWrap>
-      )}
-
-      {shownScreen.key === "deduction" && (
-          <ScreenWrap key="deduction" ref={shownScreen.ref}>
-            <Deduction
-              reduce={reduce}
-              debug={debug}
-              solvedIds={progress.deductionSolved}
-              onSolve={handleDeductionSolve}
-              onExit={exitDeduction}
-            />
-          </ScreenWrap>
-      )}
-
-      {shownScreen.key === "game" && (
+      {!intro && shownScreen.key === "game" && (
           <ScreenWrap key="game" ref={shownScreen.ref}>
             <Game
               key={endless ? `e${endlessPos}` : playingDaily ? `d-${dailyRaw?.id}` : levelIndex}
@@ -865,6 +904,7 @@ export default function App() {
               onRefillHints={refillHints}
               onWin={endless ? handleEndlessWin : handleWin}
               onLoss={endless ? noop : handleLoss}
+              onRestart={gameplayStart}
               onExit={endless ? exitEndless : playingDaily ? exitToHome : exitToLevels}
               // "Next level" used to walk straight into the level after this
               // one — including a boss whose door is still sealed, which made
@@ -900,6 +940,8 @@ export default function App() {
             />
           </ScreenWrap>
       )}
+
+      {introHere.rendered && <Intro ref={introHere.ref} onDone={() => setIntro(false)} />}
 
       {helpHere.rendered && (
         <HelpModal
@@ -1027,7 +1069,7 @@ function StatsModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("stats.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1154,7 +1196,7 @@ function HistoryModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("history.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1248,6 +1290,28 @@ function VolumeRow({
   );
 }
 
+/** Settings → Developer: the state of the analytics pipe (src/analytics.ts). */
+function AnalyticsRow() {
+  const s = analyticsStatus();
+  let host = s.script;
+  try {
+    if (s.script) host = new URL(s.script).host;
+  } catch {
+    /* show it as written */
+  }
+  const hint = !s.enabled
+    ? t("settings.analytics.off")
+    : s.loaded
+      ? t("settings.analytics.on", { host, n: s.handed })
+      : t("settings.analytics.waiting", { host, n: s.buffered });
+  return (
+    <div className="border-t border-ink/15 py-3">
+      <div className="text-sm font-bold text-ink">{t("settings.analytics")}</div>
+      <div className="break-words text-[0.7rem] text-ink-soft">{hint}</div>
+    </div>
+  );
+}
+
 function ToggleRow({
   label,
   hint,
@@ -1332,7 +1396,7 @@ function SettingsModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel
@@ -1399,6 +1463,10 @@ function SettingsModal({
             <div className="text-sm font-bold text-ink">{t("settings.tracking")}</div>
             <div className="text-[0.7rem] text-ink-soft">{t("settings.tracking.hint")}</div>
           </button>
+          {/* The other pipe: is Umami configured, did its tracker arrive, and
+              how much has gone through it this session. Read-only — there is
+              nothing to open; the dashboard lives on the Umami host. */}
+          <AnalyticsRow />
         </div>
 
         <div className="mt-4 rounded-2xl border border-press/30 bg-press/5 p-3">
@@ -1527,7 +1595,7 @@ function HelpModal({
       role="dialog"
       aria-modal="true"
       aria-label={t("help.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/40 p-4"
     >
       <div
         data-panel

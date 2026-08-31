@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import gsap from "gsap";
 import { CHAPTERS, LEVELS, TIER_KEY, EMOJI_BOSS, buildPuzzle, chapterOfLevel, decoyTiles, type BossTwist, type Category, type Level, type Puzzle, type RawPuzzle } from "./puzzles";
 import { cipherWord, computeStars, evaluateGuess, guessKey, shuffle, linkMatches, scrambleWord } from "./engine";
-import { requestRewarded } from "./sdk";
+import { requestRewarded, adsMode, subscribeAds, shareUrl, type AdsMode } from "./sdk";
 import { trackStart } from "./stats";
+import { trackEvent } from "./analytics";
 import { useModal } from "./modal";
 import { CATEGORY_THEMES, chapterInk } from "./theme";
 import { fmtTime } from "./format";
@@ -107,6 +108,8 @@ interface GameProps {
   onLoss: (result: { timeMs: number; mistakes: number; title: string }) => void;
   onExit: () => void;
   onNext?: () => void;
+  /** The board is being dealt again after a loss — a gameplay session resumes. */
+  onRestart?: () => void;
   /** Teaser for the next level's button, when it isn't just "the next one". */
   nextLabel?: string;
   onHelp: () => void;
@@ -135,11 +138,15 @@ export default function Game({
   onLoss,
   onExit,
   onNext,
+  onRestart,
   nextLabel,
   onHelp,
   onTutorialDone,
 }: GameProps) {
   const boss = twist != null;
+  // What analytics files this board under (src/analytics.ts).
+  const trackMode = endless ? "endless" : daily ? "daily" : "campaign";
+  const trackLevel = endless || daily ? 0 : puzzleIndex + 1;
   // Endless/Zen mode never fails: no mistake cap, no second-chance/loss path.
   const maxMistakes = endless ? Number.POSITIVE_INFINITY : MAX_MISTAKES;
   // The emoji boss swaps in a bespoke picture board; every other twist plays the
@@ -209,6 +216,10 @@ export default function Game({
   // continue (+2 tries) before the run actually ends.
   const [offering, setOffering] = useState(false);
   const [secondChanceUsed, setSecondChanceUsed] = useState(false);
+  // Which world the rewarded buttons are in — a real ad, a free reward (no ad
+  // system here), or blocked. Decides their copy, and whether the second
+  // chance is offered at all.
+  const ads = useSyncExternalStore(subscribeAds, adsMode, adsMode);
   // Memory boss: the board studies face-up until you say you're Ready, then
   // every tile flips. No countdown — the player decides when the lights go out,
   // which is what keeps a memory boss chill instead of a reflex test.
@@ -228,10 +239,14 @@ export default function Game({
   const startedAt = useRef(Date.now());
   const prevBest = useRef(bestMs); // captured once, before this run updates it
   // Tutorial helpers: this stays true for the whole run even after the coach
-  // marks the tutorial done (so the finale can still nudge a first-timer).
+  // marks the tutorial done (so the finale can still coach a first-timer).
   const isTutorialRun = useRef(tutorial).current;
   const coachMisses = useRef(0);
-  const finaleHinted = useRef(false);
+  // The finale's own coach card (step 3): shown once per run, dismissable; its
+  // wrong-word nudges escalate to free letters — see coachFinaleMiss.
+  const finaleCoached = useRef(false);
+  const finaleMisses = useRef(0);
+  const [finaleCoach, setFinaleCoach] = useState(false);
 
   // --- the press ----------------------------------------------------------
   // Handles the GSAP layer animates through (see src/anim.ts). The board and
@@ -260,6 +275,15 @@ export default function Game({
     trackStart({ id: levelRaw.id, level: daily ? 0 : puzzleIndex + 1, mode: daily ? "daily" : "campaign" });
   }, [endless, debug, daily, puzzleIndex, levelRaw.id]);
 
+  // Analytics counts every board, Endless included (mode adoption is the point
+  // there); debug play is filtered inside the module. Once per board dealt.
+  const trackedBoard = useRef<string | null>(null);
+  useEffect(() => {
+    if (trackedBoard.current === levelRaw.id) return;
+    trackedBoard.current = levelRaw.id;
+    trackEvent("level_start", { mode: trackMode, level: trackLevel, id: levelRaw.id, twist: twist ?? "none" });
+  }, [trackMode, trackLevel, levelRaw.id, twist]);
+
   // Tick a clock once a second while playing, for the timer display.
   useEffect(() => {
     if (status !== "playing") return;
@@ -282,16 +306,20 @@ export default function Game({
   const offerHere = usePresence(offering, null, sinkOut);
   const endHere = usePresence(status === "won" || status === "lost", status, sinkOut);
   const coachHere = usePresence(coach >= 1 && coach <= 2 && status === "playing", coach, dropOut);
+  const finaleCoachHere = usePresence(finaleCoach && status === "guessing" && linkGuess == null, null, dropOut);
   const welcomeHere = usePresence(coach === 0 && status === "playing", null, dialogOut);
   const briefHere = usePresence(brief && twist != null, twist, dialogOut);
 
-  // First-timer's finale: the tap-to-spell step is new, so nudge what to do.
+  // First-timer's finale: the tap-to-spell step is new, and a toast is gone
+  // before the letter bank has been taken in. A third coach card sits under
+  // the panel instead and says what the clues are. Not for an early call —
+  // that is a choice the player made already knowing the word.
   useEffect(() => {
-    if (isTutorialRun && status === "guessing" && !finaleHinted.current) {
-      finaleHinted.current = true;
-      setToast(t("finale.firstTime"));
+    if (isTutorialRun && status === "guessing" && !earlyCall && !finaleCoached.current) {
+      finaleCoached.current = true;
+      setFinaleCoach(true);
     }
-  }, [isTutorialRun, status]);
+  }, [isTutorialRun, status, earlyCall]);
 
   // Deferred beats that change `status` (the early call landing, the give-up
   // reveal) go through `later` so a restart or an exit cancels them: an
@@ -380,19 +408,16 @@ export default function Game({
     [buzz, pushPop, tiles]
   );
 
-  // Auto-solve the final pair, then move on — normally into the "guess the
-  // link" finale.
+  // Every group found → on to the "guess the link" finale. The last group is
+  // the player's to submit like the other three: with three tiles left it's
+  // no puzzle, but it is the move that finishes the board, and the combo, the
+  // points and the banner flight are theirs to collect for it.
   useEffect(() => {
     if (status !== "playing") return;
-    if (solved.length === puzzle.categories.length - 1) {
-      const last = unsolvedCategories[0];
-      const timer = setTimeout(() => solveCategory(last, solved.length), 600);
-      return () => clearTimeout(timer);
-    }
     // A link already named (a successful early call) means the finale has
     // nothing left to ask — the last group solved is the win.
     if (solved.length === puzzle.categories.length) setStatus(linkGuess != null ? "won" : "guessing");
-  }, [solved, status, unsolvedCategories, puzzle.categories.length, solveCategory, linkGuess]);
+  }, [solved, status, puzzle.categories.length, linkGuess]);
 
   // A solved group, in one move: the banner is stamped onto the page and the
   // three tiles that earned it are pulled off the board and filed into it, so
@@ -443,6 +468,7 @@ export default function Game({
     if (coach === 1 && solved.length >= 1) {
       setCoach(2);
       onTutorialDone();
+      trackEvent("tutorial", { step: "completed" });
     }
   }, [coach, solved.length, onTutorialDone]);
 
@@ -561,21 +587,30 @@ export default function Game({
     if (next === maxMistakes - 1) playWarn(0.34);
     if (next >= maxMistakes) {
       setSelected([]);
-      // Offer a one-time rewarded continue before ending the run.
-      if (!secondChanceUsed) setOffering(true);
+      // Offer a one-time rewarded continue before ending the run — unless an
+      // ad blocker means the offer could never be honoured, in which case it
+      // isn't made (the ad guidelines: unavailable, not a dead button).
+      if (!secondChanceUsed && ads !== "blocked") setOffering(true);
       else setStatus("lost");
     }
-  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, coach, puzzle, maxMistakes, tiles, remainingSpokes]);
+  }, [status, offering, selected, unsolvedCategories, solveCategory, solved.length, pastGuesses, buzz, combo, pushPop, secondChanceUsed, ads, coach, puzzle, maxMistakes, tiles, remainingSpokes]);
 
   const clearSelection = useCallback(() => {
     if (selected.length) playClear();
     setSelected([]);
   }, [selected.length]);
 
-  // Second chance: a rewarded ad (instant true when no SDK) buys +2 tries once.
+  // Second chance: a rewarded ad buys +2 tries once. Off the platform there is
+  // no ad to watch and the tries are simply given; on it, an ad that didn't
+  // play pays nothing, and the offer stays up to try again.
   const takeSecondChance = useCallback(async () => {
+    trackEvent("continue_offer", { choice: "watch" });
     const ok = await requestRewarded();
-    if (!ok) return; // ad failed/declined — leave the offer up
+    trackEvent("rewarded", { placement: "continue", result: ok ? "granted" : "failed" });
+    if (!ok) {
+      setToast(t("game.ad.none"));
+      return;
+    }
     setSecondChanceUsed(true);
     setOffering(false);
     mistakesRef.current = Math.max(0, mistakesRef.current - 2);
@@ -583,6 +618,7 @@ export default function Game({
     setToast(t("game.continue.taken"));
   }, []);
   const declineSecondChance = useCallback(() => {
+    trackEvent("continue_offer", { choice: "decline" });
     setOffering(false);
     setStatus("lost");
   }, []);
@@ -624,7 +660,8 @@ export default function Game({
     setToast(t("game.hint.given", { theme: cat.name }));
     onUseHint();
     playHint();
-  }, [canHint, hintableCategories, onUseHint]);
+    trackEvent("hint", { kind: "theme", mode: trackMode, level: trackLevel });
+  }, [canHint, hintableCategories, onUseHint, trackMode, trackLevel]);
 
   // Finale hint: spend a token to reveal the next letter of the secret link.
   const pivotLength = graphemes(puzzle.pivot).length;
@@ -634,7 +671,8 @@ export default function Game({
     setRevealedLetters((n) => Math.min(n + 1, pivotLength));
     onUseHint();
     playHint();
-  }, [hasHint, pivotLength, onUseHint]);
+    trackEvent("hint", { kind: "letter", mode: trackMode, level: trackLevel });
+  }, [hasHint, pivotLength, onUseHint, trackMode, trackLevel]);
 
   // Empty bank → rewarded refill (instant in standalone play, an ad on the platform).
   const refill = useCallback(async () => {
@@ -642,6 +680,8 @@ export default function Game({
     if (ok) {
       setToast(t("game.hint.refilled"));
       playCorrect(0);
+    } else {
+      setToast(t("game.ad.none"));
     }
   }, [onRefillHints]);
 
@@ -699,6 +739,7 @@ export default function Game({
 
   const restart = useCallback(() => {
     clearTimers(); // nothing from the finished run may land on the fresh one
+    onRestart?.(); // the loss card was a break; the board is live again
     reported.current = false;
     startedAt.current = Date.now();
     setNow(Date.now());
@@ -730,32 +771,60 @@ export default function Game({
     setPeekArmed(false);
     setPeeking(null);
     coachMisses.current = 0;
-    finaleHinted.current = false;
+    finaleCoached.current = false;
+    finaleMisses.current = 0;
+    setFinaleCoach(false);
     setOrder(shuffle(spokeTiles));
     setDealKey((k) => k + 1);
-  }, [spokeTiles, twist, clearTimers]);
+  }, [spokeTiles, twist, clearTimers, onRestart]);
 
-  // Keyboard shortcuts: Enter submits, Escape clears.
+  // Keyboard shortcut: Enter submits. (Escape used to clear the selection; it
+  // is the browser's key for leaving fullscreen, and CrazyGames' guidelines ask
+  // games not to bind it — the Clear button is a tap away. Dialogs still close
+  // on Escape, which is what a dialog does.)
   useEffect(() => {
     if (status !== "playing") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" && selected.length === 3) submit();
-      else if (e.key === "Escape" && selected.length) clearSelection();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [status, selected.length, submit, clearSelection]);
+  }, [status, selected.length, submit]);
+
+  // A first-timer's wrong word. The finale never costs anything, so the coach
+  // does here what it does on the board: restate the clue once, then start
+  // handing over letters — one per miss, never the last one, which stays theirs
+  // to find. Nothing is spent: these are the tutorial's, not the hint bank's.
+  const coachFinaleMiss = useCallback(() => {
+    const n = finaleMisses.current++;
+    if (n === 0) {
+      setToast(t("coach.finale.nudge.1"));
+      return;
+    }
+    const cap = puzzle.pivot.length - 1;
+    if (revealedLetters >= cap) {
+      setToast(t("coach.finale.nudge.3"));
+      return;
+    }
+    setRevealedLetters(revealedLetters + 1);
+    setToast(t("coach.finale.nudge.2", { prefix: puzzle.pivot.slice(0, revealedLetters + 1) }));
+    playHint();
+  }, [puzzle.pivot, revealedLetters]);
 
   // Returns true if the typed guess is accepted; otherwise the caller shows an
   // inline "try again" (no penalty for retries).
   const submitLink = useCallback(
     (text: string): boolean => {
-      if (!linkMatches(text, puzzle.pivot, puzzle.accept)) return false;
+      if (!linkMatches(text, puzzle.pivot, puzzle.accept)) {
+        if (isTutorialRun && !earlyCall) coachFinaleMiss();
+        return false;
+      }
       setLinkGuess(text);
       // Naming the link early is the hard way to do it — every group still
       // unsolved is one less clue you had — so it pays proportionally.
       const early = unsolvedCategories.length;
       const pts = 250 * (1 + early);
+      if (early > 0) trackEvent("early_call", { result: "hit", open: early });
       setScore((s) => s + pts);
       pushPop(early > 0 ? `+${pts}  🔑 early!` : "+250  🔑");
       playStar(2);
@@ -768,13 +837,14 @@ export default function Game({
       }, 800);
       return true;
     },
-    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length, later]
+    [puzzle.pivot, puzzle.accept, buzz, pushPop, unsolvedCategories.length, later, isTutorialRun, earlyCall, coachFinaleMiss]
   );
 
   // One call per level, spent on opening: no free look at the letter count.
+  // On offer from the first solve until the last group falls.
   const canCallEarly =
     status === "playing" && !offering && !earlyCallSpent && coach < 0 &&
-    solved.length >= 1 && unsolvedCategories.length >= 2;
+    solved.length >= 1 && unsolvedCategories.length >= 1;
   const startEarlyCall = useCallback(() => {
     setEarlyCallSpent(true);
     setEarlyCall(true);
@@ -789,7 +859,8 @@ export default function Game({
     setEarlyCall(false);
     setStatus("playing");
     setToast(t("game.early.missed"));
-  }, [buzz]);
+    trackEvent("early_call", { result: "miss", open: unsolvedCategories.length });
+  }, [buzz, unsolvedCategories.length]);
 
   // Give up: reveal the word (counts as a miss → costs a star).
   const revealLinkWord = useCallback(() => {
@@ -1070,6 +1141,7 @@ export default function Game({
             hintBank={hintBank}
             unlimited={debug}
             showRefill={hintBank === 0 && !debug}
+            ads={ads}
             onSubmit={submit}
             onClear={clearSelection}
             onHint={revealCategory}
@@ -1078,7 +1150,7 @@ export default function Game({
         )}
 
         {offerHere.rendered && (
-          <ContinueOffer ref={offerHere.ref} onAccept={takeSecondChance} onDecline={declineSecondChance} />
+          <ContinueOffer ref={offerHere.ref} ads={ads} onAccept={takeSecondChance} onDecline={declineSecondChance} />
         )}
 
         {status === "guessing" && (
@@ -1096,6 +1168,23 @@ export default function Game({
             onRefill={refill}
             onSubmit={submitLink}
             onReveal={revealLinkWord}
+          />
+        )}
+
+        {/* Step 3 of the coach, for a first-timer's finale: every group name,
+            read out as a clue to the one word. In flow under the panel. */}
+        {finaleCoachHere.rendered && (
+          <Coach
+            ref={finaleCoachHere.ref}
+            step={3}
+            vars={{
+              a: puzzle.categories[0].name,
+              b: puzzle.categories[1].name,
+              c: puzzle.categories[2].name,
+              d: puzzle.categories[3].name,
+            }}
+            onDone={() => setFinaleCoach(false)}
+            onSkip={() => setFinaleCoach(false)}
           />
         )}
 
@@ -1161,10 +1250,9 @@ export default function Game({
           <Coach
             ref={coachHere.ref}
             step={coachHere.data}
-            theme={puzzle.categories[0].name}
-            onNext={() => setCoach((c) => c + 1)}
+            vars={{ theme: puzzle.categories[0].name }}
             onDone={() => { setCoach(-1); onTutorialDone(); }}
-            onSkip={() => { setCoach(-1); onTutorialDone(); }}
+            onSkip={() => { trackEvent("tutorial", { step: "skipped" }); setCoach(-1); onTutorialDone(); }}
           />
         )}
         </div>
@@ -1176,8 +1264,8 @@ export default function Game({
       {welcomeHere.rendered && (
         <WelcomeOverlay
           ref={welcomeHere.ref}
-          onStart={() => setCoach(1)}
-          onSkip={() => { setCoach(-1); onTutorialDone(); }}
+          onStart={() => { trackEvent("tutorial", { step: "started" }); setCoach(1); }}
+          onSkip={() => { trackEvent("tutorial", { step: "skipped" }); setCoach(-1); onTutorialDone(); }}
         />
       )}
 
@@ -1232,7 +1320,9 @@ function buildShare(opts: {
   const detail = opts.won
     ? `${opts.linkCorrect ? "🔑✅" : "🔑❌"}  ⏱️ ${fmtTime(opts.timeMs)}${opts.mistakes ? `  ❌${opts.mistakes}` : ""}`
     : t("share.soClose");
-  return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: location.href })}`;
+  // On CrazyGames the link is the game's page there, not the bare iframe URL;
+  // elsewhere it is the page without its query (never `?debug`).
+  return `${head}  ${rating}\n${grid}\n${detail}\n${t("share.play", { url: shareUrl() })}`;
 }
 
 /**
@@ -1534,10 +1624,13 @@ function HintBanner({ cat, themeIndex }: { cat: Category; themeIndex: number }) 
 
 function ContinueOffer({
   ref,
+  ads,
   onAccept,
   onDecline,
 }: {
   ref?: Ref<HTMLDivElement>;
+  /** "ads": a video buys the tries; "free": they're simply given (no ad system here). */
+  ads: AdsMode;
   onAccept: () => Promise<void>;
   onDecline: () => void;
 }) {
@@ -1566,18 +1659,22 @@ function ContinueOffer({
       <div className="text-4xl">😮‍💨</div>
       <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t("game.continue.title")}</h3>
       <p className="mt-1 text-sm text-ink-soft">{t("game.continue.body")}</p>
-      <button
-        onClick={accept}
-        disabled={pending}
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
-      >
-        <span aria-hidden>🎬</span> {t(pending ? "game.continue.loading" : "game.continue.accept")}
-      </button>
-      <div>
+      {/* Two answers, one size: the ad guidelines want the way out as visible
+          as the way in — same size, same type, same ink — not a small grey
+          link under a big gold button. */}
+      <div className="mt-4 flex flex-col items-center gap-3">
+        <button
+          onClick={accept}
+          disabled={pending}
+          className="inline-flex min-w-[15rem] items-center justify-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-bold text-ink shadow-stamp transition enabled:hover:scale-[1.03] enabled:active:scale-95 disabled:opacity-60"
+        >
+          {ads === "ads" && <span aria-hidden>🎬</span>}
+          {t(pending ? "game.continue.loading" : ads === "ads" ? "game.continue.accept" : "game.continue.accept.free")}
+        </button>
         <button
           onClick={onDecline}
           disabled={pending}
-          className="mt-3 text-xs font-semibold text-ink-soft underline-offset-4 transition enabled:hover:text-ink enabled:hover:underline disabled:opacity-40"
+          className="inline-flex min-w-[15rem] items-center justify-center rounded-full border-2 border-ink/70 bg-paper px-7 py-3 text-base font-bold text-ink transition enabled:hover:bg-cream enabled:active:scale-95 disabled:opacity-40"
         >
           {t("game.continue.decline")}
         </button>
@@ -1637,6 +1734,7 @@ function Controls({
   hintBank,
   unlimited,
   showRefill,
+  ads,
   onSubmit,
   onClear,
   onHint,
@@ -1652,6 +1750,8 @@ function Controls({
   /** Debug: the bank is bottomless, so the badge reads ∞ and never empties. */
   unlimited?: boolean;
   showRefill?: boolean;
+  /** Whether the refill is an ad to watch, a free top-up, or unavailable. */
+  ads: AdsMode;
   onSubmit: () => void;
   onClear: () => void;
   onHint: () => void;
@@ -1685,12 +1785,23 @@ function Controls({
           {t("game.submit")}
         </button>
       </div>
-      {showRefill ? (
+      {showRefill && ads === "blocked" ? (
+        // An ad blocker: the refill can't be earned here, and the game says
+        // so in place instead of offering a button that does nothing.
+        <p role="status" className="max-w-xs text-center text-xs font-semibold text-ink-soft">
+          {t("game.hint.refill.blocked")}
+        </p>
+      ) : showRefill ? (
         <button
           onClick={onRefill}
           className="flex items-center gap-2 rounded-full bg-press px-5 py-2.5 text-sm font-bold text-paper shadow-stamp transition hover:scale-[1.03] active:scale-95"
         >
-          <span className="text-base" aria-hidden>🎬</span>
+          {/* The clapperboard promises a video; only show it where one plays. */}
+          {ads === "ads" && (
+            <span className="text-base" aria-hidden>
+              🎬
+            </span>
+          )}
           {t("game.hint.refill")}
         </button>
       ) : (
@@ -1716,11 +1827,13 @@ function Controls({
 
 // Step 1 teaches with the tutorial board's own first theme rather than words
 // baked in here, so re-pinning the opening level can't leave the coach
-// describing a puzzle the player isn't looking at.
+// describing a puzzle the player isn't looking at. Step 3 does the same for
+// the finale: it reads the board's four group names out as the clues.
 const COACH: readonly (null | { key: string; cta: string | null })[] = [
   null, // step 0 is the WelcomeOverlay, not an inline coach card
   { key: "coach.1", cta: null }, // advances when the player solves any group
   { key: "coach.2", cta: "common.gotIt" },
+  { key: "coach.3", cta: "common.gotIt" }, // the finale; dismissed on its own
 ];
 
 const WELCOME_RULES = [
@@ -1754,7 +1867,7 @@ function WelcomeOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={t("welcome.title")}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/45 p-5"
+      className="fixed inset-0 z-50 dialog-scrim flex flex-col items-center overflow-y-auto bg-ink/45 p-5"
     >
       <div
         data-panel
@@ -1801,16 +1914,14 @@ function WelcomeOverlay({
 function Coach({
   ref,
   step,
-  theme,
-  onNext,
+  vars,
   onDone,
   onSkip,
 }: {
   ref?: Ref<HTMLDivElement>;
   step: number;
-  /** The tutorial board's first category, so the copy matches the tiles. */
-  theme: string;
-  onNext: () => void;
+  /** What the step's copy fills in: the board's own group names, so it matches the tiles. */
+  vars: Record<string, string | number>;
   onDone: () => void;
   onSkip: () => void;
 }) {
@@ -1831,10 +1942,11 @@ function Coach({
         if (typeof ref === "function") ref(node);
         else if (ref) ref.current = node;
       }}
-      // Sticky: sits in-flow just below the board on tall screens, but pins to
-      // the bottom of the viewport on short ones so it's never off-screen.
+      // Steps 1–2 sit in-flow just below the board on tall screens, but pin to
+      // the bottom of the viewport on short ones so they're never off-screen.
+      // Step 3 stays in flow: pinned, it would sit on top of the letter bank.
       // Styled as a sticky note pinned to the puzzle page.
-      className="sticky bottom-3 z-30 mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-stamp"
+      className={`${step < 3 ? "sticky bottom-3 z-30 " : ""}mx-auto mt-6 w-full max-w-sm -rotate-1 rounded-sm border border-ink/15 bg-[#ffe9a3] p-4 shadow-stamp`}
     >
       <div className="flex items-center gap-2">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-press text-sm">
@@ -1848,10 +1960,10 @@ function Coach({
           {t("common.skip")}
         </button>
       </div>
-      <p className="mt-2 text-sm leading-snug text-ink-soft">{t(`${c.key}.body`, { theme })}</p>
+      <p className="mt-2 text-sm leading-snug text-ink-soft">{t(`${c.key}.body`, vars)}</p>
       {c.cta && (
         <button
-          onClick={step === COACH.length - 1 ? onDone : onNext}
+          onClick={onDone}
           className="mt-3 w-full rounded-xl bg-ink py-2.5 text-sm font-bold text-paper transition hover:scale-[1.02] active:scale-95"
         >
           {t(c.cta)}

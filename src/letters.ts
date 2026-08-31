@@ -1,6 +1,6 @@
-// The letter bank behind every spell-the-link finale (the main game's and
-// Pairs'). Deterministic per pivot, so the same board always offers the same
-// tiles. "Letter" is whatever the language spells with — see src/i18n/script.ts.
+// The letter bank behind every spell-the-link finale. Deterministic per pivot,
+// so the same board always offers the same tiles. "Letter" is whatever the
+// language spells with — see src/i18n/script.ts.
 import { activeScript, graphemes } from "./i18n/script.ts";
 
 export function buildLetterBank(pivot: string): string[] {
