@@ -36,7 +36,13 @@
 // `uid` is client-generated so a retried flush is idempotent: a batch that got
 // through but whose response was lost is stored once, not twice.
 import { readItem, writeItem } from "./storage.ts";
-import { cooldownUntil, fetchUmamiLevels, umamiLevelsEnabled, umamiLevelsSource } from "./umamiLevels.ts";
+import {
+  cooldownUntil,
+  fetchUmamiLevels,
+  umamiLevelsEnabled,
+  umamiLevelsSource,
+  umamiLevelsStatus,
+} from "./umamiLevels.ts";
 
 // --- what the server sends back --------------------------------------------
 
@@ -462,7 +468,13 @@ export async function refreshStats(force = false): Promise<Snapshot | null> {
   const body = fromUmami ? await fetchUmamiLevels() : await get(`${target()}/levels`);
   const levels = parseLevels(body);
   if (!levels) {
-    lastError = fromUmami && cooldownUntil() ? "resting" : "no aggregate";
+    // The reader knows why it came back empty-handed ("HTTP 500", "share HTTP
+    // 404"); that is worth more to whoever opens the dashboard than a generic
+    // line. A legitimate "nobody has played yet" never lands here — it is an
+    // empty answer, not a failure.
+    lastError = fromUmami
+      ? umamiLevelsStatus().lastError ?? (cooldownUntil() ? "resting" : "no aggregate")
+      : "no aggregate";
     return have;
   }
   snapshot = { fetchedAt: Date.now(), levels, people: !fromUmami };

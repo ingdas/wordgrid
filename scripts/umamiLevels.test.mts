@@ -213,12 +213,16 @@ await test("the read token is reused, not re-minted per refresh", async () => {
   assert.equal(calls.length, 5);
 });
 
-await test("an empty aggregate is 'nobody has played yet', not a failure", async () => {
+await test("an empty aggregate is an answer, not a failure", async () => {
   const { fn } = fakeFetch((u) =>
     shareUrl(u) ? { ok: true, json: { websiteId: WEBSITE, token: TOKEN } } : { ok: true, json: [] }
   );
   const mod = await load({ fetch: fn });
-  assert.equal(await mod.fetchUmamiLevels(), null);
+  // Nobody has finished a board yet. That must not read as an error anywhere:
+  // the caller caches an empty answer and the dashboard says "no numbers yet"
+  // rather than "last attempt failed".
+  const body = await mod.fetchUmamiLevels();
+  assert.deepEqual(body, { levels: {} });
   assert.equal(mod.umamiLevelsStatus().cooldownUntil, null, "nothing to back off from");
   assert.equal(mod.umamiLevelsStatus().lastError, null);
 });

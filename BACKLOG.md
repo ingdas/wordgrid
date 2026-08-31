@@ -532,13 +532,14 @@ Ranked by expected impact. Nothing here is started.
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
-4. **[platform] The community clear rate needs a share slug.** The reader is
-   built and tested (`src/umamiLevels.ts`), but `<meta
-   name="wordgrid:umami-share">` is empty, so the level index shows no rate
-   line. Enable the website's Share URL in Umami (scoped to Events) and paste
-   the slug. `server/stats-server.mjs` is now the *alternative* rather than the
-   plan: it is the only source that can count distinct people, and nothing else
-   needs it. (**Analytics is done**: it points at the
+4. **[platform] Nothing owed here any more — kept as the record.** Analytics
+   and the community clear rate are both live against the owner's Umami
+   (`umami.ingel.ing`, share `Xg2fTOIGWkVIOrJ7`), verified end to end. The rate
+   line stays absent per level until 5 attempts on it have finished, which real
+   players have to supply. `server/stats-server.mjs` is now the *alternative*
+   rather than the plan: it is the only source that can count distinct people,
+   and nothing else needs it. The share URL is public — it ships in the bundle —
+   so treat that website's dashboard as readable by anyone. (**Analytics is done**: it points at the
    owner's Umami at `umami.ingel.ing` and is collecting — see the *Analytics*
    section of the README. Its tracker keeps Umami's default `script.js` /
    `/api/send` names, which are the ones filter lists know; if a chunk of

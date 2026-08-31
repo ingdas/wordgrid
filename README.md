@@ -370,10 +370,15 @@ level index — comes out of the same Umami, through
 [`src/umamiLevels.ts`](./src/umamiLevels.ts). It needs a **share slug**, because
 that is how Umami hands out a read-only token with no credential in it:
 
-1. in Umami, the website's **Settings → Share URL → enable**; if you scope the
-   share, include **Events**;
-2. copy the slug out of the URL (`…/share/<slug>/<name>`) into
+1. in Umami, the website's **Settings → Share URL → enable**; if that version
+   lets you scope the share, include **Events**;
+2. copy the slug out of the URL (`…/share/<slug>`) into
    `<meta name="wordgrid:umami-share">`, or build with `VITE_UMAMI_SHARE`.
+
+As shipped this is **on**, pointing at the share for the same website. The rate
+line appears per level once `MIN_SAMPLE` (5) attempts on it have finished; until
+real players generate those, the aggregate is legitimately empty and the index
+shows no rate — which is not an error and isn't reported as one.
 
 Two `GET`s do it: `event-data/values` grouped by the `level` property, once for
 `level_win` and once for `level_loss` — `plays` is their sum, `wins` is the

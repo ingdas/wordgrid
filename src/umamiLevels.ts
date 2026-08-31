@@ -318,18 +318,12 @@ export async function fetchUmamiLevels(): Promise<LevelsBody | null> {
     return fail(lost.status ? `HTTP ${lost.status}` : "network", { retryAfterMs: lost.retryAfterMs });
   }
 
-  const wins = tally(won.body);
-  const losses = tally(lost.body);
-  // An empty answer is a legitimate "nobody has played yet", not a failure —
-  // but neither is it worth caching over a snapshot that has numbers in it.
-  if (!wins.size && !losses.size) {
-    lastError = null;
-    writeCooldown(null);
-    return null;
-  }
   lastError = null;
   writeCooldown(null);
-  return shape(wins, losses);
+  // An empty answer is a legitimate "nobody has played this yet" and comes back
+  // as an empty body, not null: the caller caches it as a real answer, and the
+  // author's dashboard says "no numbers yet" instead of reporting a failure.
+  return shape(tally(won.body), tally(lost.body));
 }
 
 /** What the author's dashboard reports about this pipe. */
