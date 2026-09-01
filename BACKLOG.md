@@ -516,8 +516,10 @@ the hardest; *emoji* — the one bespoke board.
 Ranked by expected impact. Nothing here is started.
 
 1. **[content] 17 of the 25 CrazyGames languages still need boards** (owner
-   is releasing them a few at a time; en/es/de/fr/it/nl/pt ship, Indonesian is
-   in progress). Each is one `content/<xx>.ts`
+   is releasing them a few at a time; en/es/id/de/fr/it/nl/pt ship). The eight
+   that do are every Latin-script locale on the platform's list bar ro/nb/sv/
+   fi/da/cs/hu/tr/vi — the remaining Latin ones are the cheap next batch,
+   since the non-Latin seven need the font decision below first. Each is one `content/<xx>.ts`
    written against `content/README.md` + the sheet, plus its `<xx>.ts` strings
    then its id in `SHIPPED_LOCALES`.
 
@@ -535,10 +537,14 @@ Ranked by expected impact. Nothing here is started.
    naskh for ar), rather than shipping another webfont. Also unverified for
    these: RTL beyond `dir=rtl`, and CJK/Thai tile fit at the smallest sizes
    (`displayWidth()` in `script.ts` already widens them — see `glyphWidth`).
-2. **[content] The six non-English board sets need a native read.** Their
+2. **[content] The seven non-English board sets need a native read.** Their
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
+   One known-soft spot to start from: the Indonesian pass flagged a handful of
+   grade-1/2 slots (`cap` KEPALA, `spring` KUNCI) as playing nearer grade 2–3
+   than the sheet asks — the kind of drift only a native speaker can judge, and
+   a reminder that the hand grade travels with the *slot*, not the board.
 3. **[platform] Nothing owed here any more — kept as the record.** Analytics
    and the community clear rate are both live against the owner's Umami
    (`umami.ingel.ing`, share `Xg2fTOIGWkVIOrJ7`), verified end to end. The rate
