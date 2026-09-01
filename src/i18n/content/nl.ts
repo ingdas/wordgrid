@@ -1,11 +1,244 @@
-// Placeholder — filled by the content pass. See src/i18n/content/types.ts and
-// `node --experimental-strip-types scripts/i18n-slots.mts nl` for the slots.
 import type { LocaleContent } from "./types.ts";
 
 export const content: LocaleContent = {
-  keys: [],
-  decoys: [],
-  campaign: {},
+  keys: [
+    "WOORD",
+    "SINTEL",
+    "KLUWEN",
+    "SPIEGEL",
+    "SPIRAAL",
+    "LEXICON",
+    "RAADSEL",
+    "STROMING",
+    "PLAGERIJ",
+    "GEDULDIG",
+    "KOORDDANS",
+    "MEESTERZET",
+  ],
+  decoys: [
+    "ANANAS",
+    "KOMKOMMER",
+    "GLETSJER",
+    "VULKAAN",
+    "WOESTIJN",
+    "PIRAMIDE",
+    "IGLO",
+    "MOSKEE",
+    "ZEPPELIN",
+    "SKELET",
+    "TANDPASTA",
+    "OBELISK",
+    "KANGOEROE",
+    "PINGUIN",
+    "GIRAFFE",
+    "MAMMOET",
+    "CACTUS",
+    "LAWINE",
+    "SNEEUWPOP",
+    "FJORD",
+  ],
+  campaign: {
+    star: {
+      title: "In de sterren",
+      pivot: "STER",
+      categories: [
+        { name: "Aan de nachthemel", words: ["MAAN", "KOMEET", "PLANEET"] },
+        { name: "Beroemde mensen", words: ["IDOOL", "LEGENDE", "ICOON"] },
+        { name: "Tekens en vormen", words: ["HART", "PIJL", "KRUIS"] },
+        { name: "Beloning voor een prestatie", words: ["MEDAILLE", "BEKER", "LINT"] },
+      ],
+    },
+    trunk: {
+      title: "Blad voor de mond",
+      pivot: "BLAD",
+      categories: [
+        { name: "Andere delen van een boom", words: ["TAK", "BAST", "WORTEL"] },
+        { name: "Te koop in de kiosk", words: ["KRANT", "TIJDSCHRIFT", "STRIPBOEK"] },
+        { name: "Waarop het eten wordt opgediend", words: ["SCHAAL", "KOM", "PLANK"] },
+        { name: "Delen van een tafel", words: ["POOT", "RAND", "LADE"] },
+      ],
+    },
+    ring: {
+      title: "In de ring",
+      pivot: "RING",
+      categories: [
+        { name: "Sieraden om te dragen", words: ["KETTING", "ARMBAND", "BROCHE"] },
+        { name: "Waar het gevecht plaatsvindt", words: ["ARENA", "KOOI", "MAT"] },
+        { name: "Vormen in de wiskunde", words: ["CIRKEL", "OVAAL", "ELLIPS"] },
+        { name: "Onderdelen van de snelweg", words: ["ROTONDE", "AFRIT", "VIADUCT"] },
+      ],
+    },
+    bug: {
+      title: "Muizenissen",
+      pivot: "MUIS",
+      categories: [
+        { name: "Kleine knaagdieren", words: ["RAT", "HAMSTER", "CAVIA"] },
+        { name: "Onderdelen van een computer", words: ["TOETSENBORD", "SCHERM", "KABEL"] },
+        { name: "Delen van je hand", words: ["DUIM", "PALM", "POLS"] },
+        { name: "Wat je op je boterham doet", words: ["HAGELSLAG", "JAM", "KAAS"] },
+      ],
+    },
+    bank: {
+      title: "Op de bank",
+      pivot: "BANK",
+      categories: [
+        { name: "Meubels om op te zitten", words: ["STOEL", "KRUK", "POEF"] },
+        { name: "Waar je je geld regelt", words: ["KLUIS", "PINPAS", "LENING"] },
+        { name: "Wat het zicht ontneemt", words: ["MIST", "NEVEL", "DAMP"] },
+        { name: "Wie langs de lijn moet wachten", words: ["INVALLER", "RESERVE", "WISSEL"] },
+      ],
+    },
+    stick: {
+      title: "Het bal is geopend",
+      pivot: "BAL",
+      categories: [
+        { name: "Op het sportveld", words: ["NET", "DOEL", "FLUIT"] },
+        { name: "Waar tot diep in de nacht wordt gedanst", words: ["GALA", "FUIF", "FEEST"] },
+        { name: "Uit de snackbar", words: ["KROKET", "FRIET", "LOEMPIA"] },
+        { name: "Ronde dingen", words: ["BOL", "KNIKKER", "KRAAL"] },
+      ],
+    },
+    cap: {
+      title: "Alles op een kaart",
+      pivot: "KAART",
+      categories: [
+        { name: "Hulp bij het navigeren", words: ["KOMPAS", "ATLAS", "GLOBE"] },
+        { name: "Wat je bij poker in handen hebt", words: ["AAS", "JOKER", "SCHOPPEN"] },
+        { name: "In het restaurant", words: ["OBER", "SERVET", "FOOI"] },
+        { name: "Wat je naar oma stuurt", words: ["BRIEF", "PAKJE", "POSTZEGEL"] },
+      ],
+    },
+    bat: {
+      title: "Grijsgedraaid",
+      pivot: "PLAAT",
+      categories: [
+        { name: "Bij de dj", words: ["NAALD", "DRAAITAFEL", "HOES"] },
+        { name: "Bouwmateriaal van staal", words: ["BALK", "BUIS", "PROFIEL"] },
+        { name: "Aan de muur", words: ["POSTER", "FOTO", "SCHILDERIJ"] },
+        { name: "In de keuken", words: ["OVEN", "PAN", "AFZUIGKAP"] },
+      ],
+    },
+    club: {
+      title: "Sleutelwerk",
+      pivot: "SLEUTEL",
+      categories: [
+        { name: "Aan de deur", words: ["SLOT", "GRENDEL", "KLINK"] },
+        { name: "In de gereedschapskist", words: ["TANG", "HAMER", "MOER"] },
+        { name: "Tekens in de bladmuziek", words: ["NOOT", "KRUIS", "MOL"] },
+        { name: "Botten in het lichaam", words: ["RIB", "WERVEL", "SCHEDEL"] },
+      ],
+    },
+    spring: {
+      title: "Op de band",
+      pivot: "BAND",
+      categories: [
+        { name: "Onderdelen van de fiets", words: ["ZADEL", "TRAPPER", "BEL"] },
+        { name: "Wie samen muziek maakt", words: ["DRUMMER", "ZANGER", "BASSIST"] },
+        { name: "Waarmee je papier vastmaakt", words: ["LIJM", "NIETJE", "PUNAISE"] },
+        { name: "Delen van een boek", words: ["KAFT", "RUG", "BLADZIJDE"] },
+      ],
+    },
+    cell: {
+      title: "Celdeling",
+      pivot: "CEL",
+      categories: [
+        { name: "Bouwstenen van het lichaam", words: ["WEEFSEL", "ZENUW", "ORGAAN"] },
+        { name: "In de gevangenis", words: ["TRALIES", "BEWAKER", "LUCHTPLAATS"] },
+        { name: "In het rekenblad", words: ["RIJ", "KOLOM", "FORMULE"] },
+        { name: "Wat stroom levert", words: ["ACCU", "DYNAMO", "ZONNEPANEEL"] },
+      ],
+    },
+    chip: {
+      title: "Op de schijf",
+      pivot: "SCHIJF",
+      categories: [
+        { name: "Bij een spel met zwarte en witte stukken", words: ["ZET", "BORD", "SLAG"] },
+        { name: "Op de schietbaan", words: ["ROOS", "PIJL", "BOOG"] },
+        { name: "Waarop je bestanden opslaat", words: ["USB", "CLOUD", "GEHEUGEN"] },
+        { name: "Wat de voedingsleer aanraadt", words: ["GROENTE", "FRUIT", "ZUIVEL"] },
+      ],
+    },
+    wave: {
+      title: "Golfslag",
+      pivot: "GOLF",
+      categories: [
+        { name: "Aan het strand", words: ["BRANDING", "VLOED", "SCHELP"] },
+        { name: "Bij het spel met het kleine witte balletje", words: ["BUNKER", "PUTTER", "CADDIE"] },
+        { name: "Wat plotseling toeneemt", words: ["VLAAG", "PIEK", "OPLEVING"] },
+        { name: "In het kapsel", words: ["KRUL", "LOK", "VLECHT"] },
+      ],
+    },
+    glass: {
+      title: "Proost",
+      pivot: "GLAS",
+      categories: [
+        { name: "Waar je uit drinkt", words: ["MOK", "BEKER", "KELK"] },
+        { name: "Onderdelen van een raam", words: ["KOZIJN", "VENSTERBANK", "LUIK"] },
+        { name: "Breekbare materialen", words: ["PORSELEIN", "KRISTAL", "AARDEWERK"] },
+        { name: "Hulp bij het zien", words: ["LENS", "BRIL", "LOEP"] },
+      ],
+    },
+    bark: {
+      title: "Kop of munt",
+      pivot: "KOP",
+      categories: [
+        { name: "Delen van een dier", words: ["STAART", "POOT", "SNUIT"] },
+        { name: "Wat bij de koffie op tafel komt", words: ["SCHOTEL", "LEPELTJE", "SUIKERKLONTJE"] },
+        { name: "Wat een krantenpagina vult", words: ["FOTO", "COLUMN", "ADVERTENTIE"] },
+        { name: "Bij het opgooien van een geldstuk", words: ["MUNT", "WORP", "GOK"] },
+      ],
+    },
+    step: {
+      title: "Hoog van de trap",
+      pivot: "TRAP",
+      categories: [
+        { name: "Bij het voetbal", words: ["VOORZET", "KOPBAL", "PENALTY"] },
+        { name: "In het portiek", words: ["LEUNING", "BORDES", "SPIJL"] },
+        { name: "Wat aangeeft hoe ver je gekomen bent", words: ["GRAAD", "RANG", "NIVEAU"] },
+        { name: "Waar de fietser aan draait", words: ["PEDAAL", "KETTING", "VERSNELLING"] },
+      ],
+    },
+    fire: {
+      title: "Vuur en vlam",
+      pivot: "VUUR",
+      categories: [
+        { name: "In de open haard", words: ["VLAM", "GLOED", "SINTEL"] },
+        { name: "Wat je hart sneller laat kloppen", words: ["PASSIE", "DRIFT", "BEZIELING"] },
+        { name: "Bij het schieten", words: ["SALVO", "KOGEL", "LOOP"] },
+        { name: "___ + TOREN", words: ["KERK", "WATER", "KOEL"] },
+      ],
+    },
+    block: {
+      title: "Blok aan het been",
+      pivot: "BLOK",
+      categories: [
+        { name: "Speelgoed in de kinderkamer", words: ["KNUFFEL", "PUZZEL", "AUTOOTJE"] },
+        { name: "Landen die samen optrekken", words: ["BONDGENOOT", "UNIE", "ALLIANTIE"] },
+        { name: "Wegen in de stad", words: ["STRAAT", "LAAN", "GRACHT"] },
+        { name: "Massief steen", words: ["KEI", "ZUIL", "MARMER"] },
+      ],
+    },
+    crane: {
+      title: "De kraan open",
+      pivot: "KRAAN",
+      categories: [
+        { name: "In de badkamer", words: ["DOUCHE", "WASBAK", "SPIEGEL"] },
+        { name: "Op de bouwplaats", words: ["BETONMOLEN", "STEIGER", "GRAAFMACHINE"] },
+        { name: "Vogels met lange poten", words: ["REIGER", "OOIEVAAR", "FLAMINGO"] },
+        { name: "Wie er heel goed in is", words: ["TALENT", "UITBLINKER", "VAKMAN"] },
+      ],
+    },
+    bolt: {
+      title: "Gespannen boog",
+      pivot: "BOOG",
+      categories: [
+        { name: "Bij het schieten op de roos", words: ["PEES", "KOKER", "DOELWIT"] },
+        { name: "Onderdelen van een kathedraal", words: ["GEWELF", "PIJLER", "PORTAAL"] },
+        { name: "Gebogen vormen", words: ["BOCHT", "CURVE", "SPIRAAL"] },
+        { name: "Tekens op papier bij de musicus", words: ["RUST", "MAAT", "TRIOOL"] },
+      ],
+    },
+  },
   emoji: null,
   daily: {},
 };

@@ -500,14 +500,9 @@ the hardest; *emoji* — the one bespoke board.
 
 Ranked by expected impact. Nothing here is started.
 
-1. **[content] Italian is 80 daily boards short of shipping.** Its strings,
-   12 keys, 20 decoys, 100 campaign boards and emoji boss are written and
-   validate; only `daily` is empty, which is why `it` is not in
-   `SHIPPED_LOCALES` (it would serve the English daily pool). Finish it the
-   way the others were: `scripts/i18n-slots.mts it`, ≤10 boards per write,
-   `npm run validate -- --locale it` between writes.
-2. **[content] 19 of the 25 CrazyGames languages still need boards** (owner
-   paused the rollout after the first six). Each is one `content/<xx>.ts`
+1. **[content] 18 of the 25 CrazyGames languages still need boards** (owner
+   is releasing them a few at a time; en/es/de/fr/it/pt ship, Indonesian and
+   Dutch are in progress). Each is one `content/<xx>.ts`
    written against `content/README.md` + the sheet, plus its `<xx>.ts` strings
    (Dutch strings are done), then its id in `SHIPPED_LOCALES`.
 
@@ -525,11 +520,11 @@ Ranked by expected impact. Nothing here is started.
    naskh for ar), rather than shipping another webfont. Also unverified for
    these: RTL beyond `dir=rtl`, and CJK/Thai tile fit at the smallest sizes
    (`displayWidth()` in `script.ts` already widens them — see `glyphWidth`).
-3. **[content] The four non-English board sets need a native read.** Their
+2. **[content] The five non-English board sets need a native read.** Their
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
-4. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
+3. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
    is empty in both `index.html` and `docs/index.html`, so the whole feature
    is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
    somewhere and point the tag at it. **Analytics is in the same state**: the
@@ -538,42 +533,42 @@ Ranked by expected impact. Nothing here is started.
    `COLLECT_API_ENDPOINT`, `DISABLE_TELEMETRY` on it, add one website, paste
    the tracker URL and the website id). Then check Settings → Developer →
    Analytics on the live page says the tracker loaded.
-5. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
+4. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform. The upload itself is ready
    (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);
    what is owed is the run through their preview tool with that file.
-6. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
+5. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
-7. **[ux] Landscape phones are cramped.** The two-column split needs ≥1024 px;
+6. **[ux] Landscape phones are cramped.** The two-column split needs ≥1024 px;
    at 844×390 it's one scrolling column behind the rotate hint. A compact
    landscape board (smaller tiles, controls rail at `md` + landscape) would
    make "Play anyway" a real option.
-8. **[a11y] Never run past a real screen reader.** Keyboard play, Escape and
+7. **[a11y] Never run past a real screen reader.** Keyboard play, Escape and
    the focus trap are in; nothing has been checked with VoiceOver/NVDA. A
    large-text mode is also still missing from Settings.
-9. **[gameplay] The hint token has one shape** (reveal a theme, then a
+8. **[gameplay] The hint token has one shape** (reveal a theme, then a
    letter). A cheaper "rule out one tile" would let a stuck player spend less
    than a whole theme.
-10. **[gameplay] Two twist candidates**, designed but not built: **brief** —
+9. **[gameplay] Two twist candidates**, designed but not built: **brief** —
    the four theme names shown up front, tiles assigned to a *named* group
    (recycles the oracle's panel without the cold-spelling lottery; any board
    fits); **cascade** — the board re-scrambles after every solved group
    (kills the park-three-for-later strategy; scramble's board fit; never
    adjacent to scramble or cipher).
-11. **[balance] Grades are one number per board.** A facet split (abstraction /
+10. **[balance] Grades are one number per board.** A facet split (abstraction /
    pivot / interference) would let a chapter be built from one kind of hard.
-12. **[mobile] Tall end-states scroll on small phones**; 320×568 scrolls a
+11. **[mobile] Tall end-states scroll on small phones**; 320×568 scrolls a
    little on the board and finale (accepted for legacy phones).
-13. **[engagement] Small retention hooks not built**: a post-win "N to
+12. **[engagement] Small retention hooks not built**: a post-win "N to
     Silver" nudge toast (the stats modal already says it), a daily-streak
     calendar with milestones, a "did you know" line about the link word on
     the win card.
-14. **[music] The loop is written, not composed** — the melody is chosen at
+13. **[music] The loop is written, not composed** — the melody is chosen at
     random inside the bar's chord, so it never develops or resolves. Recorded
     samples remain a taste call, not a gap (levels are measured; nothing
     clips).
-15. **[docs] `README.md`'s intro still says "9 words / four categories of two"**
+14. **[docs] `README.md`'s intro still says "9 words / four categories of two"**
     — the board is 12 words, 4 × 3 spokes. Rewrite the first paragraph and the
     *Adding puzzles* section.
 

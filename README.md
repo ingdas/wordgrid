@@ -44,8 +44,8 @@ Chase the ⭐ total and your 🔥 streak.
 ## Languages
 
 The game is wired for the 25 languages CrazyGames serves (`src/i18n/locales.ts`,
-scraped from the platform's own list) and currently ships five of them —
-English, Spanish, German, French and Brazilian Portuguese
+scraped from the platform's own list) and currently ships six of them —
+English, Spanish, German, French, Italian and Brazilian Portuguese
 (`SHIPPED_LOCALES`); the rest have their rails in place and are switched on
 one by one as their boards land. And it isn't just the menus: **every shipped
 language has its own boards.** A board of English words can't be translated,

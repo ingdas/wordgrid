@@ -1,9 +1,9 @@
 {
   "file": "wordgrid-crazygames.zip",
-  "bytes": 705490,
-  "unpacked": 1364953,
+  "bytes": 724817,
+  "unpacked": 1419210,
   "version": "1.0.0",
-  "sha256": "03f01502d171e05c174c95a0bfc024c491e0fe104d54ebecd8820ca3c6455c8c",
+  "sha256": "752daca320cddf6ad40d753192021122a633d0e7be20dfcbd95327256dc0c8ab",
   "entries": [
     {
       "path": "apple-touch-icon.png",
@@ -94,20 +94,20 @@
       "bytes": 82
     },
     {
-      "path": "assets/id-C_WuXWI7.js",
-      "bytes": 28
+      "path": "assets/id-DZGNNczO.js",
+      "bytes": 20958
     },
     {
       "path": "assets/id-saJZwa8s.js",
       "bytes": 82
     },
     {
-      "path": "assets/index-B70c37eS.js",
-      "bytes": 555250
+      "path": "assets/index-CGiW4baP.css",
+      "bytes": 52222
     },
     {
-      "path": "assets/index-uzI0eTAN.css",
-      "bytes": 54652
+      "path": "assets/index-yPMioxQ0.js",
+      "bytes": 555255
     },
     {
       "path": "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
@@ -138,12 +138,12 @@
       "bytes": 10252
     },
     {
-      "path": "assets/it-B7Uje0tc.js",
-      "bytes": 34030
-    },
-    {
       "path": "assets/it-BiSx3HCp.js",
       "bytes": 21503
+    },
+    {
+      "path": "assets/it-DDXubvbv.js",
+      "bytes": 63108
     },
     {
       "path": "assets/ja-1HKaDc3_.js",
@@ -170,12 +170,12 @@
       "bytes": 82
     },
     {
-      "path": "assets/nl-DwGFImVJ.js",
-      "bytes": 21120
+      "path": "assets/nl-COJt2fV-.js",
+      "bytes": 6756
     },
     {
-      "path": "assets/nl-saJZwa8s.js",
-      "bytes": 82
+      "path": "assets/nl-DwGFImVJ.js",
+      "bytes": 21120
     },
     {
       "path": "assets/pl-BFyK5KAT.js",
