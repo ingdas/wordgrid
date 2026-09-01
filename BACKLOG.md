@@ -509,10 +509,22 @@ Ranked by expected impact. Nothing here is started.
 2. **[content] 19 of the 25 CrazyGames languages still need boards** (owner
    paused the rollout after the first six). Each is one `content/<xx>.ts`
    written against `content/README.md` + the sheet, plus its `<xx>.ts` strings
-   (Dutch strings are done), then its id in `SHIPPED_LOCALES`. Non-Latin scripts (ru, uk, el, ar, th, ko, ja) have
-   their letter/cipher rules in `script.ts` but nothing has been rendered in
-   them yet — RTL beyond `dir=rtl`, CJK/Thai tile fit and the display face's
-   fallbacks (Fraunces has no Cyrillic/Greek/CJK/Thai/Arabic) are unverified.
+   (Dutch strings are done), then its id in `SHIPPED_LOCALES`.
+
+   **A non-Latin language needs a font decision first.** The bundled faces
+   were checked (`node_modules/@fontsource-variable/*/files`): Inter, the body
+   face, ships latin, latin-ext, **cyrillic, greek and vietnamese**; Fraunces,
+   the display face, ships **latin and latin-ext only**. So in ru/uk/el every
+   `.font-display` string — level titles, the board tiles, the link slots, the
+   chapter keys — silently falls back to `Georgia, serif`, and in ar/th/ko/ja
+   both faces fall back. Georgia is a passable stand-in for Cyrillic and Greek,
+   but it is not the Puzzle Press identity (hard requirement 2), and nothing
+   has been looked at on screen. Cheapest fix that keeps the identity: a
+   per-script `--font-display` stack in `index.css` keyed off the `lang`
+   attribute (a system serif per script — Mincho for ja, Myeongjo for ko, a
+   naskh for ar), rather than shipping another webfont. Also unverified for
+   these: RTL beyond `dir=rtl`, and CJK/Thai tile fit at the smallest sizes
+   (`displayWidth()` in `script.ts` already widens them — see `glyphWidth`).
 3. **[content] The four non-English board sets need a native read.** Their
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
