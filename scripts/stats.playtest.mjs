@@ -21,7 +21,7 @@ import { createServer } from "node:http";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
-import { launchBrowser } from "./browser.mjs";
+import { blockOffsite, launchBrowser } from "./browser.mjs";
 
 const DOCS = new URL("../docs/", import.meta.url).pathname;
 const GAME_PORT = Number(process.env.GAME_PORT || 8898);
@@ -117,6 +117,10 @@ await new Promise((r) => game.listen(GAME_PORT, r));
 
 const b = await launchBrowser();
 const p = await b.newPage();
+// This suite plays real levels without `?debug` (debug is never counted), so it
+// is the one that would otherwise load the configured analytics tracker and
+// write test events into a real dashboard.
+await blockOffsite(p);
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 2 });
 const errors = [];
 p.on("console", (m) => {
@@ -285,6 +289,7 @@ if (drained !== 0) note(`The queue still holds ${drained} events after a success
 //    loss has to pull the success rate down rather than go unrecorded.
 const context2 = await b.createBrowserContext();
 const page2 = await context2.newPage();
+await blockOffsite(page2);
 await page2.setViewport({ width: 430, height: 880 });
 await bootFresh(page2, "playtest-loser-0002");
 await loseLevelOne(page2);

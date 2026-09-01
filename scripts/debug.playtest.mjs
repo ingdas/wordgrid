@@ -11,7 +11,7 @@
 //   2. the in-game tools: reveal every theme, peek at the link, auto-solve
 //   3. hints are free (the bank reads ∞ and never goes down)
 //   4. the index tool clears the next level for real (stars are persisted)
-import { launchBrowser } from "./browser.mjs";
+import { blockOffsite, launchBrowser } from "./browser.mjs";
 
 const BASE = process.env.BASE || "http://localhost:4173/";
 const SHOT = process.env.SHOT || null;
@@ -26,8 +26,7 @@ const p = await b.newPage();
 // its "local" mode — fake ads between boards, a working data module — which is
 // not the SDK-less flow these checks describe. (playtest.mjs checks the real
 // SDK handshake separately, on its own page.)
-await p.setRequestInterception(true);
-p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
+await blockOffsite(p);
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 1 });
 const errors = [];
 p.on("console", (m) => {

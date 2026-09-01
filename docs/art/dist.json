@@ -1,9 +1,9 @@
 {
   "file": "wordgrid-crazygames.zip",
-  "bytes": 724817,
-  "unpacked": 1419210,
+  "bytes": 727701,
+  "unpacked": 1427302,
   "version": "1.0.0",
-  "sha256": "752daca320cddf6ad40d753192021122a633d0e7be20dfcbd95327256dc0c8ab",
+  "sha256": "f2f9910c67ccd52a524e99e4e90e87f7071908143cfa13f84d5457c9dde984c5",
   "entries": [
     {
       "path": "apple-touch-icon.png",
@@ -102,12 +102,12 @@
       "bytes": 82
     },
     {
-      "path": "assets/index-CGiW4baP.css",
-      "bytes": 52222
+      "path": "assets/index-BWIr7mDL.js",
+      "bytes": 559467
     },
     {
-      "path": "assets/index-yPMioxQ0.js",
-      "bytes": 555255
+      "path": "assets/index-DvgAeLcW.css",
+      "bytes": 52281
     },
     {
       "path": "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
@@ -170,8 +170,8 @@
       "bytes": 82
     },
     {
-      "path": "assets/nl-COJt2fV-.js",
-      "bytes": 6756
+      "path": "assets/nl-01ZAB6v8.js",
+      "bytes": 9975
     },
     {
       "path": "assets/nl-DwGFImVJ.js",
@@ -259,7 +259,7 @@
     },
     {
       "path": "index.html",
-      "bytes": 4472
+      "bytes": 5074
     },
     {
       "path": "manifest.webmanifest",

@@ -185,9 +185,13 @@ export function LevelStatsModal({
           )}
         </div>
 
+        {/* Umami counts events, not people, so it can't fill "Solvers" — the
+            tile is dropped rather than shown as a mislabelled zero. Same for
+            the per-level column below, which already falls back to this
+            device's own record when a level has no solver count. */}
         {status.enabled && totals.plays > 0 && (
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <Tile label={t("track.tile.players")} value={`${totals.solvers}`} />
+          <div className={`mt-3 grid gap-2 text-center ${status.people ? "grid-cols-3" : "grid-cols-2"}`}>
+            {status.people && <Tile label={t("track.tile.players")} value={`${totals.solvers}`} />}
             <Tile label={t("track.tile.plays")} value={`${totals.plays}`} />
             <Tile label={t("track.tile.rate")} value={pct(totals.wins / totals.plays)} />
           </div>

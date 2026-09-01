@@ -10,7 +10,7 @@
 //   2. the link mask is one ? per letter of the actual pivot
 //   3. modals trap Tab and hand focus back on Escape
 //   4. no durable storage — the game still plays, and says so
-import { launchBrowser } from "./browser.mjs";
+import { blockOffsite, launchBrowser } from "./browser.mjs";
 
 const BASE = process.env.BASE || "http://localhost:4173/";
 const SHOT = process.env.SHOT || null;
@@ -25,8 +25,7 @@ const p = await b.newPage();
 // its "local" mode — fake ads between boards, a working data module — which is
 // not the SDK-less flow these checks describe. (playtest.mjs checks the real
 // SDK handshake separately, on its own page.)
-await p.setRequestInterception(true);
-p.on("request", (req) => (/sdk\.crazygames\.com/.test(req.url()) ? req.abort() : req.continue()));
+await blockOffsite(p);
 await p.setViewport({ width: 430, height: 880, deviceScaleFactor: 1 });
 const errors = [];
 p.on("console", (m) => {

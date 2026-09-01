@@ -146,7 +146,9 @@ export default function Game({
   const boss = twist != null;
   // What analytics files this board under (src/analytics.ts).
   const trackMode = endless ? "endless" : daily ? "daily" : "campaign";
-  const trackLevel = endless || daily ? 0 : puzzleIndex + 1;
+  // Undefined off the campaign: the property carries exactly the 100 campaign
+  // levels, which is what keeps the aggregate readable (src/umamiLevels.ts).
+  const trackLevel = endless || daily ? undefined : puzzleIndex + 1;
   // Endless/Zen mode never fails: no mistake cap, no second-chance/loss path.
   const maxMistakes = endless ? Number.POSITIVE_INFINITY : MAX_MISTAKES;
   // The emoji boss swaps in a bespoke picture board; every other twist plays the

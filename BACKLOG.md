@@ -1,8 +1,7 @@
 # WordGrid — Project State & Backlog
 
-_Last updated 2026-08-26, after iteration 42 (CrazyGames submission audit:
-the SDK is actually initialised now, and the ad and gameplay rules are
-followed)._
+_Last updated 2026-08-31, after iteration 43 (the community clear rate reads back
+out of Umami; no second service to run)._
 
 This file is the bootstrap for a fresh session: how to work on the repo, what
 is where, the rules that must hold, the decisions that must not be quietly
@@ -33,9 +32,9 @@ twist closing each) → Game. One side mode: **Endless**
   build is committed in `docs/` (GitHub Pages), so any change that touches the
   app needs `npm run build` before its commit to keep `docs/` in sync.
 - **Commands**: `npm run build` (tsc + vite → `docs/`, then the CrazyGames
-  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (ten unit
+  upload `docs/art/wordgrid-crazygames.zip` + `dist.json`), `npm test` (eleven unit
   suites: engine, progress/key gating, quests, storage, debug,
-  i18n, sdk, level tracking, audio, analytics), `npm run validate` (puzzle structure,
+  i18n, sdk, level tracking, audio, analytics, umami-levels), `npm run validate` (puzzle structure,
   category-name spoilers, chapter-key lengths, the campaign curve, emoji
   board — for every shipped language; `-- --locale xx` for one), `npm run
   audit` (ambiguity report for a human, English), `node scripts/gen-assets.mjs`
@@ -141,9 +140,25 @@ twist closing each) → Game. One side mode: **Endless**
   injected after mount on an idle slot with `data-auto-track="false"`; events
   raised before it lands wait in a buffer (`BUFFER_CAP = 100`), a failed load
   retries (`RETRY_MS`) and on `online`; `identify` gets the same per-install
-  id as level tracking (`stats.playerId`). Debug is filtered inside; Endless
-  *is* counted. `analyticsStatus()` feeds Settings → Developer → Analytics.
-  Nothing is ever read back.
+  id as level tracking (`stats.playerId`). Endless *is* counted. A `?debug`
+  page never even loads the tracker (`startAnalytics` returns early), and every
+  headless suite blocks the configured host through `blockOffsite` in
+  `scripts/browser.mjs` — a suite must not depend on it or write test events
+  into the real dashboard. `analyticsStatus()` feeds Settings → Developer →
+  Analytics. Nothing is ever read back.
+- `umamiLevels.ts` — the one thing read *back* out of Umami: the community
+  clear rate on the level index. A share slug (`wordgrid:umami-share` /
+  `VITE_UMAMI_SHARE`) mints a read-only token with no credential
+  (`GET /api/share/{slug}`), then two `event-data/values` reads grouped by the
+  `level` property (win, then loss) become `plays`/`wins`. **The 100-row cap on
+  that endpoint is why `analytics.ts` sends `level` for campaign boards only** —
+  pinned by a test that fails if the campaign outgrows 100. Umami counts events,
+  not people, so `players`/`solvers` stay 0 and the dashboard hides them
+  (`Snapshot.people`). Degradation is the whole design: bounded requests, the
+  second read skipped when the first fails, an escalating cooldown that survives
+  a reload (15 min → 24 h, `Retry-After` honoured, a missing share rests a day),
+  jittered refresh in `stats.ts`, and the answer treated as untrusted input.
+  `stats.ts` picks the source: the reference server if configured, else this.
 - `debug.ts` — `isDebug` (URL / storage, cached per load), `setDebug` (live),
   `resetDebugCache` (test seam).
 - `achievements.ts` — 6 tiered (Bronze/Silver/Gold) defs + hint rewards.
@@ -524,19 +539,31 @@ Ranked by expected impact. Nothing here is started.
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
-3. **[platform] Level tracking has no endpoint.** `<meta name="wordgrid:stats">`
-   is empty in both `index.html` and `docs/index.html`, so the whole feature
-   is inert in production. Deploy `server/stats-server.mjs` (or equivalent)
-   somewhere and point the tag at it. **Analytics is in the same state**: the
-   `wordgrid:umami-script` / `wordgrid:umami-website` tags are empty until a
-   Umami is up (Coolify's template; set `TRACKER_SCRIPT_NAME`,
-   `COLLECT_API_ENDPOINT`, `DISABLE_TELEMETRY` on it, add one website, paste
-   the tracker URL and the website id). Then check Settings → Developer →
-   Analytics on the live page says the tracker loaded.
+3. **[platform] Nothing owed here any more — kept as the record.** Analytics
+   and the community clear rate are both live against the owner's Umami
+   (`umami.ingel.ing`, share `Xg2fTOIGWkVIOrJ7`), verified end to end. The rate
+   line stays absent per level until 5 attempts on it have finished, which real
+   players have to supply. `server/stats-server.mjs` is now the *alternative*
+   rather than the plan: it is the only source that can count distinct people,
+   and nothing else needs it. The share URL is public — it ships in the bundle —
+   so treat that website's dashboard as readable by anyone. (**Analytics is done**: it points at the
+   owner's Umami at `umami.ingel.ing` and is collecting — see the *Analytics*
+   section of the README. Its tracker keeps Umami's default `script.js` /
+   `/api/send` names, which are the ones filter lists know; if a chunk of
+   players goes missing, rename both with `TRACKER_SCRIPT_NAME` and
+   `COLLECT_API_ENDPOINT` on the server and update the meta tag to match.)
 4. **[platform] CrazyGames integration is unverified on-platform.** SDK, data
    module and ads all correctly no-op off-platform. The upload itself is ready
    (`docs/art/wordgrid-crazygames.zip`, checked by `scripts/dist.playtest.mjs`);
-   what is owed is the run through their preview tool with that file.
+   what is owed is the run through their preview tool with that file. Two
+   things to confirm there, both new since the zip was first checked: that the
+   analytics tracker loads inside their iframe (the embed now reaches a second
+   host besides the SDK's CDN — nothing in their technical requirements forbids
+   it, but it hasn't been seen working there), and whether they want a privacy
+   note, since those requirements ask for a T&C/Privacy Policy notice from a
+   game that "collects additional personal data beyond the events in our SDK".
+   Umami is cookieless and stores no personal data, so this is a judgment call
+   the owner should make deliberately rather than by omission.
 5. **[content] Ambiguity is hand-reviewed, not solver-proven.** Any new batch
    needs the full read in *Authoring a board*. Growing the daily pool is the
    evergreen content task.
@@ -594,8 +621,9 @@ One line per iteration, newest first. The commit bodies carry the reasoning.
 
 | # | What | Commits |
 |---|---|---|
+| 43 | The community clear rate read back out of Umami (`umamiLevels.ts`): a share slug mints a credential-free read token, two `event-data/values` reads become plays/wins; bounded requests, a persisted escalating cooldown, jittered refresh; `level` narrowed to campaign boards for the 100-row cap; the dashboard drops "Solvers" for a source that counts events. Switched on against the owner's share, and an empty aggregate stopped reading as a failure | `49824c0` `b354b07` |
 | 42 | CrazyGames submission audit. The SDK is actually initialised now (`sdk.ts`: wait for the async script, `init()` once, queue-and-replay calls made before it; only `sdkDisabled` is fatal — a pre-init `sdkNotInitialized` had latched it dead and `init()` never ran); the rotate hint needs `pointer: coarse`; gameplayStart/Stop at board boundaries only (never on a tab switch), `happytime` on a boss only; interstitials hold the page and mute only while showing; rewarded ads pay only when watched, free where no ad system exists (`adsMode()` drives the button copy); equal-size second-chance buttons; Escape dropped as a gameplay key; safe-area padding; scrollable dialog scrims; `shareUrl()`; playtests keep the SDK script out and check the real handshake separately | `db3b821` |
-| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host | `82ebb22` |
+| 41 | Product analytics through a self-hosted Umami: `analytics.ts` (guarded loader on an idle slot, buffered events behind `identify`, screens as virtual pageviews, 15 named events), the two `wordgrid:umami-*` meta tags / `VITE_UMAMI_*`, Settings → Developer → Analytics, `dist.playtest.mjs` allows the configured Umami host. Pointed at the owner's instance and verified live; `?debug` loads no tracker and every suite blocks the host through `blockOffsite` | `82ebb22` `ea318de` |
 | 40 | Pairs and the Logic Grid removed — screens, levels, generator, tests, quests, save fields, store shots; the home mode row is the Endless door | `9f87486` |
 | 39 | The CrazyGames upload: `npm run build` zips the game into `docs/art/` (byte-reproducible), the art page links it, `dist.playtest.mjs` boots it in a foreign iframe; service worker top-level only and scoped to its own caches | `95ba9f0` |
 | 38 | The opening: a once-per-visit press run in front of the first screen; the last group is submitted by the player, not auto-solved | `f7c699c` `666a6ac` |

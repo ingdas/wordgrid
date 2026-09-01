@@ -36,6 +36,13 @@
 // `uid` is client-generated so a retried flush is idempotent: a batch that got
 // through but whose response was lost is stored once, not twice.
 import { readItem, writeItem } from "./storage.ts";
+import {
+  cooldownUntil,
+  fetchUmamiLevels,
+  umamiLevelsEnabled,
+  umamiLevelsSource,
+  umamiLevelsStatus,
+} from "./umamiLevels.ts";
 
 // --- what the server sends back --------------------------------------------
 
@@ -57,6 +64,13 @@ export interface Snapshot {
   /** When this was fetched, so the UI can say how stale it is offline. */
   fetchedAt: number;
   levels: LevelStats;
+  /**
+   * Whether this source counts distinct installs, so `players`/`solvers` mean
+   * what they say. True for the reference server; false when the numbers come
+   * from Umami, which counts events (see src/umamiLevels.ts) — the dashboard
+   * hides those figures rather than printing a mislabelled one.
+   */
+  people: boolean;
 }
 
 // --- what we send ----------------------------------------------------------
@@ -93,6 +107,11 @@ export const QUEUE_CAP = 250;
 const BATCH = 50;
 /** Refetch the aggregate at most this often; it changes slowly. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/**
+ * Spread over the TTL, drawn once per install: without it every client that
+ * loaded the same build asks again in the same second, forever.
+ */
+const jitter = Math.floor(Math.random() * 30 * 60 * 1000);
 /** Backoff between failed flushes: give up on the tab, not on the data. */
 const RETRY_MS = [5_000, 20_000, 60_000, 300_000];
 
@@ -132,9 +151,21 @@ function target(): string {
   return endpoint;
 }
 
-/** Is anything being tracked at all? Everything else keys off this. */
+/**
+ * Is anything being *sent*? Only the reference server takes our events, so
+ * this gates the queue, the flush and every `track*` call.
+ */
 export function statsEnabled(): boolean {
   return target() !== "";
+}
+
+/**
+ * Are community numbers available to *read*, from either source? The two are
+ * independent: the usual production shape is analytics-only, where nothing is
+ * queued or posted here and the aggregate is read back out of Umami.
+ */
+export function levelsEnabled(): boolean {
+  return statsEnabled() || umamiLevelsEnabled();
 }
 
 // --- the anonymous install id ----------------------------------------------
@@ -272,7 +303,9 @@ export function communityStats(): Snapshot | null {
     const cached = readJson<Snapshot | null>(CACHE_KEY, null);
     if (cached && typeof cached.fetchedAt === "number" && cached.levels) {
       const levels = parseLevels(cached);
-      if (levels) snapshot = { fetchedAt: cached.fetchedAt, levels };
+      // A cache written before this field existed came from the server, which
+      // did count people.
+      if (levels) snapshot = { fetchedAt: cached.fetchedAt, levels, people: cached.people !== false };
     }
   }
   return snapshot;
@@ -425,17 +458,26 @@ async function runFlush(): Promise<boolean> {
  * enough cache short-circuits, and a failure quietly keeps the old snapshot.
  */
 export async function refreshStats(force = false): Promise<Snapshot | null> {
-  if (!statsEnabled()) return null;
+  const fromUmami = !statsEnabled() && umamiLevelsEnabled();
+  if (!levelsEnabled()) return null;
   const have = communityStats();
-  if (!force && have && Date.now() - have.fetchedAt < CACHE_TTL_MS) return have;
+  // Jittered, so a thousand players returning after a deploy don't all ask in
+  // the same second — the one traffic shape a small analytics box can't take.
+  if (!force && have && Date.now() - have.fetchedAt < CACHE_TTL_MS + jitter) return have;
   if (!online()) return have;
-  const body = await get(`${target()}/levels`);
+  const body = fromUmami ? await fetchUmamiLevels() : await get(`${target()}/levels`);
   const levels = parseLevels(body);
   if (!levels) {
-    lastError = "no aggregate";
+    // The reader knows why it came back empty-handed ("HTTP 500", "share HTTP
+    // 404"); that is worth more to whoever opens the dashboard than a generic
+    // line. A legitimate "nobody has played yet" never lands here — it is an
+    // empty answer, not a failure.
+    lastError = fromUmami
+      ? umamiLevelsStatus().lastError ?? (cooldownUntil() ? "resting" : "no aggregate")
+      : "no aggregate";
     return have;
   }
-  snapshot = { fetchedAt: Date.now(), levels };
+  snapshot = { fetchedAt: Date.now(), levels, people: !fromUmami };
   snapshotRead = true;
   writeJson(CACHE_KEY, snapshot);
   lastError = null;
@@ -495,9 +537,9 @@ let started = false;
  * about to go away. Idempotent, and a no-op when tracking is off.
  */
 export function startStats(): () => void {
-  if (!statsEnabled() || started) return () => {};
+  if (!levelsEnabled() || started) return () => {};
   started = true;
-  void flush();
+  void flush(); // a no-op unless the reference server is configured
   void refreshStats();
 
   const onOnline = () => {
@@ -530,6 +572,7 @@ export function startStats(): () => void {
 
 /** What the developer dashboard reports about the pipe itself. */
 export interface StatsStatus {
+  /** Are community numbers available from either source? */
   enabled: boolean;
   endpoint: string;
   pending: number;
@@ -537,17 +580,24 @@ export interface StatsStatus {
   lastError: string | null;
   fetchedAt: number | null;
   online: boolean;
+  /** Does the live source count distinct installs (see Snapshot.people)? */
+  people: boolean;
+  /** Set while the Umami reader is deliberately quiet after failures. */
+  restingUntil: number | null;
 }
 
 export function statsStatus(): StatsStatus {
+  const fromUmami = !statsEnabled() && umamiLevelsEnabled();
   return {
-    enabled: statsEnabled(),
-    endpoint: target(),
+    enabled: levelsEnabled(),
+    endpoint: fromUmami ? umamiLevelsSource() : target(),
     pending: readQueue().length,
     lastSync,
     lastError,
     fetchedAt: communityStats()?.fetchedAt ?? null,
     online: online(),
+    people: !fromUmami,
+    restingUntil: fromUmami ? cooldownUntil() : null,
   };
 }
 
