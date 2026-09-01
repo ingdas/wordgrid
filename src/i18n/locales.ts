@@ -63,7 +63,7 @@ export function isLocale(x: unknown): x is Locale {
  * falls through to the English boards is the exact failure this list exists
  * to prevent.
  */
-export const SHIPPED_LOCALES: readonly Locale[] = ["en", "es", "de", "fr", "it", "pt"];
+export const SHIPPED_LOCALES: readonly Locale[] = ["en", "es", "de", "fr", "it", "nl", "pt"];
 
 export function isShipped(x: unknown): x is Locale {
   return isLocale(x) && SHIPPED_LOCALES.includes(x);

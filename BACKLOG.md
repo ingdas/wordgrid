@@ -515,11 +515,11 @@ the hardest; *emoji* — the one bespoke board.
 
 Ranked by expected impact. Nothing here is started.
 
-1. **[content] 18 of the 25 CrazyGames languages still need boards** (owner
-   is releasing them a few at a time; en/es/de/fr/it/pt ship, Indonesian and
-   Dutch are in progress). Each is one `content/<xx>.ts`
+1. **[content] 17 of the 25 CrazyGames languages still need boards** (owner
+   is releasing them a few at a time; en/es/de/fr/it/nl/pt ship, Indonesian is
+   in progress). Each is one `content/<xx>.ts`
    written against `content/README.md` + the sheet, plus its `<xx>.ts` strings
-   (Dutch strings are done), then its id in `SHIPPED_LOCALES`.
+   then its id in `SHIPPED_LOCALES`.
 
    **A non-Latin language needs a font decision first.** The bundled faces
    were checked (`node_modules/@fontsource-variable/*/files`): Inter, the body
@@ -535,7 +535,7 @@ Ranked by expected impact. Nothing here is started.
    naskh for ar), rather than shipping another webfont. Also unverified for
    these: RTL beyond `dir=rtl`, and CJK/Thai tile fit at the smallest sizes
    (`displayWidth()` in `script.ts` already widens them — see `glyphWidth`).
-2. **[content] The five non-English board sets need a native read.** Their
+2. **[content] The six non-English board sets need a native read.** Their
    181 boards each pass `validate`, but the four failure classes in
    *Authoring a board* are only caught by a human who speaks the language;
    the English set had that read, these haven't.
